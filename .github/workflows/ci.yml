@@ -1,4 +1,4 @@
-name: CD
+name: Deploy on Heroku
 
 on:
   push:
@@ -29,6 +29,11 @@ jobs:
       - name: Build project
         run: npm run build
         working-directory: dinver-backend
+
+      - name: Check Heroku API Key
+        run: echo "HEROKU_API_KEY is set"
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
       - name: Deploy to Heroku
         env:
