@@ -14,4 +14,8 @@ app.use('/api/auth', authRoutes);
 // app.use("/api/restaurants", restaurantRoutes);
 // app.use("/api/bakeries", bakeryRoutes);
 
+app.get('/', (req, res) => {
+  res.send('Welcome to the Dinver App!');
+});
+
 module.exports = app;
