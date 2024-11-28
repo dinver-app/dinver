@@ -18,15 +18,23 @@
 
    Nakon generiranja modela, automatski će se kreirati i migracijska datoteka u `migrations` direktoriju. Pregledaj i prilagodi migraciju ako je potrebno.
 
-4. **Pokreni migracije:**
+4. **Pokreni migracije na lokalnoj bazi:**
 
-   Pokreni migracije kako bi primijenio promjene u bazi podataka:
+   Pokreni migracije kako bi primijenio promjene u lokalnoj bazi podataka:
 
    ```bash
    npx sequelize-cli db:migrate
    ```
 
-5. **Kreiraj seeder (opcionalno):**
+5. **Pokreni migracije na Heroku bazi:**
+
+   Pokreni migracije na Heroku bazi podataka:
+
+   ```bash
+   heroku run npx sequelize-cli db:migrate
+   ```
+
+6. **Kreiraj seeder (opcionalno):**
 
    Ako želiš dodati početne podatke u bazu, generiraj seeder:
 
@@ -36,18 +44,20 @@
 
    Uredi generiranu seeder datoteku u `seeders` direktoriju i dodaj željene podatke.
 
-6. **Pokreni seedere (opcionalno):**
+7. **Pokreni seedere na lokalnoj bazi (opcionalno):**
 
-   Pokreni seedere kako bi dodao početne podatke u bazu:
+   Pokreni seedere kako bi dodao početne podatke u lokalnu bazu:
 
    ```bash
    npx sequelize-cli db:seed:all
    ```
 
-   Pokreni jednog seeder:
+8. **Pokreni seedere na Heroku bazi (opcionalno):**
+
+   Pokreni seedere kako bi dodao početne podatke u Heroku bazu:
 
    ```bash
-   npx sequelize-cli db:seed --seed 20241127175719-demo-user
+   heroku run npx sequelize-cli db:seed:all
    ```
 
 ## Kreiranje i korištenje seedera
@@ -89,18 +99,32 @@
    };
    ```
 
-3. **Pokreni seedere:**
+3. **Pokreni seedere na lokalnoj bazi:**
 
-   Nakon što si uredio seeder datoteku, pokreni seedere kako bi dodao podatke u bazu:
+   Nakon što si uredio seeder datoteku, pokreni seedere kako bi dodao podatke u lokalnu bazu:
 
    ```bash
    npx sequelize-cli db:seed:all
    ```
 
-4. **Uklanjanje seed podataka (opcionalno):**
+4. **Pokreni seedere na Heroku bazi:**
+
+   Pokreni seedere kako bi dodao podatke u Heroku bazu:
+
+   ```bash
+   heroku run npx sequelize-cli db:seed:all
+   ```
+
+5. **Uklanjanje seed podataka (opcionalno):**
 
    Ako želiš ukloniti seed podatke, možeš pokrenuti:
 
    ```bash
    npx sequelize-cli db:seed:undo
+   ```
+
+   Za Heroku bazu:
+
+   ```bash
+   heroku run npx sequelize-cli db:seed:undo
    ```
