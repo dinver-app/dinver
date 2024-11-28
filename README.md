@@ -10,6 +10,12 @@
    npx sequelize-cli model:generate --name Product --attributes name:string,price:decimal
    ```
 
+   Ručno kreiranje migracijske datoteke:
+
+   ```bash
+   npx sequelize-cli migration:generate --name create-product
+   ```
+
 2. **Pregledaj i prilagodi model:**
 
    Otvori generiranu datoteku u `src/models` i prilagodi model prema potrebama.
@@ -31,7 +37,7 @@
    Pokreni migracije na Heroku bazi podataka:
 
    ```bash
-   heroku run npx sequelize-cli db:migrate
+   heroku run npx sequelize-cli db:migrate --app dinver-backend
    ```
 
 6. **Kreiraj seeder (opcionalno):**
