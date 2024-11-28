@@ -3,8 +3,6 @@ const { Sequelize } = require('sequelize');
 
 const PORT = process.env.PORT || 3000;
 
-console.log('Environment:', process.env.NODE_ENV);
-
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
 
