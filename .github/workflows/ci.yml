@@ -34,6 +34,5 @@ jobs:
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          git remote add heroku https://git.heroku.com/dinver.git
-          git push heroku main
-        working-directory: dinver-backend
+          git remote add heroku https://git.heroku.com/dinver-backend.git
+          git subtree push --prefix dinver-backend heroku main
