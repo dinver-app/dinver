@@ -42,11 +42,13 @@ jobs:
       - name: Login to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku auth:login --with-token
+        run: echo $HEROKU_API_KEY | heroku auth:token
+
+      - name: Set Heroku remote
+        run: heroku git:remote -a dinver-backend
 
       - name: Deploy to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          heroku git:remote -a dinver-backend
           git push heroku `git subtree split --prefix dinver-backend main`:main --force
