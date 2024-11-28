@@ -38,11 +38,11 @@ jobs:
       - name: Install Heroku CLI
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
+          heroku auth:whoami
 
       - name: Deploy to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          echo $HEROKU_API_KEY | heroku auth:token
           heroku git:remote -a dinver-backend
-          git subtree push --prefix dinver-backend heroku main
+          git push heroku `git subtree split --prefix dinver-backend main`:main --force
