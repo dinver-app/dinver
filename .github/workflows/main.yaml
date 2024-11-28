@@ -29,6 +29,5 @@ jobs:
           echo "  login $HEROKU_EMAIL" >> ~/.netrc
           echo "  password $HEROKU_API_KEY" >> ~/.netrc
           heroku git:remote -a dinver-backend
-          git pull heroku main
           git subtree split --prefix dinver-backend -b heroku-deploy
-          git push heroku heroku-deploy:main
+          git push heroku heroku-deploy:main --force
