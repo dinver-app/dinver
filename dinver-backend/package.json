@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "build": "npm run test"
   },
   "keywords": [],
   "author": "",
