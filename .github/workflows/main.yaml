@@ -14,10 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: akhileshns/heroku-deploy@v3.12.12
-        with:
-          branch: main
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: "dinver-backend"
-          heroku_email: "ivankikic49@gmail.com"
-          subdirectory: dinver-backend
+      - name: Deploy to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git remote add heroku https://git.heroku.com/dinver-backend.git
+          git subtree push --prefix dinver-backend heroku main
