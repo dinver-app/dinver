@@ -1,0 +1,110 @@
+'use strict';
+const { Model } = require('sequelize');
+
+module.exports = (sequelize, DataTypes) => {
+  class Restaurant extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate() {
+      // define association here
+    }
+  }
+  Restaurant.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      place_id: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: false,
+      },
+      address: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      latitude: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+      },
+      longitude: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+      },
+      rating: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      user_ratings_total: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      price_level: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      is_open_now: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+      },
+      opening_hours: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      types: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      icon_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      photo_reference: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      vicinity: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      business_status: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      geometry: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      icon_background_color: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      icon_mask_base_uri: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      photos: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      plus_code: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+    },
+    {
+      sequelize,
+      modelName: 'Restaurant',
+    },
+  );
+  return Restaurant;
+};
