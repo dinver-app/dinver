@@ -10,7 +10,9 @@ module.exports = {
       'Users',
       [
         {
-          username: 'demo_user',
+          firstName: 'Demo',
+          lastName: 'User',
+          email: 'demo_user@example.com',
           password: hashedPassword,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -21,6 +23,10 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    return queryInterface.bulkDelete('Users', null, {});
+    return queryInterface.bulkDelete(
+      'Users',
+      { email: 'demo_user@example.com' },
+      {},
+    );
   },
 };
