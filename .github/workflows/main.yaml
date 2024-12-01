@@ -54,16 +54,19 @@ jobs:
         run: |
           # Deploy dinver-frontend
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
+            set ssl:verify-certificate no;
             mirror -R ./dinver-frontend/dist /public_html;
             bye
           "
           # Deploy admin-frontend
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
+            set ssl:verify-certificate no;
             mirror -R ./admin-frontend/dist /home/u851712675/domains/dinverapp.com/public_html/admin;
             bye
           "
           # Deploy sysadmin-frontend
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
+            set ssl:verify-certificate no;
             mirror -R ./sysadmin-frontend/dist /home/u851712675/domains/dinverapp.com/public_html/sysadmin;
             bye
           "
