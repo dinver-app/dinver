@@ -39,6 +39,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 18
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
       - name: Install Dependencies and Build Frontends
         run: |
           cd dinver-frontend && npm install && npm run build
@@ -57,11 +59,11 @@ jobs:
           "
           # Deploy admin-frontend
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
-            mirror -R ./admin-frontend/build /admin;
+            mirror -R ./admin-frontend/build /home/u851712675/domains/dinverapp.com/public_html/admin;
             bye
           "
           # Deploy sysadmin-frontend
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
-            mirror -R ./sysadmin-frontend/build /sysadmin;
+            mirror -R ./sysadmin-frontend/build /home/u851712675/domains/dinverapp.com/public_html/sysadmin;
             bye
           "
