@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
+        with:
+          node-version: "18"
       - name: Install Heroku CLI
         run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: Deploy Backend to Heroku
@@ -36,30 +38,47 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: 18
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
       - name: Install Dependencies and Build Frontends
         run: |
           cd dinver-frontend && npm install && npm run build
           cd ../admin-frontend && npm install && npm run build
           cd ../sysadmin-frontend && npm install && npm run build
-      - name: Deploy Frontends to Hostinger
+      - name: Deploy dinver-frontend
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASS: ${{ secrets.FTP_PASS }}
         run: |
-          # Deploy dinver-frontend
+          set -e
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
-            mirror -R ./dinver-frontend/build /public_html;
+            set ssl:verify-certificate no;
+            mirror -R ./dinver-frontend/dist /public_html;
             bye
           "
-          # Deploy admin-frontend
+      - name: Deploy admin-frontend
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          set -e
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
-            mirror -R ./admin-frontend/build /admin;
+            set ssl:verify-certificate no;
+            mirror -R ./admin-frontend/dist /public_html/admin;
             bye
           "
-          # Deploy sysadmin-frontend
+      - name: Deploy sysadmin-frontend
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          set -e
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
-            mirror -R ./sysadmin-frontend/build /sysadmin;
+            set ssl:verify-certificate no;
+            mirror -R ./sysadmin-frontend/dist /public_html/sysadmin;
             bye
           "
