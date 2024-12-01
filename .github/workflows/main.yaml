@@ -67,7 +67,7 @@ jobs:
           set -e
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
             set ssl:verify-certificate no;
-            mirror -R ./admin-frontend/dist /home/u851712675/domains/dinverapp.com/public_html/admin;
+            mirror -R ./admin-frontend/dist /public_html/admin;
             bye
           "
       - name: Deploy sysadmin-frontend
@@ -79,6 +79,6 @@ jobs:
           set -e
           lftp -u $FTP_USER,$FTP_PASS $FTP_HOST -e "
             set ssl:verify-certificate no;
-            mirror -R ./sysadmin-frontend/dist /home/u851712675/domains/dinverapp.com/public_html/sysadmin;
+            mirror -R ./sysadmin-frontend/dist /public_html/sysadmin;
             bye
           "
