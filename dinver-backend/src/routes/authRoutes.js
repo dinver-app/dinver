@@ -16,12 +16,16 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               email:
+ *                 type: string
+ *               firstName:
+ *                 type: string
+ *               lastName:
  *                 type: string
  *               password:
  *                 type: string
  *     responses:
- *       200:
+ *       201:
  *         description: User registered successfully
  *       400:
  *         description: Bad request
@@ -41,7 +45,7 @@ router.post('/register', authController.register);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               email:
  *                 type: string
  *               password:
  *                 type: string
