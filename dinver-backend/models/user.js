@@ -13,10 +13,21 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'organizations',
       });
+
+      User.belongsToMany(models.Restaurant, {
+        through: 'UserRestaurants',
+        foreignKey: 'userId',
+        as: 'restaurants',
+      });
     }
   }
   User.init(
     {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
       firstName: DataTypes.STRING,
       lastName: DataTypes.STRING,
       email: {
