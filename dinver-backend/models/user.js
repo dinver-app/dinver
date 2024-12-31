@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       password: DataTypes.STRING,
+      googleId: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: true,
+      },
     },
     {
       sequelize,
