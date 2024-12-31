@@ -1,5 +1,6 @@
 const express = require('express');
 const authController = require('../controllers/authController');
+const passport = require('passport');
 
 const router = express.Router();
 
@@ -56,5 +57,20 @@ router.post('/register', authController.register);
  *         description: Unauthorized
  */
 router.post('/login', authController.login);
+
+router.get(
+  '/auth/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+  }),
+);
+
+router.get(
+  '/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    res.redirect('/');
+  },
+);
 
 module.exports = router;

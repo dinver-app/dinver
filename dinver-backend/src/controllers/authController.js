@@ -1,11 +1,13 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
-    
+
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already exists' });
@@ -43,6 +45,45 @@ const login = async (req, res) => {
     res.status(500).json({ error: 'An error occurred during login' });
   }
 };
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: '/auth/google/callback',
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ where: { googleId: profile.id } });
+        if (!user) {
+          user = await User.create({
+            googleId: profile.id,
+            firstName: profile.name.givenName,
+            lastName: profile.name.familyName,
+            email: profile.emails[0].value,
+          });
+        }
+        done(null, user);
+      } catch (error) {
+        done(error, null);
+      }
+    },
+  ),
+);
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findByPk(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 module.exports = {
   register,
