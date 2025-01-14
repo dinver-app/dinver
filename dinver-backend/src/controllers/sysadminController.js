@@ -150,6 +150,36 @@ async function removeUserFromOrganization(req, res) {
   }
 }
 
+// Add a restaurant to an organization
+async function addRestaurantToOrganization(req, res) {
+  try {
+    const { restaurantId, organizationId } = req.body;
+
+    // Check if the organization exists
+    const organization = await Organization.findByPk(organizationId);
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // Check if the restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Associate the restaurant with the organization
+    await restaurant.update({ organizationId });
+    res
+      .status(200)
+      .json({ message: 'Restaurant added to organization successfully' });
+  } catch (error) {
+    res.status(500).json({
+      error:
+        'An error occurred while adding the restaurant to the organization',
+    });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -159,4 +189,5 @@ module.exports = {
   deleteRestaurant,
   addUserToOrganization,
   removeUserFromOrganization,
+  addRestaurantToOrganization,
 };

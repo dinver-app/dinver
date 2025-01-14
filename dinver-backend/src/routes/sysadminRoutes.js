@@ -320,4 +320,46 @@ router.delete(
   sysadminController.removeUserFromOrganization,
 );
 
+/**
+ * @swagger
+ * /organizations/restaurants:
+ *   post:
+ *     summary: Add a restaurant to an organization
+ *     tags: [Organizations]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               restaurantId:
+ *                 type: string
+ *                 description: The ID of the restaurant
+ *               organizationId:
+ *                 type: string
+ *                 description: The ID of the organization
+ *     responses:
+ *       200:
+ *         description: Restaurant added to organization successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       403:
+ *         description: Access denied. Superadmin only.
+ *       404:
+ *         description: Organization or restaurant not found
+ */
+router.post(
+  '/organizations/restaurants',
+  checkSuperadmin,
+  sysadminController.addRestaurantToOrganization,
+);
+
 module.exports = router;
