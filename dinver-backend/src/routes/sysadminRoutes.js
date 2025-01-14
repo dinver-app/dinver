@@ -1,6 +1,6 @@
 const express = require('express');
 const sysadminController = require('../controllers/sysadminController');
-const { checkSuperadmin } = require('../middleware/roleMiddleware');
+const { checkSysadmin } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -39,7 +39,7 @@ const router = express.Router();
  */
 router.post(
   '/organizations',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.createOrganization,
 );
 
@@ -87,7 +87,7 @@ router.post(
  */
 router.put(
   '/organizations/:id',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.updateOrganization,
 );
 
@@ -116,7 +116,7 @@ router.put(
  */
 router.delete(
   '/organizations/:id',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.deleteOrganization,
 );
 
@@ -161,11 +161,7 @@ router.delete(
  *       403:
  *         description: Access denied. Superadmin only.
  */
-router.post(
-  '/restaurants',
-  checkSuperadmin,
-  sysadminController.createRestaurant,
-);
+router.post('/restaurants', checkSysadmin, sysadminController.createRestaurant);
 
 /**
  * @swagger
@@ -214,7 +210,7 @@ router.post(
  */
 router.put(
   '/restaurants/:id',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.updateRestaurant,
 );
 
@@ -243,7 +239,7 @@ router.put(
  */
 router.delete(
   '/restaurants/:id',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.deleteRestaurant,
 );
 
@@ -283,7 +279,7 @@ router.delete(
  */
 router.post(
   '/organizations/users',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.addUserToOrganization,
 );
 
@@ -316,7 +312,7 @@ router.post(
  */
 router.delete(
   '/organizations/users',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.removeUserFromOrganization,
 );
 
@@ -358,8 +354,54 @@ router.delete(
  */
 router.post(
   '/organizations/restaurants',
-  checkSuperadmin,
+  checkSysadmin,
   sysadminController.addRestaurantToOrganization,
 );
+
+/**
+ * @swagger
+ * /sysadmin/login:
+ *   post:
+ *     summary: Log in as a sysadmin
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The sysadmin's email
+ *               password:
+ *                 type: string
+ *                 description: The sysadmin's password
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Invalid email or password
+ */
+router.post('/sysadmin/login', checkSysadmin, sysadminController.login);
+
+/**
+ * @swagger
+ * /sysadmin/logout:
+ *   get:
+ *     summary: Log out as a sysadmin
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ */
+router.get('/sysadmin/logout', sysadminController.logout);
 
 module.exports = router;

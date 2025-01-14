@@ -2,7 +2,7 @@ const express = require('express');
 const menuCategoryController = require('../controllers/menuCategoryController');
 const menuItemController = require('../controllers/menuItemController');
 const menuController = require('../controllers/menuController');
-const { checkEditorOrAdmin } = require('../middleware/roleMiddleware');
+const { checkAdmin } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -219,11 +219,7 @@ router.get('/categories/:categoryId/items', menuItemController.getItems);
  *       404:
  *         description: Menu category not found
  */
-router.put(
-  '/categories/:id',
-  checkEditorOrAdmin,
-  menuController.updateMenuCategory,
-);
+router.put('/categories/:id', checkAdmin, menuController.updateMenuCategory);
 
 /**
  * @swagger
@@ -282,6 +278,6 @@ router.put(
  *       404:
  *         description: Menu item not found
  */
-router.put('/items/:id', checkEditorOrAdmin, menuController.updateMenuItem);
+router.put('/items/:id', checkAdmin, menuController.updateMenuItem);
 
 module.exports = router;

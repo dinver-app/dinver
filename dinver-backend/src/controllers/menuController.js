@@ -1,4 +1,4 @@
-const { MenuCategory, MenuItem, UserRestaurant } = require('../../models');
+const { MenuCategory, MenuItem } = require('../../models');
 
 async function updateMenuCategory(req, res) {
   try {
@@ -6,19 +6,19 @@ async function updateMenuCategory(req, res) {
     const { name } = req.body;
 
     // Check if the user has edit access to the restaurant
-    const userRest = await UserRestaurant.findOne({
-      where: {
-        userId: req.user.id,
-        restaurantId: req.body.restaurantId,
-        role: 'edit',
-      },
-    });
+    // const userRest = await UserRestaurant.findOne({
+    //   where: {
+    //     userId: req.user.id,
+    //     restaurantId: req.body.restaurantId,
+    //     role: 'edit',
+    //   },
+    // });
 
-    if (!userRest) {
-      return res.status(403).json({
-        error: 'Access denied. Only editors can update menu categories.',
-      });
-    }
+    // if (!userRest) {
+    //   return res.status(403).json({
+    //     error: 'Access denied. Only editors can update menu categories.',
+    //   });
+    // }
 
     const category = await MenuCategory.findByPk(id);
     if (!category) {
@@ -41,19 +41,19 @@ async function updateMenuItem(req, res) {
       req.body;
 
     // Check if the user has edit access to the restaurant
-    const userRest = await UserRestaurant.findOne({
-      where: {
-        userId: req.user.id,
-        restaurantId: req.body.restaurantId,
-        role: 'edit',
-      },
-    });
+    // const userRest = await UserRestaurant.findOne({
+    //   where: {
+    //     userId: req.user.id,
+    //     restaurantId: req.body.restaurantId,
+    //     role: 'edit',
+    //   },
+    // });
 
-    if (!userRest) {
-      return res
-        .status(403)
-        .json({ error: 'Access denied. Only editors can update menu items.' });
-    }
+    // if (!userRest) {
+    //   return res
+    //     .status(403)
+    //     .json({ error: 'Access denied. Only editors can update menu items.' });
+    // }
 
     const item = await MenuItem.findByPk(id);
     if (!item) {

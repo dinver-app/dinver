@@ -1,65 +1,33 @@
-const { UserRestaurant, UserOrganization } = require('../../models');
+const { UserSysadmin, UserAdmin } = require('../../models');
 
-function checkSuperadmin(req, res, next) {
-  if (req.user && req.user.role === 'superadmin') {
-    return next();
-  }
-  return res.status(403).json({ error: 'Access denied. Superadmin only.' });
-}
-
-async function checkEditorOrAdmin(req, res, next) {
+async function checkSysadmin(req, res, next) {
   try {
-    const { restaurantId } = req.body;
-
-    // Ensure the user is authenticated
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
-    }
-
-    // Check if the user is an editor for the restaurant
-    const userRest = await UserRestaurant.findOne({
-      where: { userId: req.user.id, restaurantId, role: 'edit' },
+    const sysadmin = await UserSysadmin.findOne({
+      where: { userId: req.user.id },
     });
 
-    // Check if the user is part of the organization that owns the restaurant
-    const userOrg = await UserOrganization.findOne({
-      where: { userId: req.user.id, organizationId: req.body.organizationId },
-    });
-
-    if (!userRest && !userOrg) {
-      return res.status(403).json({
-        error:
-          'Access denied. Only editors or organization members can perform this action.',
-      });
+    if (!sysadmin) {
+      return res.status(403).json({ error: 'Access denied. Sysadmin only.' });
     }
 
     next();
   } catch (error) {
     res
       .status(500)
-      .json({ error: 'An error occurred while checking permissions.' });
+      .json({ error: 'An error occurred while checking sysadmin privileges.' });
   }
 }
 
 async function checkAdmin(req, res, next) {
   try {
-    const { organizationId } = req.body;
+    const { restaurantId } = req.body;
 
-    // Ensure the user is authenticated
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
-    }
-
-    // Check if the user is part of the organization
-    const userOrg = await UserOrganization.findOne({
-      where: { userId: req.user.id, organizationId },
+    const admin = await UserAdmin.findOne({
+      where: { userId: req.user.id, restaurantId },
     });
 
-    if (!userOrg) {
-      return res.status(403).json({
-        error:
-          'Access denied. Only organization members can perform this action.',
-      });
+    if (!admin) {
+      return res.status(403).json({ error: 'Access denied. Admin only.' });
     }
 
     next();
@@ -71,7 +39,6 @@ async function checkAdmin(req, res, next) {
 }
 
 module.exports = {
-  checkSuperadmin,
-  checkEditorOrAdmin,
+  checkSysadmin,
   checkAdmin,
 };
