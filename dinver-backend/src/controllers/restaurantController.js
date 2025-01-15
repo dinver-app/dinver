@@ -4,6 +4,7 @@ const { recordInsight } = require('./insightController');
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
   try {
+    const { limit = 10, offset = 0 } = req.query;
     const restaurants = await Restaurant.findAll({
       attributes: [
         'name',
@@ -16,6 +17,8 @@ const getAllRestaurants = async (req, res) => {
         'opening_hours',
         'icon_url',
       ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
     res.json(restaurants);
   } catch (error) {

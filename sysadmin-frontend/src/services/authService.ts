@@ -18,5 +18,5 @@ apiClient.interceptors.request.use(
 );
 
 export const login = async (email: string, password: string) => {
-  return apiClient.post("/sysadmin/login", { email, password });
+  return apiClient.post("/api/sysadmin/login", { email, password });
 };

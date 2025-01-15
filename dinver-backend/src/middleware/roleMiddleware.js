@@ -1,11 +1,13 @@
-const { UserSysadmin, UserAdmin } = require('../../models');
+const { UserSysadmin, UserAdmin, User } = require('../../models');
 
 async function checkSysadmin(req, res, next) {
   try {
+    const user = await User.findOne({ where: { email: req.body.email } });
+    console.log(user);
     const sysadmin = await UserSysadmin.findOne({
-      where: { userId: req.user.id },
+      where: { userId: user.id },
     });
-
+    console.log(sysadmin);
     if (!sysadmin) {
       return res.status(403).json({ error: 'Access denied. Sysadmin only.' });
     }

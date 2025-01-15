@@ -1,9 +1,9 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
+import { login } from "../services/authService";
 
 const Login = () => {
   const initialValues = { email: "", password: "" };
@@ -17,11 +17,7 @@ const Login = () => {
 
   const onSubmit = async (values: typeof initialValues) => {
     try {
-      console.log(
-        "Requesting login at:",
-        axios.defaults.baseURL + "/sysadmin/login"
-      );
-      const response = await axios.post("/sysadmin/login", values);
+      const response = await login(values.email, values.password);
       toast.success("Login successful!");
       console.log("Login successful:", response.data);
       // Optionally, redirect to the dashboard or another page
