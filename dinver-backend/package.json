@@ -1,7 +1,7 @@
 {
   "name": "dinver-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "NODE_ENV=development nodemon src/server.js",
