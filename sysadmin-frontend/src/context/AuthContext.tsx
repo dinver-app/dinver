@@ -1,28 +1,57 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import { checkAuth } from "../services/authService";
 
-const AuthContext = createContext({ isAuthenticated: false, isLoading: true });
+interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  setIsAuthenticated: Dispatch<SetStateAction<boolean>>;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
+  recheckAuth: () => void;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  isLoading: true,
+  setIsAuthenticated: () => {},
+  setIsLoading: () => {},
+  recheckAuth: () => {},
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const checkIsAuthenticated = async () => {
-      try {
-        const response = await checkAuth();
-        setIsAuthenticated(response.isAuthenticated);
-      } catch (error) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkIsAuthenticated();
+  const checkIsAuthenticated = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await checkAuth();
+      setIsAuthenticated(response.isAuthenticated);
+    } catch (error) {
+      setIsAuthenticated(false);
+      window.location.href = "/login";
+      window.location.reload();
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        isLoading,
+        setIsAuthenticated,
+        setIsLoading,
+        recheckAuth: checkIsAuthenticated,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

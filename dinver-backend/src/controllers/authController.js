@@ -56,6 +56,11 @@ const login = async (req, res) => {
   }
 };
 
+const logout = (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logout successful' });
+};
+
 const checkAuth = (req, res) => {
   const token = req.cookies.token;
   if (!token) {
@@ -111,5 +116,6 @@ passport.deserializeUser(async (id, done) => {
 module.exports = {
   register,
   login,
+  logout,
   checkAuth,
 };

@@ -3,7 +3,8 @@ import * as Yup from "yup";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-import { login } from "../services/authService";
+import { login, logout } from "../services/authService";
+import { useEffect } from "react";
 
 const Login = () => {
   const initialValues = { email: "", password: "" };
@@ -15,11 +16,17 @@ const Login = () => {
     password: Yup.string().required("Password is required"),
   });
 
+  useEffect(() => {
+    logout();
+  }, []);
+
   const onSubmit = async (values: typeof initialValues) => {
     try {
-      await login(values.email, values.password);
-      toast.success("Login successful!");
-      navigate("/");
+      const response = await login(values.email, values.password);
+      if (response) {
+        toast.success("Login successful!");
+        navigate("/");
+      }
     } catch (error) {
       toast.error("Login failed: Invalid email or password");
       console.error("Login failed:", error);
