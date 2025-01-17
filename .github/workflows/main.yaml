@@ -29,8 +29,3 @@ jobs:
           heroku git:remote -a dinver-backend
           git subtree split --prefix dinver-backend -b heroku-deploy
           git push heroku heroku-deploy:main --force
-      - name: Run Database Migrations
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          heroku run npx sequelize-cli db:migrate --app dinver-backend
