@@ -36,7 +36,7 @@ const Login = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <ToastContainer />
-      <div className="absolute top-10">
+      <div className="absolute top-20">
         <img src="/images/logo__big.svg" alt="Logo" className="h-16" />
       </div>
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mt-20">
