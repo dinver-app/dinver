@@ -204,10 +204,18 @@ async function login(req, res) {
 
     // Generate JWT
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: '1h', // Token expires in 1 hour
+      expiresIn: '1h',
     });
 
-    res.json({ token });
+    // Set the token as an HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 3600000,
+    });
+
+    res.json({ message: 'Login successful' });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }

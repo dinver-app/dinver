@@ -10,11 +10,13 @@ const sysadminRoutes = require('./routes/sysadminRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: 'http://localhost:5173',

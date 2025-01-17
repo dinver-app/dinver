@@ -2,7 +2,8 @@ import axios from "axios";
 
 // Create an axios instance with a base URL
 const apiClient = axios.create({
-  baseURL: "http://localhost:3000", // Ensure this is your backend API URL
+  baseURL: "http://localhost:3000",
+  withCredentials: true,
 });
 
 // Add an interceptor to include the token in the headers
@@ -18,5 +19,18 @@ apiClient.interceptors.request.use(
 );
 
 export const login = async (email: string, password: string) => {
-  return apiClient.post("/api/sysadmin/login", { email, password });
+  try {
+    const response = await apiClient.post("/api/sysadmin/login", {
+      email,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error("Login failed");
+  }
+};
+
+export const checkAuth = async () => {
+  const response = await apiClient.get("/api/auth/check-auth");
+  return response.data;
 };

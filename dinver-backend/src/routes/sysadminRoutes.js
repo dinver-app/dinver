@@ -1,6 +1,9 @@
 const express = require('express');
 const sysadminController = require('../controllers/sysadminController');
-const { checkSysadmin } = require('../middleware/roleMiddleware');
+const {
+  checkSysadmin,
+  authenticateToken,
+} = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -39,7 +42,7 @@ const router = express.Router();
  */
 router.post(
   '/organizations',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.createOrganization,
 );
 
@@ -87,7 +90,7 @@ router.post(
  */
 router.put(
   '/organizations/:id',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.updateOrganization,
 );
 
@@ -116,7 +119,7 @@ router.put(
  */
 router.delete(
   '/organizations/:id',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.deleteOrganization,
 );
 
@@ -161,7 +164,11 @@ router.delete(
  *       403:
  *         description: Access denied. Superadmin only.
  */
-router.post('/restaurants', checkSysadmin, sysadminController.createRestaurant);
+router.post(
+  '/restaurants',
+  authenticateToken,
+  sysadminController.createRestaurant,
+);
 
 /**
  * @swagger
@@ -210,7 +217,7 @@ router.post('/restaurants', checkSysadmin, sysadminController.createRestaurant);
  */
 router.put(
   '/restaurants/:id',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.updateRestaurant,
 );
 
@@ -239,7 +246,7 @@ router.put(
  */
 router.delete(
   '/restaurants/:id',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.deleteRestaurant,
 );
 
@@ -279,7 +286,7 @@ router.delete(
  */
 router.post(
   '/organizations/users',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.addUserToOrganization,
 );
 
@@ -312,7 +319,7 @@ router.post(
  */
 router.delete(
   '/organizations/users',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.removeUserFromOrganization,
 );
 
@@ -354,7 +361,7 @@ router.delete(
  */
 router.post(
   '/organizations/restaurants',
-  checkSysadmin,
+  authenticateToken,
   sysadminController.addRestaurantToOrganization,
 );
 

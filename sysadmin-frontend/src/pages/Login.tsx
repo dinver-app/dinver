@@ -17,10 +17,8 @@ const Login = () => {
 
   const onSubmit = async (values: typeof initialValues) => {
     try {
-      const response = await login(values.email, values.password);
+      await login(values.email, values.password);
       toast.success("Login successful!");
-      console.log("Login successful:", response.data);
-      // Optionally, redirect to the dashboard or another page
       navigate("/");
     } catch (error) {
       toast.error("Login failed: Invalid email or password");
