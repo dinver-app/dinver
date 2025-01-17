@@ -1,5 +1,6 @@
 const express = require('express');
 const restaurantController = require('../controllers/restaurantController');
+const { checkAdmin } = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -83,5 +84,60 @@ router.get('/', restaurantController.getAllRestaurants);
  *         description: Restaurant not found
  */
 router.get('/:id', restaurantController.getRestaurantDetails);
+
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   put:
+ *     summary: Update restaurant details
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               openingHours:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Restaurant updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 openingHours:
+ *                   type: string
+ *       403:
+ *         description: Access denied. Only admins can perform this action.
+ *       404:
+ *         description: Restaurant not found
+ */
+router.put('/:id', checkAdmin, restaurantController.updateRestaurant);
 
 module.exports = router;

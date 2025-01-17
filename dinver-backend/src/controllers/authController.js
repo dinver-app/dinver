@@ -1,3 +1,4 @@
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
@@ -40,10 +41,37 @@ const login = async (req, res) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
+
+    // Set the token as an HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 3600000,
+    });
+
     res.json({ message: 'Login successful', token });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }
+};
+
+const logout = (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logout successful' });
+};
+
+const checkAuth = (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ isAuthenticated: false });
+  }
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ isAuthenticated: false });
+    }
+    res.json({ isAuthenticated: true });
+  });
 };
 
 passport.use(
@@ -88,4 +116,6 @@ passport.deserializeUser(async (id, done) => {
 module.exports = {
   register,
   login,
+  logout,
+  checkAuth,
 };

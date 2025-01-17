@@ -58,6 +58,32 @@ router.post('/register', authController.register);
  */
 router.post('/login', authController.login);
 
+/**
+ * @swagger
+ * /logout:
+ *   get:
+ *     summary: Logout a user
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User logged out successfully
+ */
+router.get('/logout', authController.logout);
+
+/**
+ * @swagger
+ * /check-auth:
+ *   get:
+ *     summary: Check if the user is authenticated
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User is authenticated
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/check-auth', authController.checkAuth);
+
 router.get(
   '/auth/google',
   passport.authenticate('google', {

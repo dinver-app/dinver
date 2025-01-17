@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       User.belongsToMany(models.Restaurant, {
-        through: 'UserRestaurants',
+        through: 'UserAdmins',
         foreignKey: 'userId',
         as: 'restaurants',
       });
@@ -43,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         unique: true,
         allowNull: true,
+      },
+      role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'user',
       },
     },
     {

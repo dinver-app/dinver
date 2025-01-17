@@ -2,15 +2,19 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class UserRestaurant extends Model {
+  class UserAdmin extends Model {
     static associate(models) {
-      UserRestaurant.belongsTo(models.User, {
+      UserAdmin.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'user',
       });
+      UserAdmin.belongsTo(models.Restaurant, {
+        foreignKey: 'restaurantId',
+        as: 'restaurant',
+      });
     }
   }
-  UserRestaurant.init(
+  UserAdmin.init(
     {
       userId: {
         type: DataTypes.UUID,
@@ -28,15 +32,15 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      permission: {
-        type: DataTypes.ENUM('view', 'edit'),
+      role: {
+        type: DataTypes.ENUM('owner', 'admin', 'helper'),
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: 'UserRestaurant',
+      modelName: 'UserAdmin',
     },
   );
-  return UserRestaurant;
+  return UserAdmin;
 };
