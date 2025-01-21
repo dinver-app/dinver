@@ -1,13 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaHome, FaUser, FaCog, FaRegChartBar } from "react-icons/fa";
+import {
+  FaHome,
+  FaUser,
+  FaCog,
+  FaRegChartBar,
+  FaSignOutAlt,
+} from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
-import { CiLogout } from "react-icons/ci";
+import LogoutModal from "./LogoutModal";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isModalOpen, setModalOpen] = useState(false);
 
   const menuItems = [
     { name: "Dashboard", path: "/", icon: <FaHome className="h-4 w-4 mr-3" /> },
@@ -29,11 +36,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const preferenceItems = [
-    {
-      name: "Logs",
-      path: "/logs",
-      icon: <LuLogs className="h-4 w-4 mr-3" />,
-    },
+    { name: "Logs", path: "/logs", icon: <LuLogs className="h-4 w-4 mr-3" /> },
     {
       name: "Settings",
       path: "/settings",
@@ -41,21 +44,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     },
   ];
 
+  const handleLogout = () => {
+    setModalOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setModalOpen(false);
+    navigate("/login");
+  };
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 bg-white text-gray-800 shadow-lg flex flex-col justify-between">
+    <div className={`flex min-h-screen ${"bg-white text-gray-800"}`}>
+      <aside
+        className={`w-64 shadow-lg flex flex-col justify-between ${"bg-white"}`}
+      >
         <div>
-          <div className="p-4 border-b">
-            <img
-              src="/images/logo__big.svg"
-              alt="Logo"
-              className="h-10 mb-4 select-none"
-            />
+          <div className="p-4 border-b select-none">
+            <img src="/images/logo__big.svg" alt="Logo" className="h-10 mb-4" />
           </div>
-          <div className="p-4">
-            <h2 className="text-sm font-semibold text-gray-500 cursor-default select-none">
-              Main Menu
-            </h2>
+          <div className="p-4 select-none">
+            <h2 className="text-sm font-semibold text-gray-500">Main Menu</h2>
           </div>
           <nav className="pb-4">
             <ul>
@@ -76,10 +84,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ))}
             </ul>
           </nav>
-          <div className="p-4 border-t">
-            <h2 className="text-sm font-semibold text-gray-500 cursor-default select-none">
-              Preferences
-            </h2>
+          <div className="p-4 border-t select-none">
+            <h2 className="text-sm font-semibold text-gray-500">Preferences</h2>
           </div>
           <nav className="pb-4">
             <ul>
@@ -103,15 +109,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
         <div className="py-4 border-t">
           <button
-            onClick={() => navigate("/login")}
+            onClick={handleLogout}
             className="flex items-center p-3 pl-4 w-full text-left text-sm font-light hover:bg-gray-100"
           >
-            <CiLogout className="h-4 w-4 mr-3" />
+            <FaSignOutAlt className="h-4 w-4 mr-3" />
             Log Out
           </button>
         </div>
       </aside>
-      <main className="flex-1 p-6 bg-gray-100">{children}</main>
+      <main className="flex-1 p-6">{children}</main>
+      <LogoutModal
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={confirmLogout}
+      />
     </div>
   );
 };
