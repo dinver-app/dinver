@@ -1,12 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  FaHome,
-  FaBuilding,
-  FaUser,
-  FaCog,
-  FaRegChartBar,
-} from "react-icons/fa";
+import { FaHome, FaUser, FaCog, FaRegChartBar } from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 import { CiLogout } from "react-icons/ci";
@@ -21,11 +15,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: "Restaurants",
       path: "/restaurants",
       icon: <IoRestaurant className="h-4 w-4 mr-3" />,
-    },
-    {
-      name: "Organizations",
-      path: "/organizations",
-      icon: <FaBuilding className="h-4 w-4 mr-3" />,
     },
     {
       name: "Users",
