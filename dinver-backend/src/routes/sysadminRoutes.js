@@ -411,4 +411,115 @@ router.post('/login', checkSysadmin, sysadminController.login);
  */
 router.get('/sysadmin/logout', sysadminController.logout);
 
+/**
+ * @swagger
+ * /sysadmins:
+ *   get:
+ *     summary: List all sysadmins
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of sysadmins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: string
+ *                   user:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.get(
+  '/sysadmins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.listSysadmins,
+);
+
+/**
+ * @swagger
+ * /sysadmins:
+ *   post:
+ *     summary: Add a user as a sysadmin
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user to be added as sysadmin
+ *     responses:
+ *       201:
+ *         description: User added as sysadmin successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userId:
+ *                   type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/sysadmins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.addSysadmin,
+);
+
+/**
+ * @swagger
+ * /sysadmins/{userId}:
+ *   delete:
+ *     summary: Remove a user from sysadmins
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user to be removed from sysadmins
+ *     responses:
+ *       204:
+ *         description: Sysadmin removed successfully
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ *       404:
+ *         description: Sysadmin not found
+ */
+router.delete(
+  '/sysadmins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.removeSysadmin,
+);
+
 module.exports = router;

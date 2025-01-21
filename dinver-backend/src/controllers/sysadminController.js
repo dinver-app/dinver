@@ -3,6 +3,7 @@ const {
   Restaurant,
   User,
   UserOrganization,
+  UserSysadmin,
 } = require('../../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -225,6 +226,68 @@ async function logout(req, res) {
   res.status(200).json({ message: 'Logout successful' });
 }
 
+// List all sysadmins
+async function listSysadmins(req, res) {
+  try {
+    const sysadmins = await UserSysadmin.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName'],
+        },
+      ],
+    });
+    res.json(sysadmins);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching sysadmins' });
+  }
+}
+
+// Add a user as a sysadmin
+async function addSysadmin(req, res) {
+  try {
+    const { userId } = req.body;
+
+    // Check if the user exists
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Add the user to the UserSysadmin table
+    const sysadmin = await UserSysadmin.create({ userId });
+    res.status(201).json(sysadmin);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while adding the sysadmin' });
+  }
+}
+
+// Remove a user from sysadmins
+async function removeSysadmin(req, res) {
+  try {
+    const { userId } = req.params;
+
+    // Find the sysadmin record
+    const sysadmin = await UserSysadmin.findOne({ where: { userId } });
+    if (!sysadmin) {
+      return res.status(404).json({ error: 'Sysadmin not found' });
+    }
+
+    // Remove the sysadmin record
+    await sysadmin.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while removing the sysadmin' });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -237,4 +300,7 @@ module.exports = {
   addRestaurantToOrganization,
   login,
   logout,
+  listSysadmins,
+  addSysadmin,
+  removeSysadmin,
 };
