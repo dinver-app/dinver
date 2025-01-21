@@ -249,16 +249,16 @@ async function listSysadmins(req, res) {
 // Add a user as a sysadmin
 async function addSysadmin(req, res) {
   try {
-    const { userId } = req.body;
+    const { email } = req.body;
 
     // Check if the user exists
-    const user = await User.findByPk(userId);
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Add the user to the UserSysadmin table
-    const sysadmin = await UserSysadmin.create({ userId });
+    const sysadmin = await UserSysadmin.create({ userId: user.id });
     res.status(201).json(sysadmin);
   } catch (error) {
     res
@@ -270,10 +270,16 @@ async function addSysadmin(req, res) {
 // Remove a user from sysadmins
 async function removeSysadmin(req, res) {
   try {
-    const { userId } = req.params;
+    const { email } = req.params;
+
+    // Find the user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     // Find the sysadmin record
-    const sysadmin = await UserSysadmin.findOne({ where: { userId } });
+    const sysadmin = await UserSysadmin.findOne({ where: { userId: user.id } });
     if (!sysadmin) {
       return res.status(404).json({ error: 'Sysadmin not found' });
     }

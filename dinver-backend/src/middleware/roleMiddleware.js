@@ -4,12 +4,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 async function checkSysadmin(req, res, next) {
   try {
-    const user = await User.findOne({ where: { email: req.body.email } });
-    console.log(user);
+    const userId = req.user.id;
+
     const sysadmin = await UserSysadmin.findOne({
-      where: { userId: user.id },
+      where: { userId },
     });
-    console.log(sysadmin);
+
     if (!sysadmin) {
       return res.status(403).json({ error: 'Access denied. Sysadmin only.' });
     }

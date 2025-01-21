@@ -4,7 +4,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Restaurants from "./pages/Restaurants";
-import Organizations from "./pages/Organizations";
 import Users from "./pages/Users";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
@@ -28,7 +27,6 @@ function App() {
           >
             <Route path="/" element={<Home />} />
             <Route path="/restaurants" element={<Restaurants />} />
-            <Route path="/organizations" element={<Organizations />} />
             <Route path="/users" element={<Users />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/analytics" element={<Analytics />} />
