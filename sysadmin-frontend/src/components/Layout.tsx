@@ -92,7 +92,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               Preferences
             </h2>
           </div>
-          <nav className="py-4">
+          <nav className="pb-4">
             <ul>
               {preferenceItems.map((item) => (
                 <li key={item.name} className="mb-2">
