@@ -397,7 +397,12 @@ router.post(
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', checkSysadmin, sysadminController.login);
+router.post(
+  '/login',
+  sysadminController.login,
+  authenticateToken,
+  checkSysadmin,
+);
 
 /**
  * @swagger
