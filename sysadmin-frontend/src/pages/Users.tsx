@@ -104,12 +104,16 @@ const Users = () => {
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
             <tr className="text-sm text-black">
-              <th className="py-2 px-4 text-left font-normal">Email</th>
-              <th className="py-2 px-4 text-left font-normal">First Name</th>
-              <th className="py-2 px-4 text-left font-normal">Last Name</th>
-              <th className="py-2 px-4 text-left font-normal">Role</th>
-              <th className="py-2 px-4 text-left font-normal">Created</th>
-              <th className="py-2 px-4 text-left"></th>
+              <th className="py-2 px-4 text-left font-normal w-64">Email</th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                First Name
+              </th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                Last Name
+              </th>
+              <th className="py-2 px-4 text-left font-normal w-48">Role</th>
+              <th className="py-2 px-4 text-left font-normal w-48">Created</th>
+              <th className="py-2 px-4 text-left w-10"></th>
             </tr>
           </thead>
           <tbody>
@@ -118,18 +122,20 @@ const Users = () => {
                 key={user.id}
                 className="hover:bg-gray-100 border-b border-gray-200"
               >
-                <td className="py-2 px-4 text-sm">{user.email}</td>
-                <td className="py-2 px-4 text-sm text-gray-600">
+                <td className="py-2 px-4 text-sm w-64">{user.email}</td>
+                <td className="py-2 px-4 text-sm text-gray-600 w-48">
                   {user.firstName}
                 </td>
-                <td className="py-2 px-4 text-sm text-gray-600">
+                <td className="py-2 px-4 text-sm text-gray-600 w-48">
                   {user.lastName}
                 </td>
-                <td className="py-2 px-4 text-sm text-gray-600">{user.role}</td>
-                <td className="py-2 px-4 text-sm text-gray-600">
+                <td className="py-2 px-4 text-sm text-gray-600 w-48">
+                  {user.role}
+                </td>
+                <td className="py-2 px-4 text-sm text-gray-600 w-48">
                   {format(new Date(user.createdAt || ""), "dd.MM.yyyy")}
                 </td>
-                <td className="py-2 px-4">
+                <td className="py-2 px-4 w-10">
                   <div className="relative" ref={menuRef}>
                     <button
                       onClick={(e) => {

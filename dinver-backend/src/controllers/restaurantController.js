@@ -1,11 +1,28 @@
 const { Restaurant, UserOrganization } = require('../../models');
 const { recordInsight } = require('./insightController');
+const { Op } = require('sequelize');
 
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
   try {
-    const { limit = 10, offset = 0 } = req.query;
-    const restaurants = await Restaurant.findAll({
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const { search } = req.query;
+
+    console.log(search);
+
+    const whereClause = search
+      ? {
+          [Op.or]: [
+            { name: { [Op.iLike]: `%${search}%` } },
+            { address: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+      where: whereClause,
       attributes: [
         'name',
         'address',
@@ -17,10 +34,21 @@ const getAllRestaurants = async (req, res) => {
         'opening_hours',
         'icon_url',
       ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit,
+      offset,
     });
-    res.json(restaurants);
+
+    const restaurantsWithOpenStatus = restaurants.map((restaurant) => ({
+      ...restaurant.get(),
+      isOpen: isRestaurantOpen(restaurant.opening_hours),
+    }));
+
+    res.json({
+      totalRestaurants: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      restaurants: restaurantsWithOpenStatus,
+    });
   } catch (error) {
     res
       .status(500)
@@ -103,6 +131,33 @@ async function updateRestaurant(req, res) {
       .status(500)
       .json({ error: 'An error occurred while updating the restaurant' });
   }
+}
+
+function isRestaurantOpen(openingHours) {
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentTime = now.getHours() * 100 + now.getMinutes();
+
+  if (!openingHours || !openingHours.periods) {
+    return false;
+  }
+
+  for (const period of openingHours.periods) {
+    const openDay = period.open.day;
+    const openTime = parseInt(period.open.time);
+    const closeDay = period.close.day;
+    const closeTime = parseInt(period.close.time);
+
+    if (
+      (currentDay === openDay && currentTime >= openTime) ||
+      (currentDay === closeDay && currentTime < closeTime) ||
+      (openDay < closeDay && currentDay > openDay && currentDay < closeDay) ||
+      (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 module.exports = {

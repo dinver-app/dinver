@@ -1,6 +1,9 @@
 const express = require('express');
 const restaurantController = require('../controllers/restaurantController');
-const { checkAdmin } = require('../middleware/roleMiddleware');
+const {
+  checkAdmin,
+  authenticateToken,
+} = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -39,7 +42,7 @@ const router = express.Router();
  *                   icon_url:
  *                     type: string
  */
-router.get('/', restaurantController.getAllRestaurants);
+router.get('/', authenticateToken, restaurantController.getAllRestaurants);
 
 /**
  * @swagger
