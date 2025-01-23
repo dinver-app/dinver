@@ -1,0 +1,22 @@
+import { User } from "../interfaces/Interfaces";
+import { apiClient } from "./authService";
+
+export const listUsers = async (page: number, search?: string) => {
+  const searchQuery = search ? `&search=${encodeURIComponent(search)}` : "";
+  const response = await apiClient.get(
+    `api/sysadmin/users?page=${page}${searchQuery}`
+  );
+  return response.data;
+};
+
+export const createUser = async (user: User) => {
+  const response = await apiClient.post(`api/sysadmin/users`, user);
+  return response.data;
+};
+
+export const deleteUser = async (email: string) => {
+  const response = await apiClient.delete(`api/sysadmin/users`, {
+    data: { email },
+  });
+  return response.data;
+};

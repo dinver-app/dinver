@@ -4,25 +4,25 @@ export const listSysadmins = async () => {
   try {
     const response = await apiClient.get("api/sysadmin/sysadmins");
     return response.data;
-  } catch (error) {
-    throw new Error("Failed to fetch sysadmins");
+  } catch (error: any) {
+    throw new Error(error.response.data.error);
   }
 };
 
-export const addSysadmin = async (userId: string) => {
+export const addSysadmin = async (email: string) => {
   try {
-    const response = await apiClient.post("api/sysadmin/sysadmins", { userId });
+    const response = await apiClient.post("api/sysadmin/sysadmins", { email });
     return response.data;
-  } catch (error) {
-    throw new Error("Failed to add sysadmin");
+  } catch (error: any) {
+    throw new Error(error.response.data.error);
   }
 };
 
-export const removeSysadmin = async (userId: string) => {
+export const removeSysadmin = async (email: string) => {
   try {
-    const response = await apiClient.delete(`api/sysadmin/sysadmins/${userId}`);
+    const response = await apiClient.delete(`api/sysadmin/sysadmins/${email}`);
     return response.data;
-  } catch (error) {
-    throw new Error("Failed to remove sysadmin");
+  } catch (error: any) {
+    throw new Error(error.response.data.error);
   }
 };

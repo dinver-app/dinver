@@ -6,22 +6,7 @@ import {
 } from "../services/sysadminService";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface Sysadmin {
-  id: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-  user: User;
-}
-
+import { Sysadmin } from "../interfaces/Interfaces";
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
@@ -38,9 +23,9 @@ const Settings = () => {
     try {
       const data = await listSysadmins();
       setSysadmins(data);
-    } catch (error) {
-      toast.error("Failed to fetch sysadmins");
-      console.error("Failed to fetch sysadmins");
+    } catch (error: any) {
+      toast.error(error.message);
+      console.error("Failed to fetch sysadmins", error);
     }
   };
 
@@ -51,19 +36,21 @@ const Settings = () => {
       setModalOpen(false);
       fetchSysadmins();
       toast.success("Sysadmin added successfully");
-    } catch (error) {
-      toast.error("Failed to add sysadmin");
-      console.error("Failed to add sysadmin");
+    } catch (error: any) {
+      toast.error(error.message);
+      console.error("Error object:", error.message);
     }
   };
 
   const handleRemoveSysadmin = async (userId: string) => {
     try {
-      await removeSysadmin(userId);
+      await removeSysadmin(
+        sysadmins.find((sysadmin) => sysadmin.id === userId)?.user.email || ""
+      );
       fetchSysadmins();
       toast.success("Sysadmin removed successfully");
-    } catch (error) {
-      toast.error("Failed to remove sysadmin");
+    } catch (error: any) {
+      toast.error(error.message);
       console.error("Failed to remove sysadmin");
     }
   };
@@ -144,7 +131,7 @@ const Settings = () => {
               Add Sysadmin
             </button>
           </div>
-          <div className=" rounded-lg border border-gray-200">
+          <div className="rounded-lg border border-gray-200">
             <table className="min-w-full bg-white">
               <thead className="bg-gray-100">
                 <tr className="text-sm text-black">
@@ -193,7 +180,7 @@ const Settings = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleRemoveSysadmin(sysadmin.userId);
+                                handleRemoveSysadmin(sysadmin.id);
                               }}
                               className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                             >

@@ -1,8 +1,333 @@
+import { useState, useEffect, useRef } from "react";
+import { listUsers, createUser, deleteUser } from "../services/userService";
+import { format } from "date-fns";
+import { User } from "../interfaces/Interfaces";
+import { toast } from "react-hot-toast";
+
 const Users = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [newUser, setNewUser] = useState({
+    email: "",
+    firstName: "",
+    lastName: "",
+    password: "",
+  });
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    fetchUsers(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
+
+  const fetchUsers = async (page: number, search: string) => {
+    try {
+      const data = await listUsers(page, search);
+      setTotalUsers(data.totalUsers);
+      setUsers(data.users);
+      setTotalPages(data.totalPages);
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleDeleteUser = async (email: string) => {
+    try {
+      await deleteUser(email);
+      fetchUsers(currentPage, searchTerm);
+      setDeleteModalOpen(false);
+      toast.success("User deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete user", error);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      const userToCreate = {
+        ...newUser,
+        role: "user",
+      };
+      await createUser(userToCreate);
+      setModalOpen(false);
+      setNewUser({ email: "", firstName: "", lastName: "", password: "" });
+      fetchUsers(currentPage, searchTerm);
+      toast.success("User created successfully");
+    } catch (error) {
+      console.error("Failed to create user", error);
+    }
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setSelectedUserId(null);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-2xl font-bold mb-4">Users</h1>
-      <p>Manage your users here.</p>
+    <div className="mx-auto p-4">
+      <div className="flex flex-col justify-between items-start mb-4">
+        <h1 className="page-title">Users</h1>
+        <h3 className="page-subtitle">List of all users.</h3>
+      </div>
+      <div className="h-line mb-4"></div>
+      <div className="flex justify-between items-center mb-4">
+        <input
+          type="text"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
+        />
+        <button onClick={() => setModalOpen(true)} className="primary-button">
+          Add User
+        </button>
+      </div>
+      <div className="rounded-lg border border-gray-200">
+        <table className="min-w-full bg-white">
+          <thead className="bg-gray-100">
+            <tr className="text-sm text-black">
+              <th className="py-2 px-4 text-left font-normal">Email</th>
+              <th className="py-2 px-4 text-left font-normal">First Name</th>
+              <th className="py-2 px-4 text-left font-normal">Last Name</th>
+              <th className="py-2 px-4 text-left font-normal">Role</th>
+              <th className="py-2 px-4 text-left font-normal">Created</th>
+              <th className="py-2 px-4 text-left"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr
+                key={user.id}
+                className="hover:bg-gray-100 border-b border-gray-200"
+              >
+                <td className="py-2 px-4 text-sm">{user.email}</td>
+                <td className="py-2 px-4 text-sm text-gray-600">
+                  {user.firstName}
+                </td>
+                <td className="py-2 px-4 text-sm text-gray-600">
+                  {user.lastName}
+                </td>
+                <td className="py-2 px-4 text-sm text-gray-600">{user.role}</td>
+                <td className="py-2 px-4 text-sm text-gray-600">
+                  {format(new Date(user.createdAt || ""), "dd.MM.yyyy")}
+                </td>
+                <td className="py-2 px-4">
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUserId(
+                          selectedUserId === user.id ? null : user.id || null
+                        );
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      &#x22EE;
+                    </button>
+                    {selectedUserId === user.id && (
+                      <div className="absolute top-5 right-0 mt-2 w-48 z-50 bg-white border rounded shadow-lg">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTimeout(() => {
+                              setUserToDelete(user.email);
+                              setDeleteModalOpen(true);
+                            }, 0);
+                            setSelectedUserId(null);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-sm">
+          {(currentPage - 1) * 10 + 1} -{" "}
+          {Math.min(currentPage * 10, totalUsers)} of {totalUsers}
+        </span>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            &lt;
+          </button>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/user.svg"
+                alt="User Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">Add User</h2>
+                <p className="text-sm text-gray-500">
+                  Add a new user to the system.
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, email: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={newUser.firstName}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, firstName: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={newUser.lastName}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, lastName: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                type="password"
+                value={newUser.password}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, password: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button onClick={handleCreateUser} className="primary-button">
+                Add User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteModalOpen && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/trash.svg"
+                alt="Trash Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">Delete User</h2>
+                <p className="text-sm text-gray-500">
+                  Deleting user from the system.
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <p className="text-sm text-black">
+                Are you sure you want to delete the user with email:{" "}
+                <span className="font-bold">{userToDelete}</span>?
+              </p>
+            </div>
+            <div className="h-line"></div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteUser(userToDelete)}
+                className="delete-button"
+              >
+                Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
