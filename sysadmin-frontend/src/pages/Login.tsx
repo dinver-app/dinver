@@ -1,7 +1,6 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { login, logout } from "../services/authService";
 import { useEffect } from "react";
@@ -35,7 +34,6 @@ const Login = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <ToastContainer />
       <div className="absolute top-20">
         <img src="/images/logo__big.svg" alt="Logo" className="h-16" />
       </div>

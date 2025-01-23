@@ -10,10 +10,13 @@ import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import Logs from "./pages/Logs";
 import { ThemeProvider } from "./context/ThemeContext";
+import { Toaster } from "react-hot-toast";
+
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <Toaster />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
