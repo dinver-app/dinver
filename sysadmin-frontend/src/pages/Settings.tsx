@@ -60,11 +60,9 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white  shadow-md rounded-lg">
+    <div className=" mx-auto mt-10 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Sysadmin Management
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-800">Sysadmin Users</h1>
         <button
           onClick={() => setModalOpen(true)}
           className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
@@ -73,7 +71,7 @@ const Settings = () => {
         </button>
       </div>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <table className="min-w-full bg-white">
+      <table className="min-w-full">
         <thead>
           <tr>
             <th className="py-2 px-4 border-b dark:border-gray-700">ID</th>
@@ -105,10 +103,8 @@ const Settings = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-sm w-full p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-              Add New Sysadmin
-            </h2>
+          <div className="bg-white rounded-md shadow-lg max-w-sm w-full p-6">
+            <h2 className="text-lg font-semibold mb-4">Add New Sysadmin</h2>
             <input
               type="email"
               value={newSysadminEmail}
