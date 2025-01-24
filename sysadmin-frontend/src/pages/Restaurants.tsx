@@ -25,6 +25,7 @@ const Restaurants = () => {
   const fetchRestaurants = async (page: number, search: string) => {
     try {
       const data = await getAllRestaurants(page, search);
+      console.log(data.restaurants.length);
       setRestaurants(data.restaurants);
       setTotalPages(data.totalPages);
       setTotalRestaurants(data.totalRestaurants);
@@ -81,7 +82,7 @@ const Restaurants = () => {
           <tbody>
             {restaurants.map((restaurant: Restaurant) => (
               <tr
-                key={restaurant.name}
+                key={restaurant.id}
                 className="hover:bg-gray-100 border-b border-gray-200"
               >
                 <td className="py-3 px-4 text-sm w-32">{restaurant.name}</td>

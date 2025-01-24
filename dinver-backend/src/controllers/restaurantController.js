@@ -10,14 +10,27 @@ const getAllRestaurants = async (req, res) => {
     const offset = (page - 1) * limit;
     const { search } = req.query;
 
-    console.log(search);
+    const generateSearchVariations = (search) => {
+      const variations = [search];
+      const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
+
+      for (const [lower, upper] of Object.entries(replacements)) {
+        if (search.includes(lower)) {
+          variations.push(search.replace(new RegExp(lower, 'g'), upper));
+        }
+      }
+
+      return variations;
+    };
+
+    const searchVariations = generateSearchVariations(search);
 
     const whereClause = search
       ? {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${search}%` } },
-            { address: { [Op.iLike]: `%${search}%` } },
-          ],
+          [Op.or]: searchVariations.flatMap((variation) => [
+            { name: { [Op.iLike]: `%${variation}%` } },
+            { address: { [Op.iLike]: `%${variation}%` } },
+          ]),
         }
       : {};
 
