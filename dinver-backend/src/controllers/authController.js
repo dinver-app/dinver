@@ -47,6 +47,7 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   res.clearCookie('token');
+  res.clearCookie('refreshToken');
   res.json({ message: 'Logout successful' });
 };
 
@@ -114,7 +115,7 @@ function generateTokens(user) {
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
     {
-      expiresIn: '2m',
+      expiresIn: '1h',
     },
   );
 
