@@ -105,8 +105,10 @@ const Restaurants = () => {
       </div>
       <div className="flex justify-between items-center mt-4">
         <span className="text-sm">
-          {(currentPage - 1) * 10 + 1} -{" "}
-          {Math.min(currentPage * 10, totalPages)} of {totalRestaurants}
+          {totalRestaurants !== 0
+            ? (currentPage - 1) * 10 + 1
+            : totalRestaurants}{" "}
+          - {Math.min(currentPage * 10, totalRestaurants)} of {totalRestaurants}
         </span>
         <div className="flex space-x-2">
           <button
