@@ -42,4 +42,5 @@ export interface Restaurant {
   organizationId?: string;
   isOpen?: boolean;
   isClaimed?: boolean;
+  slug?: string;
 }

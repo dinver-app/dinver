@@ -57,9 +57,11 @@ const getAllRestaurants = async (req, res) => {
         'price_level',
         'opening_hours',
         'icon_url',
+        'slug',
       ],
       limit,
       offset,
+      order: [['name', 'ASC']],
     });
 
     const restaurantsWithStatus = await Promise.all(
@@ -96,8 +98,9 @@ const getAllRestaurants = async (req, res) => {
 // Get detailed information for a specific restaurant by ID
 const getRestaurantDetails = async (req, res) => {
   try {
-    const { id } = req.params;
-    const restaurant = await Restaurant.findByPk(id);
+    const { slug } = req.params;
+    console.log(slug);
+    const restaurant = await Restaurant.findOne({ where: { slug } });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
@@ -135,6 +138,34 @@ async function viewRestaurant(req, res) {
   }
 }
 
+const addRestaurant = async (req, res) => {
+  try {
+    const { name, address } = req.body;
+
+    if (!name || !address) {
+      return res.status(400).json({ error: 'Name and address are required' });
+    }
+
+    const slug = await generateSlug(name);
+
+    const newRestaurant = await Restaurant.create({
+      name,
+      address,
+      slug,
+    });
+
+    res.status(201).json({
+      message: 'Restaurant added successfully',
+      restaurant: newRestaurant,
+    });
+  } catch (error) {
+    console.error('Error adding restaurant:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while adding the restaurant' });
+  }
+};
+
 // Update restaurant details
 async function updateRestaurant(req, res) {
   try {
@@ -161,9 +192,15 @@ async function updateRestaurant(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    await restaurant.update({ name, description, address, openingHours });
+    let slug;
+    if (name) {
+      slug = await generateSlug(name);
+    }
+
+    await restaurant.update({ name, description, address, openingHours, slug });
     res.json(restaurant);
   } catch (error) {
+    console.error('Error updating restaurant:', error);
     res
       .status(500)
       .json({ error: 'An error occurred while updating the restaurant' });
@@ -197,28 +234,22 @@ function isRestaurantOpen(openingHours) {
   return false;
 }
 
-const addRestaurant = async (req, res) => {
-  try {
-    const { name, address } = req.body;
+const generateSlug = async (name) => {
+  const baseSlug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w\-]+/g, '');
 
-    const newRestaurant = await Restaurant.create({
-      name,
-      address,
-      latitude: 0,
-      longitude: 0,
-      place_id: 'null',
-    });
+  let slug = baseSlug;
+  let suffix = 1;
 
-    res.status(201).json({
-      message: 'Restaurant added successfully',
-      restaurant: newRestaurant,
-    });
-  } catch (error) {
-    console.error('Error adding restaurant:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while adding the restaurant' });
+  while (await Restaurant.findOne({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
   }
+
+  return slug;
 };
 
 module.exports = {

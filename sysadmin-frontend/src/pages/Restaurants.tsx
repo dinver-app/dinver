@@ -5,6 +5,7 @@ import {
 } from "../services/restaurantService";
 import { Restaurant } from "../interfaces/Interfaces";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const Restaurants = () => {
   const [restaurants, setRestaurants] = useState([]);
@@ -20,6 +21,8 @@ const Restaurants = () => {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchRestaurants(currentPage, searchTerm);
@@ -92,8 +95,9 @@ const Restaurants = () => {
           <tbody>
             {restaurants.map((restaurant: Restaurant) => (
               <tr
-                key={restaurant.id}
-                className="hover:bg-gray-100 border-b border-gray-200"
+                key={restaurant.slug}
+                className="hover:bg-gray-100 border-b border-gray-200 cursor-pointer"
+                onClick={() => navigate(`/restaurants/${restaurant.slug}`)}
               >
                 <td className="py-3 px-4 text-sm w-32">{restaurant.name}</td>
                 <td className="py-3 px-4 text-sm w-48">{restaurant.address}</td>

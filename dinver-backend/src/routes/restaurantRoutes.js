@@ -46,17 +46,17 @@ router.get('/', authenticateToken, restaurantController.getAllRestaurants);
 
 /**
  * @swagger
- * /restaurants/{id}:
+ * /restaurants/{slug}:
  *   get:
- *     summary: Get restaurant details by ID
+ *     summary: Get restaurant details by slug
  *     tags: [Restaurants]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: slug
  *         required: true
  *         schema:
  *           type: string
- *         description: The restaurant ID
+ *         description: The restaurant slug
  *     responses:
  *       200:
  *         description: Restaurant details
@@ -86,7 +86,7 @@ router.get('/', authenticateToken, restaurantController.getAllRestaurants);
  *       404:
  *         description: Restaurant not found
  */
-router.get('/:id', restaurantController.getRestaurantDetails);
+router.get('/:slug', restaurantController.getRestaurantDetails);
 
 /**
  * @swagger

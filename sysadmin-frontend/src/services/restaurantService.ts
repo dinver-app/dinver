@@ -9,6 +9,11 @@ export const getAllRestaurants = async (page: number, search?: string) => {
   return response.data;
 };
 
+export const getRestaurantDetails = async (slug: string) => {
+  const response = await apiClient.get(`api/restaurants/${slug}`);
+  return response.data;
+};
+
 export const createRestaurant = async (restaurant: any) => {
   const response = await apiClient.post("api/restaurants", restaurant);
   return response.data;
