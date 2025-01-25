@@ -159,14 +159,14 @@ const Restaurants = () => {
             </button>
             <div className="flex items-center mb-4 gap-1">
               <img
-                src="/images/user.svg"
-                alt="User Icon"
+                src="/images/restaurant.svg"
+                alt="Restaurant Icon"
                 className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
               />
               <div>
-                <h2 className="text-lg font-semibold">Add User</h2>
+                <h2 className="text-lg font-semibold">Add Restaurant</h2>
                 <p className="text-sm text-gray-500">
-                  Add a new user to the system.
+                  Add a new restaurant to the system.
                 </p>
               </div>
             </div>
