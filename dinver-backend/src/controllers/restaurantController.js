@@ -1,16 +1,25 @@
-const { Restaurant, UserOrganization } = require('../../models');
+const { Restaurant, UserOrganization, UserAdmin } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
   try {
+    const totalRestaurantsCount = await Restaurant.count();
+
+    const claimedRestaurantsCount = await UserAdmin.count({
+      distinct: true,
+      col: 'restaurantId',
+    });
+
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const offset = (page - 1) * limit;
     const { search } = req.query;
 
     const generateSearchVariations = (search) => {
+      if (!search) return [];
+
       const variations = [search];
       const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
 
@@ -25,18 +34,20 @@ const getAllRestaurants = async (req, res) => {
 
     const searchVariations = generateSearchVariations(search);
 
-    const whereClause = search
-      ? {
-          [Op.or]: searchVariations.flatMap((variation) => [
-            { name: { [Op.iLike]: `%${variation}%` } },
-            { address: { [Op.iLike]: `%${variation}%` } },
-          ]),
-        }
-      : {};
+    const whereClause =
+      searchVariations.length > 0
+        ? {
+            [Op.or]: searchVariations.flatMap((variation) => [
+              { name: { [Op.iLike]: `%${variation}%` } },
+              { address: { [Op.iLike]: `%${variation}%` } },
+            ]),
+          }
+        : {};
 
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
       where: whereClause,
       attributes: [
+        'id',
         'name',
         'address',
         'latitude',
@@ -51,18 +62,31 @@ const getAllRestaurants = async (req, res) => {
       offset,
     });
 
-    const restaurantsWithOpenStatus = restaurants.map((restaurant) => ({
-      ...restaurant.get(),
-      isOpen: isRestaurantOpen(restaurant.opening_hours),
-    }));
+    const restaurantsWithStatus = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        const isClaimed = await UserAdmin.findOne({
+          where: { restaurantId: restaurant.id },
+          attributes: ['restaurantId'],
+        });
+
+        return {
+          ...restaurant.get(),
+          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          isClaimed: !!isClaimed,
+        };
+      }),
+    );
 
     res.json({
       totalRestaurants: count,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      restaurants: restaurantsWithOpenStatus,
+      restaurants: restaurantsWithStatus,
+      totalRestaurantsCount,
+      claimedRestaurantsCount,
     });
   } catch (error) {
+    console.error('Error fetching restaurants:', error);
     res
       .status(500)
       .json({ error: 'An error occurred while fetching restaurants' });

@@ -41,4 +41,5 @@ export interface Restaurant {
   updatedAt?: string;
   organizationId?: string;
   isOpen?: boolean;
+  isClaimed?: boolean;
 }

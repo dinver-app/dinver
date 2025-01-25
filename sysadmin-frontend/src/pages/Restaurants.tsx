@@ -11,6 +11,8 @@ const Restaurants = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setModalOpen] = useState(false);
   const [totalRestaurants, setTotalRestaurants] = useState(0);
+  const [claimedRestaurantsCount, setClaimedRestaurantsCount] = useState(0);
+  const [totalRestaurantsCount, setTotalRestaurantsCount] = useState(0);
   const [newRestaurant, setNewRestaurant] = useState<Restaurant>({
     name: "",
     address: "",
@@ -29,6 +31,8 @@ const Restaurants = () => {
       setRestaurants(data.restaurants);
       setTotalPages(data.totalPages);
       setTotalRestaurants(data.totalRestaurants);
+      setClaimedRestaurantsCount(data.claimedRestaurantsCount);
+      setTotalRestaurantsCount(data.totalRestaurantsCount);
     } catch (error) {
       console.error("Failed to fetch restaurants", error);
     }
@@ -75,6 +79,9 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-left font-normal w-48">Address</th>
               <th className="py-2 px-4 text-center font-normal w-20">Rating</th>
               <th className="py-2 px-4 text-center font-normal w-20">
+                Is Claimed
+              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">
                 Is Open
               </th>
             </tr>
@@ -91,6 +98,9 @@ const Restaurants = () => {
                   {restaurant.rating !== undefined && restaurant.rating !== null
                     ? restaurant.rating.toFixed(1)
                     : "-"}
+                </td>
+                <td className="py-3 px-4 text-sm w-20 text-center">
+                  {restaurant.isClaimed ? "Yes" : "No"}
                 </td>
                 <td className="py-3 px-4 text-sm w-20">
                   <div
@@ -127,6 +137,12 @@ const Restaurants = () => {
             &gt;
           </button>
         </div>
+      </div>
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-sm">
+          Claimed restaurants: {claimedRestaurantsCount} of{" "}
+          {totalRestaurantsCount}
+        </span>
       </div>
 
       {isModalOpen && (
