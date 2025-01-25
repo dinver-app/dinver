@@ -143,4 +143,51 @@ router.get('/:id', restaurantController.getRestaurantDetails);
  */
 router.put('/:id', checkAdmin, restaurantController.updateRestaurant);
 
+/**
+ * @swagger
+ * /restaurants:
+ *   post:
+ *     summary: Add a new restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the restaurant
+ *               address:
+ *                 type: string
+ *                 description: The address of the restaurant
+ *     responses:
+ *       201:
+ *         description: Restaurant added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 restaurant:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *       400:
+ *         description: Name and address are required
+ *       500:
+ *         description: An error occurred while adding the restaurant
+ */
+router.post('/', authenticateToken, restaurantController.addRestaurant);
+
 module.exports = router;

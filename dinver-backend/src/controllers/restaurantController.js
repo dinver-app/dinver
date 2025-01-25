@@ -197,9 +197,34 @@ function isRestaurantOpen(openingHours) {
   return false;
 }
 
+const addRestaurant = async (req, res) => {
+  try {
+    const { name, address } = req.body;
+
+    const newRestaurant = await Restaurant.create({
+      name,
+      address,
+      latitude: 0,
+      longitude: 0,
+      place_id: 'null',
+    });
+
+    res.status(201).json({
+      message: 'Restaurant added successfully',
+      restaurant: newRestaurant,
+    });
+  } catch (error) {
+    console.error('Error adding restaurant:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while adding the restaurant' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurantDetails,
   viewRestaurant,
   updateRestaurant,
+  addRestaurant,
 };

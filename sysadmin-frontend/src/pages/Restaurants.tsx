@@ -4,6 +4,7 @@ import {
   createRestaurant,
 } from "../services/restaurantService";
 import { Restaurant } from "../interfaces/Interfaces";
+import toast from "react-hot-toast";
 
 const Restaurants = () => {
   const [restaurants, setRestaurants] = useState([]);
@@ -43,8 +44,10 @@ const Restaurants = () => {
       await createRestaurant(newRestaurant);
       setModalOpen(false);
       fetchRestaurants(currentPage, searchTerm);
+      toast.success("Restaurant added successfully");
     } catch (error) {
       console.error("Failed to create restaurant", error);
+      toast.error("Failed to create restaurant");
     }
   };
 
@@ -154,7 +157,20 @@ const Restaurants = () => {
             >
               &times;
             </button>
-            <h2 className="text-xl font-semibold mb-4">Add Restaurant</h2>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/user.svg"
+                alt="User Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">Add User</h2>
+                <p className="text-sm text-gray-500">
+                  Add a new user to the system.
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
                 Name
@@ -165,7 +181,7 @@ const Restaurants = () => {
                 onChange={(e) =>
                   setNewRestaurant({ ...newRestaurant, name: e.target.value })
                 }
-                className="mt-1 block w-full p-2 border border-gray-300 rounded"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
               />
             </div>
             <div className="mb-4">
@@ -181,19 +197,21 @@ const Restaurants = () => {
                     address: e.target.value,
                   })
                 }
-                className="mt-1 block w-full p-2 border border-gray-300 rounded"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
               />
             </div>
+
+            <div className="h-line"></div>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                className="secondary-button"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateRestaurant}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="primary-button"
               >
                 Add Restaurant
               </button>
