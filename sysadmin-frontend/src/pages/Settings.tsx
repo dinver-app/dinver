@@ -66,10 +66,6 @@ const Settings = () => {
   };
 
   useEffect(() => {
-    console.log(selectedSysadmin);
-  }, [selectedSysadmin]);
-
-  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);

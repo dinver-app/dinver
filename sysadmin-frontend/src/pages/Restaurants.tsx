@@ -85,11 +85,9 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-left font-normal w-48">Address</th>
               <th className="py-2 px-4 text-center font-normal w-20">Rating</th>
               <th className="py-2 px-4 text-center font-normal w-20">
-                Is Claimed
+                Claimed
               </th>
-              <th className="py-2 px-4 text-center font-normal w-20">
-                Is Open
-              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">Open</th>
             </tr>
           </thead>
           <tbody>

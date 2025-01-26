@@ -4,6 +4,7 @@ const {
   checkAdmin,
   authenticateToken,
 } = require('../middleware/roleMiddleware');
+const upload = require('../../utils/uploadMiddleware');
 
 const router = express.Router();
 
@@ -141,7 +142,18 @@ router.get('/:slug', restaurantController.getRestaurantDetails);
  *       404:
  *         description: Restaurant not found
  */
-router.put('/:id', checkAdmin, restaurantController.updateRestaurant);
+router.put(
+  '/:id',
+  (req, res, next) => {
+    console.log(req.body);
+    console.log(req.file);
+    next();
+  },
+  upload.single('thumbnail'),
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateRestaurant,
+);
 
 /**
  * @swagger

@@ -25,3 +25,13 @@ export const deleteRestaurant = async (name: string) => {
   });
   return response.data;
 };
+
+export const updateRestaurant = async (id: string, updatedData: any) => {
+  try {
+    const response = await apiClient.put(`/api/restaurants/${id}`, updatedData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating restaurant:", error);
+    throw error;
+  }
+};

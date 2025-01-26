@@ -32,6 +32,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      thumbnail_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       place_id: {
         type: DataTypes.STRING,
         unique: true,

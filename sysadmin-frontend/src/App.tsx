@@ -4,7 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Restaurants from "./pages/Restaurants";
-import RestaurantDetails from "./pages/RestaurantDetails";
+import RestaurantDetails from "./pages/RestaurantDetails/RestaurantDetails";
 import Users from "./pages/Users";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";

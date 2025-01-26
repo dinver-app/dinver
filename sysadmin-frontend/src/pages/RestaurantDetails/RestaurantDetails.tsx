@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getRestaurantDetails } from "../services/restaurantService";
+import { getRestaurantDetails } from "../../services/restaurantService";
 import toast from "react-hot-toast";
-import GeneralTab from "./RestaurantDetails/GeneralTab";
-import { Restaurant } from "../interfaces/Interfaces";
+import { Restaurant } from "../../interfaces/Interfaces";
+import GeneralTab from "./GeneralTab";
+import MenuTab from "./MenuTab";
+import WorkingHoursTab from "./WorkingHoursTab";
 
 const RestaurantDetails = () => {
   const { slug } = useParams();
@@ -15,7 +17,8 @@ const RestaurantDetails = () => {
     const fetchRestaurantDetails = async () => {
       try {
         if (!slug) {
-          throw new Error("Restaurant slug is required");
+          toast.error("Restaurant slug is required");
+          return;
         }
         const data = await getRestaurantDetails(slug);
         setRestaurant(data);
@@ -28,6 +31,10 @@ const RestaurantDetails = () => {
     fetchRestaurantDetails();
   }, [slug]);
 
+  if (!restaurant) {
+    return <div>Loading...</div>;
+  }
+
   const handleUpdate = (updatedRestaurant: Restaurant) => {
     setRestaurant(updatedRestaurant);
   };
@@ -35,21 +42,15 @@ const RestaurantDetails = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "General":
-        return restaurant ? (
-          <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />
-        ) : null;
+        return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Menu":
-        return <div>Menu details will be displayed here.</div>;
+        return <MenuTab />;
       case "Working Hours":
-        return <div>Working hours information will be displayed here.</div>;
+        return <WorkingHoursTab />;
       default:
         return null;
     }
   };
-
-  if (!restaurant) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="mx-auto p-4">
@@ -63,21 +64,31 @@ const RestaurantDetails = () => {
         <h1 className="text-2xl font-bold">{restaurant.name}</h1>
       </div>
       <div className="h-line mb-4"></div>
-      <div className="tabs flex space-x-4 mb-4">
+      <div className="tabs flex mb-4">
         <button
-          className={`tab ${activeTab === "General" ? "active-tab" : ""}`}
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "General"
+              ? "border-b-2 border-black"
+              : "text-gray-500"
+          }`}
           onClick={() => setActiveTab("General")}
         >
           General
         </button>
         <button
-          className={`tab ${activeTab === "Menu" ? "active-tab" : ""}`}
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "Menu" ? "border-b-2 border-black" : "text-gray-500"
+          }`}
           onClick={() => setActiveTab("Menu")}
         >
           Menu
         </button>
         <button
-          className={`tab ${activeTab === "Working Hours" ? "active-tab" : ""}`}
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "Working Hours"
+              ? "border-b-2 border-black"
+              : "text-gray-500"
+          }`}
           onClick={() => setActiveTab("Working Hours")}
         >
           Working Hours

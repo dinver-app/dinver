@@ -1,6 +1,7 @@
 const { Restaurant, UserOrganization, UserAdmin } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
+const { uploadToS3 } = require('../../utils/s3Upload');
 
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
@@ -169,35 +170,36 @@ const addRestaurant = async (req, res) => {
 // Update restaurant details
 async function updateRestaurant(req, res) {
   try {
+    console.log(req.params);
     const { id } = req.params;
-    const { name, description, address, openingHours } = req.body;
-
-    // Check if the user is an owner of the organization
-    const userOrg = await UserOrganization.findOne({
-      where: {
-        userId: req.user.id,
-        organizationId: req.body.organizationId,
-        role: 'owner',
-      },
-    });
-
-    if (!userOrg) {
-      return res.status(403).json({
-        error: 'Access denied. Only owners can update restaurant details.',
-      });
-    }
+    const { name, description, address } = req.body;
+    console.log(req.file);
+    const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
+    console.log('testttttt');
+    console.log(req.body);
 
-    let slug;
-    if (name) {
-      slug = await generateSlug(name);
+    let thumbnail_url = restaurant.thumbnail_url;
+    if (file) {
+      thumbnail_url = await uploadToS3(file);
     }
 
-    await restaurant.update({ name, description, address, openingHours, slug });
+    const typesArray = req.body.types
+      ? req.body.types.split(',').map((type) => type.trim())
+      : [];
+
+    await restaurant.update({
+      name,
+      thumbnail_url,
+      description,
+      types: typesArray,
+      address,
+    });
+
     res.json(restaurant);
   } catch (error) {
     console.error('Error updating restaurant:', error);
@@ -235,9 +237,16 @@ function isRestaurantOpen(openingHours) {
 }
 
 const generateSlug = async (name) => {
-  const baseSlug = name
+  const normalizedName = name
     .toLowerCase()
     .trim()
+    .replace(/[čć]/g, 'c')
+    .replace(/[š]/g, 's')
+    .replace(/[ž]/g, 'z')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^\w\s-]/g, '');
+
+  const baseSlug = normalizedName
     .replace(/[\s]+/g, '-')
     .replace(/[^\w\-]+/g, '');
 
