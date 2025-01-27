@@ -90,13 +90,22 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         <label className="block text-sm font-medium text-gray-700">
           Thumbnail
         </label>
-        {formData.thumbnail_url && (
+        {formData.thumbnail_url ? (
           <img
             src={formData.thumbnail_url}
             alt="Thumbnail"
-            className="w-32 h-32 object-cover cursor-pointer"
+            className="mb-2 w-32 h-32 object-cover cursor-pointer"
             onClick={handleImageClick}
           />
+        ) : (
+          <div
+            className="mb-2 w-32 h-32 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer"
+            onClick={handleImageClick}
+          >
+            <span className="text-sm text-gray-500 p-2 text-center">
+              Click to add image
+            </span>
+          </div>
         )}
         <input
           id="fileInput"
@@ -117,7 +126,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           }}
         />
         <p className="text-sm text-gray-500">
-          *Click the image to select a new one
+          Click the image to select a new one
         </p>
       </div>
       <div>
