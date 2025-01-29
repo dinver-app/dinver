@@ -1,4 +1,9 @@
-const { Restaurant, UserOrganization, UserAdmin } = require('../../models');
+const {
+  Restaurant,
+  UserOrganization,
+  UserAdmin,
+  FoodType,
+} = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -261,10 +266,24 @@ const generateSlug = async (name) => {
   return slug;
 };
 
+// Get all food types
+async function getAllFoodTypes(req, res) {
+  try {
+    const foodTypes = await FoodType.findAll();
+    res.json(foodTypes);
+  } catch (error) {
+    console.error('Error fetching food types:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching food types' });
+  }
+}
+
 module.exports = {
   getAllRestaurants,
   getRestaurantDetails,
   viewRestaurant,
   updateRestaurant,
   addRestaurant,
+  getAllFoodTypes,
 };

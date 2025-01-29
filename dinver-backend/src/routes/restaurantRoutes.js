@@ -202,4 +202,38 @@ router.put(
  */
 router.post('/', authenticateToken, restaurantController.addRestaurant);
 
+/**
+ * @swagger
+ * /food-types:
+ *   get:
+ *     summary: Retrieve a list of all food types
+ *     tags: [FoodTypes]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of food types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     format: uuid
+ *                   name:
+ *                     type: string
+ *                   icon:
+ *                     type: string
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/food-types',
+  authenticateToken,
+  restaurantController.getAllFoodTypes,
+);
+
 module.exports = router;
