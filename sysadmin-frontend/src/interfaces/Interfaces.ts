@@ -31,6 +31,7 @@ export interface Restaurant {
   is_open_now?: boolean;
   opening_hours?: string;
   types?: string[];
+  venue_perks?: string[];
   icon_url?: string;
   photo_reference?: string;
   vicinity?: string;
@@ -46,4 +47,17 @@ export interface Restaurant {
   isOpen?: boolean;
   isClaimed?: boolean;
   slug?: string;
+  isDirty?: boolean;
+}
+
+export interface FoodType {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface VenuePerk {
+  id: string;
+  name: string;
+  icon: string;
 }

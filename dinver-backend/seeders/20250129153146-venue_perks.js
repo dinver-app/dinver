@@ -87,12 +87,6 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Accessibility & Convenience',
-        icon: '🚗',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
         name: 'Parking Available',
         icon: '🚗',
         createdAt: new Date(),

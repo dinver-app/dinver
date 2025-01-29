@@ -175,18 +175,14 @@ const addRestaurant = async (req, res) => {
 // Update restaurant details
 async function updateRestaurant(req, res) {
   try {
-    console.log(req.params);
     const { id } = req.params;
     const { name, description, address } = req.body;
-    console.log(req.file);
     const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
-    console.log('testttttt');
-    console.log(req.body);
 
     let thumbnail_url = restaurant.thumbnail_url;
     if (file) {
@@ -197,10 +193,15 @@ async function updateRestaurant(req, res) {
       ? req.body.types.split(',').map((type) => type.trim())
       : [];
 
+    const venuePerksArray = req.body.venue_perks
+      ? req.body.venue_perks.split(',').map((perk) => perk.trim())
+      : [];
+
     await restaurant.update({
       name,
       thumbnail_url,
       description,
+      venue_perks: venuePerksArray,
       types: typesArray,
       address,
     });

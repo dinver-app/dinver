@@ -35,3 +35,13 @@ export const updateRestaurant = async (id: string, updatedData: any) => {
     throw error;
   }
 };
+
+export const getAllFoodTypes = async () => {
+  const response = await apiClient.get("api/types/food-types");
+  return response.data;
+};
+
+export const getAllVenuePerks = async () => {
+  const response = await apiClient.get("api/types/venue-perks");
+  return response.data;
+};
