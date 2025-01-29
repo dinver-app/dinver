@@ -1,6 +1,10 @@
 const express = require('express');
 const restaurantController = require('../controllers/restaurantController');
-const { checkAdmin } = require('../middleware/roleMiddleware');
+const {
+  checkAdmin,
+  authenticateToken,
+} = require('../middleware/roleMiddleware');
+const upload = require('../../utils/uploadMiddleware');
 
 const router = express.Router();
 
@@ -39,21 +43,21 @@ const router = express.Router();
  *                   icon_url:
  *                     type: string
  */
-router.get('/', restaurantController.getAllRestaurants);
+router.get('/', authenticateToken, restaurantController.getAllRestaurants);
 
 /**
  * @swagger
- * /restaurants/{id}:
+ * /restaurants/{slug}:
  *   get:
- *     summary: Get restaurant details by ID
+ *     summary: Get restaurant details by slug
  *     tags: [Restaurants]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: slug
  *         required: true
  *         schema:
  *           type: string
- *         description: The restaurant ID
+ *         description: The restaurant slug
  *     responses:
  *       200:
  *         description: Restaurant details
@@ -83,7 +87,7 @@ router.get('/', restaurantController.getAllRestaurants);
  *       404:
  *         description: Restaurant not found
  */
-router.get('/:id', restaurantController.getRestaurantDetails);
+router.get('/:slug', restaurantController.getRestaurantDetails);
 
 /**
  * @swagger
@@ -138,6 +142,98 @@ router.get('/:id', restaurantController.getRestaurantDetails);
  *       404:
  *         description: Restaurant not found
  */
-router.put('/:id', checkAdmin, restaurantController.updateRestaurant);
+router.put(
+  '/:id',
+  (req, res, next) => {
+    console.log(req.body);
+    console.log(req.file);
+    next();
+  },
+  upload.single('thumbnail'),
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateRestaurant,
+);
+
+/**
+ * @swagger
+ * /restaurants:
+ *   post:
+ *     summary: Add a new restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the restaurant
+ *               address:
+ *                 type: string
+ *                 description: The address of the restaurant
+ *     responses:
+ *       201:
+ *         description: Restaurant added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 restaurant:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *       400:
+ *         description: Name and address are required
+ *       500:
+ *         description: An error occurred while adding the restaurant
+ */
+router.post('/', authenticateToken, restaurantController.addRestaurant);
+
+/**
+ * @swagger
+ * /food-types:
+ *   get:
+ *     summary: Retrieve a list of all food types
+ *     tags: [FoodTypes]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of food types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     format: uuid
+ *                   name:
+ *                     type: string
+ *                   icon:
+ *                     type: string
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/food-types',
+  authenticateToken,
+  restaurantController.getAllFoodTypes,
+);
 
 module.exports = router;

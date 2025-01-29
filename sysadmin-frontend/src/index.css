@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .primary-button {
+    @apply bg-green-600 text-white text-sm py-2 px-3 rounded-md hover:bg-green-700;
+  }
+
+  .secondary-button {
+    @apply bg-gray-600 text-white text-sm py-2 px-3 rounded-md hover:bg-gray-700;
+  }
+
+  .delete-button {
+    @apply bg-red-600 text-white text-sm py-2 px-3 rounded-md hover:bg-red-700;
+  }
+
+  .page-title {
+    @apply text-3xl font-bold text-black;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-gray-600;
+  }
+
+  .section-title {
+    @apply text-base font-semibold text-black;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-gray-500;
+  }
+
+  .h-line {
+    @apply h-px w-full bg-gray-200 my-3;
+  }
+}

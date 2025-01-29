@@ -397,7 +397,12 @@ router.post(
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', checkSysadmin, sysadminController.login);
+router.post(
+  '/login',
+  sysadminController.login,
+  authenticateToken,
+  checkSysadmin,
+);
 
 /**
  * @swagger
@@ -410,5 +415,264 @@ router.post('/login', checkSysadmin, sysadminController.login);
  *         description: Logout successful
  */
 router.get('/sysadmin/logout', sysadminController.logout);
+
+/**
+ * @swagger
+ * /sysadmins:
+ *   get:
+ *     summary: List all sysadmins
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of sysadmins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: string
+ *                   user:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.get(
+  '/sysadmins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.listSysadmins,
+);
+
+/**
+ * @swagger
+ * /sysadmins:
+ *   post:
+ *     summary: Add a user as a sysadmin
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user to be added as sysadmin
+ *     responses:
+ *       201:
+ *         description: User added as sysadmin successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userId:
+ *                   type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/sysadmins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.addSysadmin,
+);
+
+/**
+ * @swagger
+ * /sysadmins/{userId}:
+ *   delete:
+ *     summary: Remove a user from sysadmins
+ *     tags: [Sysadmins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user to be removed from sysadmins
+ *     responses:
+ *       204:
+ *         description: Sysadmin removed successfully
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ *       404:
+ *         description: Sysadmin not found
+ */
+router.delete(
+  '/sysadmins/:email',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.removeSysadmin,
+);
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: List users with pagination
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number to retrieve
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalUsers:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.get(
+  '/users',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.listUsers,
+);
+
+/**
+ * @swagger
+ * /users:
+ *   delete:
+ *     summary: Delete a user by email
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email of the user to delete
+ *     responses:
+ *       204:
+ *         description: User deleted successfully
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.delete(
+  '/users',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.deleteUser,
+);
+
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Create a new user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email of the user to create
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 description: The password for the user
+ *                 example: password123
+ *               firstName:
+ *                 type: string
+ *                 description: The first name of the user
+ *                 example: John
+ *               lastName:
+ *                 type: string
+ *                 description: The last name of the user
+ *                 example: Doe
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *       400:
+ *         description: User already exists
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.post(
+  '/users',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.createUser,
+);
 
 module.exports = router;

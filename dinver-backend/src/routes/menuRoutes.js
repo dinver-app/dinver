@@ -1,6 +1,4 @@
 const express = require('express');
-const menuCategoryController = require('../controllers/menuCategoryController');
-const menuItemController = require('../controllers/menuItemController');
 const menuController = require('../controllers/menuController');
 const { checkAdmin } = require('../middleware/roleMiddleware');
 
@@ -48,7 +46,7 @@ const router = express.Router();
  */
 router.post(
   '/restaurants/:restaurantId/categories',
-  menuCategoryController.createCategory,
+  menuController.addMenuCategory,
 );
 
 /**
@@ -83,7 +81,7 @@ router.post(
  */
 router.get(
   '/restaurants/:restaurantId/categories',
-  menuCategoryController.getCategories,
+  menuController.getCategories,
 );
 
 /**
@@ -141,7 +139,7 @@ router.get(
  *       404:
  *         description: Category not found
  */
-router.post('/categories/:categoryId/items', menuItemController.createItem);
+router.post('/categories/:categoryId/items', menuController.addMenuItem);
 
 /**
  * @swagger
@@ -175,7 +173,7 @@ router.post('/categories/:categoryId/items', menuItemController.createItem);
  *                   category_id:
  *                     type: string
  */
-router.get('/categories/:categoryId/items', menuItemController.getItems);
+router.get('/categories/:categoryId/items', menuController.getMenuItems);
 
 /**
  * @swagger
@@ -279,5 +277,17 @@ router.put('/categories/:id', checkAdmin, menuController.updateMenuCategory);
  *         description: Menu item not found
  */
 router.put('/items/:id', checkAdmin, menuController.updateMenuItem);
+
+// Routes for menu categories
+router.post('/categories', menuController.addMenuCategory);
+router.put('/categories/:id', menuController.updateMenuCategory);
+router.delete('/categories/:id', menuController.deleteMenuCategory);
+router.get('/categories/:restaurantId', menuController.getCategories);
+
+// Routes for menu items
+router.post('/items', menuController.addMenuItem);
+router.put('/items/:id', menuController.updateMenuItem);
+router.delete('/items/:id', menuController.deleteMenuItem);
+router.get('/items/:restaurantId', menuController.getMenuItems);
 
 module.exports = router;

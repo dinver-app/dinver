@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Create an axios instance with a base URL
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
   withCredentials: true,
 });
@@ -16,6 +16,21 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle 401 and 403 errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403) &&
+      window.location.pathname !== "/login"
+    ) {
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
 );
 
 export const login = async (email: string, password: string) => {

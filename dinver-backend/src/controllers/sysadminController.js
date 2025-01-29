@@ -3,9 +3,11 @@ const {
   Restaurant,
   User,
   UserOrganization,
+  UserSysadmin,
 } = require('../../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { Op } = require('sequelize');
 
 // Secret key for JWT
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -225,6 +227,173 @@ async function logout(req, res) {
   res.status(200).json({ message: 'Logout successful' });
 }
 
+// List all sysadmins
+async function listSysadmins(req, res) {
+  try {
+    const sysadmins = await UserSysadmin.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName'],
+        },
+      ],
+    });
+    res.json(sysadmins);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching sysadmins' });
+  }
+}
+
+// Add a user as a sysadmin
+async function addSysadmin(req, res) {
+  try {
+    const { email } = req.body;
+
+    // Check if the user exists
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if the user is already a sysadmin
+    const existingSysadmin = await UserSysadmin.findOne({
+      where: { userId: user.id },
+    });
+    if (existingSysadmin) {
+      return res.status(400).json({ error: 'User is already a sysadmin' });
+    }
+
+    // Add the user to the UserSysadmin table
+    const sysadmin = await UserSysadmin.create({ userId: user.id });
+    res.status(201).json(sysadmin);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while adding the sysadmin' });
+  }
+}
+
+// Remove a user from sysadmins
+async function removeSysadmin(req, res) {
+  try {
+    const { email } = req.params;
+    console.log(email);
+    // Find the user
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Find the sysadmin record
+    const sysadmin = await UserSysadmin.findOne({ where: { userId: user.id } });
+    if (!sysadmin) {
+      return res.status(404).json({ error: 'Sysadmin not found' });
+    }
+
+    // Remove the sysadmin record
+    await sysadmin.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while removing the sysadmin' });
+  }
+}
+
+// List users with pagination
+async function listUsers(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const { search } = req.query;
+    console.log(search);
+
+    const whereClause = search
+      ? {
+          [Op.or]: [
+            { email: { [Op.iLike]: `%${search}%` } },
+            { firstName: { [Op.iLike]: `%${search}%` } },
+            { lastName: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    console.log(whereClause);
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where: whereClause,
+      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'createdAt'],
+      limit,
+      offset,
+    });
+
+    res.json({
+      totalUsers: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching users' });
+  }
+}
+
+// Create a new user
+async function createUser(req, res) {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the user
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: 'user',
+    });
+
+    res.status(201).json({ message: 'User created successfully', user });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while creating the user' });
+  }
+}
+
+// Delete a user by email
+async function deleteUser(req, res) {
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete the user
+    await user.destroy();
+    res.status(204).send(); // No content response
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while deleting the user' });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -237,4 +406,10 @@ module.exports = {
   addRestaurantToOrganization,
   login,
   logout,
+  listSysadmins,
+  addSysadmin,
+  removeSysadmin,
+  listUsers,
+  createUser,
+  deleteUser,
 };
