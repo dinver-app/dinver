@@ -190,9 +190,7 @@ const GeneralTab = ({ restaurant }: GeneralTabProps) => {
             }
           }}
         />
-        <p className="text-sm text-gray-500">
-          Click the image to select a new one
-        </p>
+        <p className="text-sm text-gray-500">Click the image to change it</p>
       </div>
       {/* <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
@@ -231,9 +229,9 @@ const GeneralTab = ({ restaurant }: GeneralTabProps) => {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="mt-2 text-blue-500 hover:underline"
+          className="mt-4 primary-button text-xs"
         >
-          Add more types
+          Add
         </button>
       </div>
 
@@ -310,9 +308,9 @@ const GeneralTab = ({ restaurant }: GeneralTabProps) => {
         </div>
         <button
           onClick={() => setIsModalOpen2(true)}
-          className="mt-2 text-blue-500 hover:underline"
+          className="mt-4 primary-button text-xs"
         >
-          Add more venue perks
+          Add
         </button>
       </div>
 

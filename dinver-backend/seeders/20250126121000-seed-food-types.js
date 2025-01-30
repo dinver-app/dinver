@@ -26,7 +26,7 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Steakhouse',
+        name: 'Steak',
         icon: '🥩',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -98,7 +98,7 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Bakery & Pastries',
+        name: 'Bakery Products & Pastries',
         icon: '🍩',
         createdAt: new Date(),
         updatedAt: new Date(),

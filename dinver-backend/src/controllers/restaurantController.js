@@ -280,6 +280,27 @@ async function getAllFoodTypes(req, res) {
   }
 }
 
+async function updateWorkingHours(req, res) {
+  try {
+    const { id } = req.params;
+    const { opening_hours } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({ opening_hours });
+
+    res.json({ message: 'Working hours updated successfully', restaurant });
+  } catch (error) {
+    console.error('Error updating working hours:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating working hours' });
+  }
+}
+
 module.exports = {
   getAllRestaurants,
   getRestaurantDetails,
@@ -287,4 +308,5 @@ module.exports = {
   updateRestaurant,
   addRestaurant,
   getAllFoodTypes,
+  updateWorkingHours,
 };

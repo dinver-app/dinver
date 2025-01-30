@@ -29,7 +29,7 @@ export interface Restaurant {
   user_ratings_total?: number;
   price_level?: number;
   is_open_now?: boolean;
-  opening_hours?: string;
+  opening_hours?: any;
   types?: string[];
   venue_perks?: string[];
   icon_url?: string;

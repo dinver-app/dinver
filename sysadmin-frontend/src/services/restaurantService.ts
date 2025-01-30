@@ -36,6 +36,13 @@ export const updateRestaurant = async (id: string, updatedData: any) => {
   }
 };
 
+export const updateWorkingHours = async (id: string, workingHours: any) => {
+  const response = await apiClient.put(`/api/restaurants/${id}/working-hours`, {
+    opening_hours: workingHours,
+  });
+  return response.data;
+};
+
 export const getAllFoodTypes = async () => {
   const response = await apiClient.get("api/types/food-types");
   return response.data;

@@ -64,7 +64,9 @@ const RestaurantDetails = () => {
       case "Menu":
         return <MenuTab />;
       case "Working Hours":
-        return <WorkingHoursTab />;
+        return (
+          <WorkingHoursTab restaurant={restaurant} onUpdate={handleUpdate} />
+        );
       default:
         return null;
     }
@@ -72,7 +74,7 @@ const RestaurantDetails = () => {
 
   return (
     <div className="mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 gap-4">
         <button
           onClick={() => navigate("/restaurants")}
           className="secondary-button"

@@ -157,6 +157,55 @@ router.put(
 
 /**
  * @swagger
+ * /restaurants/{id}/working-hours:
+ *   put:
+ *     summary: Update restaurant working hours
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               opening_hours:
+ *                 type: object
+ *                 description: The opening hours of the restaurant
+ *     responses:
+ *       200:
+ *         description: Working hours updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 restaurant:
+ *                   type: object
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while updating working hours
+ */
+router.put(
+  '/:id/working-hours',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateWorkingHours,
+);
+
+/**
+ * @swagger
  * /restaurants:
  *   post:
  *     summary: Add a new restaurant
