@@ -23,8 +23,7 @@ const router = express.Router();
  *                 type: object
  *                 properties:
  *                   id:
- *                     type: string
- *                     format: uuid
+ *                     type: integer
  *                   name:
  *                     type: string
  *                   icon:
@@ -36,15 +35,15 @@ router.get('/food-types', authenticateToken, typeController.getAllFoodTypes);
 
 /**
  * @swagger
- * /venue-types:
+ * /establishment-types:
  *   get:
- *     summary: Retrieve a list of all venue types
- *     tags: [VenueTypes]
+ *     summary: Retrieve a list of all establishment types
+ *     tags: [EstablishmentTypes]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of venue types
+ *         description: A list of establishment types
  *         content:
  *           application/json:
  *             schema:
@@ -53,8 +52,7 @@ router.get('/food-types', authenticateToken, typeController.getAllFoodTypes);
  *                 type: object
  *                 properties:
  *                   id:
- *                     type: string
- *                     format: uuid
+ *                     type: integer
  *                   name:
  *                     type: string
  *                   icon:
@@ -62,6 +60,43 @@ router.get('/food-types', authenticateToken, typeController.getAllFoodTypes);
  *       500:
  *         description: Server error
  */
-router.get('/venue-perks', authenticateToken, typeController.getAllVenuePerks);
+router.get(
+  '/establishment-types',
+  authenticateToken,
+  typeController.getAllEstablishmentTypes,
+);
+
+/**
+ * @swagger
+ * /establishment-perks:
+ *   get:
+ *     summary: Retrieve a list of all establishment perks
+ *     tags: [EstablishmentPerks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of establishment perks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   icon:
+ *                     type: string
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/establishment-perks',
+  authenticateToken,
+  typeController.getAllEstablishmentPerks,
+);
 
 module.exports = router;

@@ -3,55 +3,13 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // First, delete all existing entries in the VenuePerks table
-    await queryInterface.bulkDelete('VenuePerks', null, {});
+    // First, delete all existing entries in the EstablishmentPerks table
+    await queryInterface.bulkDelete('EstablishmentPerk', null, {});
 
-    // Then, insert the new venue perks
-    return queryInterface.bulkInsert('VenuePerks', [
+    // Then, insert the new establishment perks
+    return queryInterface.bulkInsert('EstablishmentPerk', [
       {
-        name: 'Pub / Beer Bar',
-        icon: '🍺',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Wine Bar',
-        icon: '🍷',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Cocktail Bar',
-        icon: '🍹',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Nightclub',
-        icon: '🕺',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Fine Dining',
-        icon: '🍽',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Hotel Restaurant',
-        icon: '🏨',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Beach Restaurant',
-        icon: '🏖',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Rooftop Restaurant',
+        name: 'Rooftop View',
         icon: '🏞',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -63,14 +21,8 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Beachfront Location',
+        name: 'Beachfront',
         icon: '🏖',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Historical / Unique Interior',
-        icon: '🏰',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -81,7 +33,7 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Themed Restaurant',
+        name: 'Themed Establishment',
         icon: '🎭',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -135,25 +87,19 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Home Delivery',
-        icon: '🏡',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Express Service (Quick Bites)',
+        name: 'Quick Bites',
         icon: '🚀',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name: 'Family & Pets',
-        icon: '🏡',
+        name: 'Play Areas',
+        icon: '🎢',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name: 'Kid-Friendly',
+        name: 'Childrens Menu',
         icon: '👶',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -195,32 +141,8 @@ module.exports = {
         updatedAt: new Date(),
       },
       {
-        name: 'Serves Alcohol',
-        icon: '🍷',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Vegan Menu Available',
-        icon: '🥑',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Gluten-Free Options',
-        icon: '🌾',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
         name: 'Spicy Food Lovers',
-        icon: '🔥',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        name: 'Premium Meat Cuts',
-        icon: '🥩',
+        icon: '🌶',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -246,6 +168,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    return queryInterface.bulkDelete('VenuePerks', null, {});
+    return queryInterface.bulkDelete('EstablishmentPerk', null, {});
   },
 };

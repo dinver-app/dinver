@@ -1,17 +1,17 @@
-'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  class VenuePerks extends Model {
+  class EstablishmentPerk extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // Define associations here if needed
     }
   }
-  VenuePerks.init(
+  EstablishmentPerk.init(
     {
       id: {
         type: DataTypes.INTEGER,
@@ -29,8 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'VenuePerks',
+      modelName: 'EstablishmentPerk',
     },
   );
-  return VenuePerks;
+  return EstablishmentPerk;
 };
