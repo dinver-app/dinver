@@ -5,8 +5,14 @@ module.exports = (sequelize, DataTypes) => {
   class MenuItem extends Model {
     static associate(models) {
       MenuItem.belongsTo(models.MenuCategory, {
-        foreignKey: 'category_id',
+        foreignKey: 'categoryId',
         as: 'category',
+      });
+      MenuItem.belongsTo(models.Restaurant, {
+        foreignKey: 'restaurantId',
+        as: 'restaurant',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
       });
     }
   }
@@ -17,11 +23,19 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      category_id: {
+      categoryId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'MenuCategories',
+          key: 'id',
+        },
+      },
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: 'MenuCategories',
+          model: 'Restaurants',
           key: 'id',
         },
       },
@@ -33,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL,
         allowNull: false,
       },
-      image_url: {
+      imageUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },

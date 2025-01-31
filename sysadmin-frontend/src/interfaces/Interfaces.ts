@@ -68,3 +68,18 @@ export interface EstablishmentPerk {
   name: string;
   icon: string;
 }
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  restaurantId: string;
+  categoryId: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  restaurantId: string;
+  menuItems: MenuItem[];
+}

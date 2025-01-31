@@ -19,6 +19,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'users',
       });
+
+      Restaurant.hasMany(models.MenuItem, {
+        foreignKey: 'restaurantId',
+        as: 'menuItems',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+      });
     }
   }
   Restaurant.init(

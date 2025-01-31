@@ -1,217 +1,133 @@
-const { MenuCategory, MenuItem } = require('../../models');
+const { MenuItem, MenuCategory } = require('../../models');
 
-// Add a new menu category
-async function addMenuCategory(req, res) {
-  try {
-    const { name, restaurantId } = req.body;
-
-    const newCategory = await MenuCategory.create({ name, restaurantId });
-    res.status(201).json(newCategory);
-  } catch (error) {
-    console.error('Error adding menu category:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while adding the menu category' });
-  }
-}
-
-// Update an existing menu category
-async function updateMenuCategory(req, res) {
-  try {
-    const { id } = req.params;
-    const { name } = req.body;
-
-    // Check if the user has edit access to the restaurant
-    // const userRest = await UserRestaurant.findOne({
-    //   where: {
-    //     userId: req.user.id,
-    //     restaurantId: req.body.restaurantId,
-    //     role: 'edit',
-    //   },
-    // });
-
-    // if (!userRest) {
-    //   return res.status(403).json({
-    //     error: 'Access denied. Only editors can update menu categories.',
-    //   });
-    // }
-
-    const category = await MenuCategory.findByPk(id);
-    if (!category) {
-      return res.status(404).json({ error: 'Menu category not found' });
-    }
-
-    await category.update({ name });
-    res.json(category);
-  } catch (error) {
-    console.error('Error updating menu category:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while updating the menu category' });
-  }
-}
-
-// Delete a menu category
-async function deleteMenuCategory(req, res) {
-  try {
-    const { id } = req.params;
-
-    const category = await MenuCategory.findByPk(id);
-    if (!category) {
-      return res.status(404).json({ error: 'Menu category not found' });
-    }
-
-    await category.destroy();
-    res.status(204).send();
-  } catch (error) {
-    console.error('Error deleting menu category:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while deleting the menu category' });
-  }
-}
-
-// Add a new menu item
-async function addMenuItem(req, res) {
-  try {
-    const {
-      name,
-      price,
-      image_url,
-      ingredients,
-      allergens,
-      description,
-      categoryId,
-    } = req.body;
-
-    const newItem = await MenuItem.create({
-      name,
-      price,
-      image_url,
-      ingredients,
-      allergens,
-      description,
-      categoryId,
-    });
-    res.status(201).json(newItem);
-  } catch (error) {
-    console.error('Error adding menu item:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while adding the menu item' });
-  }
-}
-
-// Update an existing menu item
-async function updateMenuItem(req, res) {
-  try {
-    const { id } = req.params;
-    const { name, price, image_url, ingredients, allergens, description } =
-      req.body;
-
-    // Check if the user has edit access to the restaurant
-    // const userRest = await UserRestaurant.findOne({
-    //   where: {
-    //     userId: req.user.id,
-    //     restaurantId: req.body.restaurantId,
-    //     role: 'edit',
-    //   },
-    // });
-
-    // if (!userRest) {
-    //   return res
-    //     .status(403)
-    //     .json({ error: 'Access denied. Only editors can update menu items.' });
-    // }
-
-    const item = await MenuItem.findByPk(id);
-    if (!item) {
-      return res.status(404).json({ error: 'Menu item not found' });
-    }
-
-    await item.update({
-      name,
-      price,
-      image_url,
-      ingredients,
-      allergens,
-      description,
-    });
-    res.json(item);
-  } catch (error) {
-    console.error('Error updating menu item:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while updating the menu item' });
-  }
-}
-
-// Delete a menu item
-async function deleteMenuItem(req, res) {
-  try {
-    const { id } = req.params;
-
-    const item = await MenuItem.findByPk(id);
-    if (!item) {
-      return res.status(404).json({ error: 'Menu item not found' });
-    }
-
-    await item.destroy();
-    res.status(204).send();
-  } catch (error) {
-    console.error('Error deleting menu item:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while deleting the menu item' });
-  }
-}
-
-// Get all categories for a restaurant
-async function getCategories(req, res) {
+// Get all menu items for a specific restaurant
+exports.getMenuItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-
-    const categories = await MenuCategory.findAll({
+    const menuItems = await MenuItem.findAll({
       where: { restaurantId },
     });
 
-    res.json(categories);
+    // Format price for each menu item before sending the response
+    const formattedMenuItems = menuItems.map((item) => ({
+      ...item.toJSON(),
+      price: parseFloat(item.price).toFixed(2),
+    }));
+    res.json(formattedMenuItems);
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching categories' });
+    res.status(500).json({ error: 'Failed to fetch menu items' });
   }
-}
+};
 
-// Get all menu items for a restaurant
-async function getMenuItems(req, res) {
+// Get all categories for a specific restaurant
+exports.getCategoryItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const categories = await MenuCategory.findAll({
+      where: { restaurantId },
+    });
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+};
 
-    const items = await MenuItem.findAll({
-      include: {
-        model: MenuCategory,
-        where: { restaurantId },
-      },
+// Create a new menu item for a specific restaurant
+exports.createMenuItem = async (req, res) => {
+  try {
+    const { name, price, categoryId, restaurantId } = req.body;
+    const formattedPrice = parseFloat(price).toFixed(2);
+    const menuItem = await MenuItem.create({
+      name,
+      price: formattedPrice,
+      restaurantId: restaurantId,
+      categoryId: categoryId,
+    });
+    console.log(menuItem);
+    res.status(201).json(menuItem);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create menu item' });
+  }
+};
+
+// Update an existing menu item
+exports.updateMenuItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, categoryId } = req.body;
+    const menuItem = await MenuItem.findByPk(id);
+    if (!menuItem) {
+      return res.status(404).json({ error: 'Menu item not found' });
+    }
+    const formattedPrice = parseFloat(price).toFixed(2); // Format price to two decimal places
+    menuItem.name = name;
+    menuItem.price = formattedPrice;
+    menuItem.categoryId = categoryId;
+    await menuItem.save();
+    res.json(menuItem);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update menu item' });
+  }
+};
+
+// Delete a menu item
+exports.deleteMenuItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const menuItem = await MenuItem.findByPk(id);
+    if (!menuItem) {
+      return res.status(404).json({ error: 'Menu item not found' });
+    }
+    await menuItem.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete menu item' });
+  }
+};
+
+// Create a new category for a specific restaurant
+exports.createCategory = async (req, res) => {
+  try {
+    const { name, restaurantId } = req.body;
+    const category = await MenuCategory.create({
+      name,
+      restaurantId: restaurantId,
     });
 
-    res.json(items);
+    res.status(201).json(category);
   } catch (error) {
-    console.error('Error fetching menu items:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching menu items' });
+    res.status(500).json({ error: 'Failed to create category' });
   }
-}
+};
 
-module.exports = {
-  addMenuCategory,
-  updateMenuCategory,
-  deleteMenuCategory,
-  addMenuItem,
-  updateMenuItem,
-  deleteMenuItem,
-  getCategories,
-  getMenuItems,
+// Update an existing category
+exports.updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const category = await MenuCategory.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    category.name = name;
+    await category.save();
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update category' });
+  }
+};
+
+// Delete a category
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const category = await MenuCategory.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    await category.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete category' });
+  }
 };

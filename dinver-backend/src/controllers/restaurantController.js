@@ -292,8 +292,6 @@ async function updateFilters(req, res) {
     const { id } = req.params;
     const { food_types, establishment_types, establishment_perks } = req.body;
 
-    console.log('establishmentTypes', establishment_types);
-
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });

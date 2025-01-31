@@ -63,7 +63,7 @@ const RestaurantDetails = () => {
       case "General":
         return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Menu":
-        return <MenuTab />;
+        return <MenuTab restaurantId={restaurant.id} />;
       case "Filters":
         return <FiltersTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Working Hours":

@@ -1,22 +1,18 @@
 const express = require('express');
 const menuController = require('../controllers/menuController');
-const { checkAdmin } = require('../middleware/roleMiddleware');
+const {
+  checkAdmin,
+  authenticateToken,
+} = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
 /**
  * @swagger
- * /restaurants/{restaurantId}/categories:
+ * /categories:
  *   post:
- *     summary: Create a new menu category for a restaurant
- *     tags: [Menu Categories]
- *     parameters:
- *       - in: path
- *         name: restaurantId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the restaurant
+ *     summary: Create a new category
+ *     tags: [Menu]
  *     requestBody:
  *       required: true
  *       content:
@@ -26,170 +22,32 @@ const router = express.Router();
  *             properties:
  *               name:
  *                 type: string
- *                 description: The name of the category
  *     responses:
  *       201:
  *         description: Category created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 name:
- *                   type: string
- *                 restaurant_id:
- *                   type: string
- *       404:
- *         description: Restaurant not found
+ *       500:
+ *         description: Failed to create category
  */
 router.post(
-  '/restaurants/:restaurantId/categories',
-  menuController.addMenuCategory,
+  '/categories',
+  authenticateToken,
+  checkAdmin,
+  menuController.createCategory,
 );
-
-/**
- * @swagger
- * /restaurants/{restaurantId}/categories:
- *   get:
- *     summary: Get all menu categories for a restaurant
- *     tags: [Menu Categories]
- *     parameters:
- *       - in: path
- *         name: restaurantId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the restaurant
- *     responses:
- *       200:
- *         description: A list of categories
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   name:
- *                     type: string
- *                   restaurant_id:
- *                     type: string
- */
-router.get(
-  '/restaurants/:restaurantId/categories',
-  menuController.getCategories,
-);
-
-/**
- * @swagger
- * /categories/{categoryId}/items:
- *   post:
- *     summary: Create a new menu item in a category
- *     tags: [Menu Items]
- *     parameters:
- *       - in: path
- *         name: categoryId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the category
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               price:
- *                 type: number
- *               image_url:
- *                 type: string
- *               ingredients:
- *                 type: array
- *                 items:
- *                   type: string
- *               allergens:
- *                 type: array
- *                 items:
- *                   type: string
- *               description:
- *                 type: string
- *     responses:
- *       201:
- *         description: Item created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 name:
- *                   type: string
- *                 price:
- *                   type: number
- *                 category_id:
- *                   type: string
- *       404:
- *         description: Category not found
- */
-router.post('/categories/:categoryId/items', menuController.addMenuItem);
-
-/**
- * @swagger
- * /categories/{categoryId}/items:
- *   get:
- *     summary: Get all menu items in a category
- *     tags: [Menu Items]
- *     parameters:
- *       - in: path
- *         name: categoryId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the category
- *     responses:
- *       200:
- *         description: A list of items
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   name:
- *                     type: string
- *                   price:
- *                     type: number
- *                   category_id:
- *                     type: string
- */
-router.get('/categories/:categoryId/items', menuController.getMenuItems);
 
 /**
  * @swagger
  * /categories/{id}:
  *   put:
- *     summary: Update a menu category
- *     tags: [Menu Categories]
- *     security:
- *       - bearerAuth: []
+ *     summary: Update an existing category
+ *     tags: [Menu]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: The ID of the category to update
  *         schema:
  *           type: string
- *         description: The category ID
  *     requestBody:
  *       required: true
  *       content:
@@ -199,41 +57,55 @@ router.get('/categories/:categoryId/items', menuController.getMenuItems);
  *             properties:
  *               name:
  *                 type: string
- *                 description: The new name of the category
  *     responses:
  *       200:
  *         description: Category updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 name:
- *                   type: string
- *       403:
- *         description: Access denied. Only editors or organization members can perform this action.
  *       404:
- *         description: Menu category not found
+ *         description: Category not found
+ *       500:
+ *         description: Failed to update category
  */
-router.put('/categories/:id', checkAdmin, menuController.updateMenuCategory);
+router.put(
+  '/categories/:id',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateCategory,
+);
 
 /**
  * @swagger
- * /items/{id}:
- *   put:
- *     summary: Update a menu item
- *     tags: [Menu Items]
- *     security:
- *       - bearerAuth: []
+ * /categories/{id}:
+ *   delete:
+ *     summary: Delete a category
+ *     tags: [Menu]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: The ID of the category to delete
  *         schema:
  *           type: string
- *         description: The item ID
+ *     responses:
+ *       204:
+ *         description: Category deleted successfully
+ *       404:
+ *         description: Category not found
+ *       500:
+ *         description: Failed to delete category
+ */
+router.delete(
+  '/categories/:id',
+  authenticateToken,
+  checkAdmin,
+  menuController.deleteCategory,
+);
+
+/**
+ * @swagger
+ * /menuItems:
+ *   post:
+ *     summary: Create a new menu item
+ *     tags: [Menu]
  *     requestBody:
  *       required: true
  *       content:
@@ -245,49 +117,104 @@ router.put('/categories/:id', checkAdmin, menuController.updateMenuCategory);
  *                 type: string
  *               price:
  *                 type: number
- *               image_url:
+ *               restaurantId:
  *                 type: string
- *               ingredients:
- *                 type: array
- *                 items:
- *                   type: string
- *               allergens:
- *                 type: array
- *                 items:
- *                   type: string
- *               description:
+ *               categoryId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Menu item created successfully
+ *       500:
+ *         description: Failed to create menu item
+ */
+router.post(
+  '/menuItems',
+  authenticateToken,
+  checkAdmin,
+  menuController.createMenuItem,
+);
+
+/**
+ * @swagger
+ * /menuItems/{id}:
+ *   put:
+ *     summary: Update an existing menu item
+ *     tags: [Menu]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the menu item to update
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               categoryId:
  *                 type: string
  *     responses:
  *       200:
- *         description: Item updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 name:
- *                   type: string
- *                 price:
- *                   type: number
- *       403:
- *         description: Access denied. Only editors or organization members can perform this action.
+ *         description: Menu item updated successfully
  *       404:
  *         description: Menu item not found
+ *       500:
+ *         description: Failed to update menu item
  */
-router.put('/items/:id', checkAdmin, menuController.updateMenuItem);
+router.put(
+  '/menuItems/:id',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateMenuItem,
+);
 
-// Routes for menu categories
-router.post('/categories', menuController.addMenuCategory);
-router.put('/categories/:id', menuController.updateMenuCategory);
-router.delete('/categories/:id', menuController.deleteMenuCategory);
-router.get('/categories/:restaurantId', menuController.getCategories);
+/**
+ * @swagger
+ * /menuItems/{id}:
+ *   delete:
+ *     summary: Delete a menu item
+ *     tags: [Menu]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the menu item to delete
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Menu item deleted successfully
+ *       404:
+ *         description: Menu item not found
+ *       500:
+ *         description: Failed to delete menu item
+ */
+router.delete(
+  '/menuItems/:id',
+  authenticateToken,
+  checkAdmin,
+  menuController.deleteMenuItem,
+);
 
-// Routes for menu items
-router.post('/items', menuController.addMenuItem);
-router.put('/items/:id', menuController.updateMenuItem);
-router.delete('/items/:id', menuController.deleteMenuItem);
-router.get('/items/:restaurantId', menuController.getMenuItems);
+// New routes for fetching menu items and categories
+router.get(
+  '/menuItems/:restaurantId',
+  authenticateToken,
+  checkAdmin,
+  menuController.getMenuItems,
+);
+router.get(
+  '/categories/:restaurantId',
+  authenticateToken,
+  checkAdmin,
+  menuController.getCategoryItems,
+);
 
 module.exports = router;
