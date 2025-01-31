@@ -43,12 +43,25 @@ export const updateWorkingHours = async (id: string, workingHours: any) => {
   return response.data;
 };
 
+export const updateFilters = async (id: string, filters: any) => {
+  const response = await apiClient.put(
+    `/api/restaurants/${id}/filters`,
+    filters
+  );
+  return response.data;
+};
+
 export const getAllFoodTypes = async () => {
   const response = await apiClient.get("api/types/food-types");
   return response.data;
 };
 
-export const getAllVenuePerks = async () => {
-  const response = await apiClient.get("api/types/venue-perks");
+export const getAllEstablishmentTypes = async () => {
+  const response = await apiClient.get("api/types/establishment-types");
+  return response.data;
+};
+
+export const getAllEstablishmentPerks = async () => {
+  const response = await apiClient.get("api/types/establishment-perks");
   return response.data;
 };

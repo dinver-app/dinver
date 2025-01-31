@@ -2,9 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('EstablishmentType', null, {});
-
-    return queryInterface.bulkInsert('EstablishmentType', [
+    return queryInterface.bulkInsert('EstablishmentTypes', [
       {
         name: 'Restaurant',
         icon: '🍽',
@@ -99,6 +97,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    return queryInterface.bulkDelete('EstablishmentType', null, {});
+    return queryInterface.bulkDelete('EstablishmentTypes', null, {});
   },
 };

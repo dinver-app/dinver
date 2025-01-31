@@ -30,8 +30,9 @@ export interface Restaurant {
   price_level?: number;
   is_open_now?: boolean;
   opening_hours?: any;
-  types?: string[];
-  venue_perks?: string[];
+  food_types?: number[];
+  establishment_types?: number[];
+  establishment_perks?: number[];
   icon_url?: string;
   photo_reference?: string;
   vicinity?: string;
@@ -51,13 +52,19 @@ export interface Restaurant {
 }
 
 export interface FoodType {
-  id: string;
+  id: number;
   name: string;
   icon: string;
 }
 
-export interface VenuePerk {
-  id: string;
+export interface EstablishmentType {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export interface EstablishmentPerk {
+  id: number;
   name: string;
   icon: string;
 }

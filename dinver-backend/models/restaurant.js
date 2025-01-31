@@ -117,8 +117,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
-      venue_perks: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+      food_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      establishment_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      establishment_perks: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
     },

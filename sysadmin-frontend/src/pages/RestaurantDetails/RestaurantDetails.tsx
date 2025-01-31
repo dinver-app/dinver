@@ -6,6 +6,7 @@ import { Restaurant } from "../../interfaces/Interfaces";
 import GeneralTab from "./GeneralTab";
 import MenuTab from "./MenuTab";
 import WorkingHoursTab from "./WorkingHoursTab";
+import FiltersTab from "./FiltersTab";
 
 const RestaurantDetails = () => {
   const { slug } = useParams();
@@ -63,6 +64,8 @@ const RestaurantDetails = () => {
         return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Menu":
         return <MenuTab />;
+      case "Filters":
+        return <FiltersTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Working Hours":
         return (
           <WorkingHoursTab restaurant={restaurant} onUpdate={handleUpdate} />
@@ -102,6 +105,16 @@ const RestaurantDetails = () => {
           onClick={() => handleTabChange("Menu")}
         >
           Menu
+        </button>
+        <button
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "Filters"
+              ? "border-b-2 border-black"
+              : "text-gray-500"
+          }`}
+          onClick={() => handleTabChange("Filters")}
+        >
+          Filters
         </button>
         <button
           className={`py-2 px-4 border-b-2 text-sm ${

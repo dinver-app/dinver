@@ -105,7 +105,6 @@ const getAllRestaurants = async (req, res) => {
 const getRestaurantDetails = async (req, res) => {
   try {
     const { slug } = req.params;
-    console.log(slug);
     const restaurant = await Restaurant.findOne({ where: { slug } });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -267,19 +266,6 @@ const generateSlug = async (name) => {
   return slug;
 };
 
-// Get all food types
-async function getAllFoodTypes(req, res) {
-  try {
-    const foodTypes = await FoodType.findAll();
-    res.json(foodTypes);
-  } catch (error) {
-    console.error('Error fetching food types:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching food types' });
-  }
-}
-
 async function updateWorkingHours(req, res) {
   try {
     const { id } = req.params;
@@ -301,12 +287,37 @@ async function updateWorkingHours(req, res) {
   }
 }
 
+async function updateFilters(req, res) {
+  try {
+    const { id } = req.params;
+    const { food_types, establishment_types, establishment_perks } = req.body;
+
+    console.log('establishmentTypes', establishment_types);
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({
+      food_types: food_types,
+      establishment_types: establishment_types,
+      establishment_perks: establishment_perks,
+    });
+
+    res.json({ message: 'Filters updated successfully', restaurant });
+  } catch (error) {
+    console.error('Error updating filters:', error);
+    res.status(500).json({ error: 'An error occurred while updating filters' });
+  }
+}
+
 module.exports = {
   getAllRestaurants,
   getRestaurantDetails,
   viewRestaurant,
   updateRestaurant,
   addRestaurant,
-  getAllFoodTypes,
   updateWorkingHours,
+  updateFilters,
 };

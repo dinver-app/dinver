@@ -3,11 +3,8 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // First, delete all existing entries in the EstablishmentPerks table
-    await queryInterface.bulkDelete('EstablishmentPerk', null, {});
-
     // Then, insert the new establishment perks
-    return queryInterface.bulkInsert('EstablishmentPerk', [
+    return queryInterface.bulkInsert('EstablishmentPerks', [
       {
         name: 'Rooftop View',
         icon: '🏞',
@@ -168,6 +165,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    return queryInterface.bulkDelete('EstablishmentPerk', null, {});
+    return queryInterface.bulkDelete('EstablishmentPerks', null, {});
   },
 };

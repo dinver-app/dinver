@@ -2,9 +2,6 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // First, delete all existing entries in the FoodTypes table
-    await queryInterface.bulkDelete('FoodTypes', null, {});
-
     // Then, insert the new food types
     return queryInterface.bulkInsert('FoodTypes', [
       {
