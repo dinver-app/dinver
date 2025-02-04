@@ -8,6 +8,7 @@ const passport = require('passport');
 const menuRoutes = require('./routes/menuRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const typeRoutes = require('./routes/TypeRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -57,6 +58,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/types', typeRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/admin', adminRoutes);

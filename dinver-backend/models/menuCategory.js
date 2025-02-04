@@ -5,12 +5,12 @@ module.exports = (sequelize, DataTypes) => {
   class MenuCategory extends Model {
     static associate(models) {
       MenuCategory.belongsTo(models.Restaurant, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'restaurant',
       });
 
       MenuCategory.hasMany(models.MenuItem, {
-        foreignKey: 'category_id',
+        foreignKey: 'categoryId',
         as: 'items',
       });
     }
@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      restaurant_id: {
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {

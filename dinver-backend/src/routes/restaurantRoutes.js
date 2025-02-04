@@ -157,6 +157,55 @@ router.put(
 
 /**
  * @swagger
+ * /restaurants/{id}/working-hours:
+ *   put:
+ *     summary: Update restaurant working hours
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               opening_hours:
+ *                 type: object
+ *                 description: The opening hours of the restaurant
+ *     responses:
+ *       200:
+ *         description: Working hours updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 restaurant:
+ *                   type: object
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while updating working hours
+ */
+router.put(
+  '/:id/working-hours',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateWorkingHours,
+);
+
+/**
+ * @swagger
  * /restaurants:
  *   post:
  *     summary: Add a new restaurant
@@ -204,36 +253,77 @@ router.post('/', authenticateToken, restaurantController.addRestaurant);
 
 /**
  * @swagger
- * /food-types:
- *   get:
- *     summary: Retrieve a list of all food types
- *     tags: [FoodTypes]
+ * /restaurants/{id}/filters:
+ *   put:
+ *     summary: Update filters for a restaurant
+ *     tags: [Restaurants]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the restaurant
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               foodTypes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: List of food type IDs
+ *               establishmentTypes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: List of establishment type IDs
+ *               establishmentPerks:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: List of establishment perk IDs
  *     responses:
  *       200:
- *         description: A list of food types
+ *         description: Filters updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     format: uuid
- *                   name:
- *                     type: string
- *                   icon:
- *                     type: string
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 restaurant:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     food_types:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                     establishment_types:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                     establishment_perks:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *       404:
+ *         description: Restaurant not found
  *       500:
- *         description: Server error
+ *         description: An error occurred while updating filters
  */
-router.get(
-  '/food-types',
+router.put(
+  '/:id/filters',
   authenticateToken,
-  restaurantController.getAllFoodTypes,
+  restaurantController.updateFilters,
 );
 
 module.exports = router;

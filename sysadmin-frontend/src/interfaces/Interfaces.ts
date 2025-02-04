@@ -29,8 +29,10 @@ export interface Restaurant {
   user_ratings_total?: number;
   price_level?: number;
   is_open_now?: boolean;
-  opening_hours?: string;
-  types?: string[];
+  opening_hours?: any;
+  food_types?: number[];
+  establishment_types?: number[];
+  establishment_perks?: number[];
   icon_url?: string;
   photo_reference?: string;
   vicinity?: string;
@@ -46,4 +48,38 @@ export interface Restaurant {
   isOpen?: boolean;
   isClaimed?: boolean;
   slug?: string;
+  isDirty?: boolean;
+}
+
+export interface FoodType {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export interface EstablishmentType {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export interface EstablishmentPerk {
+  id: number;
+  name: string;
+  icon: string;
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  restaurantId: string;
+  categoryId: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  restaurantId: string;
+  menuItems: MenuItem[];
 }

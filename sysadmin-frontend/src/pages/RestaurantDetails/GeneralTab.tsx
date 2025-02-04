@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { updateRestaurant } from "../../services/restaurantService";
-import toast from "react-hot-toast";
 import { Restaurant } from "../../interfaces/Interfaces";
 
 interface GeneralTabProps {
@@ -13,12 +12,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",
     thumbnail_url: restaurant.thumbnail_url || "",
-    description: restaurant.description || "",
-    types: restaurant.types || "",
     address: restaurant.address || "",
   });
 
   const [file, setFile] = useState<File | null>(null);
+  const [saveStatus, setSaveStatus] = useState("All changes saved");
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -27,56 +25,46 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async () => {
+  const handleAutoSave = async () => {
+    setSaveStatus("Saving...");
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
-      formDataToSend.append(
-        "description",
-        Array.isArray(formData.description)
-          ? formData.description.join(", ")
-          : formData.description
-      );
-      formDataToSend.append(
-        "types",
-        Array.isArray(formData.types)
-          ? formData.types.join(", ")
-          : formData.types
-      );
-      formDataToSend.append(
-        "address",
-        Array.isArray(formData.address)
-          ? formData.address.join(", ")
-          : formData.address
-      );
+      formDataToSend.append("address", formData.address);
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
 
-      console.log(restaurant.id);
-
-      console.log(formDataToSend);
-
-      const updatedRestaurant = await updateRestaurant(
-        restaurant.id || "",
-        formDataToSend
-      );
-      onUpdate(updatedRestaurant);
-      toast.success("Restaurant details updated successfully");
+      await updateRestaurant(restaurant.id || "", formDataToSend);
+      setSaveStatus("All changes saved");
+      onUpdate({ ...restaurant, ...formData });
     } catch (error) {
-      console.error("Failed to update restaurant details", error);
-      toast.error("Failed to update restaurant details");
+      console.error("Failed to auto-save restaurant details", error);
+      setSaveStatus("Failed to save changes");
     }
   };
 
-  const handleImageClick = () => {
-    document.getElementById("fileInput")?.click();
-  };
+  useEffect(() => {
+    const isFormModified = () => {
+      return (
+        formData.name !== restaurant.name ||
+        formData.address !== restaurant.address ||
+        formData.thumbnail_url !== restaurant.thumbnail_url
+      );
+    };
+
+    if (isFormModified()) {
+      handleAutoSave();
+    }
+  }, [formData]);
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div>
+      <div className="flex justify-end items-center my-4">
+        <span className="text-sm text-gray-500">{saveStatus}</span>
+      </div>
+      <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">Name</label>
         <input
           type="text"
@@ -86,7 +74,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
         />
       </div>
-      <div>
+      <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
           Thumbnail
         </label>
@@ -95,12 +83,12 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             src={formData.thumbnail_url}
             alt="Thumbnail"
             className="mb-2 w-32 h-32 object-cover cursor-pointer"
-            onClick={handleImageClick}
+            onClick={() => document.getElementById("fileInput")?.click()}
           />
         ) : (
           <div
             className="mb-2 w-32 h-32 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer"
-            onClick={handleImageClick}
+            onClick={() => document.getElementById("fileInput")?.click()}
           >
             <span className="text-sm text-gray-500 p-2 text-center">
               Click to add image
@@ -125,30 +113,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             }
           }}
         />
-        <p className="text-sm text-gray-500">
-          Click the image to select a new one
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Description
-        </label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleInputChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Types</label>
-        <input
-          type="text"
-          name="types"
-          value={formData.types}
-          onChange={handleInputChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded"
-        />
+        <p className="text-sm text-gray-500">Click the image to change it</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700">
@@ -162,9 +127,6 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
         />
       </div>
-      <button onClick={handleSave} className="primary-button mt-4">
-        Save
-      </button>
     </div>
   );
 };

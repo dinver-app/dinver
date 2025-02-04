@@ -1,0 +1,334 @@
+import { useState, useEffect } from "react";
+import {
+  getAllFoodTypes,
+  getAllEstablishmentTypes,
+  getAllEstablishmentPerks,
+  updateFilters,
+} from "../../services/restaurantService";
+import {
+  FoodType,
+  Restaurant,
+  EstablishmentType,
+  EstablishmentPerk,
+} from "../../interfaces/Interfaces";
+
+interface FiltersTabProps {
+  restaurant: Restaurant;
+  onUpdate: (updatedRestaurant: Restaurant) => void;
+}
+
+const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
+  const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
+  const [establishmentTypes, setEstablishmentTypes] = useState<
+    EstablishmentType[]
+  >([]);
+  const [establishmentPerks, setEstablishmentPerks] = useState<
+    EstablishmentPerk[]
+  >([]);
+  const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>(
+    restaurant.food_types || []
+  );
+  const [selectedEstablishmentTypes, setSelectedEstablishmentTypes] = useState<
+    number[]
+  >(restaurant.establishment_types || []);
+  const [selectedEstablishmentPerks, setSelectedEstablishmentPerks] = useState<
+    number[]
+  >(restaurant.establishment_perks || []);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeModal, setActiveModal] = useState<
+    "food" | "establishment" | "perk" | null
+  >(null);
+  const [saveStatus, setSaveStatus] = useState("All changes saved");
+
+  useEffect(() => {
+    const fetchFoodTypes = async () => {
+      try {
+        const types = await getAllFoodTypes();
+        setFoodTypes(types);
+      } catch (error) {
+        console.error("Failed to fetch food types", error);
+      }
+    };
+    fetchFoodTypes();
+
+    const fetchEstablishmentTypes = async () => {
+      try {
+        const types = await getAllEstablishmentTypes();
+        setEstablishmentTypes(types);
+      } catch (error) {
+        console.error("Failed to fetch establishment types", error);
+      }
+    };
+    fetchEstablishmentTypes();
+
+    const fetchEstablishmentPerks = async () => {
+      try {
+        const perks = await getAllEstablishmentPerks();
+        setEstablishmentPerks(perks);
+      } catch (error) {
+        console.error("Failed to fetch establishment perks", error);
+      }
+    };
+    fetchEstablishmentPerks();
+  }, []);
+
+  useEffect(() => {
+    const handleAutoSave = async () => {
+      setSaveStatus("Saving...");
+      try {
+        const filters = {
+          food_types: selectedFoodTypes,
+          establishment_types: selectedEstablishmentTypes,
+          establishment_perks: selectedEstablishmentPerks,
+        };
+
+        await updateFilters(restaurant.id || "", filters);
+        setSaveStatus("All changes saved");
+        onUpdate({
+          ...restaurant,
+          food_types: selectedFoodTypes,
+          establishment_types: selectedEstablishmentTypes,
+          establishment_perks: selectedEstablishmentPerks,
+        });
+      } catch (error) {
+        console.error("Failed to auto-save filters", error);
+        setSaveStatus("Failed to save changes");
+      }
+    };
+
+    handleAutoSave();
+  }, [
+    selectedFoodTypes,
+    selectedEstablishmentTypes,
+    selectedEstablishmentPerks,
+  ]);
+
+  const handleRemoveItem = (
+    id: number,
+    type: "food" | "establishment" | "perk"
+  ) => {
+    if (type === "food") {
+      setSelectedFoodTypes((prev) => prev.filter((t) => t !== id));
+    } else if (type === "establishment") {
+      setSelectedEstablishmentTypes((prev) => prev.filter((t) => t !== id));
+    } else if (type === "perk") {
+      setSelectedEstablishmentPerks((prev) => prev.filter((t) => t !== id));
+    }
+  };
+
+  const handleAddItem = (
+    id: number,
+    type: "food" | "establishment" | "perk"
+  ) => {
+    if (type === "food") {
+      setSelectedFoodTypes((prev) => [...prev, id]);
+    } else if (type === "establishment") {
+      setSelectedEstablishmentTypes((prev) => [...prev, id]);
+    } else if (type === "perk") {
+      setSelectedEstablishmentPerks((prev) => [...prev, id]);
+    }
+  };
+
+  const getModalContent = () => {
+    let items: (FoodType | EstablishmentType | EstablishmentPerk)[] = [];
+    let selectedItems: number[] = [];
+    let title = "";
+
+    if (activeModal === "food") {
+      items = foodTypes;
+      selectedItems = selectedFoodTypes;
+      title = "Add Food Types";
+    } else if (activeModal === "establishment") {
+      items = establishmentTypes;
+      selectedItems = selectedEstablishmentTypes;
+      title = "Add Establishment Types";
+    } else if (activeModal === "perk") {
+      items = establishmentPerks;
+      selectedItems = selectedEstablishmentPerks;
+      title = "Add Establishment Perks";
+    }
+
+    return { items, selectedItems, title };
+  };
+
+  const { items, selectedItems, title } = getModalContent();
+
+  return (
+    <div>
+      <div className="flex justify-end items-center my-4">
+        <span className="text-sm text-gray-500">{saveStatus}</span>
+      </div>
+
+      <div className="my-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Establishment Types
+        </label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedEstablishmentTypes.length > 0 ? (
+            selectedEstablishmentTypes.map((id) => {
+              const establishmentType = establishmentTypes.find(
+                (et) => et.id === id
+              );
+              return (
+                <div
+                  key={id}
+                  className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+                >
+                  <span className="mr-2">{establishmentType?.icon}</span>
+                  <span>{establishmentType?.name}</span>
+                  <button
+                    onClick={() => handleRemoveItem(id, "establishment")}
+                    className="ml-2 text-xs text-red-500 hover:text-red-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-sm text-gray-500">
+              No establishment types selected
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setActiveModal("establishment")}
+          className="mt-4 primary-button text-xs"
+        >
+          Add
+        </button>
+      </div>
+
+      <hr className="my-4" />
+
+      <div className="my-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Food Types
+        </label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedFoodTypes.length > 0 ? (
+            selectedFoodTypes.map((id: number) => {
+              const foodType = foodTypes.find((ft: FoodType) => ft.id === id);
+              return (
+                <div
+                  key={id}
+                  className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+                >
+                  <span className="mr-2">{foodType?.icon}</span>
+                  <span>{foodType?.name}</span>
+                  <button
+                    onClick={() => handleRemoveItem(id, "food")}
+                    className="ml-2 text-xs text-red-500 hover:text-red-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-sm text-gray-500">
+              No food types selected
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setActiveModal("food")}
+          className="mt-4 primary-button text-xs"
+        >
+          Add
+        </button>
+      </div>
+
+      <hr className="my-4" />
+
+      <div className="my-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Establishment Perks
+        </label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedEstablishmentPerks.length > 0 ? (
+            selectedEstablishmentPerks.map((id) => {
+              const establishmentPerk = establishmentPerks.find(
+                (ep) => ep.id === id
+              );
+              return (
+                <div
+                  key={id}
+                  className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+                >
+                  <span className="mr-2">{establishmentPerk?.icon}</span>
+                  <span>{establishmentPerk?.name}</span>
+                  <button
+                    onClick={() => handleRemoveItem(id, "perk")}
+                    className="ml-2 text-xs text-red-500 hover:text-red-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-sm text-gray-500">
+              No establishment perks selected
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setActiveModal("perk")}
+          className="mt-4 primary-button text-xs"
+        >
+          Add
+        </button>
+      </div>
+
+      {activeModal && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{title}</h2>
+            </div>
+            <input
+              type="text"
+              placeholder={`Search ${title.toLowerCase()}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full p-2 mb-4 border border-gray-300 rounded"
+            />
+            <div className="h-60 overflow-y-auto">
+              {items
+                .filter(
+                  (item) =>
+                    !selectedItems.includes(item.id) &&
+                    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-2 border-b hover:bg-gray-100 transition"
+                  >
+                    <span className="flex items-center">
+                      {item.icon} <span className="ml-2">{item.name}</span>
+                    </span>
+                    <button
+                      onClick={() => handleAddItem(item.id, activeModal)}
+                      className="text-blue-500 hover:underline"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))}
+            </div>
+            <button
+              onClick={() => setActiveModal(null)}
+              className="mt-4 w-full py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FiltersTab;

@@ -280,7 +280,6 @@ async function addSysadmin(req, res) {
 async function removeSysadmin(req, res) {
   try {
     const { email } = req.params;
-    console.log(email);
     // Find the user
     const user = await User.findOne({ where: { email } });
     if (!user) {
@@ -310,7 +309,6 @@ async function listUsers(req, res) {
     const limit = 10;
     const offset = (page - 1) * limit;
     const { search } = req.query;
-    console.log(search);
 
     const whereClause = search
       ? {
@@ -321,8 +319,6 @@ async function listUsers(req, res) {
           ],
         }
       : {};
-
-    console.log(whereClause);
 
     const { count, rows: users } = await User.findAndCountAll({
       where: whereClause,

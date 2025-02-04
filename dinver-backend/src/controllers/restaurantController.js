@@ -105,7 +105,6 @@ const getAllRestaurants = async (req, res) => {
 const getRestaurantDetails = async (req, res) => {
   try {
     const { slug } = req.params;
-    console.log(slug);
     const restaurant = await Restaurant.findOne({ where: { slug } });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -175,18 +174,14 @@ const addRestaurant = async (req, res) => {
 // Update restaurant details
 async function updateRestaurant(req, res) {
   try {
-    console.log(req.params);
     const { id } = req.params;
     const { name, description, address } = req.body;
-    console.log(req.file);
     const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
-    console.log('testttttt');
-    console.log(req.body);
 
     let thumbnail_url = restaurant.thumbnail_url;
     if (file) {
@@ -197,10 +192,15 @@ async function updateRestaurant(req, res) {
       ? req.body.types.split(',').map((type) => type.trim())
       : [];
 
+    const venuePerksArray = req.body.venue_perks
+      ? req.body.venue_perks.split(',').map((perk) => perk.trim())
+      : [];
+
     await restaurant.update({
       name,
       thumbnail_url,
       description,
+      venue_perks: venuePerksArray,
       types: typesArray,
       address,
     });
@@ -266,16 +266,47 @@ const generateSlug = async (name) => {
   return slug;
 };
 
-// Get all food types
-async function getAllFoodTypes(req, res) {
+async function updateWorkingHours(req, res) {
   try {
-    const foodTypes = await FoodType.findAll();
-    res.json(foodTypes);
+    const { id } = req.params;
+    const { opening_hours } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({ opening_hours });
+
+    res.json({ message: 'Working hours updated successfully', restaurant });
   } catch (error) {
-    console.error('Error fetching food types:', error);
+    console.error('Error updating working hours:', error);
     res
       .status(500)
-      .json({ error: 'An error occurred while fetching food types' });
+      .json({ error: 'An error occurred while updating working hours' });
+  }
+}
+
+async function updateFilters(req, res) {
+  try {
+    const { id } = req.params;
+    const { food_types, establishment_types, establishment_perks } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({
+      food_types: food_types,
+      establishment_types: establishment_types,
+      establishment_perks: establishment_perks,
+    });
+
+    res.json({ message: 'Filters updated successfully', restaurant });
+  } catch (error) {
+    console.error('Error updating filters:', error);
+    res.status(500).json({ error: 'An error occurred while updating filters' });
   }
 }
 
@@ -285,5 +316,6 @@ module.exports = {
   viewRestaurant,
   updateRestaurant,
   addRestaurant,
-  getAllFoodTypes,
+  updateWorkingHours,
+  updateFilters,
 };

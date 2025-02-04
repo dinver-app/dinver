@@ -19,6 +19,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'users',
       });
+
+      Restaurant.hasMany(models.MenuItem, {
+        foreignKey: 'restaurantId',
+        as: 'menuItems',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+      });
     }
   }
   Restaurant.init(
@@ -115,6 +122,18 @@ module.exports = (sequelize, DataTypes) => {
       },
       plus_code: {
         type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      food_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      establishment_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      establishment_perks: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
     },
