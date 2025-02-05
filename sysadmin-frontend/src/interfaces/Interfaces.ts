@@ -49,6 +49,11 @@ export interface Restaurant {
   isClaimed?: boolean;
   slug?: string;
   isDirty?: boolean;
+  website_url?: string;
+  fb_url?: string;
+  ig_url?: string;
+  phone?: string;
+  images?: string[];
 }
 
 export interface FoodType {

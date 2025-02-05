@@ -13,25 +13,76 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     thumbnail: restaurant.thumbnail || "",
     thumbnail_url: restaurant.thumbnail_url || "",
     address: restaurant.address || "",
+    website_url: restaurant.website_url || "",
+    fb_url: restaurant.fb_url || "",
+    ig_url: restaurant.ig_url || "",
+    phone: restaurant.phone || "",
   });
 
   const [file, setFile] = useState<File | null>(null);
   const [saveStatus, setSaveStatus] = useState("All changes saved");
+  const [errors, setErrors] = useState({
+    website_url: "",
+    fb_url: "",
+    ig_url: "",
+    phone: "",
+  });
+
+  const validateInput = (name: string, value: string) => {
+    let error = "";
+    const urlPattern = new RegExp(
+      "^(https?:\\/\\/)?" + // protocol
+        "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+        "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+        "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+        "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+        "(\\#[-a-z\\d_]*)?$",
+      "i"
+    );
+    const phonePattern = /^\+?[0-9\s]{7,20}$/;
+
+    if (value.trim() === "") {
+      // Skip validation if the value is empty
+      error = "";
+    } else if (name.includes("url") && !urlPattern.test(value)) {
+      error = "Please enter a valid URL.";
+    } else if (name === "phone" && !phonePattern.test(value)) {
+      error = "Please enter a valid phone number.";
+    }
+
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    validateInput(name, value);
   };
 
   const handleAutoSave = async () => {
     setSaveStatus("Saving...");
+    console.log("Saving...");
+    console.log(errors.website_url === "" ? formData.website_url : "");
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
+      formDataToSend.append(
+        "website_url",
+        errors.website_url === "" ? formData.website_url : ""
+      );
+      formDataToSend.append(
+        "fb_url",
+        errors.fb_url === "" ? formData.fb_url : ""
+      );
+      formDataToSend.append(
+        "ig_url",
+        errors.ig_url === "" ? formData.ig_url : ""
+      );
+      formDataToSend.append("phone", errors.phone === "" ? formData.phone : "");
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -46,11 +97,21 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   };
 
   useEffect(() => {
+    Object.entries(formData).forEach(([name, value]) => {
+      validateInput(name, value);
+    });
+  }, []);
+
+  useEffect(() => {
     const isFormModified = () => {
       return (
         formData.name !== restaurant.name ||
         formData.address !== restaurant.address ||
-        formData.thumbnail_url !== restaurant.thumbnail_url
+        formData.thumbnail_url !== restaurant.thumbnail_url ||
+        formData.website_url !== restaurant.website_url ||
+        formData.fb_url !== restaurant.fb_url ||
+        formData.ig_url !== restaurant.ig_url ||
+        formData.phone !== restaurant.phone
       );
     };
 
@@ -115,7 +176,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         />
         <p className="text-sm text-gray-500">Click the image to change it</p>
       </div>
-      <div>
+      <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
           Address
         </label>
@@ -126,6 +187,68 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           onChange={handleInputChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
         />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Website URL
+          </label>
+          <input
+            type="text"
+            name="website_url"
+            value={formData.website_url}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+          {errors.website_url && (
+            <p className="text-sm text-red-500">{errors.website_url}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Phone
+          </label>
+          <input
+            type="text"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+          {errors.phone && (
+            <p className="text-sm text-red-500">{errors.phone}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Facebook URL
+          </label>
+          <input
+            type="text"
+            name="fb_url"
+            value={formData.fb_url}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+          {errors.fb_url && (
+            <p className="text-sm text-red-500">{errors.fb_url}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Instagram URL
+          </label>
+          <input
+            type="text"
+            name="ig_url"
+            value={formData.ig_url}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+          {errors.ig_url && (
+            <p className="text-sm text-red-500">{errors.ig_url}</p>
+          )}
+        </div>
       </div>
     </div>
   );
