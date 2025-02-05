@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
+const { authenticateToken } = require('../middleware/roleMiddleware');
 const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
@@ -27,7 +27,7 @@ const register = async (req, res) => {
   }
 };
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ where: { email } });
@@ -39,7 +39,9 @@ const login = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user);
 
     res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.json({ accessToken });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    authenticateToken(req, res, next, accessToken);
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }
@@ -59,7 +61,7 @@ const checkAuth = async (req, res) => {
 
   jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
     if (err) {
-      const refreshToken = req.cookies.refreshToken;
+      const refreshToken = req.cookies.token;
       if (!refreshToken) {
         return res.status(401).json({ isAuthenticated: false });
       }
@@ -79,6 +81,11 @@ const checkAuth = async (req, res) => {
           generateTokens(user);
 
         res.cookie('refreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+        });
+
+        res.cookie('token', accessToken, {
           httpOnly: true,
           secure: true,
         });

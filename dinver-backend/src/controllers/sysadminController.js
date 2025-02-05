@@ -187,46 +187,6 @@ async function addRestaurantToOrganization(req, res) {
   }
 }
 
-// Login function
-async function login(req, res) {
-  try {
-    const { email, password } = req.body;
-
-    // Find user by email
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: '1h',
-    });
-
-    // Set the token as an HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: 3600000,
-    });
-
-    res.json({ message: 'Login successful' });
-  } catch (error) {
-    res.status(500).json({ error: 'An error occurred during login' });
-  }
-}
-
-async function logout(req, res) {
-  res.status(200).json({ message: 'Logout successful' });
-}
-
 // List all sysadmins
 async function listSysadmins(req, res) {
   try {
@@ -400,8 +360,6 @@ module.exports = {
   addUserToOrganization,
   removeUserFromOrganization,
   addRestaurantToOrganization,
-  login,
-  logout,
   listSysadmins,
   addSysadmin,
   removeSysadmin,

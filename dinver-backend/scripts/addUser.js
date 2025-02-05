@@ -16,8 +16,6 @@ async function createAndAddSysadmin(email, password, firstName, lastName) {
       lastName,
       role: 'user', // Default role, can be adjusted if needed
     });
-
-    console.log('User created:', user);
   } catch (error) {
     console.error('An error occurred:', error);
   } finally {

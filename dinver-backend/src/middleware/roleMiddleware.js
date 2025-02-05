@@ -3,9 +3,11 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 async function checkSysadmin(req, res, next) {
+  console.log('checkSysadmin');
   try {
+    console.log('test');
+    console.log(req.user);
     const userId = req.user.id;
-
     const sysadmin = await UserSysadmin.findOne({
       where: { userId },
     });
@@ -49,8 +51,8 @@ async function checkAdmin(req, res, next) {
   }
 }
 
-function authenticateToken(req, res, next) {
-  const token = req.cookies.token;
+function authenticateToken(req, res, next, token = null) {
+  token = token || req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Access denied' });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {

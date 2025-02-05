@@ -1,5 +1,6 @@
 const express = require('express');
 const sysadminController = require('../controllers/sysadminController');
+const authController = require('../controllers/authController');
 const {
   checkSysadmin,
   authenticateToken,
@@ -287,6 +288,7 @@ router.delete(
 router.post(
   '/organizations/users',
   authenticateToken,
+  checkSysadmin,
   sysadminController.addUserToOrganization,
 );
 
@@ -397,24 +399,9 @@ router.post(
  *       401:
  *         description: Invalid email or password
  */
-router.post(
-  '/login',
-  sysadminController.login,
-  authenticateToken,
-  checkSysadmin,
-);
-
-/**
- * @swagger
- * /sysadmin/logout:
- *   get:
- *     summary: Log out as a sysadmin
- *     tags: [Authentication]
- *     responses:
- *       200:
- *         description: Logout successful
- */
-router.get('/sysadmin/logout', sysadminController.logout);
+router.post('/login', authController.login, checkSysadmin, (req, res) => {
+  res.json({ accessToken: res.locals.accessToken });
+});
 
 /**
  * @swagger
@@ -571,12 +558,7 @@ router.delete(
  *       403:
  *         description: Access denied. Sysadmin only.
  */
-router.get(
-  '/users',
-  authenticateToken,
-  checkSysadmin,
-  sysadminController.listUsers,
-);
+router.get('/users', authenticateToken, sysadminController.listUsers);
 
 /**
  * @swagger
