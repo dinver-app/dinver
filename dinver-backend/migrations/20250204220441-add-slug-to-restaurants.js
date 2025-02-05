@@ -9,12 +9,11 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-
-    await queryInterface.renameColumn(
-      'MenuCategories',
-      'restaurant_id',
-      'restaurantId',
-    );
+    await queryInterface.addColumn('Restaurants', 'slug', {
+      type: Sequelize.STRING,
+      allowNull: true,
+      unique: true,
+    });
   },
 
   async down(queryInterface, Sequelize) {
@@ -24,11 +23,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-
-    await queryInterface.renameColumn(
-      'MenuCategories',
-      'restaurantId',
-      'restaurant_id',
-    );
+    await queryInterface.removeColumn('Restaurants', 'slug');
   },
 };
