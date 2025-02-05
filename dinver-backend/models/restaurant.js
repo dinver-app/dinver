@@ -136,6 +136,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
+      website_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fb_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      ig_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      images: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
     },
     {
       sequelize,
