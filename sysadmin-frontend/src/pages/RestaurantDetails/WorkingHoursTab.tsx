@@ -165,7 +165,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           />
           <button
             onClick={() => handleClosed(index)}
-            className="text-xs text-red-500 hover:text-red-700 "
+            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600 ml-4"
           >
             Closed
           </button>
