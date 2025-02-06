@@ -4,9 +4,12 @@ import {
   addSysadmin,
   removeSysadmin,
 } from "../services/sysadminService";
+import { updateUserLanguage, getUserLanguage } from "../services/userService";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import { Sysadmin } from "../interfaces/Interfaces";
+import i18n from "i18next";
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
@@ -14,9 +17,11 @@ const Settings = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedSysadmin, setSelectedSysadmin] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
 
   useEffect(() => {
     fetchSysadmins();
+    fetchUserLanguage();
   }, []);
 
   const fetchSysadmins = async () => {
@@ -26,6 +31,15 @@ const Settings = () => {
     } catch (error: any) {
       toast.error(error.message);
       console.error("Failed to fetch sysadmins", error);
+    }
+  };
+
+  const fetchUserLanguage = async () => {
+    try {
+      const { language } = await getUserLanguage();
+      setSelectedLanguage(language);
+    } catch (error: any) {
+      console.error("Failed to fetch user language", error);
     }
   };
 
@@ -72,6 +86,17 @@ const Settings = () => {
     };
   }, []);
 
+  const handleLanguageChange = async (language: string) => {
+    try {
+      await updateUserLanguage(language);
+      setSelectedLanguage(language);
+      localStorage.setItem("language", language);
+      i18n.changeLanguage(language);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
@@ -110,6 +135,19 @@ const Settings = () => {
           <h3 className="section-subtitle">
             General settings content goes here.
           </h3>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Language
+            </label>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="mt-1 block w-48 p-2 border border-gray-300 rounded outline-gray-300"
+            >
+              <option value="en">English</option>
+              <option value="hr">Hrvatski</option>
+            </select>
+          </div>
         </div>
       )}
 

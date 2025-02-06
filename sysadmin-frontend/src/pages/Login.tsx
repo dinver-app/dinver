@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { login, logout } from "../services/authService";
 import { useEffect } from "react";
+import i18n from "i18next";
 
 const Login = () => {
   const initialValues = { email: "", password: "" };
@@ -23,6 +24,10 @@ const Login = () => {
     try {
       const response = await login(values.email, values.password);
       if (response) {
+        const { language } = response;
+        localStorage.setItem("language", language);
+        i18n.changeLanguage(language);
+
         toast.success("Login successful!");
         navigate("/");
       }

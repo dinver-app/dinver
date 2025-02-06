@@ -10,35 +10,45 @@ import {
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 import LogoutModal from "./LogoutModal";
+import { useTranslation } from "react-i18next";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setModalOpen] = useState(false);
 
   const menuItems = [
-    { name: "Dashboard", path: "/", icon: <FaHome className="h-4 w-4 mr-3" /> },
     {
-      name: "Restaurants",
+      name: t("dashboard"),
+      path: "/",
+      icon: <FaHome className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("restaurants"),
       path: "/restaurants",
       icon: <IoRestaurant className="h-4 w-4 mr-3" />,
     },
     {
-      name: "Users",
+      name: t("users"),
       path: "/users",
       icon: <FaUser className="h-4 w-4 mr-3" />,
     },
     {
-      name: "Analytics",
+      name: t("analytics"),
       path: "/analytics",
       icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
     },
   ];
 
   const preferenceItems = [
-    { name: "Logs", path: "/logs", icon: <LuLogs className="h-4 w-4 mr-3" /> },
     {
-      name: "Settings",
+      name: t("logs"),
+      path: "/logs",
+      icon: <LuLogs className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("settings"),
       path: "/settings",
       icon: <FaCog className="h-4 w-4 mr-3" />,
     },
@@ -61,7 +71,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" />
           </div>
           <div className="p-4 select-none">
-            <h2 className="text-sm font-semibold text-gray-500">Main Menu</h2>
+            <h2 className="text-sm font-semibold text-gray-500">
+              {t("mainMenu")}
+            </h2>
           </div>
           <nav className="pb-4">
             <ul>
@@ -83,7 +95,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </ul>
           </nav>
           <div className="p-4 border-t select-none">
-            <h2 className="text-sm font-semibold text-gray-500">Preferences</h2>
+            <h2 className="text-sm font-semibold text-gray-500">
+              {t("preferences")}
+            </h2>
           </div>
           <nav className="pb-4">
             <ul>

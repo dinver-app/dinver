@@ -20,3 +20,15 @@ export const deleteUser = async (email: string) => {
   });
   return response.data;
 };
+
+export const updateUserLanguage = async (language: string) => {
+  const response = await apiClient.put(`api/user/language`, {
+    language,
+  });
+  return response.data;
+};
+
+export const getUserLanguage = async () => {
+  const response = await apiClient.get(`api/user/language`);
+  return response.data;
+};
