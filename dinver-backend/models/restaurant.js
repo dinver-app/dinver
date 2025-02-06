@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
+      working_hours_info: {
         type: DataTypes.TEXT,
         allowNull: true,
       },

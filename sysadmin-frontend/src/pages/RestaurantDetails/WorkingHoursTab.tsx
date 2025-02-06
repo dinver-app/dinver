@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { updateWorkingHours } from "../../services/restaurantService";
+import {
+  updateRestaurant,
+  updateWorkingHours,
+} from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 
 interface WorkingHoursTabProps {
@@ -50,6 +53,10 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     return initialHours;
   });
 
+  const [workingHoursInfo, setWorkingHoursInfo] = useState(
+    restaurant.working_hours_info || ""
+  );
+
   const [saveStatus, setSaveStatus] = useState("All changes saved");
 
   useEffect(() => {
@@ -57,7 +64,14 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       setSaveStatus("Saving...");
       try {
         await updateWorkingHours(restaurant.id || "", workingHours);
-        onUpdate({ ...restaurant, opening_hours: { periods: workingHours } });
+        await updateRestaurant(restaurant.id || "", {
+          working_hours_info: workingHoursInfo,
+        });
+        onUpdate({
+          ...restaurant,
+          opening_hours: { periods: workingHours },
+          working_hours_info: workingHoursInfo,
+        });
         setSaveStatus("All changes saved");
       } catch (error) {
         console.error("Failed to update working hours", error);
@@ -68,14 +82,17 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     if (isFormModified()) {
       handleAutoSave();
     }
-  }, [workingHours]);
+  }, [workingHours, workingHoursInfo]);
 
   const isFormModified = () => {
     const restaurantOpeningHours = restaurant.opening_hours?.periods
       ? restaurant.opening_hours?.periods
       : restaurant.opening_hours;
 
-    return JSON.stringify(workingHours) !== restaurantOpeningHours;
+    return (
+      JSON.stringify(workingHours) !== restaurantOpeningHours ||
+      workingHoursInfo !== restaurant.working_hours_info
+    );
   };
 
   const handleTimeChange = (
@@ -99,6 +116,10 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const handleClosed = (dayIndex: number) => {
     handleTimeChange(dayIndex, "open", "");
     handleTimeChange(dayIndex, "close", "");
+  };
+
+  const handleInfoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setWorkingHoursInfo(e.target.value);
   };
 
   return (
@@ -126,12 +147,22 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           />
           <button
             onClick={() => handleClosed(index)}
-            className="text-xs text-red-500 hover:text-red-700 "
+            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600 ml-4"
           >
             Closed
           </button>
         </div>
       ))}
+
+      <div className="flex flex-col gap-2 py-2">
+        <h2 className="section-title text-md">Working Hours Info</h2>
+        <textarea
+          value={workingHoursInfo}
+          onChange={handleInfoChange}
+          className="border p-2 rounded w-full h-24"
+          placeholder="Enter additional working hours information here..."
+        />
+      </div>
     </div>
   );
 };

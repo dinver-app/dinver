@@ -19,7 +19,7 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
-  description?: string;
+  working_hours_info?: string;
   thumbnail_url?: string;
   thumbnail?: string;
   latitude?: number;
