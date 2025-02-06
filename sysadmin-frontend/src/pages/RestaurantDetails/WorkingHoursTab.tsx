@@ -37,19 +37,21 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       open: { day: 0, time: "" },
       close: { day: 0, time: "" },
     });
+
     if (restaurant.opening_hours?.periods) {
       JSON.parse(JSON.stringify(restaurant.opening_hours.periods)).forEach(
         (period: any) => {
           initialHours[period.open.day] = period;
         }
       );
-    } else {
-      JSON.parse(JSON.stringify(restaurant.opening_hours)).forEach(
-        (period: any) => {
-          initialHours[period.open.day] = period;
-        }
-      );
+    } else if (
+      restaurant.opening_hours &&
+      Object.keys(restaurant.opening_hours).length === 0
+    ) {
+      // If opening_hours is an empty object, initialize with default structure
+      return initialHours;
     }
+
     return initialHours;
   });
 
@@ -63,7 +65,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     const handleAutoSave = async () => {
       setSaveStatus("Saving...");
       try {
-        await updateWorkingHours(restaurant.id || "", workingHours);
+        await updateWorkingHours(restaurant.id || "", {
+          periods: workingHours,
+        });
         await updateRestaurant(restaurant.id || "", {
           working_hours_info: workingHoursInfo,
         });
@@ -83,6 +87,20 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       handleAutoSave();
     }
   }, [workingHours, workingHoursInfo]);
+
+  useEffect(() => {
+    if (
+      restaurant.opening_hours &&
+      Object.keys(restaurant.opening_hours).length === 0
+    ) {
+      setWorkingHours(
+        Array(7).fill({
+          open: { day: 0, time: "" },
+          close: { day: 0, time: "" },
+        })
+      );
+    }
+  }, [restaurant]);
 
   const isFormModified = () => {
     const restaurantOpeningHours = restaurant.opening_hours?.periods
@@ -147,7 +165,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           />
           <button
             onClick={() => handleClosed(index)}
-            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600 ml-4"
+            className="text-xs text-red-500 hover:text-red-700 "
           >
             Closed
           </button>

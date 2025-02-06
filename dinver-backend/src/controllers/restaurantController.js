@@ -230,7 +230,6 @@ function isRestaurantOpen(openingHours) {
   const now = new Date();
   const currentDay = now.getDay();
   const currentTime = now.getHours() * 100 + now.getMinutes();
-  const currentDate = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
   if (!openingHours || !openingHours.periods) {
     return 'undefined';
