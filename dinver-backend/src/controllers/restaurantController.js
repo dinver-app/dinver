@@ -223,27 +223,46 @@ function isRestaurantOpen(openingHours) {
   const now = new Date();
   const currentDay = now.getDay();
   const currentTime = now.getHours() * 100 + now.getMinutes();
+  const currentDate = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
 
   if (!openingHours || !openingHours.periods) {
-    return false;
+    return 'undefined';
+  }
+
+  const allTimesEmpty = openingHours.periods.every(
+    (period) => period.open.time === '' && period.close.time === '',
+  );
+
+  if (allTimesEmpty) {
+    return 'undefined';
   }
 
   for (const period of openingHours.periods) {
     const openDay = period.open.day;
-    const openTime = parseInt(period.open.time);
+    const openTime = parseInt(period.open.time, 10);
     const closeDay = period.close.day;
-    const closeTime = parseInt(period.close.time);
+    const closeTime = parseInt(period.close.time, 10);
 
-    if (
-      (currentDay === openDay && currentTime >= openTime) ||
-      (currentDay === closeDay && currentTime < closeTime) ||
-      (openDay < closeDay && currentDay > openDay && currentDay < closeDay) ||
-      (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
-    ) {
-      return true;
+    if (openDay === closeDay) {
+      if (
+        currentDay === openDay &&
+        currentTime >= openTime &&
+        currentTime < closeTime
+      ) {
+        return 'true';
+      }
+    } else {
+      if (
+        (currentDay === openDay && currentTime >= openTime) ||
+        (currentDay === closeDay && currentTime < closeTime) ||
+        (currentDay > openDay && currentDay < closeDay) ||
+        (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
+      ) {
+        return 'true';
+      }
     }
   }
-  return false;
+  return 'false';
 }
 
 const generateSlug = async (name) => {

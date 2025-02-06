@@ -110,7 +110,11 @@ const Restaurants = () => {
                 <td className="py-3 px-4 text-sm w-20">
                   <div
                     className={`w-4 h-4 mx-auto rounded-full ${
-                      restaurant.isOpen ? "bg-green-500" : "bg-red-500"
+                      restaurant.isOpen === "true"
+                        ? "bg-green-500"
+                        : restaurant.isOpen === "false"
+                        ? "bg-red-500"
+                        : "bg-gray-500"
                     }`}
                   ></div>
                 </td>
