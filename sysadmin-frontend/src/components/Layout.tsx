@@ -54,10 +54,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className={`flex min-h-screen ${"bg-white text-gray-800"}`}>
-      <aside
-        className={`w-64 shadow-lg flex flex-col justify-between ${"bg-white"}`}
-      >
+    <div className="flex">
+      <aside className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 flex flex-col justify-between">
         <div>
           <div className="p-4 border-b select-none">
             <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" />
@@ -117,7 +115,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </button>
         </div>
       </aside>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 ml-64 p-6">{children}</main>
       <LogoutModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
