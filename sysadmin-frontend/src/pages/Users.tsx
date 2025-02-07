@@ -3,8 +3,9 @@ import { listUsers, createUser, deleteUser } from "../services/userService";
 import { format } from "date-fns";
 import { User } from "../interfaces/Interfaces";
 import { toast } from "react-hot-toast";
-
+import { useTranslation } from "react-i18next";
 const Users = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -84,35 +85,41 @@ const Users = () => {
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
-        <h1 className="page-title">Users</h1>
-        <h3 className="page-subtitle">List of all users.</h3>
+        <h1 className="page-title">{t("users")}</h1>
+        <h3 className="page-subtitle">{t("list_of_all_users")}</h3>
       </div>
       <div className="h-line mb-4"></div>
       <div className="flex justify-between items-center mb-4">
         <input
           type="text"
-          placeholder="Search users..."
+          placeholder={t("search_users")}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
         />
         <button onClick={() => setModalOpen(true)} className="primary-button">
-          Add User
+          {t("add_user")}
         </button>
       </div>
       <div className="rounded-lg border border-gray-200">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
             <tr className="text-sm text-black">
-              <th className="py-2 px-4 text-left font-normal w-64">Email</th>
-              <th className="py-2 px-4 text-left font-normal w-48">
-                First Name
+              <th className="py-2 px-4 text-left font-normal w-64">
+                {t("email")}
               </th>
               <th className="py-2 px-4 text-left font-normal w-48">
-                Last Name
+                {t("first_name")}
               </th>
-              <th className="py-2 px-4 text-left font-normal w-48">Role</th>
-              <th className="py-2 px-4 text-left font-normal w-48">Created</th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                {t("last_name")}
+              </th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                {t("role")}
+              </th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                {t("added_on")}
+              </th>
               <th className="py-2 px-4 text-left w-10"></th>
             </tr>
           </thead>
@@ -211,16 +218,16 @@ const Users = () => {
                 className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
               />
               <div>
-                <h2 className="text-lg font-semibold">Add User</h2>
+                <h2 className="text-lg font-semibold">{t("add_user")}</h2>
                 <p className="text-sm text-gray-500">
-                  Add a new user to the system.
+                  {t("add_user_description")}
                 </p>
               </div>
             </div>
             <div className="h-line"></div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Email
+                {t("email")}
               </label>
               <input
                 type="email"
@@ -233,7 +240,7 @@ const Users = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                First Name
+                {t("first_name")}
               </label>
               <input
                 type="text"
@@ -246,7 +253,7 @@ const Users = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Last Name
+                {t("last_name")}
               </label>
               <input
                 type="text"
@@ -259,7 +266,7 @@ const Users = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Password
+                {t("password")}
               </label>
               <input
                 type="password"
@@ -276,10 +283,10 @@ const Users = () => {
                 onClick={() => setModalOpen(false)}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleCreateUser} className="primary-button">
-                Add User
+                {t("add_user")}
               </button>
             </div>
           </div>
@@ -302,16 +309,16 @@ const Users = () => {
                 className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
               />
               <div>
-                <h2 className="text-lg font-semibold">Delete User</h2>
+                <h2 className="text-lg font-semibold">{t("delete_user")}</h2>
                 <p className="text-sm text-gray-500">
-                  Deleting user from the system.
+                  {t("delete_user_description")}
                 </p>
               </div>
             </div>
             <div className="h-line"></div>
             <div className="mb-4">
               <p className="text-sm text-black">
-                Are you sure you want to delete the user with email:{" "}
+                {t("are_you_sure_you_want_to_delete_the_user_with_email")}
                 <span className="font-bold">{userToDelete}</span>?
               </p>
             </div>
@@ -322,13 +329,13 @@ const Users = () => {
                 onClick={() => setDeleteModalOpen(false)}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={() => handleDeleteUser(userToDelete)}
                 className="delete-button"
               >
-                Delete User
+                {t("delete_user")}
               </button>
             </div>
           </div>

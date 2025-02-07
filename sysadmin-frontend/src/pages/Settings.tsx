@@ -9,8 +9,9 @@ import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import { Sysadmin } from "../interfaces/Interfaces";
 import i18n from "i18next";
-
+import { useTranslation } from "react-i18next";
 const Settings = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
   const [newSysadminEmail, setNewSysadminEmail] = useState("");
@@ -100,10 +101,8 @@ const Settings = () => {
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
-        <h1 className="page-title">Settings</h1>
-        <h3 className="page-subtitle">
-          Manage your account settings and preferences.
-        </h3>
+        <h1 className="page-title">{t("settings")}</h1>
+        <h3 className="page-subtitle">{t("manage_your_account_settings")}</h3>
       </div>
       <div className="h-line mb-4"></div>
       <div className="flex mb-6">
@@ -115,7 +114,7 @@ const Settings = () => {
               : "text-gray-500"
           }`}
         >
-          General
+          {t("general_settings")}
         </button>
         <button
           onClick={() => handleTabChange("sysadmins")}
@@ -125,19 +124,19 @@ const Settings = () => {
               : "text-gray-500"
           }`}
         >
-          System Users
+          {t("system_users")}
         </button>
       </div>
 
       {activeTab === "general" && (
         <div className="flex flex-col gap-1">
-          <h2 className="section-title">General Settings</h2>
+          <h2 className="section-title">{t("general_settings")}</h2>
           <h3 className="section-subtitle">
-            General settings content goes here.
+            {t("general_settings_content_goes_here")}
           </h3>
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700">
-              Language
+              {t("language")}
             </label>
             <select
               value={selectedLanguage}
@@ -155,26 +154,34 @@ const Settings = () => {
         <div>
           <div className="flex justify-between items-center mb-6">
             <div className="flex flex-col gap-1">
-              <h2 className="section-title">Sysadmin Management</h2>
-              <h3 className="section-subtitle">List of all system admins.</h3>
+              <h2 className="section-title">{t("sysadmin_management")}</h2>
+              <h3 className="section-subtitle">
+                {t("list_of_all_system_admins")}
+              </h3>
             </div>
             <button
               onClick={() => setModalOpen(true)}
               className="primary-button"
             >
-              Add Sysadmin
+              {t("add_sysadmin")}
             </button>
           </div>
           <div className="rounded-lg border border-gray-200">
             <table className="min-w-full bg-white">
               <thead className="bg-gray-100">
                 <tr className="text-sm text-black">
-                  <th className="py-2 px-4 text-left font-normal">Email</th>
                   <th className="py-2 px-4 text-left font-normal">
-                    First Name
+                    {t("email")}
                   </th>
-                  <th className="py-2 px-4 text-left font-normal">Last Name</th>
-                  <th className="py-2 px-4 text-left font-normal">Added On</th>
+                  <th className="py-2 px-4 text-left font-normal">
+                    {t("first_name")}
+                  </th>
+                  <th className="py-2 px-4 text-left font-normal">
+                    {t("last_name")}
+                  </th>
+                  <th className="py-2 px-4 text-left font-normal">
+                    {t("added_on")}
+                  </th>
                   <th className="py-2 px-4 text-left font-normal"></th>
                 </tr>
               </thead>
@@ -218,7 +225,7 @@ const Settings = () => {
                               }}
                               className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                             >
-                              Remove
+                              {t("remove")}
                             </button>
                           </div>
                         )}
@@ -248,9 +255,9 @@ const Settings = () => {
                 className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
               />
               <div>
-                <h2 className="text-lg font-semibold">Add Sysadmin</h2>
+                <h2 className="text-lg font-semibold">{t("add_sysadmin")}</h2>
                 <p className="text-sm text-gray-500">
-                  Add a new sysadmin to manage the system.
+                  {t("add_sysadmin_description")}
                 </p>
               </div>
             </div>
@@ -273,10 +280,10 @@ const Settings = () => {
                 onClick={() => setModalOpen(false)}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleAddSysadmin} className="primary-button">
-                Add Sysadmin
+                {t("add_sysadmin")}
               </button>
             </div>
           </div>

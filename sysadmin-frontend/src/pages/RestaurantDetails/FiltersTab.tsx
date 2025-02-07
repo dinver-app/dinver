@@ -11,13 +11,14 @@ import {
   EstablishmentType,
   EstablishmentPerk,
 } from "../../interfaces/Interfaces";
-
+import { useTranslation } from "react-i18next";
 interface FiltersTabProps {
   restaurant: Restaurant;
   onUpdate: (updatedRestaurant: Restaurant) => void;
 }
 
 const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
+  const { t } = useTranslation();
   const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
   const [establishmentTypes, setEstablishmentTypes] = useState<
     EstablishmentType[]
@@ -38,7 +39,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [activeModal, setActiveModal] = useState<
     "food" | "establishment" | "perk" | null
   >(null);
-  const [saveStatus, setSaveStatus] = useState("All changes saved");
+  const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
   useEffect(() => {
     const fetchFoodTypes = async () => {
@@ -74,7 +75,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
   useEffect(() => {
     const handleAutoSave = async () => {
-      setSaveStatus("Saving...");
+      setSaveStatus(t("saving"));
       try {
         const filters = {
           food_types: selectedFoodTypes,
@@ -83,7 +84,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         };
 
         await updateFilters(restaurant.id || "", filters);
-        setSaveStatus("All changes saved");
+        setSaveStatus(t("all_changes_saved"));
         onUpdate({
           ...restaurant,
           food_types: selectedFoodTypes,
@@ -92,7 +93,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         });
       } catch (error) {
         console.error("Failed to auto-save filters", error);
-        setSaveStatus("Failed to save changes");
+        setSaveStatus(t("failed_to_save_changes"));
       }
     };
 
@@ -137,15 +138,15 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     if (activeModal === "food") {
       items = foodTypes;
       selectedItems = selectedFoodTypes;
-      title = "Add Food Types";
+      title = t("add_food_types");
     } else if (activeModal === "establishment") {
       items = establishmentTypes;
       selectedItems = selectedEstablishmentTypes;
-      title = "Add Establishment Types";
+      title = t("add_establishment_types");
     } else if (activeModal === "perk") {
       items = establishmentPerks;
       selectedItems = selectedEstablishmentPerks;
-      title = "Add Establishment Perks";
+      title = t("add_establishment_perks");
     }
 
     return { items, selectedItems, title };
@@ -161,7 +162,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
-          Establishment Types
+          {t("establishment_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedEstablishmentTypes.length > 0 ? (
@@ -187,7 +188,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
             })
           ) : (
             <span className="text-sm text-gray-500">
-              No establishment types selected
+              {t("no_establishment_types_selected")}
             </span>
           )}
         </div>
@@ -195,7 +196,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           onClick={() => setActiveModal("establishment")}
           className="mt-4 primary-button text-xs"
         >
-          Add
+          {t("add")}
         </button>
       </div>
 
@@ -203,7 +204,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
-          Food Types
+          {t("food_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedFoodTypes.length > 0 ? (
@@ -227,7 +228,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
             })
           ) : (
             <span className="text-sm text-gray-500">
-              No food types selected
+              {t("no_food_types_selected")}
             </span>
           )}
         </div>
@@ -235,7 +236,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           onClick={() => setActiveModal("food")}
           className="mt-4 primary-button text-xs"
         >
-          Add
+          {t("add")}
         </button>
       </div>
 
@@ -243,7 +244,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
-          Establishment Perks
+          {t("establishment_perks")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedEstablishmentPerks.length > 0 ? (
@@ -269,7 +270,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
             })
           ) : (
             <span className="text-sm text-gray-500">
-              No establishment perks selected
+              {t("no_establishment_perks_selected")}
             </span>
           )}
         </div>
@@ -277,7 +278,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           onClick={() => setActiveModal("perk")}
           className="mt-4 primary-button text-xs"
         >
-          Add
+          {t("add")}
         </button>
       </div>
 
@@ -289,7 +290,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
             </div>
             <input
               type="text"
-              placeholder={`Search ${title.toLowerCase()}...`}
+              placeholder={`${t("search")}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full p-2 mb-4 border border-gray-300 rounded"
@@ -313,7 +314,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                       onClick={() => handleAddItem(item.id, activeModal)}
                       className="text-blue-500 hover:underline"
                     >
-                      Add
+                      {t("add")}
                     </button>
                   </div>
                 ))}
@@ -322,7 +323,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               onClick={() => setActiveModal(null)}
               className="mt-4 w-full py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
             >
-              Close
+              {t("close")}
             </button>
           </div>
         </div>

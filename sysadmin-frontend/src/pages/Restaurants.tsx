@@ -6,8 +6,10 @@ import {
 import { Restaurant } from "../interfaces/Interfaces";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Restaurants = () => {
+  const { t } = useTranslation();
   const [restaurants, setRestaurants] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -61,8 +63,10 @@ const Restaurants = () => {
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
-        <h1 className="page-title">Restaurants</h1>
-        <h3 className="page-subtitle">Manage your restaurant listings.</h3>
+        <h1 className="page-title">{t("restaurants")}</h1>
+        <h3 className="page-subtitle">
+          {t("manage_your_restaurant_listings")}
+        </h3>
       </div>
       <div className="h-line mb-4"></div>
       <div className="flex justify-between items-center mb-4">
@@ -74,20 +78,28 @@ const Restaurants = () => {
           className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
         />
         <button onClick={() => setModalOpen(true)} className="primary-button">
-          Add Restaurant
+          {t("add_restaurant")}
         </button>
       </div>
       <div className="rounded-lg border border-gray-200">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
             <tr className="text-sm text-black">
-              <th className="py-2 px-4 text-left font-normal w-32">Name</th>
-              <th className="py-2 px-4 text-left font-normal w-48">Address</th>
-              <th className="py-2 px-4 text-center font-normal w-20">Rating</th>
-              <th className="py-2 px-4 text-center font-normal w-20">
-                Claimed
+              <th className="py-2 px-4 text-left font-normal w-32">
+                {t("name")}
               </th>
-              <th className="py-2 px-4 text-center font-normal w-20">Open</th>
+              <th className="py-2 px-4 text-left font-normal w-48">
+                {t("address")}
+              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">
+                {t("rating")}
+              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">
+                {t("claimed")}
+              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">
+                {t("open")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +161,7 @@ const Restaurants = () => {
       </div>
       <div className="flex justify-between items-center mt-4">
         <span className="text-sm">
-          Claimed restaurants: {claimedRestaurantsCount} of{" "}
+          {t("claimed_restaurants")}: {claimedRestaurantsCount} of{" "}
           {totalRestaurantsCount}
         </span>
       </div>
@@ -170,16 +182,16 @@ const Restaurants = () => {
                 className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
               />
               <div>
-                <h2 className="text-lg font-semibold">Add Restaurant</h2>
+                <h2 className="text-lg font-semibold">{t("add_restaurant")}</h2>
                 <p className="text-sm text-gray-500">
-                  Add a new restaurant to the system.
+                  {t("add_restaurant_description")}
                 </p>
               </div>
             </div>
             <div className="h-line"></div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Name
+                {t("restaurant_name")}
               </label>
               <input
                 type="text"
@@ -192,7 +204,7 @@ const Restaurants = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Address
+                {t("address")}
               </label>
               <input
                 type="text"
@@ -219,7 +231,7 @@ const Restaurants = () => {
                 onClick={handleCreateRestaurant}
                 className="primary-button"
               >
-                Add Restaurant
+                {t("add_restaurant")}
               </button>
             </div>
           </div>

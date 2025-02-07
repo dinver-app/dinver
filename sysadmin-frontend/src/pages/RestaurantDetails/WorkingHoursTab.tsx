@@ -4,21 +4,12 @@ import {
   updateWorkingHours,
 } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
+import { useTranslation } from "react-i18next";
 
 interface WorkingHoursTabProps {
   restaurant: Restaurant;
   onUpdate: (updatedRestaurant: Restaurant) => void;
 }
-
-const daysOfWeek = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
 
 const formatTime = (time: string) => {
   if (time.length === 4) {
@@ -32,6 +23,18 @@ const unformatTime = (time: string) => {
 };
 
 const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
+  const { t } = useTranslation();
+
+  const daysOfWeek = [
+    t("monday"),
+    t("tuesday"),
+    t("wednesday"),
+    t("thursday"),
+    t("friday"),
+    t("saturday"),
+    t("sunday"),
+  ];
+
   const [workingHours, setWorkingHours] = useState(() => {
     const initialHours = Array(7).fill({
       open: { day: 0, time: "" },
@@ -59,11 +62,11 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     restaurant.working_hours_info || ""
   );
 
-  const [saveStatus, setSaveStatus] = useState("All changes saved");
+  const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
   useEffect(() => {
     const handleAutoSave = async () => {
-      setSaveStatus("Saving...");
+      setSaveStatus(t("saving"));
       try {
         await updateWorkingHours(restaurant.id || "", {
           periods: workingHours,
@@ -76,10 +79,10 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           opening_hours: { periods: workingHours },
           working_hours_info: workingHoursInfo,
         });
-        setSaveStatus("All changes saved");
+        setSaveStatus(t("all_changes_saved"));
       } catch (error) {
         console.error("Failed to update working hours", error);
-        setSaveStatus("Failed to save changes");
+        setSaveStatus(t("failed_to_save_changes"));
       }
     };
 
@@ -145,7 +148,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       <div className="flex justify-end items-center">
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
-      <h2 className="section-title text-md">Working Hours</h2>
+      <h2 className="section-title text-md">{t("working_hours")}</h2>
 
       {daysOfWeek.map((day, index) => (
         <div key={day} className="flex items-center gap-2 my-2">
@@ -156,7 +159,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             onChange={(e) => handleTimeChange(index, "open", e.target.value)}
             className="border p-1 rounded"
           />
-          <span>to</span>
+          <span>-</span>
           <input
             type="time"
             value={formatTime(workingHours[index]?.close.time || "")}
@@ -167,18 +170,18 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             onClick={() => handleClosed(index)}
             className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600 ml-4"
           >
-            Closed
+            {t("closed")}
           </button>
         </div>
       ))}
 
       <div className="flex flex-col gap-2 py-2">
-        <h2 className="section-title text-md">Working Hours Info</h2>
+        <h2 className="section-title text-md">{t("working_hours_info")}</h2>
         <textarea
           value={workingHoursInfo}
           onChange={handleInfoChange}
           className="border p-2 rounded w-full h-24"
-          placeholder="Enter additional working hours information here..."
+          placeholder={t("enter_additional_working_hours_information_here")}
         />
       </div>
     </div>

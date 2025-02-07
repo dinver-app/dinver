@@ -9,8 +9,10 @@ import {
 } from "../../services/menuService";
 import { MenuItem, Category } from "../../interfaces/Interfaces";
 import Modal from "../../components/Modal";
+import { useTranslation } from "react-i18next";
 
 const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
+  const { t } = useTranslation();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState<string>("");
@@ -120,9 +122,9 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="section-title">Menu</h2>
+      <h2 className="section-title">{t("menu")}</h2>
       <h3 className="section-subtitle">
-        Manage your menu items and categories.
+        {t("manage_your_menu_items_and_categories")}
       </h3>
 
       <div className="flex gap-4">
@@ -130,13 +132,13 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           onClick={() => setCategoryModalOpen(true)}
           className="primary-button"
         >
-          Add Category
+          {t("add_category")}
         </button>
         <button
           onClick={() => setItemModalOpen(true)}
           className="primary-button"
         >
-          Add Menu Item
+          {t("add_menu_item")}
         </button>
       </div>
 
@@ -150,7 +152,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           </div>
         ))}
         <div className="my-4">
-          <h4 className="text-lg font-semibold">Uncategorized Items</h4>
+          <h4 className="text-lg font-semibold">{t("uncategorized_items")}</h4>
           <ul className="bg-white rounded-lg shadow-md">
             {renderMenuItems(null)}
           </ul>
@@ -161,33 +163,33 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         isOpen={isCategoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
       >
-        <h4 className="text-lg font-semibold mb-4">Add New Category</h4>
+        <h4 className="text-lg font-semibold mb-4">{t("add_new_category")}</h4>
         <input
           type="text"
           value={newCategoryName}
           onChange={(e) => setNewCategoryName(e.target.value)}
-          placeholder="Category Name"
+          placeholder={t("category_name")}
           className="w-full p-2 border border-gray-300 rounded mb-4"
         />
         <button onClick={handleAddCategory} className="primary-button w-full">
-          Add Category
+          {t("add_category")}
         </button>
       </Modal>
 
       <Modal isOpen={isItemModalOpen} onClose={() => setItemModalOpen(false)}>
-        <h4 className="text-lg font-semibold mb-4">Add New Menu Item</h4>
+        <h4 className="text-lg font-semibold mb-4">{t("add_new_menu_item")}</h4>
         <input
           type="text"
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
-          placeholder="Item Name"
+          placeholder={t("item_name")}
           className="w-full p-2 border border-gray-300 rounded mb-4"
         />
         <input
           type="number"
           value={newItemPrice}
           onChange={(e) => setNewItemPrice(e.target.value)}
-          placeholder="Item Price"
+          placeholder={t("item_price")}
           className="w-full p-2 border border-gray-300 rounded mb-4"
         />
         <select
@@ -195,7 +197,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           onChange={(e) => setSelectedCategoryId(e.target.value || null)}
           className="w-full p-2 border border-gray-300 rounded mb-4"
         >
-          <option value="">No Category</option>
+          <option value="">{t("no_category")}</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -203,7 +205,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           ))}
         </select>
         <button onClick={handleAddMenuItem} className="primary-button w-full">
-          Add Menu Item
+          {t("add_menu_item")}
         </button>
       </Modal>
     </div>

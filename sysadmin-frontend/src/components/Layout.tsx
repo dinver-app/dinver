@@ -125,7 +125,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             className="flex items-center p-3 pl-4 w-full text-left text-sm font-light hover:bg-gray-100"
           >
             <FaSignOutAlt className="h-4 w-4 mr-3" />
-            Log Out
+            {t("logout")}
           </button>
         </div>
       </aside>

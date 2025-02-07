@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { updateRestaurant } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
+import { useTranslation } from "react-i18next";
 
 interface GeneralTabProps {
   restaurant: Restaurant;
@@ -8,6 +9,7 @@ interface GeneralTabProps {
 }
 
 const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",
@@ -20,7 +22,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   });
 
   const [file, setFile] = useState<File | null>(null);
-  const [saveStatus, setSaveStatus] = useState("All changes saved");
+  const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
   const [errors, setErrors] = useState({
     website_url: "",
     fb_url: "",
@@ -45,9 +47,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       // Skip validation if the value is empty
       error = "";
     } else if (name.includes("url") && !urlPattern.test(value)) {
-      error = "Please enter a valid URL.";
+      error = t("please_enter_a_valid_url");
     } else if (name === "phone" && !phonePattern.test(value)) {
-      error = "Please enter a valid phone number.";
+      error = t("please_enter_a_valid_phone_number");
     }
 
     setErrors((prev) => ({ ...prev, [name]: error }));
@@ -62,9 +64,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   };
 
   const handleAutoSave = async () => {
-    setSaveStatus("Saving...");
-    console.log("Saving...");
-    console.log(errors.website_url === "" ? formData.website_url : "");
+    setSaveStatus(t("saving"));
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("restaurantId", restaurant.id || "");
@@ -88,11 +88,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       }
 
       await updateRestaurant(restaurant.id || "", formDataToSend);
-      setSaveStatus("All changes saved");
+      setSaveStatus(t("all_changes_saved"));
       onUpdate({ ...restaurant, ...formData });
     } catch (error) {
       console.error("Failed to auto-save restaurant details", error);
-      setSaveStatus("Failed to save changes");
+      setSaveStatus(t("failed_to_save_changes"));
     }
   };
 
@@ -126,7 +126,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
       <div className="my-4">
-        <label className="block text-sm font-medium text-gray-700">Name</label>
+        <label className="block text-sm font-medium text-gray-700">
+          {t("name")}
+        </label>
         <input
           type="text"
           name="name"
@@ -137,7 +139,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       </div>
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
-          Thumbnail
+          {t("thumbnail")}
         </label>
         {formData.thumbnail_url ? (
           <img
@@ -152,7 +154,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             onClick={() => document.getElementById("fileInput")?.click()}
           >
             <span className="text-sm text-gray-500 p-2 text-center">
-              Click to add image
+              {t("click_to_add_image")}
             </span>
           </div>
         )}
@@ -174,11 +176,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             }
           }}
         />
-        <p className="text-sm text-gray-500">Click the image to change it</p>
+        <p className="text-sm text-gray-500">
+          {t("click_the_image_to_change_it")}
+        </p>
       </div>
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">
-          Address
+          {t("address")}
         </label>
         <input
           type="text"
@@ -191,7 +195,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Website URL
+            {t("website_url")}
           </label>
           <input
             type="text"
@@ -206,7 +210,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Phone
+            {t("phone")}
           </label>
           <input
             type="text"
@@ -221,7 +225,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Facebook URL
+            {t("facebook_url")}
           </label>
           <input
             type="text"
@@ -236,7 +240,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Instagram URL
+            {t("instagram_url")}
           </label>
           <input
             type="text"
