@@ -80,6 +80,11 @@ export interface MenuItem {
   price: number;
   restaurantId: string;
   categoryId: string;
+  imageUrl?: string;
+  ingredients?: string[];
+  allergens?: string[];
+  description?: string;
+  imageFile?: File;
 }
 
 export interface Category {

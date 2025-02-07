@@ -6,23 +6,67 @@ import {
   updateCategory,
   createMenuItem,
   updateMenuItem,
+  deleteCategory,
+  deleteMenuItem,
+  getAllIngredients,
+  getAllAllergens,
 } from "../../services/menuService";
 import { MenuItem, Category } from "../../interfaces/Interfaces";
-import Modal from "../../components/Modal";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-hot-toast";
+
+interface Ingredient {
+  id: number;
+  name_en: string;
+  name_hr: string;
+  icon: string;
+}
+
+interface Allergen {
+  id: number;
+  name_en: string;
+  name_hr: string;
+  icon: string;
+}
 
 const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
+  const language = localStorage.getItem("language") || "en";
   const { t } = useTranslation();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState<string>("");
   const [newItemName, setNewItemName] = useState<string>("");
   const [newItemPrice, setNewItemPrice] = useState<string>("");
+  const [newItemDescription, setNewItemDescription] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
   );
-  const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [isItemModalOpen, setItemModalOpen] = useState(false);
+  const [isAddCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
+  const [isEditCategoryModalOpen, setEditCategoryModalOpen] = useState(false);
+  const [isAddItemModalOpen, setAddItemModalOpen] = useState(false);
+  const [isEditItemModalOpen, setEditItemModalOpen] = useState(false);
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState<string>("");
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editItemName, setEditItemName] = useState<string>("");
+  const [editItemPrice, setEditItemPrice] = useState<string>("");
+  const [editItemDescription, setEditItemDescription] = useState<string>("");
+  const [newItemImageFile, setNewItemImageFile] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [allergens, setAllergens] = useState<Allergen[]>([]);
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
+    []
+  );
+  const [ingredientSearch, setIngredientSearch] = useState("");
+  const [isIngredientDropdownOpen, setIngredientDropdownOpen] = useState(false);
+  const [isDeleteCategoryModalOpen, setDeleteCategoryModalOpen] =
+    useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
+    null
+  );
+  const [isDeleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     const fetchMenuData = async () => {
@@ -40,6 +84,19 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   }, [restaurantId]);
 
   useEffect(() => {
+    const fetchIngredients = async () => {
+      const data = await getAllIngredients();
+      setIngredients(data);
+    };
+    fetchIngredients();
+    const fetchAllergens = async () => {
+      const data = await getAllAllergens();
+      setAllergens(data);
+    };
+    fetchAllergens();
+  }, []);
+
+  useEffect(() => {
     console.log(menuItems);
   }, [menuItems]);
 
@@ -52,8 +109,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       });
       setCategories([...categories, category]);
       setNewCategoryName("");
-      setCategoryModalOpen(false);
+      setAddCategoryModalOpen(false);
     } catch (error) {
+      const errorMessage = (error as Error).message;
+      toast.error(t(errorMessage));
       console.error("Failed to create category", error);
     }
   };
@@ -61,153 +120,936 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const handleAddMenuItem = async () => {
     if (!newItemName || !newItemPrice) return;
     try {
-      const menuItem: MenuItem = await createMenuItem({
-        name: newItemName,
-        price: parseFloat(newItemPrice),
-        restaurantId: restaurantId as string,
-        categoryId: selectedCategoryId || undefined,
+      const formData = new FormData();
+      formData.append("name", newItemName);
+      formData.append("price", newItemPrice);
+      formData.append("restaurantId", restaurantId as string);
+      if (selectedCategoryId) {
+        formData.append("categoryId", selectedCategoryId);
+      }
+      if (newItemImageFile) {
+        formData.append("imageFile", newItemImageFile);
+      }
+      formData.append("description", newItemDescription);
+
+      selectedIngredientIds.forEach((id) => {
+        formData.append("ingredientIds", id);
       });
+
+      const menuItem: MenuItem = await createMenuItem(formData);
       setMenuItems([...menuItems, menuItem]);
       setNewItemName("");
       setNewItemPrice("");
       setSelectedCategoryId(null);
-      setItemModalOpen(false);
+      setNewItemImageFile(null);
+      setNewItemDescription("");
+      setAddItemModalOpen(false);
+      setSelectedIngredientIds([]);
     } catch (error) {
       console.error("Failed to create menu item", error);
     }
   };
 
-  const handleUpdateCategory = async (id: string, name: string) => {
+  const handleUpdateCategory = async () => {
+    if (!editCategoryId || !editCategoryName) return;
     try {
-      const updatedCategory: Category = await updateCategory(id, { name });
+      const updatedCategory: Category = await updateCategory(editCategoryId, {
+        name: editCategoryName,
+      });
       setCategories(
-        categories.map((cat) => (cat.id === id ? updatedCategory : cat))
+        categories.map((cat) =>
+          cat.id === editCategoryId ? updatedCategory : cat
+        )
       );
+      setEditCategoryId(null);
+      setEditCategoryName("");
+      setEditCategoryModalOpen(false);
     } catch (error) {
       console.error("Failed to update category", error);
     }
   };
 
-  const handleUpdateMenuItem = async (
-    id: string,
-    name: string,
-    price: number
-  ) => {
+  const handleUpdateMenuItem = async () => {
+    if (!editItemId || !editItemName || !editItemPrice) return;
     try {
-      const updatedMenuItem: MenuItem = await updateMenuItem(id, {
-        name,
-        price,
+      const formData = new FormData();
+      formData.append("name", editItemName);
+      formData.append("price", editItemPrice);
+      formData.append("restaurantId", restaurantId as string);
+      formData.append("categoryId", selectedCategoryId || "");
+      if (newItemImageFile) {
+        formData.append("imageFile", newItemImageFile);
+      }
+      if (removeImage) {
+        formData.append("removeImage", "true");
+      }
+      selectedIngredientIds.forEach((id) => {
+        formData.append("ingredientIds", id);
       });
-      setMenuItems(
-        menuItems.map((item) => (item.id === id ? updatedMenuItem : item))
+      formData.append("description", editItemDescription || "");
+
+      const updatedMenuItem: MenuItem = await updateMenuItem(
+        editItemId,
+        formData
       );
+      setMenuItems(
+        menuItems.map((item) =>
+          item.id === editItemId ? updatedMenuItem : item
+        )
+      );
+      setEditItemId(null);
+      setEditItemName("");
+      setEditItemPrice("");
+      setEditItemDescription("");
+      setSelectedCategoryId(null);
+      setNewItemImageFile(null);
+      setRemoveImage(false);
+      setNewItemDescription("");
+      setEditItemModalOpen(false);
+      setSelectedIngredientIds([]);
     } catch (error) {
       console.error("Failed to update menu item", error);
     }
   };
 
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      setCategories(categories.filter((cat) => cat.id !== id));
+      setDeleteCategoryModalOpen(false);
+    } catch (error) {
+      console.error("Failed to delete category", error);
+    }
+  };
+
+  const handleDeleteMenuItem = async (id: string) => {
+    try {
+      await deleteMenuItem(id);
+      setMenuItems(menuItems.filter((item) => item.id !== id));
+      setDeleteItemModalOpen(false);
+    } catch (error) {
+      console.error("Failed to delete menu item", error);
+    }
+  };
+
+  const openEditCategoryModal = (category: Category) => {
+    setEditCategoryId(category.id);
+    setEditCategoryName(category.name);
+    setEditCategoryModalOpen(true);
+  };
+
+  const openEditItemModal = (item: MenuItem) => {
+    setEditItemId(item.id);
+    setEditItemName(item.name);
+    setEditItemPrice(item.price.toString());
+    setSelectedCategoryId(item.categoryId || null);
+    setEditItemDescription(item.description || "");
+    setRemoveImage(false);
+    setEditItemModalOpen(true);
+
+    const ingredientObjects = item.ingredients?.map((id) =>
+      ingredients.find((ing) => ing.id.toString() === id.toString())
+    );
+
+    setSelectedIngredientIds(
+      ingredientObjects
+        ?.filter(
+          (ingredient): ingredient is Ingredient => ingredient !== undefined
+        )
+        .map((ingredient) => ingredient.id.toString()) || []
+    );
+  };
+
   const renderMenuItems = (categoryId: string | null) => {
     return menuItems
       .filter((item) => item.categoryId === categoryId)
-      .map((item) => (
-        <li
-          key={item.id}
-          className="flex justify-between items-center p-2 border-b"
-        >
-          <span>{item.name}</span>
-          <span>${item.price}</span>
-        </li>
-      ));
+      .map((item) => {
+        const itemIngredients = item.ingredients?.map((id) =>
+          ingredients.find((ing) => ing.id.toString() === id.toString())
+        );
+
+        const itemAllergens = item.allergens?.map((id) =>
+          allergens.find((all) => all.id.toString() === id.toString())
+        );
+
+        return (
+          <li
+            key={item.id}
+            className="flex flex-col md:flex-row justify-between items-center p-6 mb-6 border border-gray-200 rounded-lg shadow-lg bg-white hover:shadow-xl transition-shadow duration-300"
+          >
+            <div className="flex items-center space-x-6">
+              <div className="w-36 h-24 flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
+                {item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
+                <p className="text-gray-600 text-lg">${item.price}</p>
+                <p className="text-sm text-gray-700 mt-2">{item.description}</p>
+                <div className="flex space-x-4 mt-3">
+                  <div className="flex items-center space-x-2">
+                    {itemIngredients && itemIngredients?.length > 0 && (
+                      <span className="font-semibold text-gray-800">
+                        {t("ingredients")}:
+                      </span>
+                    )}
+                    {itemIngredients?.map((ingredient) => (
+                      <span
+                        key={ingredient?.id}
+                        className="tooltip cursor-default"
+                        title={
+                          language === "en"
+                            ? ingredient?.name_en
+                            : ingredient?.name_hr
+                        }
+                      >
+                        {ingredient?.icon}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {itemAllergens && itemAllergens?.length > 0 && (
+                      <span className="font-semibold text-gray-800">
+                        {t("allergens")}:
+                      </span>
+                    )}
+                    {itemAllergens?.map((allergen) => (
+                      <span
+                        key={allergen?.id}
+                        className="tooltip cursor-default"
+                        title={
+                          language === "en"
+                            ? allergen?.name_en
+                            : allergen?.name_hr
+                        }
+                      >
+                        {allergen?.icon}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 md:mt-0 flex space-x-4">
+              <button
+                onClick={() => openEditItemModal(item)}
+                className="text-sm px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-full shadow-md hover:from-blue-600 hover:to-blue-800 transition-transform transform hover:scale-105"
+              >
+                {t("edit")}
+              </button>
+              <button
+                onClick={() => handleDeleteItemModal(item)}
+                className="text-sm px-4 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold rounded-full shadow-md hover:from-red-600 hover:to-red-800 transition-transform transform hover:scale-105"
+              >
+                {t("delete")}
+              </button>
+            </div>
+          </li>
+        );
+      });
+  };
+
+  const handleIngredientSelect = (id: string) => {
+    setSelectedIngredientIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleModalClose = () => {
+    setIngredientSearch("");
+    setIngredientDropdownOpen(false);
+    setSelectedIngredientIds([]);
+    setEditItemId(null);
+    setEditItemName("");
+    setEditItemPrice("");
+    setEditItemDescription("");
+    setSelectedCategoryId(null);
+    setNewItemImageFile(null);
+    setRemoveImage(false);
+    setEditItemModalOpen(false);
+  };
+
+  const handleDeleteCategoryModal = (category: Category) => {
+    setCategoryToDelete(category);
+    setDeleteCategoryModalOpen(true);
+  };
+
+  const handleDeleteItemModal = (item: MenuItem) => {
+    setItemToDelete(item);
+    setDeleteItemModalOpen(true);
   };
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="section-title">{t("menu")}</h2>
-      <h3 className="section-subtitle">
-        {t("manage_your_menu_items_and_categories")}
-      </h3>
-
-      <div className="flex gap-4">
-        <button
-          onClick={() => setCategoryModalOpen(true)}
-          className="primary-button"
-        >
-          {t("add_category")}
-        </button>
-        <button
-          onClick={() => setItemModalOpen(true)}
-          className="primary-button"
-        >
-          {t("add_menu_item")}
-        </button>
+      <div className="flex justify-between items-start mt-2">
+        <div>
+          <h2 className="section-title">{t("menu")}</h2>
+          <h3 className="section-subtitle">
+            {t("manage_your_menu_items_and_categories")}
+          </h3>
+        </div>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setAddCategoryModalOpen(true)}
+            className="primary-button"
+          >
+            {t("add_category")}
+          </button>
+          <button
+            onClick={() => setAddItemModalOpen(true)}
+            className="primary-button"
+          >
+            {t("add_menu_item")}
+          </button>
+        </div>
       </div>
+
+      <div className="h-line"></div>
 
       <div>
         {categories.map((category) => (
           <div key={category.id} className="my-4">
-            <h4 className="text-lg font-semibold">{category.name}</h4>
-            <ul className="bg-white rounded-lg shadow-md">
+            <h4 className="text-lg font-semibold flex justify-between">
+              {category.name}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openEditCategoryModal(category)}
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                >
+                  {t("edit")}
+                </button>
+                <button
+                  onClick={() => handleDeleteCategoryModal(category)}
+                  className="text-red-500 hover:text-red-700 text-sm"
+                >
+                  {t("delete")}
+                </button>
+              </div>
+            </h4>
+            <ul className="bg-white flex flex-col mt-2">
               {renderMenuItems(category.id)}
             </ul>
+            <div className="h-line"></div>
           </div>
         ))}
         <div className="my-4">
           <h4 className="text-lg font-semibold">{t("uncategorized_items")}</h4>
-          <ul className="bg-white rounded-lg shadow-md">
+          <ul className="g-white flex flex-col mt-2">
             {renderMenuItems(null)}
           </ul>
         </div>
       </div>
 
-      <Modal
-        isOpen={isCategoryModalOpen}
-        onClose={() => setCategoryModalOpen(false)}
-      >
-        <h4 className="text-lg font-semibold mb-4">{t("add_new_category")}</h4>
-        <input
-          type="text"
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          placeholder={t("category_name")}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        />
-        <button onClick={handleAddCategory} className="primary-button w-full">
-          {t("add_category")}
-        </button>
-      </Modal>
+      {isAddCategoryModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setAddCategoryModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/category.svg"
+                alt="Restaurant Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("add_category")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("add_category_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("category_name")}
+              </label>
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
 
-      <Modal isOpen={isItemModalOpen} onClose={() => setItemModalOpen(false)}>
-        <h4 className="text-lg font-semibold mb-4">{t("add_new_menu_item")}</h4>
-        <input
-          type="text"
-          value={newItemName}
-          onChange={(e) => setNewItemName(e.target.value)}
-          placeholder={t("item_name")}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        />
-        <input
-          type="number"
-          value={newItemPrice}
-          onChange={(e) => setNewItemPrice(e.target.value)}
-          placeholder={t("item_price")}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        />
-        <select
-          value={selectedCategoryId || ""}
-          onChange={(e) => setSelectedCategoryId(e.target.value || null)}
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        >
-          <option value="">{t("no_category")}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <button onClick={handleAddMenuItem} className="primary-button w-full">
-          {t("add_menu_item")}
-        </button>
-      </Modal>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setAddCategoryModalOpen(false)}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button onClick={handleAddCategory} className="primary-button">
+                {t("add_category")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditCategoryModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setEditCategoryModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/category.svg"
+                alt="Restaurant Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("edit_category")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("edit_category_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("category_name")}
+              </label>
+              <input
+                type="text"
+                value={editCategoryName}
+                onChange={(e) => setEditCategoryName(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setEditCategoryModalOpen(false)}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button onClick={handleUpdateCategory} className="primary-button">
+                {t("update_category")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddItemModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative overflow-y-auto max-h-screen">
+            <button
+              onClick={() => {
+                setAddItemModalOpen(false);
+                setEditItemId(null);
+                setEditItemName("");
+                setEditItemPrice("");
+                setEditItemDescription("");
+                setSelectedCategoryId(null);
+                setNewItemImageFile(null);
+                setRemoveImage(false);
+                setNewItemDescription("");
+                setIngredientSearch("");
+                setIngredientDropdownOpen(false);
+                setSelectedIngredientIds([]);
+              }}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/item.svg"
+                alt="Restaurant Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("add_menu_item")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("add_menu_item_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("item_name")}
+              </label>
+              <input
+                type="text"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("item_price")}
+              </label>
+              <input
+                type="text"
+                value={newItemPrice}
+                onChange={(e) => setNewItemPrice(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("category")}
+              </label>
+              <select
+                value={selectedCategoryId || ""}
+                onChange={(e) => setSelectedCategoryId(e.target.value || null)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              >
+                <option value="">{t("no_category")}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Ingredients
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search ingredients..."
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                  onFocus={() => setIngredientDropdownOpen(true)}
+                  onBlur={() => setIngredientDropdownOpen(false)}
+                  className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                />
+                {isIngredientDropdownOpen && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
+                    {ingredients
+                      .filter(
+                        (ingredient) =>
+                          !selectedIngredientIds.includes(
+                            ingredient.id.toString()
+                          ) &&
+                          (language === "en"
+                            ? ingredient.name_en
+                            : ingredient.name_hr
+                          )
+                            .toLowerCase()
+                            .includes(ingredientSearch.toLowerCase())
+                      )
+                      .map((ingredient) => (
+                        <div
+                          key={ingredient.id}
+                          className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
+                          onMouseDown={() =>
+                            handleIngredientSelect(ingredient.id.toString())
+                          }
+                        >
+                          <span className="flex items-center">
+                            {ingredient.icon}{" "}
+                            {language === "en"
+                              ? ingredient.name_en
+                              : ingredient.name_hr}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t("image")}
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setNewItemImageFile(e.target.files[0]);
+                    }
+                  }}
+                  className="mt-1 block w-full p-2 border border-gray-300 rounded"
+                />
+                <div className="mt-2">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={removeImage}
+                      onChange={(e) => setRemoveImage(e.target.checked)}
+                      className="form-checkbox"
+                    />
+                    <span className="ml-2">{t("remove_image")}</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedIngredientIds.map((id) => {
+                  const ingredient = ingredients.find(
+                    (ing) => ing.id.toString() === id
+                  );
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+                    >
+                      <span className="mr-2">{ingredient?.icon}</span>
+                      <span>
+                        {language === "en"
+                          ? ingredient?.name_en
+                          : ingredient?.name_hr}
+                      </span>
+                      <button
+                        onClick={() => handleIngredientSelect(id)}
+                        className="ml-2 text-xs text-red-500 hover:text-red-700"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("description")}
+              </label>
+              <textarea
+                value={newItemDescription}
+                onChange={(e) => setNewItemDescription(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setAddItemModalOpen(false);
+                  handleModalClose();
+                }}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button onClick={handleAddMenuItem} className="primary-button">
+                {t("add_menu_item")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditItemModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative overflow-y-auto max-h-screen">
+            <button
+              onClick={() => {
+                setEditItemModalOpen(false);
+                handleModalClose();
+              }}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/item.svg"
+                alt="Restaurant Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("edit_menu_item")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("edit_menu_item_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("item_name")}
+              </label>
+              <input
+                type="text"
+                value={editItemName}
+                onChange={(e) => setEditItemName(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("item_price")}
+              </label>
+              <input
+                type="text"
+                value={editItemPrice}
+                onChange={(e) => setEditItemPrice(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("category")}
+              </label>
+              <select
+                value={selectedCategoryId || ""}
+                onChange={(e) => setSelectedCategoryId(e.target.value || null)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              >
+                <option value="">{t("no_category")}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Ingredients
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search ingredients..."
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                  onFocus={() => setIngredientDropdownOpen(true)}
+                  onBlur={() => setIngredientDropdownOpen(false)}
+                  className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                />
+                {isIngredientDropdownOpen && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
+                    {ingredients
+                      .filter(
+                        (ingredient) =>
+                          !selectedIngredientIds.includes(
+                            ingredient.id.toString()
+                          ) &&
+                          (language === "en"
+                            ? ingredient.name_en
+                            : ingredient.name_hr
+                          )
+                            .toLowerCase()
+                            .includes(ingredientSearch.toLowerCase())
+                      )
+                      .map((ingredient) => (
+                        <div
+                          key={ingredient.id}
+                          className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
+                          onMouseDown={() =>
+                            handleIngredientSelect(ingredient.id.toString())
+                          }
+                        >
+                          <span className="flex items-center">
+                            {ingredient.icon}{" "}
+                            {language === "en"
+                              ? ingredient.name_en
+                              : ingredient.name_hr}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedIngredientIds.map((id) => {
+                  const ingredient = ingredients.find(
+                    (ing) => ing.id.toString() === id
+                  );
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+                    >
+                      <span className="mr-2">{ingredient?.icon}</span>
+                      <span>
+                        {language === "en"
+                          ? ingredient?.name_en
+                          : ingredient?.name_hr}
+                      </span>
+                      <button
+                        onClick={() => handleIngredientSelect(id)}
+                        className="ml-2 text-xs text-red-500 hover:text-red-700"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("image")}
+              </label>
+              <input
+                type="file"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setNewItemImageFile(e.target.files[0]);
+                  }
+                }}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded"
+              />
+              <div className="mt-2">
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={removeImage}
+                    onChange={(e) => setRemoveImage(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2">{t("remove_image")}</span>
+                </label>
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("description")}
+              </label>
+              <textarea
+                value={editItemDescription}
+                onChange={(e) => setEditItemDescription(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setEditItemModalOpen(false);
+                  handleModalClose();
+                }}
+                className="secondary-button"
+              >
+                Cancel
+              </button>
+              <button onClick={handleUpdateMenuItem} className="primary-button">
+                {t("update_menu_item")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteCategoryModalOpen && categoryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setDeleteCategoryModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/trash.svg"
+                alt="Trash Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("delete_category")}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t("delete_category_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <p className="text-sm text-black">
+                {t("are_you_sure_you_want_to_delete_the_category")}{" "}
+                <span className="font-bold">{categoryToDelete.name}</span>?
+                <br />
+                {t("this_will_delete_all_items_in_the_category")}
+              </p>
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteCategoryModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => handleDeleteCategory(categoryToDelete.id)}
+                className="delete-button"
+              >
+                {t("delete_category")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteItemModalOpen && itemToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setDeleteItemModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/trash.svg"
+                alt="Trash Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("delete_item")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("delete_item_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <p className="text-sm text-black">
+                {t("are_you_sure_you_want_to_delete_the_item")}{" "}
+                <span className="font-bold">{itemToDelete.name}</span>?
+              </p>
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteItemModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => handleDeleteMenuItem(itemToDelete.id)}
+                className="delete-button"
+              >
+                {t("delete_item")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

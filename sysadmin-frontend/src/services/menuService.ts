@@ -27,20 +27,12 @@ export const getMenuItems = async (restaurantId: string) => {
   return response.data;
 };
 
-export const createMenuItem = async (data: {
-  name: string;
-  price: number;
-  restaurantId: string;
-  categoryId?: string;
-}) => {
+export const createMenuItem = async (data: any) => {
   const response = await apiClient.post("/api/menu/menuItems", data);
   return response.data;
 };
 
-export const updateMenuItem = async (
-  id: string,
-  data: { name: string; price: number; categoryId?: string }
-) => {
+export const updateMenuItem = async (id: string, data: any) => {
   const response = await apiClient.put(`/api/menu/menuItems/${id}`, data);
   return response.data;
 };
@@ -53,5 +45,17 @@ export const deleteMenuItem = async (id: string) => {
 // Get all categories for a specific restaurant
 export const getCategoryItems = async (restaurantId: string) => {
   const response = await apiClient.get(`/api/menu/categories/${restaurantId}`);
+  return response.data;
+};
+
+// Get all ingredients
+export const getAllIngredients = async () => {
+  const response = await apiClient.get("/api/menu/ingredients");
+  return response.data;
+};
+
+// Get all allergens
+export const getAllAllergens = async () => {
+  const response = await apiClient.get("/api/menu/allergens");
   return response.data;
 };

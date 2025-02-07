@@ -1,14 +1,21 @@
-const { MenuItem, MenuCategory } = require('../../models');
+const {
+  MenuItem,
+  MenuCategory,
+  IngredientAllergen,
+  Ingredient,
+  Allergen,
+} = require('../../models');
+const { uploadToS3 } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 
 // Get all menu items for a specific restaurant
-exports.getMenuItems = async (req, res) => {
+const getMenuItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
     const menuItems = await MenuItem.findAll({
       where: { restaurantId },
     });
 
-    // Format price for each menu item before sending the response
     const formattedMenuItems = menuItems.map((item) => ({
       ...item.toJSON(),
       price: parseFloat(item.price).toFixed(2),
@@ -20,7 +27,7 @@ exports.getMenuItems = async (req, res) => {
 };
 
 // Get all categories for a specific restaurant
-exports.getCategoryItems = async (req, res) => {
+const getCategoryItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
     const categories = await MenuCategory.findAll({
@@ -33,17 +40,38 @@ exports.getCategoryItems = async (req, res) => {
 };
 
 // Create a new menu item for a specific restaurant
-exports.createMenuItem = async (req, res) => {
+const createMenuItem = async (req, res) => {
   try {
-    const { name, price, categoryId, restaurantId } = req.body;
+    const { name, price, categoryId, restaurantId, ingredientIds, type } =
+      req.body;
+    const file = req.file;
+
+    // Fetch related allergens
+    const allergens = await IngredientAllergen.findAll({
+      where: { ingredientId: ingredientIds },
+      attributes: ['allergenId'],
+    });
+
+    // Extract unique allergen IDs
+    const allergenIds = [...new Set(allergens.map((a) => a.allergenId))];
+
+    let imageUrl = null;
+    if (file) {
+      const folder = 'menu_items';
+      imageUrl = await uploadToS3(file, folder);
+    }
+
     const formattedPrice = parseFloat(price).toFixed(2);
     const menuItem = await MenuItem.create({
       name,
       price: formattedPrice,
-      restaurantId: restaurantId,
-      categoryId: categoryId,
+      restaurantId,
+      categoryId,
+      imageUrl,
+      ingredients: ingredientIds,
+      allergens: allergenIds,
+      type,
     });
-    console.log(menuItem);
     res.status(201).json(menuItem);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create menu item' });
@@ -51,19 +79,65 @@ exports.createMenuItem = async (req, res) => {
 };
 
 // Update an existing menu item
-exports.updateMenuItem = async (req, res) => {
+const updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, categoryId } = req.body;
+    const { name, price, categoryId, removeImage, ingredientIds, description } =
+      req.body;
+    const file = req.file;
+
     const menuItem = await MenuItem.findByPk(id);
     if (!menuItem) {
       return res.status(404).json({ error: 'Menu item not found' });
     }
-    const formattedPrice = parseFloat(price).toFixed(2); // Format price to two decimal places
-    menuItem.name = name;
-    menuItem.price = formattedPrice;
-    menuItem.categoryId = categoryId;
-    await menuItem.save();
+
+    let imageUrl = menuItem.imageUrl;
+
+    // Delete the old image if a new one is uploaded
+    if (file) {
+      if (menuItem.imageUrl) {
+        const oldKey = menuItem.imageUrl.split('/').pop();
+        await deleteFromS3(`menu_items/${oldKey}`);
+      }
+      const folder = 'menu_items';
+      imageUrl = await uploadToS3(file, folder);
+    } else if (removeImage === 'true') {
+      if (menuItem.imageUrl) {
+        const oldKey = menuItem.imageUrl.split('/').pop();
+        await deleteFromS3(`menu_items/${oldKey}`);
+      }
+      imageUrl = null;
+    }
+
+    const allAllergens = [];
+
+    // Fetch related allergens
+    for (const ingredientId of ingredientIds) {
+      const allergens = await IngredientAllergen.findAll({
+        where: { ingredientId: Number(ingredientId) },
+        attributes: ['allergenId'],
+      });
+      allAllergens.push(...allergens.map((a) => a.allergenId));
+    }
+
+    // Extract unique allergen IDs
+    const allergenIds = [...new Set(allAllergens)];
+
+    // Parse the JSON string into an array
+    const ingredientsNumberIds = ingredientIds.map(Number);
+
+    const formattedCategoryId = categoryId === '' ? null : categoryId;
+    const formattedPrice = parseFloat(price).toFixed(2);
+    await menuItem.update({
+      name,
+      price: formattedPrice,
+      categoryId: formattedCategoryId,
+      imageUrl,
+      ingredients: ingredientsNumberIds,
+      allergens: allergenIds,
+      description,
+    });
+
     res.json(menuItem);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update menu item' });
@@ -71,13 +145,21 @@ exports.updateMenuItem = async (req, res) => {
 };
 
 // Delete a menu item
-exports.deleteMenuItem = async (req, res) => {
+const deleteMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     const menuItem = await MenuItem.findByPk(id);
     if (!menuItem) {
       return res.status(404).json({ error: 'Menu item not found' });
     }
+
+    // Delete image from S3 if it exists
+    if (menuItem.imageUrl) {
+      const fileName = menuItem.imageUrl.split('/').pop();
+      const key = `menu_items/${fileName}`;
+      await deleteFromS3(key);
+    }
+
     await menuItem.destroy();
     res.status(204).send();
   } catch (error) {
@@ -86,12 +168,25 @@ exports.deleteMenuItem = async (req, res) => {
 };
 
 // Create a new category for a specific restaurant
-exports.createCategory = async (req, res) => {
+const createCategory = async (req, res) => {
   try {
     const { name, restaurantId } = req.body;
+
+    // Provjera postoji li već kategorija s istim imenom i restaurantId
+    const existingCategory = await MenuCategory.findOne({
+      where: {
+        name,
+        restaurantId,
+      },
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({ message: 'category_already_exists' });
+    }
+
     const category = await MenuCategory.create({
       name,
-      restaurantId: restaurantId,
+      restaurantId,
     });
 
     res.status(201).json(category);
@@ -101,7 +196,7 @@ exports.createCategory = async (req, res) => {
 };
 
 // Update an existing category
-exports.updateCategory = async (req, res) => {
+const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -118,16 +213,63 @@ exports.updateCategory = async (req, res) => {
 };
 
 // Delete a category
-exports.deleteCategory = async (req, res) => {
+const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const category = await MenuCategory.findByPk(id);
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
+
+    // Find all items in the category
+    const menuItems = await MenuItem.findAll({ where: { categoryId: id } });
+
+    // Delete images from S3 for each item
+    for (const item of menuItems) {
+      if (item.imageUrl) {
+        const fileName = item.imageUrl.split('/').pop();
+        const key = `menu_items/${fileName}`;
+        await deleteFromS3(key);
+      }
+    }
+
+    // Delete all items in the category
+    await MenuItem.destroy({ where: { categoryId: id } });
+
     await category.destroy();
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete category' });
   }
+};
+
+const getAllIngredients = async (req, res) => {
+  try {
+    const ingredients = await Ingredient.findAll();
+    res.json(ingredients);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ingredients' });
+  }
+};
+
+const getAllAllergens = async (req, res) => {
+  try {
+    const allergens = await Allergen.findAll();
+    res.json(allergens);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch allergens' });
+  }
+};
+
+module.exports = {
+  getMenuItems,
+  getCategoryItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getAllIngredients,
+  getAllAllergens,
 };

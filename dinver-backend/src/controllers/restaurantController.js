@@ -2,6 +2,7 @@ const { Restaurant, UserAdmin } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
@@ -167,18 +168,10 @@ const addRestaurant = async (req, res) => {
 };
 
 // Update restaurant details
-async function updateRestaurant(req, res) {
+const updateRestaurant = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      name,
-      working_hours_info,
-      address,
-      website_url,
-      fb_url,
-      ig_url,
-      phone,
-    } = req.body;
+    const { name, address, website_url, fb_url, ig_url, phone } = req.body;
     const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
@@ -187,39 +180,53 @@ async function updateRestaurant(req, res) {
     }
 
     let thumbnail_url = restaurant.thumbnail_url;
+
+    // Delete the old image if a new one is uploaded
     if (file) {
-      thumbnail_url = await uploadToS3(file);
+      if (restaurant.thumbnail_url) {
+        const oldKey = restaurant.thumbnail_url.split('/').pop();
+        await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
+      }
+      const folder = 'restaurant_thumbnails';
+      thumbnail_url = await uploadToS3(file, folder);
     }
-
-    const typesArray = req.body.types
-      ? req.body.types.split(',').map((type) => type.trim())
-      : [];
-
-    const venuePerksArray = req.body.venue_perks
-      ? req.body.venue_perks.split(',').map((perk) => perk.trim())
-      : [];
 
     await restaurant.update({
       name,
-      thumbnail_url,
-      working_hours_info,
+      address,
       website_url,
       fb_url,
       ig_url,
       phone,
-      venue_perks: venuePerksArray,
-      types: typesArray,
-      address,
+      thumbnail_url,
     });
 
     res.json(restaurant);
   } catch (error) {
-    console.error('Error updating restaurant:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while updating the restaurant' });
+    res.status(500).json({ error: 'Failed to update restaurant' });
   }
-}
+};
+
+const deleteRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Delete the image from S3 if it exists
+    if (restaurant.thumbnailUrl) {
+      const key = restaurant.thumbnailUrl.split('/').pop();
+      await deleteFromS3(`restaurant_thumbnails/${key}`);
+    }
+
+    await restaurant.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete restaurant' });
+  }
+};
 
 function isRestaurantOpen(openingHours) {
   const now = new Date();
@@ -343,4 +350,5 @@ module.exports = {
   addRestaurant,
   updateWorkingHours,
   updateFilters,
+  deleteRestaurant,
 };
