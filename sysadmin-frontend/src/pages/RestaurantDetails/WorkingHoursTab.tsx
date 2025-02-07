@@ -129,7 +129,20 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           close: { day: dayIndex, time: "" },
         };
       }
-      updated[dayIndex][type].time = unformatTime(time);
+      const formattedTime = unformatTime(time);
+      updated[dayIndex][type].time = formattedTime;
+
+      if (type === "close") {
+        const openTime = updated[dayIndex].open.time;
+        if (formattedTime < openTime) {
+          updated[dayIndex][type].day = dayIndex + 1;
+        } else {
+          updated[dayIndex][type].day = dayIndex;
+        }
+      } else {
+        updated[dayIndex][type].day = dayIndex;
+      }
+
       return updated;
     });
   };

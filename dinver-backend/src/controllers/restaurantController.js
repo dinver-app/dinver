@@ -1,9 +1,4 @@
-const {
-  Restaurant,
-  UserOrganization,
-  UserAdmin,
-  FoodType,
-} = require('../../models');
+const { Restaurant, UserAdmin } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -228,7 +223,7 @@ async function updateRestaurant(req, res) {
 
 function isRestaurantOpen(openingHours) {
   const now = new Date();
-  const currentDay = now.getDay();
+  const currentDay = now.getDay() - 1;
   const currentTime = now.getHours() * 100 + now.getMinutes();
 
   if (!openingHours || !openingHours.periods) {
