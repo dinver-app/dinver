@@ -107,5 +107,7 @@
   "category_name": "Category Name",
   "item_name": "Item Name",
   "item_price": "Item Price",
-  "no_category": "No Category"
+  "no_category": "No Category",
+  "login_successful": "Login successful",
+  "login_failed": "Login failed: Invalid email or password"
 }

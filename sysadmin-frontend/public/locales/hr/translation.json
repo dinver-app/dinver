@@ -107,5 +107,7 @@
   "category_name": "Ime kategorije",
   "item_name": "Ime stavke",
   "item_price": "Cijena stavke",
-  "no_category": "Nema kategorije"
+  "no_category": "Nema kategorije",
+  "login_successful": "Prijava uspješna",
+  "login_failed": "Prijava neuspješna: Pogrešan email ili lozinka"
 }

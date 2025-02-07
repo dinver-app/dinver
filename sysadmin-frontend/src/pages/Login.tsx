@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { login, logout } from "../services/authService";
 import { useEffect } from "react";
 import i18n from "i18next";
+import { useTranslation } from "react-i18next";
 
 const Login = () => {
+  const { t } = useTranslation();
   const initialValues = { email: "", password: "" };
   const navigate = useNavigate();
   const validationSchema = Yup.object({
@@ -28,11 +30,11 @@ const Login = () => {
         localStorage.setItem("language", language);
         i18n.changeLanguage(language);
 
-        toast.success("Login successful!");
+        toast.success(t("login_successful"));
         navigate("/");
       }
     } catch (error) {
-      toast.error("Login failed: Invalid email or password");
+      toast.error(t("login_failed"));
       console.error("Login failed:", error);
     }
   };
