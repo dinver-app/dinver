@@ -261,6 +261,32 @@ const getAllAllergens = async (req, res) => {
   }
 };
 
+// Update category order
+const updateCategoryOrder = async (req, res) => {
+  try {
+    const { order } = req.body; // Array of category IDs in the desired order
+    for (let i = 0; i < order.length; i++) {
+      await MenuCategory.update({ position: i }, { where: { id: order[i] } });
+    }
+    res.status(200).json({ message: 'Category order updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update category order' });
+  }
+};
+
+// Update item order within a category
+const updateItemOrder = async (req, res) => {
+  try {
+    const { order } = req.body; // Array of item IDs in the desired order
+    for (let i = 0; i < order.length; i++) {
+      await MenuItem.update({ position: i }, { where: { id: order[i] } });
+    }
+    res.status(200).json({ message: 'Item order updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update item order' });
+  }
+};
+
 module.exports = {
   getMenuItems,
   getCategoryItems,
@@ -272,4 +298,6 @@ module.exports = {
   deleteCategory,
   getAllIngredients,
   getAllAllergens,
+  updateCategoryOrder,
+  updateItemOrder,
 };

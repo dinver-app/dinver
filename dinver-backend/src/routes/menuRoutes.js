@@ -235,4 +235,18 @@ router.get(
   menuController.getAllAllergens,
 );
 
+router.put(
+  '/categories/order',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateCategoryOrder,
+);
+
+router.put(
+  '/menuItems/order',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateItemOrder,
+);
+
 module.exports = router;
