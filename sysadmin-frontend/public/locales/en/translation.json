@@ -136,5 +136,10 @@
   "delete_category": "Delete Category",
   "delete_item_description": "Delete an item from the menu.",
   "delete_category_description": "Delete a category from the menu.",
-  "this_will_delete_all_items_in_the_category": "This will delete all items in the category."
+  "this_will_delete_all_items_in_the_category": "This will delete all items in the category.",
+  "order_categories": "Order Categories",
+  "order_items": "Order Items",
+  "save_order": "Save Order",
+  "category_order_updated": "Category order updated",
+  "failed_to_update_category_order": "Failed to update category order"
 }

@@ -236,14 +236,14 @@ router.get(
 );
 
 router.put(
-  '/categories/order',
+  '/categories-order',
   authenticateToken,
   checkAdmin,
   menuController.updateCategoryOrder,
 );
 
 router.put(
-  '/menuItems/order',
+  '/menuItems-order',
   authenticateToken,
   checkAdmin,
   menuController.updateItemOrder,

@@ -136,5 +136,10 @@
   "delete_category": "Ukloni kategoriju",
   "delete_item_description": "Ukloni stavku iz menija.",
   "delete_category_description": "Ukloni kategoriju iz menija.",
-  "this_will_delete_all_items_in_the_category": "Ovo će ukloniti sve stavke iz kategorije."
+  "this_will_delete_all_items_in_the_category": "Ovo će ukloniti sve stavke iz kategorije.",
+  "order_categories": "Redoslijed kategorija",
+  "order_items": "Redoslijed stavki",
+  "save_order": "Spremi redoslijed",
+  "category_order_updated": "Redoslijed kategorija ažuriran",
+  "failed_to_update_category_order": "Greška pri ažuriranju redoslijeda kategorija"
 }

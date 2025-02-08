@@ -264,7 +264,7 @@ const getAllAllergens = async (req, res) => {
 // Update category order
 const updateCategoryOrder = async (req, res) => {
   try {
-    const { order } = req.body; // Array of category IDs in the desired order
+    const { order } = req.body;
     for (let i = 0; i < order.length; i++) {
       await MenuCategory.update({ position: i }, { where: { id: order[i] } });
     }

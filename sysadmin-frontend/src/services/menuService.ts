@@ -59,3 +59,13 @@ export const getAllAllergens = async () => {
   const response = await apiClient.get("/api/menu/allergens");
   return response.data;
 };
+
+export const updateCategoryOrder = async (order: string[]) => {
+  const response = await apiClient.put("/api/menu/categories-order", { order });
+  return response.data;
+};
+
+export const updateItemOrder = async (order: string[]) => {
+  const response = await apiClient.put("/api/menu/menuItems-order", { order });
+  return response.data;
+};

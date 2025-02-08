@@ -10,10 +10,12 @@ import {
   deleteMenuItem,
   getAllIngredients,
   getAllAllergens,
+  updateCategoryOrder,
 } from "../../services/menuService";
 import { MenuItem, Category } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 interface Ingredient {
   id: number;
@@ -67,6 +69,13 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   );
   const [isDeleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
+
+  const [isOrderCategoriesModalOpen, setIsOrderCategoriesModalOpen] =
+    useState(false);
+  const [isOrderItemsModalOpen, setIsOrderItemsModalOpen] = useState(false);
+
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [itemOrder, setItemOrder] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchMenuData = async () => {
@@ -260,6 +269,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     );
   };
 
+  useEffect(() => {
+    console.log("Categories:", categories);
+  }, [categories]);
+
   const renderMenuItems = (categoryId: string | null) => {
     return menuItems
       .filter((item) => item.categoryId === categoryId)
@@ -384,6 +397,28 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setDeleteItemModalOpen(true);
   };
 
+  const handleSaveCategoryOrder = async () => {
+    try {
+      await updateCategoryOrder(categoryOrder);
+      setIsOrderCategoriesModalOpen(false);
+      toast.success(t("category_order_updated"));
+    } catch (error) {
+      console.error("Failed to update category order", error);
+      toast.error(t("failed_to_update_category_order"));
+    }
+  };
+
+  const onDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const updatedCategories = Array.from(categories);
+    const [movedCategory] = updatedCategories.splice(result.source.index, 1);
+    updatedCategories.splice(result.destination.index, 0, movedCategory);
+
+    setCategories(updatedCategories);
+    setCategoryOrder(updatedCategories.map((cat) => cat.id));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-start mt-2">
@@ -405,6 +440,12 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             className="primary-button"
           >
             {t("add_menu_item")}
+          </button>
+          <button
+            onClick={() => setIsOrderCategoriesModalOpen(true)}
+            className="secondary-button"
+          >
+            {t("order_categories")}
           </button>
         </div>
       </div>
@@ -1045,6 +1086,79 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 className="delete-button"
               >
                 {t("delete_item")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOrderCategoriesModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setIsOrderCategoriesModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <h2 className="text-lg font-semibold mb-4">
+              {t("order_categories")}
+            </h2>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="categories">
+                {(provided) => {
+                  console.log("Rendering categories:", categories);
+                  return (
+                    <ul
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="space-y-2"
+                    >
+                      {categories.map((category, index) => {
+                        console.log(index);
+                        if (!category.id) {
+                          console.error("Category ID is undefined!", category);
+                          return null;
+                        }
+                        return (
+                          <Draggable
+                            key={category.id}
+                            draggableId={category.id.toString()}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <li
+                                key={category.id}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                ref={provided.innerRef}
+                                className="p-2 border border-gray-300 rounded bg-white cursor-pointer"
+                              >
+                                {category.name}
+                              </li>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {provided.placeholder}
+                    </ul>
+                  );
+                }}
+              </Droppable>
+            </DragDropContext>
+
+            <div className="flex justify-end space-x-3 mt-4">
+              <button
+                onClick={() => setIsOrderCategoriesModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleSaveCategoryOrder}
+                className="primary-button"
+              >
+                {t("save_order")}
               </button>
             </div>
           </div>
