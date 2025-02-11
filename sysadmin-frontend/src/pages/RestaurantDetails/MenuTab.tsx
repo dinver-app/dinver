@@ -28,6 +28,9 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const { t } = useTranslation();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesForSorting, setCategoriesForSorting] = useState<Category[]>(
+    []
+  );
   const [newCategoryName, setNewCategoryName] = useState<string>("");
   const [newItemName, setNewItemName] = useState<string>("");
   const [newItemPrice, setNewItemPrice] = useState<string>("");
@@ -73,6 +76,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         setMenuItems(items);
         const cats: Category[] = await getCategoryItems(restaurantId as string);
         setCategories(cats);
+        setCategoriesForSorting(cats);
+        setCategoryOrder(cats.map((cat) => cat.id));
       } catch (error) {
         console.error("Failed to fetch menu data", error);
       }
@@ -101,6 +106,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         restaurantId: restaurantId as string,
       });
       setCategories([...categories, category]);
+      setCategoriesForSorting([...categories, category]);
       setNewCategoryName("");
       setAddCategoryModalOpen(false);
     } catch (error) {
@@ -150,6 +156,11 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         name: editCategoryName,
       });
       setCategories(
+        categories.map((cat) =>
+          cat.id === editCategoryId ? updatedCategory : cat
+        )
+      );
+      setCategoriesForSorting(
         categories.map((cat) =>
           cat.id === editCategoryId ? updatedCategory : cat
         )
@@ -209,6 +220,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     try {
       await deleteCategory(id);
       setCategories(categories.filter((cat) => cat.id !== id));
+      setCategoriesForSorting(categories.filter((cat) => cat.id !== id));
       setDeleteCategoryModalOpen(false);
     } catch (error) {
       console.error("Failed to delete category", error);
@@ -250,10 +262,6 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         .map((allergen) => allergen.id.toString()) || []
     );
   };
-
-  useEffect(() => {
-    console.log("Categories:", categories);
-  }, [categories]);
 
   const renderMenuItems = (categoryId: string | null) => {
     return menuItems
@@ -311,13 +319,13 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             <div className="mt-4 md:mt-0 flex space-x-4">
               <button
                 onClick={() => openEditItemModal(item)}
-                className="text-sm px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-full shadow-md hover:from-blue-600 hover:to-blue-800 transition-transform transform hover:scale-105"
+                className="secondary-button"
               >
                 {t("edit")}
               </button>
               <button
                 onClick={() => handleDeleteItemModal(item)}
-                className="text-sm px-4 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white font-semibold rounded-full shadow-md hover:from-red-600 hover:to-red-800 transition-transform transform hover:scale-105"
+                className="delete-button"
               >
                 {t("delete")}
               </button>
@@ -360,6 +368,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const handleSaveCategoryOrder = async () => {
     try {
       await updateCategoryOrder(categoryOrder);
+      setCategories(
+        categories.sort(
+          (a, b) => categoryOrder.indexOf(a.id) - categoryOrder.indexOf(b.id)
+        )
+      );
+      setCategoriesForSorting(
+        categories.sort(
+          (a, b) => categoryOrder.indexOf(a.id) - categoryOrder.indexOf(b.id)
+        )
+      );
       setIsOrderCategoriesModalOpen(false);
       toast.success(t("category_order_updated"));
     } catch (error) {
@@ -375,7 +393,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     const [movedCategory] = updatedCategories.splice(result.source.index, 1);
     updatedCategories.splice(result.destination.index, 0, movedCategory);
 
-    setCategories(updatedCategories);
+    setCategoriesForSorting(updatedCategories);
     setCategoryOrder(updatedCategories.map((cat) => cat.id));
   };
 
@@ -487,7 +505,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 onClick={() => setAddCategoryModalOpen(false)}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleAddCategory} className="primary-button">
                 {t("add_category")}
@@ -538,7 +556,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 onClick={() => setEditCategoryModalOpen(false)}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleUpdateCategory} className="primary-button">
                 {t("update_category")}
@@ -631,7 +649,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search allergens..."
+                  placeholder={t("search_allergens")}
                   value={allergenSearch}
                   onChange={(e) => setAllergenSearch(e.target.value)}
                   onFocus={() => setAllergenDropdownOpen(true)}
@@ -745,7 +763,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 }}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleAddMenuItem} className="primary-button">
                 {t("add_menu_item")}
@@ -828,7 +846,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search allergens..."
+                  placeholder={t("search_allergens")}
                   value={allergenSearch}
                   onChange={(e) => setAllergenSearch(e.target.value)}
                   onFocus={() => setAllergenDropdownOpen(true)}
@@ -942,7 +960,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 }}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button onClick={handleUpdateMenuItem} className="primary-button">
                 {t("update_menu_item")}
@@ -1067,15 +1085,13 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="categories">
                 {(provided) => {
-                  console.log("Rendering categories:", categories);
                   return (
                     <ul
                       {...provided.droppableProps}
                       ref={provided.innerRef}
                       className="space-y-2"
                     >
-                      {categories.map((category, index) => {
-                        console.log(index);
+                      {categoriesForSorting.map((category, index) => {
                         if (!category.id) {
                           console.error("Category ID is undefined!", category);
                           return null;
@@ -1092,8 +1108,15 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                                 ref={provided.innerRef}
-                                className="p-2 border border-gray-300 rounded bg-white cursor-pointer"
+                                className="p-2 border border-gray-300 rounded bg-white cursor-pointer flex items-center w-full"
                               >
+                                <span className="flex items-center mr-2">
+                                  <img
+                                    src="/images/drag.png"
+                                    alt="Drag Icon"
+                                    className="w-4 h-4"
+                                  />
+                                </span>
                                 {category.name}
                               </li>
                             )}
@@ -1109,7 +1132,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
             <div className="flex justify-end space-x-3 mt-4">
               <button
-                onClick={() => setIsOrderCategoriesModalOpen(false)}
+                onClick={() => {
+                  setIsOrderCategoriesModalOpen(false);
+                  setCategoriesForSorting(categories);
+                }}
                 className="secondary-button"
               >
                 {t("cancel")}

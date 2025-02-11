@@ -141,5 +141,6 @@
   "order_items": "Order Items",
   "save_order": "Save Order",
   "category_order_updated": "Category order updated",
-  "failed_to_update_category_order": "Failed to update category order"
+  "failed_to_update_category_order": "Failed to update category order",
+  "search_allergens": "Search allergens..."
 }

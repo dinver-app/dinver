@@ -141,5 +141,6 @@
   "order_items": "Redoslijed stavki",
   "save_order": "Spremi redoslijed",
   "category_order_updated": "Redoslijed kategorija ažuriran",
-  "failed_to_update_category_order": "Greška pri ažuriranju redoslijeda kategorija"
+  "failed_to_update_category_order": "Greška pri ažuriranju redoslijeda kategorija",
+  "search_allergens": "Pretraži alergene..."
 }
