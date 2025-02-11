@@ -8,7 +8,6 @@ import {
   updateMenuItem,
   deleteCategory,
   deleteMenuItem,
-  getAllIngredients,
   getAllAllergens,
   updateCategoryOrder,
 } from "../../services/menuService";
@@ -16,13 +15,6 @@ import { MenuItem, Category } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-
-interface Ingredient {
-  id: number;
-  name_en: string;
-  name_hr: string;
-  icon: string;
-}
 
 interface Allergen {
   id: number;
@@ -55,13 +47,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const [editItemDescription, setEditItemDescription] = useState<string>("");
   const [newItemImageFile, setNewItemImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
-  const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
-    []
-  );
-  const [ingredientSearch, setIngredientSearch] = useState("");
-  const [isIngredientDropdownOpen, setIngredientDropdownOpen] = useState(false);
+  const [selectedAllergenIds, setSelectedAllergenIds] = useState<string[]>([]);
+  const [allergenSearch, setAllergenSearch] = useState("");
+  const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
   const [isDeleteCategoryModalOpen, setDeleteCategoryModalOpen] =
     useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
@@ -93,11 +82,6 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   }, [restaurantId]);
 
   useEffect(() => {
-    const fetchIngredients = async () => {
-      const data = await getAllIngredients();
-      setIngredients(data);
-    };
-    fetchIngredients();
     const fetchAllergens = async () => {
       const data = await getAllAllergens();
       setAllergens(data);
@@ -141,8 +125,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       }
       formData.append("description", newItemDescription);
 
-      selectedIngredientIds.forEach((id) => {
-        formData.append("ingredientIds", id);
+      selectedAllergenIds.forEach((id) => {
+        formData.append("allergenIds", id);
       });
 
       const menuItem: MenuItem = await createMenuItem(formData);
@@ -153,7 +137,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewItemImageFile(null);
       setNewItemDescription("");
       setAddItemModalOpen(false);
-      setSelectedIngredientIds([]);
+      setSelectedAllergenIds([]);
     } catch (error) {
       console.error("Failed to create menu item", error);
     }
@@ -192,8 +176,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       if (removeImage) {
         formData.append("removeImage", "true");
       }
-      selectedIngredientIds.forEach((id) => {
-        formData.append("ingredientIds", id);
+      selectedAllergenIds.forEach((id) => {
+        formData.append("allergenIds", id);
       });
       formData.append("description", editItemDescription || "");
 
@@ -215,7 +199,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setRemoveImage(false);
       setNewItemDescription("");
       setEditItemModalOpen(false);
-      setSelectedIngredientIds([]);
+      setSelectedAllergenIds([]);
     } catch (error) {
       console.error("Failed to update menu item", error);
     }
@@ -256,16 +240,14 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setRemoveImage(false);
     setEditItemModalOpen(true);
 
-    const ingredientObjects = item.ingredients?.map((id) =>
-      ingredients.find((ing) => ing.id.toString() === id.toString())
+    const allergenObjects = item.allergens?.map((id) =>
+      allergens.find((all) => all.id.toString() === id.toString())
     );
 
-    setSelectedIngredientIds(
-      ingredientObjects
-        ?.filter(
-          (ingredient): ingredient is Ingredient => ingredient !== undefined
-        )
-        .map((ingredient) => ingredient.id.toString()) || []
+    setSelectedAllergenIds(
+      allergenObjects
+        ?.filter((allergen): allergen is Allergen => allergen !== undefined)
+        .map((allergen) => allergen.id.toString()) || []
     );
   };
 
@@ -277,10 +259,6 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     return menuItems
       .filter((item) => item.categoryId === categoryId)
       .map((item) => {
-        const itemIngredients = item.ingredients?.map((id) =>
-          ingredients.find((ing) => ing.id.toString() === id.toString())
-        );
-
         const itemAllergens = item.allergens?.map((id) =>
           allergens.find((all) => all.id.toString() === id.toString())
         );
@@ -302,29 +280,11 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               </div>
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
-                <p className="text-gray-600 text-lg">${item.price}</p>
+                <p className="text-gray-600 text-lg">
+                  {item.price.toString().replace(".", ",")} €
+                </p>
                 <p className="text-sm text-gray-700 mt-2">{item.description}</p>
                 <div className="flex space-x-4 mt-3">
-                  <div className="flex items-center space-x-2">
-                    {itemIngredients && itemIngredients?.length > 0 && (
-                      <span className="font-semibold text-gray-800">
-                        {t("ingredients")}:
-                      </span>
-                    )}
-                    {itemIngredients?.map((ingredient) => (
-                      <span
-                        key={ingredient?.id}
-                        className="tooltip cursor-default"
-                        title={
-                          language === "en"
-                            ? ingredient?.name_en
-                            : ingredient?.name_hr
-                        }
-                      >
-                        {ingredient?.icon}
-                      </span>
-                    ))}
-                  </div>
                   <div className="flex items-center space-x-2">
                     {itemAllergens && itemAllergens?.length > 0 && (
                       <span className="font-semibold text-gray-800">
@@ -367,16 +327,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       });
   };
 
-  const handleIngredientSelect = (id: string) => {
-    setSelectedIngredientIds((prev) =>
+  const handleAllergenSelect = (id: string) => {
+    setSelectedAllergenIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   const handleModalClose = () => {
-    setIngredientSearch("");
-    setIngredientDropdownOpen(false);
-    setSelectedIngredientIds([]);
+    setAllergenSearch("");
+    setAllergenDropdownOpen(false);
+    setSelectedAllergenIds([]);
     setEditItemId(null);
     setEditItemName("");
     setEditItemPrice("");
@@ -602,9 +562,9 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 setNewItemImageFile(null);
                 setRemoveImage(false);
                 setNewItemDescription("");
-                setIngredientSearch("");
-                setIngredientDropdownOpen(false);
-                setSelectedIngredientIds([]);
+                setAllergenSearch("");
+                setAllergenDropdownOpen(false);
+                setSelectedAllergenIds([]);
               }}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             >
@@ -666,46 +626,46 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Ingredients
+                {t("allergens")}
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search ingredients..."
-                  value={ingredientSearch}
-                  onChange={(e) => setIngredientSearch(e.target.value)}
-                  onFocus={() => setIngredientDropdownOpen(true)}
-                  onBlur={() => setIngredientDropdownOpen(false)}
+                  placeholder="Search allergens..."
+                  value={allergenSearch}
+                  onChange={(e) => setAllergenSearch(e.target.value)}
+                  onFocus={() => setAllergenDropdownOpen(true)}
+                  onBlur={() => setAllergenDropdownOpen(false)}
                   className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
                 />
-                {isIngredientDropdownOpen && (
+                {isAllergenDropdownOpen && (
                   <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
-                    {ingredients
+                    {allergens
                       .filter(
-                        (ingredient) =>
-                          !selectedIngredientIds.includes(
-                            ingredient.id.toString()
+                        (allergen) =>
+                          !selectedAllergenIds.includes(
+                            allergen.id.toString()
                           ) &&
                           (language === "en"
-                            ? ingredient.name_en
-                            : ingredient.name_hr
+                            ? allergen.name_en
+                            : allergen.name_hr
                           )
                             .toLowerCase()
-                            .includes(ingredientSearch.toLowerCase())
+                            .includes(allergenSearch.toLowerCase())
                       )
-                      .map((ingredient) => (
+                      .map((allergen) => (
                         <div
-                          key={ingredient.id}
+                          key={allergen.id}
                           className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
                           onMouseDown={() =>
-                            handleIngredientSelect(ingredient.id.toString())
+                            handleAllergenSelect(allergen.id.toString())
                           }
                         >
                           <span className="flex items-center">
-                            {ingredient.icon}{" "}
+                            {allergen.icon}{" "}
                             {language === "en"
-                              ? ingredient.name_en
-                              : ingredient.name_hr}
+                              ? allergen.name_en
+                              : allergen.name_hr}
                           </span>
                         </div>
                       ))}
@@ -738,23 +698,23 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
-                {selectedIngredientIds.map((id) => {
-                  const ingredient = ingredients.find(
-                    (ing) => ing.id.toString() === id
+                {selectedAllergenIds.map((id) => {
+                  const allergen = allergens.find(
+                    (all) => all.id.toString() === id
                   );
                   return (
                     <div
                       key={id}
                       className="flex items-center px-2 py-1 rounded-full bg-gray-100"
                     >
-                      <span className="mr-2">{ingredient?.icon}</span>
+                      <span className="mr-2">{allergen?.icon}</span>
                       <span>
                         {language === "en"
-                          ? ingredient?.name_en
-                          : ingredient?.name_hr}
+                          ? allergen?.name_en
+                          : allergen?.name_hr}
                       </span>
                       <button
-                        onClick={() => handleIngredientSelect(id)}
+                        onClick={() => handleAllergenSelect(id)}
                         className="ml-2 text-xs text-red-500 hover:text-red-700"
                       >
                         &times;
@@ -863,46 +823,46 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Ingredients
+                {t("allergens")}
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search ingredients..."
-                  value={ingredientSearch}
-                  onChange={(e) => setIngredientSearch(e.target.value)}
-                  onFocus={() => setIngredientDropdownOpen(true)}
-                  onBlur={() => setIngredientDropdownOpen(false)}
+                  placeholder="Search allergens..."
+                  value={allergenSearch}
+                  onChange={(e) => setAllergenSearch(e.target.value)}
+                  onFocus={() => setAllergenDropdownOpen(true)}
+                  onBlur={() => setAllergenDropdownOpen(false)}
                   className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
                 />
-                {isIngredientDropdownOpen && (
+                {isAllergenDropdownOpen && (
                   <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
-                    {ingredients
+                    {allergens
                       .filter(
-                        (ingredient) =>
-                          !selectedIngredientIds.includes(
-                            ingredient.id.toString()
+                        (allergen) =>
+                          !selectedAllergenIds.includes(
+                            allergen.id.toString()
                           ) &&
                           (language === "en"
-                            ? ingredient.name_en
-                            : ingredient.name_hr
+                            ? allergen.name_en
+                            : allergen.name_hr
                           )
                             .toLowerCase()
-                            .includes(ingredientSearch.toLowerCase())
+                            .includes(allergenSearch.toLowerCase())
                       )
-                      .map((ingredient) => (
+                      .map((allergen) => (
                         <div
-                          key={ingredient.id}
+                          key={allergen.id}
                           className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
                           onMouseDown={() =>
-                            handleIngredientSelect(ingredient.id.toString())
+                            handleAllergenSelect(allergen.id.toString())
                           }
                         >
                           <span className="flex items-center">
-                            {ingredient.icon}{" "}
+                            {allergen.icon}{" "}
                             {language === "en"
-                              ? ingredient.name_en
-                              : ingredient.name_hr}
+                              ? allergen.name_en
+                              : allergen.name_hr}
                           </span>
                         </div>
                       ))}
@@ -910,23 +870,23 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 )}
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
-                {selectedIngredientIds.map((id) => {
-                  const ingredient = ingredients.find(
-                    (ing) => ing.id.toString() === id
+                {selectedAllergenIds.map((id) => {
+                  const allergen = allergens.find(
+                    (all) => all.id.toString() === id
                   );
                   return (
                     <div
                       key={id}
                       className="flex items-center px-2 py-1 rounded-full bg-gray-100"
                     >
-                      <span className="mr-2">{ingredient?.icon}</span>
+                      <span className="mr-2">{allergen?.icon}</span>
                       <span>
                         {language === "en"
-                          ? ingredient?.name_en
-                          : ingredient?.name_hr}
+                          ? allergen?.name_en
+                          : allergen?.name_hr}
                       </span>
                       <button
-                        onClick={() => handleIngredientSelect(id)}
+                        onClick={() => handleAllergenSelect(id)}
                         className="ml-2 text-xs text-red-500 hover:text-red-700"
                       >
                         &times;

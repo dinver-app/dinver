@@ -42,24 +42,19 @@ const getCategoryItems = async (req, res) => {
 // Create a new menu item for a specific restaurant
 const createMenuItem = async (req, res) => {
   try {
-    const { name, price, categoryId, restaurantId, ingredientIds, type } =
+    const { name, price, categoryId, restaurantId, allergenIds, type } =
       req.body;
     const file = req.file;
-
-    // Fetch related allergens
-    const allergens = await IngredientAllergen.findAll({
-      where: { ingredientId: ingredientIds },
-      attributes: ['allergenId'],
-    });
-
-    // Extract unique allergen IDs
-    const allergenIds = [...new Set(allergens.map((a) => a.allergenId))];
 
     let imageUrl = null;
     if (file) {
       const folder = 'menu_items';
       imageUrl = await uploadToS3(file, folder);
     }
+
+    const formattedAllergenIds = Array.isArray(allergenIds)
+      ? allergenIds.map((id) => parseInt(id))
+      : [parseInt(allergenIds)];
 
     const formattedPrice = parseFloat(price).toFixed(2);
     const menuItem = await MenuItem.create({
@@ -68,8 +63,7 @@ const createMenuItem = async (req, res) => {
       restaurantId,
       categoryId,
       imageUrl,
-      ingredients: ingredientIds,
-      allergens: allergenIds,
+      allergens: formattedAllergenIds,
       type,
     });
     res.status(201).json(menuItem);
@@ -82,7 +76,7 @@ const createMenuItem = async (req, res) => {
 const updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, categoryId, removeImage, ingredientIds, description } =
+    const { name, price, categoryId, removeImage, allergenIds, description } =
       req.body;
     const file = req.file;
 
@@ -109,23 +103,9 @@ const updateMenuItem = async (req, res) => {
       imageUrl = null;
     }
 
-    const allAllergens = [];
-
-    // Fetch related allergens
-    for (const ingredientId of ingredientIds) {
-      const allergens = await IngredientAllergen.findAll({
-        where: { ingredientId: Number(ingredientId) },
-        attributes: ['allergenId'],
-      });
-      allAllergens.push(...allergens.map((a) => a.allergenId));
-    }
-
-    // Extract unique allergen IDs
-    const allergenIds = [...new Set(allAllergens)];
-
-    // Parse the JSON string into an array
-    const ingredientsNumberIds = ingredientIds.map(Number);
-
+    const formattedAllergenIds = Array.isArray(allergenIds)
+      ? allergenIds.map((id) => parseInt(id))
+      : [parseInt(allergenIds)];
     const formattedCategoryId = categoryId === '' ? null : categoryId;
     const formattedPrice = parseFloat(price).toFixed(2);
     await menuItem.update({
@@ -133,8 +113,7 @@ const updateMenuItem = async (req, res) => {
       price: formattedPrice,
       categoryId: formattedCategoryId,
       imageUrl,
-      ingredients: ingredientsNumberIds,
-      allergens: allergenIds,
+      allergens: formattedAllergenIds,
       description,
     });
 
