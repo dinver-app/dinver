@@ -42,7 +42,7 @@ const getCategoryItems = async (req, res) => {
 // Create a new menu item for a specific restaurant
 const createMenuItem = async (req, res) => {
   try {
-    const { name, price, categoryId, restaurantId, allergenIds, type } =
+    const { name, price, categoryId, restaurantId, allergenIds, description } =
       req.body;
     const file = req.file;
 
@@ -54,9 +54,11 @@ const createMenuItem = async (req, res) => {
 
     const formattedAllergenIds = Array.isArray(allergenIds)
       ? allergenIds.map((id) => parseInt(id))
-      : [parseInt(allergenIds)];
+      : allergenIds === undefined
+        ? []
+        : [parseInt(allergenIds)];
 
-    const formattedPrice = parseFloat(price).toFixed(2);
+    const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
     const menuItem = await MenuItem.create({
       name,
       price: formattedPrice,
@@ -64,7 +66,7 @@ const createMenuItem = async (req, res) => {
       categoryId,
       imageUrl,
       allergens: formattedAllergenIds,
-      type,
+      description,
     });
     res.status(201).json(menuItem);
   } catch (error) {
@@ -105,9 +107,11 @@ const updateMenuItem = async (req, res) => {
 
     const formattedAllergenIds = Array.isArray(allergenIds)
       ? allergenIds.map((id) => parseInt(id))
-      : [parseInt(allergenIds)];
+      : allergenIds === undefined
+        ? []
+        : [parseInt(allergenIds)];
     const formattedCategoryId = categoryId === '' ? null : categoryId;
-    const formattedPrice = parseFloat(price).toFixed(2);
+    const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
     await menuItem.update({
       name,
       price: formattedPrice,
@@ -256,7 +260,7 @@ const updateCategoryOrder = async (req, res) => {
 // Update item order within a category
 const updateItemOrder = async (req, res) => {
   try {
-    const { order } = req.body; // Array of item IDs in the desired order
+    const { order } = req.body;
     for (let i = 0; i < order.length; i++) {
       await MenuItem.update({ position: i }, { where: { id: order[i] } });
     }

@@ -10,6 +10,7 @@ import {
   deleteMenuItem,
   getAllAllergens,
   updateCategoryOrder,
+  updateItemOrder,
 } from "../../services/menuService";
 import { MenuItem, Category } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
@@ -69,6 +70,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [itemOrder, setItemOrder] = useState<string[]>([]);
 
+  const [itemsForSorting, setItemsForSorting] = useState<MenuItem[]>([]);
+
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
@@ -100,6 +105,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleAddCategory = async () => {
     if (!newCategoryName) return;
+    setIsLoading(true);
     try {
       const category: Category = await createCategory({
         name: newCategoryName,
@@ -109,15 +115,26 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setCategoriesForSorting([...categories, category]);
       setNewCategoryName("");
       setAddCategoryModalOpen(false);
+      toast.success(t("category_created"));
     } catch (error) {
       const errorMessage = (error as Error).message;
       toast.error(t(errorMessage));
       console.error("Failed to create category", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleAddMenuItem = async () => {
-    if (!newItemName || !newItemPrice) return;
+    if (!newItemName) {
+      toast.error(t("item_name_required"));
+      return;
+    }
+    if (!newItemPrice) {
+      toast.error(t("price_required"));
+      return;
+    }
+    setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("name", newItemName);
@@ -144,12 +161,17 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewItemDescription("");
       setAddItemModalOpen(false);
       setSelectedAllergenIds([]);
+      toast.success(t("menu_item_created"));
     } catch (error) {
       console.error("Failed to create menu item", error);
+      toast.error(t("failed_to_create_menu_item"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdateCategory = async () => {
+    setIsLoading(true);
     if (!editCategoryId || !editCategoryName) return;
     try {
       const updatedCategory: Category = await updateCategory(editCategoryId, {
@@ -168,13 +190,29 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setEditCategoryId(null);
       setEditCategoryName("");
       setEditCategoryModalOpen(false);
+      toast.success(t("category_updated"));
     } catch (error) {
       console.error("Failed to update category", error);
+      toast.error(t("failed_to_update_category"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdateMenuItem = async () => {
-    if (!editItemId || !editItemName || !editItemPrice) return;
+    if (!editItemId) {
+      toast.error(t("item_id_required"));
+      return;
+    }
+    if (!editItemName) {
+      toast.error(t("item_name_required"));
+      return;
+    }
+    if (!editItemPrice) {
+      toast.error(t("price_required"));
+      return;
+    }
+    setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("name", editItemName);
@@ -211,29 +249,43 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewItemDescription("");
       setEditItemModalOpen(false);
       setSelectedAllergenIds([]);
+      toast.success(t("menu_item_updated"));
     } catch (error) {
       console.error("Failed to update menu item", error);
+      toast.error(t("failed_to_update_menu_item"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteCategory = async (id: string) => {
+    setIsLoading(true);
     try {
       await deleteCategory(id);
       setCategories(categories.filter((cat) => cat.id !== id));
       setCategoriesForSorting(categories.filter((cat) => cat.id !== id));
       setDeleteCategoryModalOpen(false);
+      toast.success(t("category_deleted"));
     } catch (error) {
       console.error("Failed to delete category", error);
+      toast.error(t("failed_to_delete_category"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteMenuItem = async (id: string) => {
+    setIsLoading(true);
     try {
       await deleteMenuItem(id);
       setMenuItems(menuItems.filter((item) => item.id !== id));
       setDeleteItemModalOpen(false);
+      toast.success(t("menu_item_deleted"));
     } catch (error) {
       console.error("Failed to delete menu item", error);
+      toast.error(t("failed_to_delete_menu_item"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -316,7 +368,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 </div>
               </div>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-4">
+            <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
               <button
                 onClick={() => openEditItemModal(item)}
                 className="secondary-button"
@@ -366,6 +418,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   };
 
   const handleSaveCategoryOrder = async () => {
+    setIsLoading(true);
     try {
       await updateCategoryOrder(categoryOrder);
       setCategories(
@@ -383,6 +436,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     } catch (error) {
       console.error("Failed to update category order", error);
       toast.error(t("failed_to_update_category_order"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -395,6 +450,80 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
     setCategoriesForSorting(updatedCategories);
     setCategoryOrder(updatedCategories.map((cat) => cat.id));
+  };
+
+  const openSortItemsModal = (categoryId: string) => {
+    const itemsInCategory = menuItems.filter(
+      (item) => item.categoryId === categoryId
+    );
+    setItemsForSorting(itemsInCategory);
+    setItemOrder(itemsInCategory.map((item) => item.id));
+    setIsOrderItemsModalOpen(true);
+  };
+
+  const handleSaveItemOrder = async () => {
+    setIsLoading(true);
+    try {
+      await updateItemOrder(itemOrder);
+
+      const updatedMenuItems = [...menuItems];
+      updatedMenuItems.sort(
+        (a, b) => itemOrder.indexOf(a.id) - itemOrder.indexOf(b.id)
+      );
+      setMenuItems(updatedMenuItems);
+
+      setIsOrderItemsModalOpen(false);
+      toast.success(t("item_order_updated"));
+    } catch (error) {
+      console.error("Failed to update item order", error);
+      toast.error(t("failed_to_update_item_order"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onItemDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const updatedItems = Array.from(itemsForSorting);
+    const [movedItem] = updatedItems.splice(result.source.index, 1);
+    updatedItems.splice(result.destination.index, 0, movedItem);
+
+    setItemsForSorting(updatedItems);
+    setItemOrder(updatedItems.map((item) => item.id));
+  };
+
+  const CustomFileInput = () => {
+    const [fileName, setFileName] = useState<string>("");
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (event.target.files && event.target.files[0]) {
+        setFileName(event.target.files[0].name);
+      }
+    };
+
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          {t("image")}
+        </label>
+        <div className="mt-1 flex items-center gap-2 border border-gray-300 rounded p-2">
+          <input
+            type="file"
+            id="fileInput"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => document.getElementById("fileInput")?.click()}
+            className="secondary-button"
+          >
+            {t("choose_image")}
+          </button>
+          <span className="ml-2">{fileName || t("no_file_chosen")}</span>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -436,6 +565,12 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             <h4 className="text-lg font-semibold flex justify-between">
               {category.name}
               <div className="flex gap-2">
+                <button
+                  onClick={() => openSortItemsModal(category.id)}
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                >
+                  {t("sort")}
+                </button>
                 <button
                   onClick={() => openEditCategoryModal(category)}
                   className="text-gray-500 hover:text-gray-700 text-sm"
@@ -558,8 +693,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               >
                 {t("cancel")}
               </button>
-              <button onClick={handleUpdateCategory} className="primary-button">
-                {t("update_category")}
+              <button
+                onClick={handleUpdateCategory}
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("update_category")
+                )}
               </button>
             </div>
           </div>
@@ -690,31 +833,6 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                   </div>
                 )}
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  {t("image")}
-                </label>
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setNewItemImageFile(e.target.files[0]);
-                    }
-                  }}
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded"
-                />
-                <div className="mt-2">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={removeImage}
-                      onChange={(e) => setRemoveImage(e.target.checked)}
-                      className="form-checkbox"
-                    />
-                    <span className="ml-2">{t("remove_image")}</span>
-                  </label>
-                </div>
-              </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 {selectedAllergenIds.map((id) => {
                   const allergen = allergens.find(
@@ -742,6 +860,9 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 })}
               </div>
             </div>
+            <div className="mb-4">
+              <CustomFileInput />
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
@@ -765,8 +886,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               >
                 {t("cancel")}
               </button>
-              <button onClick={handleAddMenuItem} className="primary-button">
-                {t("add_menu_item")}
+              <button
+                onClick={handleAddMenuItem}
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("add_menu_item")
+                )}
               </button>
             </div>
           </div>
@@ -916,29 +1045,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                {t("image")}
-              </label>
-              <input
-                type="file"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setNewItemImageFile(e.target.files[0]);
-                  }
-                }}
-                className="mt-1 block w-full p-2 border border-gray-300 rounded"
-              />
-              <div className="mt-2">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={removeImage}
-                    onChange={(e) => setRemoveImage(e.target.checked)}
-                    className="form-checkbox"
-                  />
-                  <span className="ml-2">{t("remove_image")}</span>
-                </label>
-              </div>
+              <CustomFileInput />
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
@@ -962,8 +1069,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               >
                 {t("cancel")}
               </button>
-              <button onClick={handleUpdateMenuItem} className="primary-button">
-                {t("update_menu_item")}
+              <button
+                onClick={handleUpdateMenuItem}
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("update_menu_item")
+                )}
               </button>
             </div>
           </div>
@@ -1142,9 +1257,86 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               </button>
               <button
                 onClick={handleSaveCategoryOrder}
-                className="primary-button"
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
               >
-                {t("save_order")}
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("save_order")
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOrderItemsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setIsOrderItemsModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <h2 className="text-lg font-semibold mb-4">{t("order_items")}</h2>
+            <DragDropContext onDragEnd={onItemDragEnd}>
+              <Droppable droppableId="items">
+                {(provided) => (
+                  <ul
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-2"
+                  >
+                    {itemsForSorting.map((item, index) => (
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id.toString()}
+                        index={index}
+                      >
+                        {(provided) => (
+                          <li
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            ref={provided.innerRef}
+                            className="p-2 border border-gray-300 rounded bg-white cursor-pointer flex items-center w-full"
+                          >
+                            <span className="flex items-center mr-2">
+                              <img
+                                src="/images/drag.png"
+                                alt="Drag Icon"
+                                className="w-4 h-4"
+                              />
+                            </span>
+                            {item.name}
+                          </li>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
+
+            <div className="flex justify-end space-x-3 mt-4">
+              <button
+                onClick={() => setIsOrderItemsModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleSaveItemOrder}
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("save_order")
+                )}
               </button>
             </div>
           </div>
