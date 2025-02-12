@@ -700,4 +700,154 @@ router.post(
   sysadminController.setUserBanStatus,
 );
 
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins:
+ *   get:
+ *     summary: Get all admins for a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       200:
+ *         description: A list of admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *       404:
+ *         description: Restaurant not found
+ */
+router.get(
+  '/restaurants/:restaurantId/admins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.getRestaurantAdmins,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins:
+ *   post:
+ *     summary: Add an admin to a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [owner, admin, helper]
+ *     responses:
+ *       201:
+ *         description: Admin added successfully
+ *       404:
+ *         description: Restaurant or user not found
+ */
+router.post(
+  '/restaurants/:restaurantId/admins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.addRestaurantAdmin,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins/{userId}:
+ *   delete:
+ *     summary: Remove an admin from a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     responses:
+ *       204:
+ *         description: Admin removed successfully
+ *       404:
+ *         description: Admin not found
+ */
+router.delete(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.removeRestaurantAdmin,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins/{userId}:
+ *   patch:
+ *     summary: Update an admin's role in a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [owner, admin, helper]
+ *     responses:
+ *       200:
+ *         description: Admin role updated successfully
+ *       404:
+ *         description: Admin not found
+ */
+router.patch(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.updateRestaurantAdminRole,
+);
+
 module.exports = router;

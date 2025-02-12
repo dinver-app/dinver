@@ -204,5 +204,19 @@
   "manage_your_restaurant_filters": "Upravljaj filterima restorana.",
   "are_you_sure_you_want_to_delete_this_image": "Jesi li siguran da želiš ukloniti ovu sliku?",
   "welcome_message": "Dobrodošao",
-  "homepage_description": "Ova je početna stranica. Odaberite uslugu iz izbornika sa strane."
+  "homepage_description": "Ova je početna stranica. Odaberite uslugu iz izbornika sa strane.",
+  "manage_admins": "Upravljaj administratori",
+  "add_admin": "Dodaj administratora",
+  "no_admins": "Trenutno nema administratora za ovaj restoran",
+  "manage_admins_description": "Upravljaj administratorima restorana.",
+  "user_not_found": "Korisnik nije pronađen",
+  "restaurant_not_found": "Restoran nije pronađen",
+  "admin_email": "Email administratora",
+  "add_admin_description": "Dodaj novog administratora u sustav.",
+  "admin_added_successfully": "Administrator je uspješno dodan",
+  "user_already_has_this_role": "Korisnik već ima ovu funkciju",
+  "remove_admin": "Ukloni administratora",
+  "remove_admin_description": "Ukloni administratora iz restorana.",
+  "confirm_delete": "Potvrdi brisanje",
+  "are_you_sure_you_want_to_delete_admin": "Jesi li siguran da želiš ukloniti ovog administratora?"
 }

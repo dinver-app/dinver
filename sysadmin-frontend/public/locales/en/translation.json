@@ -204,5 +204,19 @@
   "manage_your_restaurant_filters": "Manage your restaurant filters.",
   "are_you_sure_you_want_to_delete_this_image": "Are you sure you want to delete this image?",
   "welcome_message": "Welcome to the Dashboard",
-  "homepage_description": "This is the homepage. Choose a service from the menu on the side."
+  "homepage_description": "This is the homepage. Choose a service from the menu on the side.",
+  "manage_admins": "Manage Admins",
+  "add_admin": "Add Admin",
+  "no_admins": "Currently there are no admins for this restaurant",
+  "manage_admins_description": "Manage the admins of the restaurant.",
+  "user_not_found": "User not found",
+  "restaurant_not_found": "Restaurant not found",
+  "admin_email": "Admin Email",
+  "add_admin_description": "Add a new admin to the restaurant.",
+  "admin_added_successfully": "Admin added successfully",
+  "user_already_has_this_role": "User already has this role",
+  "remove_admin": "Remove Admin",
+  "remove_admin_description": "Remove an admin from the restaurant.",
+  "confirm_delete": "Confirm Delete",
+  "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin?"
 }

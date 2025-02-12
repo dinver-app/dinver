@@ -4,6 +4,7 @@ const {
   User,
   UserOrganization,
   UserSysadmin,
+  UserAdmin,
 } = require('../../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -384,6 +385,115 @@ async function setUserBanStatus(req, res) {
   }
 }
 
+// Get all admins for a restaurant
+async function getRestaurantAdmins(req, res) {
+  try {
+    const { restaurantId } = req.params;
+    const admins = await UserAdmin.findAll({
+      where: { restaurantId },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName'],
+        },
+      ],
+    });
+    res.json(admins);
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching admins' });
+  }
+}
+
+// Add an admin to a restaurant
+async function addRestaurantAdmin(req, res) {
+  try {
+    const { restaurantId } = req.params;
+    const { email, role } = req.body;
+
+    // Check if the user and restaurant exist
+    const user = await User.findOne({ where: { email } });
+    const restaurant = await Restaurant.findByPk(restaurantId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    // Check if the user is already an admin for this restaurant
+    const existingAdmin = await UserAdmin.findOne({
+      where: { userId: user.id, restaurantId },
+    });
+
+    if (existingAdmin) {
+      if (existingAdmin.role === role) {
+        return res.status(400).json({ error: 'user_already_has_this_role' });
+      } else {
+        // Remove the existing admin with a different role
+        await existingAdmin.destroy();
+      }
+    }
+
+    // Add the admin with the new role
+    const admin = await UserAdmin.create({
+      userId: user.id,
+      restaurantId,
+      role,
+    });
+    res.status(201).json(admin);
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while adding the admin' });
+  }
+}
+
+// Remove an admin from a restaurant
+async function removeRestaurantAdmin(req, res) {
+  try {
+    const { restaurantId, userId } = req.params;
+    const admin = await UserAdmin.findOne({
+      where: { restaurantId, userId },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    await admin.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while removing the admin' });
+  }
+}
+
+// Update an admin's role in a restaurant
+async function updateRestaurantAdminRole(req, res) {
+  try {
+    const { restaurantId, userId } = req.params;
+    const { role } = req.body;
+
+    const admin = await UserAdmin.findOne({
+      where: { restaurantId, userId },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    admin.role = role;
+    await admin.save();
+    res.status(200).json(admin);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating the admin role' });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -401,4 +511,8 @@ module.exports = {
   createUser,
   deleteUser,
   setUserBanStatus,
+  getRestaurantAdmins,
+  addRestaurantAdmin,
+  removeRestaurantAdmin,
+  updateRestaurantAdminRole,
 };
