@@ -162,5 +162,14 @@
   "item_name_and_price_required": "Item name and price required",
   "item_id_required": "Item ID is required",
   "choose_image": "Choose Image",
-  "no_file_chosen": "No file chosen"
+  "no_file_chosen": "No file chosen",
+  "ban_user": "Ban User",
+  "ban_user_description": "Ban a user from the system.",
+  "unban_user": "Unban User",
+  "unban_user_description": "Unban a user from the system.",
+  "are_you_sure_you_want_to_ban_the_user_with_email": "Are you sure you want to ban the user with email",
+  "are_you_sure_you_want_to_unban_the_user_with_email": "Are you sure you want to unban the user with email",
+  "yes": "Yes",
+  "no": "No",
+  "banned": "Banned"
 }

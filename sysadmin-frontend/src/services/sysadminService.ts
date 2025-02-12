@@ -26,3 +26,15 @@ export const removeSysadmin = async (email: string) => {
     throw new Error(error.response.data.error);
   }
 };
+
+export const setUserBanStatus = async (email: string, banned: boolean) => {
+  try {
+    const response = await apiClient.post("api/sysadmin/users/ban", {
+      email,
+      banned,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response.data.error);
+  }
+};

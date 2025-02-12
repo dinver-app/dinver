@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { User } from "../interfaces/Interfaces";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { setUserBanStatus } from "../services/sysadminService";
+
 const Users = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
@@ -18,10 +20,13 @@ const Users = () => {
     firstName: "",
     lastName: "",
     password: "",
+    banned: false,
   });
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [userToBan, setUserToBan] = useState<User | null>(null);
+  const [isBanModalOpen, setBanModalOpen] = useState(false);
 
   useEffect(() => {
     fetchUsers(currentPage, searchTerm);
@@ -61,11 +66,28 @@ const Users = () => {
       };
       await createUser(userToCreate);
       setModalOpen(false);
-      setNewUser({ email: "", firstName: "", lastName: "", password: "" });
+      setNewUser({
+        email: "",
+        firstName: "",
+        lastName: "",
+        password: "",
+        banned: false,
+      });
       fetchUsers(currentPage, searchTerm);
       toast.success("User created successfully");
     } catch (error) {
       console.error("Failed to create user", error);
+    }
+  };
+
+  const handleBanUser = async (email: string, banned: boolean) => {
+    try {
+      await setUserBanStatus(email, banned);
+      fetchUsers(currentPage, searchTerm);
+      setBanModalOpen(false);
+      toast.success(`User ${banned ? "banned" : "unbanned"} successfully`);
+    } catch (error) {
+      console.error(`Failed to ${banned ? "ban" : "unban"} user`, error);
     }
   };
 
@@ -115,7 +137,7 @@ const Users = () => {
                 {t("last_name")}
               </th>
               <th className="py-2 px-4 text-left font-normal w-48">
-                {t("role")}
+                {t("banned")}
               </th>
               <th className="py-2 px-4 text-left font-normal w-48">
                 {t("added_on")}
@@ -137,10 +159,10 @@ const Users = () => {
                   {user.lastName}
                 </td>
                 <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                  {user.role}
+                  {user.banned ? t("yes") : t("no")}
                 </td>
                 <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                  {format(new Date(user.createdAt || ""), "dd.MM.yyyy")}
+                  {format(new Date(user.createdAt || ""), "dd.MM.yyyy.")}
                 </td>
                 <td className="py-2 px-4 w-10">
                   <div className="relative" ref={menuRef}>
@@ -169,6 +191,19 @@ const Users = () => {
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                         >
                           Delete
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTimeout(() => {
+                              setUserToBan(user);
+                              setBanModalOpen(true);
+                            }, 0);
+                            setSelectedUserId(null);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                        >
+                          {user.banned ? t("unban_user") : t("ban_user")}
                         </button>
                       </div>
                     )}
@@ -336,6 +371,63 @@ const Users = () => {
                 className="delete-button"
               >
                 {t("delete_user")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBanModalOpen && userToBan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setBanModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/block.svg"
+                alt="Block Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {userToBan.banned === true ? t("unban_user") : t("ban_user")}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {userToBan.banned === true
+                    ? t("unban_user_description")
+                    : t("ban_user_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="mb-4">
+              <p className="text-sm text-black">
+                {userToBan.banned === true
+                  ? t("are_you_sure_you_want_to_unban_the_user_with_email")
+                  : t("are_you_sure_you_want_to_ban_the_user_with_email")}
+                <span className="font-bold">{userToBan.email}</span>?
+              </p>
+            </div>
+            <div className="h-line"></div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setBanModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() =>
+                  handleBanUser(userToBan.email, !userToBan.banned)
+                }
+                className="primary-button"
+              >
+                {userToBan.banned === true ? t("unban_user") : t("ban_user")}
               </button>
             </div>
           </div>

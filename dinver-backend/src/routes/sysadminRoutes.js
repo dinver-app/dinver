@@ -657,4 +657,47 @@ router.post(
   sysadminController.createUser,
 );
 
+/**
+ * @swagger
+ * /users/ban:
+ *   post:
+ *     summary: Ban or unban a user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email of the user to ban/unban
+ *               banned:
+ *                 type: boolean
+ *                 description: The ban status to set
+ *     responses:
+ *       200:
+ *         description: User ban status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.post(
+  '/users/ban',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.setUserBanStatus,
+);
+
 module.exports = router;

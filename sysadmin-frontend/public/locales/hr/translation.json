@@ -162,5 +162,14 @@
   "item_name_and_price_required": "Ime i cijena stavke su obavezni",
   "item_id_required": "ID stavke je obavezan",
   "choose_image": "Odaberite sliku",
-  "no_file_chosen": "Nema odabrane slike"
+  "no_file_chosen": "Nema odabrane slike",
+  "ban_user": "Blokiraj korisnika",
+  "ban_user_description": "Blokirajte korisnika u sustavu.",
+  "unban_user": "Oblokiraj korisnika",
+  "unban_user_description": "Oblokirajte korisnika u sustavu.",
+  "are_you_sure_you_want_to_ban_the_user_with_email": "Jeste li sigurni da želite blokirati korisnika s emailom",
+  "are_you_sure_you_want_to_unban_the_user_with_email": "Jeste li sigurni da želite obločirati korisnika s emailom",
+  "yes": "Da",
+  "no": "Ne",
+  "banned": "Blokiran"
 }

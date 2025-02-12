@@ -5,6 +5,7 @@ export interface User {
   lastName: string;
   role: string;
   createdAt?: string;
+  banned?: boolean;
 }
 
 export interface Sysadmin {

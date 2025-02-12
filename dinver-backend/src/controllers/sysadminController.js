@@ -282,9 +282,18 @@ async function listUsers(req, res) {
 
     const { count, rows: users } = await User.findAndCountAll({
       where: whereClause,
-      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'createdAt'],
+      attributes: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'createdAt',
+        'banned',
+      ],
       limit,
       offset,
+      order: [['createdAt', 'ASC']],
     });
 
     res.json({
@@ -350,6 +359,31 @@ async function deleteUser(req, res) {
   }
 }
 
+// Ban or unban a user
+async function setUserBanStatus(req, res) {
+  try {
+    const { email, banned } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update the banned status
+    user.banned = banned;
+    await user.save();
+
+    res
+      .status(200)
+      .json({ message: `User ${banned ? 'banned' : 'unbanned'} successfully` });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating the user ban status' });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -366,4 +400,5 @@ module.exports = {
   listUsers,
   createUser,
   deleteUser,
+  setUserBanStatus,
 };
