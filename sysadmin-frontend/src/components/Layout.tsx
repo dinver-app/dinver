@@ -20,7 +20,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     {
-      name: t("dashboard"),
+      name: t("homepage"),
       path: "/",
       icon: <FaHome className="h-4 w-4 mr-3" />,
     },
