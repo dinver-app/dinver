@@ -74,7 +74,7 @@ const Restaurants = () => {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search restaurants"
+          placeholder={t("search_restaurants")}
           className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
         />
         <button onClick={() => setModalOpen(true)} className="primary-button">
@@ -140,7 +140,8 @@ const Restaurants = () => {
           {totalRestaurants !== 0
             ? (currentPage - 1) * 10 + 1
             : totalRestaurants}{" "}
-          - {Math.min(currentPage * 10, totalRestaurants)} of {totalRestaurants}
+          - {Math.min(currentPage * 10, totalRestaurants)} {t("of")}{" "}
+          {totalRestaurants}
         </span>
         <div className="flex space-x-2">
           <button
@@ -161,7 +162,7 @@ const Restaurants = () => {
       </div>
       <div className="flex justify-between items-center mt-4">
         <span className="text-sm">
-          {t("claimed_restaurants")}: {claimedRestaurantsCount} of{" "}
+          {t("claimed_restaurants")}: {claimedRestaurantsCount} {t("of")}{" "}
           {totalRestaurantsCount}
         </span>
       </div>

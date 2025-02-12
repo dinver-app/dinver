@@ -171,5 +171,11 @@
   "are_you_sure_you_want_to_unban_the_user_with_email": "Are you sure you want to unban the user with email",
   "yes": "Yes",
   "no": "No",
-  "banned": "Banned"
+  "banned": "Banned",
+  "user_banned_successfully": "User banned successfully",
+  "user_unbanned_successfully": "User unbanned successfully",
+  "user_deleted_successfully": "User deleted successfully",
+  "user_created_successfully": "User created successfully",
+  "of": "of",
+  "search_restaurants": "Search restaurants..."
 }

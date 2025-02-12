@@ -52,7 +52,7 @@ const Users = () => {
       await deleteUser(email);
       fetchUsers(currentPage, searchTerm);
       setDeleteModalOpen(false);
-      toast.success("User deleted successfully");
+      toast.success(t("user_deleted_successfully"));
     } catch (error) {
       console.error("Failed to delete user", error);
     }
@@ -74,7 +74,7 @@ const Users = () => {
         banned: false,
       });
       fetchUsers(currentPage, searchTerm);
-      toast.success("User created successfully");
+      toast.success(t("user_created_successfully"));
     } catch (error) {
       console.error("Failed to create user", error);
     }
@@ -85,9 +85,14 @@ const Users = () => {
       await setUserBanStatus(email, banned);
       fetchUsers(currentPage, searchTerm);
       setBanModalOpen(false);
-      toast.success(`User ${banned ? "banned" : "unbanned"} successfully`);
+      toast.success(
+        banned ? t("user_banned_successfully") : t("user_unbanned_successfully")
+      );
     } catch (error) {
-      console.error(`Failed to ${banned ? "ban" : "unban"} user`, error);
+      console.error(
+        banned ? `Failed to ban user` : `Failed to unban user`,
+        error
+      );
     }
   };
 
@@ -190,7 +195,7 @@ const Users = () => {
                           }}
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                         >
-                          Delete
+                          {t("delete_user")}
                         </button>
                         <button
                           onClick={(e) => {
@@ -201,7 +206,7 @@ const Users = () => {
                             }, 0);
                             setSelectedUserId(null);
                           }}
-                          className="block w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                         >
                           {user.banned ? t("unban_user") : t("ban_user")}
                         </button>
@@ -409,7 +414,7 @@ const Users = () => {
                 {userToBan.banned === true
                   ? t("are_you_sure_you_want_to_unban_the_user_with_email")
                   : t("are_you_sure_you_want_to_ban_the_user_with_email")}
-                <span className="font-bold">{userToBan.email}</span>?
+                <span className="font-bold"> {userToBan.email}</span>?
               </p>
             </div>
             <div className="h-line"></div>
