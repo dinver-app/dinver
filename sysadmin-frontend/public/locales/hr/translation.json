@@ -202,5 +202,7 @@
   "general_information": "Općenito",
   "manage_your_restaurant_general_information": "Upravljaj općenitim informacijama o restoranu.",
   "manage_your_restaurant_filters": "Upravljaj filterima restorana.",
-  "are_you_sure_you_want_to_delete_this_image": "Jesi li siguran da želiš ukloniti ovu sliku?"
+  "are_you_sure_you_want_to_delete_this_image": "Jesi li siguran da želiš ukloniti ovu sliku?",
+  "welcome_message": "Dobrodošao",
+  "homepage_description": "Ova je početna stranica. Odaberite uslugu iz izbornika sa strane."
 }

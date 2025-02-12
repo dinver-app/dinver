@@ -202,5 +202,7 @@
   "general_information": "General Information",
   "manage_your_restaurant_general_information": "Manage your restaurant general information.",
   "manage_your_restaurant_filters": "Manage your restaurant filters.",
-  "are_you_sure_you_want_to_delete_this_image": "Are you sure you want to delete this image?"
+  "are_you_sure_you_want_to_delete_this_image": "Are you sure you want to delete this image?",
+  "welcome_message": "Welcome to the Dashboard",
+  "homepage_description": "This is the homepage. Choose a service from the menu on the side."
 }
