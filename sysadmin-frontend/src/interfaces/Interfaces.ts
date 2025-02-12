@@ -52,6 +52,7 @@ export interface Restaurant {
   website_url?: string;
   fb_url?: string;
   ig_url?: string;
+  tt_url?: string;
   phone?: string;
   images?: string[];
 }

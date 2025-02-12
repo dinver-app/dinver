@@ -171,7 +171,8 @@ const addRestaurant = async (req, res) => {
 const updateRestaurant = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, address, website_url, fb_url, ig_url, phone } = req.body;
+    const { name, address, website_url, fb_url, ig_url, phone, tt_url } =
+      req.body;
     const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
@@ -199,6 +200,7 @@ const updateRestaurant = async (req, res) => {
       ig_url,
       phone,
       thumbnail_url,
+      tt_url,
     });
 
     res.json(restaurant);

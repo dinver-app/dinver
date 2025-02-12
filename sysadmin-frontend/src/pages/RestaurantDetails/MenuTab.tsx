@@ -49,6 +49,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const [editItemName, setEditItemName] = useState<string>("");
   const [editItemPrice, setEditItemPrice] = useState<string>("");
   const [editItemDescription, setEditItemDescription] = useState<string>("");
+  const [editItemImage, setEditItemImage] = useState<string | null>(null);
   const [newItemImageFile, setNewItemImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
@@ -99,10 +100,6 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     fetchAllergens();
   }, []);
 
-  useEffect(() => {
-    console.log(menuItems);
-  }, [menuItems]);
-
   const handleAddCategory = async () => {
     if (!newCategoryName) return;
     setIsLoading(true);
@@ -126,6 +123,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   };
 
   const handleAddMenuItem = async () => {
+    if (!newItemName && !newItemPrice) {
+      toast.error(t("item_name_and_price_required"));
+      return;
+    }
     if (!newItemName) {
       toast.error(t("item_name_required"));
       return;
@@ -243,6 +244,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setEditItemName("");
       setEditItemPrice("");
       setEditItemDescription("");
+      setEditItemImage(null);
       setSelectedCategoryId(null);
       setNewItemImageFile(null);
       setRemoveImage(false);
@@ -301,6 +303,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setEditItemPrice(item.price.toString());
     setSelectedCategoryId(item.categoryId || null);
     setEditItemDescription(item.description || "");
+    setEditItemImage(item.imageUrl || null);
     setRemoveImage(false);
     setEditItemModalOpen(true);
 
@@ -401,6 +404,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setEditItemName("");
     setEditItemPrice("");
     setEditItemDescription("");
+    setEditItemImage(null);
     setSelectedCategoryId(null);
     setNewItemImageFile(null);
     setRemoveImage(false);
@@ -494,11 +498,9 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   };
 
   const CustomFileInput = () => {
-    const [fileName, setFileName] = useState<string>("");
-
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       if (event.target.files && event.target.files[0]) {
-        setFileName(event.target.files[0].name);
+        setNewItemImageFile(event.target.files[0]);
       }
     };
 
@@ -520,7 +522,11 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           >
             {t("choose_image")}
           </button>
-          <span className="ml-2">{fileName || t("no_file_chosen")}</span>
+          <span className="ml-2 truncate">
+            {newItemImageFile?.name
+              ? newItemImageFile?.name
+              : editItemImage?.split("/").pop() || t("no_file_chosen")}
+          </span>
         </div>
       </div>
     );
@@ -719,6 +725,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 setEditItemName("");
                 setEditItemPrice("");
                 setEditItemDescription("");
+                setEditItemImage(null);
                 setSelectedCategoryId(null);
                 setNewItemImageFile(null);
                 setRemoveImage(false);
@@ -862,6 +869,18 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             </div>
             <div className="mb-4">
               <CustomFileInput />
+
+              <div className="mt-2">
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={removeImage}
+                    onChange={(e) => setRemoveImage(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2">{t("remove_image")}</span>
+                </label>
+              </div>
             </div>
 
             <div className="mb-4">
@@ -1046,6 +1065,17 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
             <div className="mb-4">
               <CustomFileInput />
+              <div className="mt-2">
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={removeImage}
+                    onChange={(e) => setRemoveImage(e.target.checked)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2">{t("remove_image")}</span>
+                </label>
+              </div>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">

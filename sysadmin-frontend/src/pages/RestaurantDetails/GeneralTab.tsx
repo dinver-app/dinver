@@ -18,6 +18,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     website_url: restaurant.website_url || "",
     fb_url: restaurant.fb_url || "",
     ig_url: restaurant.ig_url || "",
+    tt_url: restaurant.tt_url || "",
     phone: restaurant.phone || "",
   });
 
@@ -27,6 +28,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     website_url: "",
     fb_url: "",
     ig_url: "",
+    tt_url: "",
     phone: "",
   });
 
@@ -82,6 +84,10 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         "ig_url",
         errors.ig_url === "" ? formData.ig_url : ""
       );
+      formDataToSend.append(
+        "tt_url",
+        errors.tt_url === "" ? formData.tt_url : ""
+      );
       formDataToSend.append("phone", errors.phone === "" ? formData.phone : "");
       if (file) {
         formDataToSend.append("thumbnail", file);
@@ -111,6 +117,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         formData.website_url !== restaurant.website_url ||
         formData.fb_url !== restaurant.fb_url ||
         formData.ig_url !== restaurant.ig_url ||
+        formData.tt_url !== restaurant.tt_url ||
         formData.phone !== restaurant.phone
       );
     };
@@ -251,6 +258,21 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           />
           {errors.ig_url && (
             <p className="text-sm text-red-500">{errors.ig_url}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            {t("tiktok_url")}
+          </label>
+          <input
+            type="text"
+            name="tt_url"
+            value={formData.tt_url}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+          {errors.tt_url && (
+            <p className="text-sm text-red-500">{errors.tt_url}</p>
           )}
         </div>
       </div>
