@@ -128,11 +128,18 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   }, [formData]);
 
   return (
-    <div>
-      <div className="flex justify-end items-center my-4">
+    <div className="flex flex-col">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="section-title">{t("general_information")}</h2>
+          <h3 className="section-subtitle">
+            {t("manage_your_restaurant_general_information")}
+          </h3>
+        </div>
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
-      <div className="my-4">
+      <div className="h-line"></div>
+      <div>
         <label className="block text-sm font-medium text-gray-700">
           {t("name")}
         </label>

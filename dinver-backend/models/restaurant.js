@@ -136,6 +136,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
+      slug: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       website_url: {
         type: DataTypes.STRING,
         allowNull: true,

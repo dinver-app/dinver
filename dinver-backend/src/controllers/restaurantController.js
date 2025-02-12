@@ -344,6 +344,86 @@ async function updateFilters(req, res) {
   }
 }
 
+const addRestaurantImages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { restaurant_slug } = req.body;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No images provided' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const folder = `restaurant_images/${restaurant_slug}`;
+    const imageUrls = await Promise.all(
+      files.map((file) => uploadToS3(file, folder)),
+    );
+
+    const updatedImages = [...(restaurant.images || []), ...imageUrls];
+    await restaurant.update({ images: updatedImages });
+
+    res.json({ message: 'Images added successfully', images: updatedImages });
+  } catch (error) {
+    console.error('Error adding images:', error);
+    res.status(500).json({ error: 'Failed to add images' });
+  }
+};
+
+const deleteRestaurantImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageUrl, restaurant_slug } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (!restaurant.images || !restaurant.images.includes(imageUrl)) {
+      return res.status(400).json({ error: 'Image not found in restaurant' });
+    }
+
+    const key = imageUrl.split('/').pop();
+    await deleteFromS3(`restaurant_images/${restaurant_slug}/${key}`);
+
+    const updatedImages = restaurant.images.filter((img) => img !== imageUrl);
+    await restaurant.update({ images: updatedImages });
+
+    res.json({ message: 'Image deleted successfully', images: updatedImages });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
+};
+
+const updateImageOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { images } = req.body;
+
+    if (!images || !Array.isArray(images)) {
+      return res.status(400).json({ error: 'Invalid images array' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({ images });
+
+    res.json({ message: 'Image order updated successfully', images });
+  } catch (error) {
+    console.error('Error updating image order:', error);
+    res.status(500).json({ error: 'Failed to update image order' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurantDetails,
@@ -353,4 +433,7 @@ module.exports = {
   updateWorkingHours,
   updateFilters,
   deleteRestaurant,
+  addRestaurantImages,
+  deleteRestaurantImage,
+  updateImageOrder,
 };

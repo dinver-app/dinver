@@ -155,12 +155,19 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const { items, selectedItems, title } = getModalContent();
 
   return (
-    <div>
-      <div className="flex justify-end items-center my-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="section-title">{t("filters")}</h2>
+          <h3 className="section-subtitle">
+            {t("manage_your_restaurant_filters")}
+          </h3>
+        </div>
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
+      <div className="h-line"></div>
 
-      <div className="my-4">
+      <div>
         <label className="block text-sm font-medium text-gray-700">
           {t("establishment_types")}
         </label>
@@ -200,9 +207,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         </button>
       </div>
 
-      <hr className="my-4" />
+      <div className="h-line"></div>
 
-      <div className="my-4">
+      <div>
         <label className="block text-sm font-medium text-gray-700">
           {t("food_types")}
         </label>
@@ -240,9 +247,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         </button>
       </div>
 
-      <hr className="my-4" />
+      <div className="h-line"></div>
 
-      <div className="my-4">
+      <div>
         <label className="block text-sm font-medium text-gray-700">
           {t("establishment_perks")}
         </label>

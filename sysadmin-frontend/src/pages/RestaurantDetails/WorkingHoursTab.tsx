@@ -157,11 +157,16 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-end items-center">
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="section-title text-md">{t("working_hours")}</h2>
+          <h3 className="section-subtitle">{t("manage_your_working_hours")}</h3>
+        </div>
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
-      <h2 className="section-title text-md">{t("working_hours")}</h2>
+
+      <div className="h-line"></div>
 
       {daysOfWeek.map((day, index) => (
         <div key={day} className="flex items-center gap-2 my-2">

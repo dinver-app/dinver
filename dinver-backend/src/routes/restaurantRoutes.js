@@ -326,4 +326,133 @@ router.put(
   restaurantController.updateFilters,
 );
 
+/**
+ * @swagger
+ * /restaurants/{id}/images:
+ *   post:
+ *     summary: Add images to a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images added successfully
+ *       400:
+ *         description: No images provided
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to add images
+ */
+router.post(
+  '/:id/images',
+  authenticateToken,
+  checkAdmin,
+  upload.array('images'),
+  restaurantController.addRestaurantImages,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}/images:
+ *   delete:
+ *     summary: Delete an image from a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 description: The URL of the image to delete
+ *     responses:
+ *       200:
+ *         description: Image deleted successfully
+ *       400:
+ *         description: Image not found in restaurant
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to delete image
+ */
+router.delete(
+  '/:id/images',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.deleteRestaurantImage,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}/images/order:
+ *   put:
+ *     summary: Update the order of images for a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: The reordered list of image URLs
+ *     responses:
+ *       200:
+ *         description: Image order updated successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to update image order
+ */
+router.put(
+  '/:id/images/order',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateImageOrder,
+);
+
 module.exports = router;

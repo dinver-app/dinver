@@ -534,14 +534,14 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between items-start mt-2">
+      <div className="flex justify-between items-start">
         <div>
           <h2 className="section-title">{t("menu")}</h2>
           <h3 className="section-subtitle">
             {t("manage_your_menu_items_and_categories")}
           </h3>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2">
           <button
             onClick={() => setAddCategoryModalOpen(true)}
             className="primary-button"

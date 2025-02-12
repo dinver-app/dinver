@@ -8,6 +8,7 @@ import MenuTab from "./MenuTab";
 import WorkingHoursTab from "./WorkingHoursTab";
 import FiltersTab from "./FiltersTab";
 import { useTranslation } from "react-i18next";
+import Images from "./Images";
 
 const RestaurantDetails = () => {
   const { slug } = useParams();
@@ -26,6 +27,7 @@ const RestaurantDetails = () => {
           return;
         }
         const data = await getRestaurantDetails(slug);
+
         setRestaurant(data);
       } catch (error) {
         console.error("Failed to fetch restaurant details", error);
@@ -72,6 +74,8 @@ const RestaurantDetails = () => {
         return (
           <WorkingHoursTab restaurant={restaurant} onUpdate={handleUpdate} />
         );
+      case "Images":
+        return <Images restaurant={restaurant} onUpdate={handleUpdate} />;
       default:
         return null;
     }
@@ -127,6 +131,14 @@ const RestaurantDetails = () => {
           onClick={() => handleTabChange("Working Hours")}
         >
           {t("working_hours")}
+        </button>
+        <button
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "Images" ? "border-b-2 border-black" : "text-gray-500"
+          }`}
+          onClick={() => handleTabChange("Images")}
+        >
+          {t("images")}
         </button>
       </div>
       <div className="tab-content">{renderTabContent()}</div>
