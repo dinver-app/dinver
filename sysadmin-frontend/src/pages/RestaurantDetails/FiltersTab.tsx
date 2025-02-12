@@ -12,13 +12,14 @@ import {
   EstablishmentPerk,
 } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+
 interface FiltersTabProps {
   restaurant: Restaurant;
   onUpdate: (updatedRestaurant: Restaurant) => void;
 }
 
 const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [foodTypes, setFoodTypes] = useState<FoodType[]>([]);
   const [establishmentTypes, setEstablishmentTypes] = useState<
     EstablishmentType[]
@@ -183,7 +184,11 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   className="flex items-center px-2 py-1 rounded-full bg-gray-100"
                 >
                   <span className="mr-2">{establishmentType?.icon}</span>
-                  <span>{establishmentType?.name}</span>
+                  <span>
+                    {i18n.language === "en"
+                      ? establishmentType?.name_en
+                      : establishmentType?.name_hr}
+                  </span>
                   <button
                     onClick={() => handleRemoveItem(id, "establishment")}
                     className="ml-2 text-xs text-red-500 hover:text-red-700"
@@ -223,7 +228,11 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   className="flex items-center px-2 py-1 rounded-full bg-gray-100"
                 >
                   <span className="mr-2">{foodType?.icon}</span>
-                  <span>{foodType?.name}</span>
+                  <span>
+                    {i18n.language === "en"
+                      ? foodType?.name_en
+                      : foodType?.name_hr}
+                  </span>
                   <button
                     onClick={() => handleRemoveItem(id, "food")}
                     className="ml-2 text-xs text-red-500 hover:text-red-700"
@@ -265,7 +274,11 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   className="flex items-center px-2 py-1 rounded-full bg-gray-100"
                 >
                   <span className="mr-2">{establishmentPerk?.icon}</span>
-                  <span>{establishmentPerk?.name}</span>
+                  <span>
+                    {i18n.language === "en"
+                      ? establishmentPerk?.name_en
+                      : establishmentPerk?.name_hr}
+                  </span>
                   <button
                     onClick={() => handleRemoveItem(id, "perk")}
                     className="ml-2 text-xs text-red-500 hover:text-red-700"
@@ -307,7 +320,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 .filter(
                   (item) =>
                     !selectedItems.includes(item.id) &&
-                    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    (i18n.language === "en" ? item.name_en : item.name_hr)
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
                 )
                 .map((item) => (
                   <div
@@ -315,7 +330,10 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                     className="flex items-center justify-between p-2 border-b hover:bg-gray-100 transition"
                   >
                     <span className="flex items-center">
-                      {item.icon} <span className="ml-2">{item.name}</span>
+                      {item.icon}{" "}
+                      <span className="ml-2">
+                        {i18n.language === "en" ? item.name_en : item.name_hr}
+                      </span>
                     </span>
                     <button
                       onClick={() => handleAddItem(item.id, activeModal)}

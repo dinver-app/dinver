@@ -60,19 +60,22 @@ export interface Restaurant {
 
 export interface FoodType {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 
 export interface EstablishmentType {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 
 export interface EstablishmentPerk {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 

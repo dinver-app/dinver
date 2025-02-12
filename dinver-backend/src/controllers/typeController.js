@@ -8,7 +8,7 @@ const {
 async function getAllFoodTypes(req, res) {
   try {
     const foodTypes = await FoodType.findAll({
-      attributes: ['id', 'name', 'icon'],
+      attributes: ['id', 'name_en', 'name_hr', 'icon'],
     });
     res.json(foodTypes);
   } catch (error) {
@@ -23,7 +23,7 @@ async function getAllFoodTypes(req, res) {
 async function getAllEstablishmentTypes(req, res) {
   try {
     const establishmentTypes = await EstablishmentType.findAll({
-      attributes: ['id', 'name', 'icon'],
+      attributes: ['id', 'name_en', 'name_hr', 'icon'],
     });
     res.json(establishmentTypes);
   } catch (error) {
@@ -38,7 +38,7 @@ async function getAllEstablishmentTypes(req, res) {
 async function getAllEstablishmentPerks(req, res) {
   try {
     const establishmentPerks = await EstablishmentPerk.findAll({
-      attributes: ['id', 'name', 'icon'],
+      attributes: ['id', 'name_en', 'name_hr', 'icon'],
     });
     res.json(establishmentPerks);
   } catch (error) {
