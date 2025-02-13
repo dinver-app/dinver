@@ -11,7 +11,6 @@ import {
   getRestaurantAdmins,
   addRestaurantAdmin,
   removeRestaurantAdmin,
-  updateRestaurantAdminRole,
 } from "../services/sysadminService";
 
 const Restaurants = () => {
@@ -179,9 +178,7 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-left font-normal w-48">
                 {t("address")}
               </th>
-              <th className="py-2 px-4 text-center font-normal w-20">
-                {t("rating")}
-              </th>
+
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("claimed")}
               </th>
@@ -200,13 +197,9 @@ const Restaurants = () => {
               >
                 <td className="py-3 px-4 text-sm w-32">{restaurant.name}</td>
                 <td className="py-3 px-4 text-sm w-48">{restaurant.address}</td>
-                <td className="py-3 px-4 text-sm text-center w-20">
-                  {restaurant.rating !== undefined && restaurant.rating !== null
-                    ? restaurant.rating.toFixed(1)
-                    : "-"}
-                </td>
+
                 <td className="py-3 px-4 text-sm w-20 text-center">
-                  {restaurant.isClaimed ? "Yes" : "No"}
+                  {restaurant.isClaimed ? t("yes") : t("no")}
                 </td>
                 <td className="py-3 px-4 text-sm w-20">
                   <div
