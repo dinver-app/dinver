@@ -219,5 +219,8 @@
   "remove_admin_description": "Remove an admin from the restaurant.",
   "confirm_delete": "Confirm Delete",
   "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin?",
-  "admin_removed_successfully": "Admin removed successfully"
+  "admin_removed_successfully": "Admin removed successfully",
+  "order_uncategorized_items": "Order Uncategorized Items",
+  "uncategorized_item_order_updated": "Uncategorized item order updated",
+  "failed_to_update_uncategorized_item_order": "Failed to update uncategorized item order"
 }

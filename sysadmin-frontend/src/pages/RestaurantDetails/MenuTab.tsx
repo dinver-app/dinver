@@ -75,6 +75,13 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const [uncategorizedItemsForSorting, setUncategorizedItemsForSorting] =
+    useState<MenuItem[]>([]);
+  const [
+    isOrderUncategorizedItemsModalOpen,
+    setIsOrderUncategorizedItemsModalOpen,
+  ] = useState(false);
+
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
@@ -532,6 +539,45 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     );
   };
 
+  const openSortUncategorizedItemsModal = () => {
+    const uncategorizedItems = menuItems.filter((item) => !item.categoryId);
+    setUncategorizedItemsForSorting(uncategorizedItems);
+    setItemOrder(uncategorizedItems.map((item) => item.id));
+    setIsOrderUncategorizedItemsModalOpen(true);
+  };
+
+  const handleSaveUncategorizedItemOrder = async () => {
+    setIsLoading(true);
+    try {
+      await updateItemOrder(itemOrder);
+
+      const updatedMenuItems = [...menuItems];
+      updatedMenuItems.sort(
+        (a, b) => itemOrder.indexOf(a.id) - itemOrder.indexOf(b.id)
+      );
+      setMenuItems(updatedMenuItems);
+
+      setIsOrderUncategorizedItemsModalOpen(false);
+      toast.success(t("uncategorized_item_order_updated"));
+    } catch (error) {
+      console.error("Failed to update uncategorized item order", error);
+      toast.error(t("failed_to_update_uncategorized_item_order"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onUncategorizedItemDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const updatedItems = Array.from(uncategorizedItemsForSorting);
+    const [movedItem] = updatedItems.splice(result.source.index, 1);
+    updatedItems.splice(result.destination.index, 0, movedItem);
+
+    setUncategorizedItemsForSorting(updatedItems);
+    setItemOrder(updatedItems.map((item) => item.id));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-start">
@@ -598,7 +644,15 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           </div>
         ))}
         <div className="my-4">
-          <h4 className="text-lg font-semibold">{t("uncategorized_items")}</h4>
+          <h4 className="text-lg font-semibold flex justify-between">
+            {t("uncategorized_items")}
+            <button
+              onClick={openSortUncategorizedItemsModal}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              {t("sort")}
+            </button>
+          </h4>
           <ul className="g-white flex flex-col mt-2">
             {renderMenuItems(null)}
           </ul>
@@ -1359,6 +1413,80 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
               </button>
               <button
                 onClick={handleSaveItemOrder}
+                className={`primary-button ${isLoading ? "disabled" : ""}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner"></span>
+                ) : (
+                  t("save_order")
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOrderUncategorizedItemsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setIsOrderUncategorizedItemsModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <h2 className="text-lg font-semibold mb-4">
+              {t("order_uncategorized_items")}
+            </h2>
+            <DragDropContext onDragEnd={onUncategorizedItemDragEnd}>
+              <Droppable droppableId="uncategorizedItems">
+                {(provided) => (
+                  <ul
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-2"
+                  >
+                    {uncategorizedItemsForSorting.map((item, index) => (
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id.toString()}
+                        index={index}
+                      >
+                        {(provided) => (
+                          <li
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            ref={provided.innerRef}
+                            className="p-2 border border-gray-300 rounded bg-white cursor-pointer flex items-center w-full"
+                          >
+                            <span className="flex items-center mr-2">
+                              <img
+                                src="/images/drag.png"
+                                alt="Drag Icon"
+                                className="w-4 h-4"
+                              />
+                            </span>
+                            {item.name}
+                          </li>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
+
+            <div className="flex justify-end space-x-3 mt-4">
+              <button
+                onClick={() => setIsOrderUncategorizedItemsModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleSaveUncategorizedItemOrder}
                 className={`primary-button ${isLoading ? "disabled" : ""}`}
                 disabled={isLoading}
               >
