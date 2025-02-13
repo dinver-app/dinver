@@ -218,5 +218,6 @@
   "remove_admin": "Remove Admin",
   "remove_admin_description": "Remove an admin from the restaurant.",
   "confirm_delete": "Confirm Delete",
-  "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin?"
+  "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin?",
+  "admin_removed_successfully": "Admin removed successfully"
 }

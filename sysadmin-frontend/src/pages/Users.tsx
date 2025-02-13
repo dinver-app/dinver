@@ -222,7 +222,7 @@ const Users = () => {
       <div className="flex justify-between items-center mt-4">
         <span className="text-sm">
           {(currentPage - 1) * 10 + 1} -{" "}
-          {Math.min(currentPage * 10, totalUsers)} of {totalUsers}
+          {Math.min(currentPage * 10, totalUsers)} {t("of")} {totalUsers}
         </span>
         <div className="flex space-x-2">
           <button

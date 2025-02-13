@@ -1,5 +1,5 @@
 {
-  "welcome": "Dobrodošao",
+  "welcome": "Dobrodošao/la",
   "goodbye": "Doviđenja",
   "mainMenu": "Glavni izbornik",
   "homepage": "Početna stranica",
@@ -90,7 +90,7 @@
   "sunday": "Nedjelja",
   "please_enter_a_valid_phone_number": "Unesi ispravan broj telefona.",
   "please_enter_a_valid_url": "Unesi ispravan URL.",
-  "click_to_add_image": "Klikni da dodaš sliku",
+  "click_to_add_image": "Klikni za dodavanje slike",
   "thumbnail": "Slika",
   "website_url": "Link web stranice",
   "facebook_url": "Link Facebook stranice",
@@ -165,8 +165,8 @@
   "no_file_chosen": "Nema odabrane slike",
   "ban_user": "Blokiraj korisnika",
   "ban_user_description": "Blokiraj korisnika u sustavu.",
-  "unban_user": "Oblokiraj korisnika",
-  "unban_user_description": "Oblokiraj korisnika u sustavu.",
+  "unban_user": "Odblokiraj korisnika",
+  "unban_user_description": "Odblokiraj korisnika u sustavu.",
   "are_you_sure_you_want_to_ban_the_user_with_email": "Jesi li siguran da želiš blokirati korisnika s emailom",
   "are_you_sure_you_want_to_unban_the_user_with_email": "Jesi li siguran da želiš odblokirati korisnika s emailom",
   "yes": "Da",
@@ -203,9 +203,9 @@
   "manage_your_restaurant_general_information": "Upravljaj općenitim informacijama o restoranu.",
   "manage_your_restaurant_filters": "Upravljaj filterima restorana.",
   "are_you_sure_you_want_to_delete_this_image": "Jesi li siguran da želiš ukloniti ovu sliku?",
-  "welcome_message": "Dobrodošao",
-  "homepage_description": "Ova je početna stranica. Odaberite uslugu iz izbornika sa strane.",
-  "manage_admins": "Upravljaj administratori",
+  "welcome_message": "Dobrodošao/la!",
+  "homepage_description": "Ovo je početna stranica. Odaberi uslugu iz izbornika sa strane.",
+  "manage_admins": "Upravljaj administratorima",
   "add_admin": "Dodaj administratora",
   "no_admins": "Trenutno nema administratora za ovaj restoran",
   "manage_admins_description": "Upravljaj administratorima restorana.",
@@ -218,5 +218,6 @@
   "remove_admin": "Ukloni administratora",
   "remove_admin_description": "Ukloni administratora iz restorana.",
   "confirm_delete": "Potvrdi brisanje",
-  "are_you_sure_you_want_to_delete_admin": "Jesi li siguran da želiš ukloniti ovog administratora?"
+  "are_you_sure_you_want_to_delete_admin": "Jesi li siguran da želiš ukloniti ovog administratora?",
+  "admin_removed_successfully": "Administrator je uspješno uklonjen"
 }
