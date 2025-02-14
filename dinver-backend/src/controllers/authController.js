@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { authenticateToken } = require('../middleware/roleMiddleware');
+const { generateTokens } = require('../utils/tokenUtils');
+
 const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
@@ -27,7 +28,7 @@ const register = async (req, res) => {
   }
 };
 
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ where: { email } });
@@ -40,8 +41,6 @@ const login = async (req, res, next) => {
 
     res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
     res.cookie('token', accessToken, { httpOnly: true, secure: true });
-
-    authenticateToken(req, res, next, accessToken);
 
     res
       .status(200)
@@ -65,7 +64,7 @@ const checkAuth = async (req, res) => {
 
   jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
     if (err) {
-      const refreshToken = req.cookies.token;
+      const refreshToken = req.cookies.refreshToken;
       if (!refreshToken) {
         return res.status(401).json({ isAuthenticated: false });
       }
@@ -105,40 +104,27 @@ const checkAuth = async (req, res) => {
 };
 
 async function refreshToken(req, res) {
-  const { token } = req.body;
-  if (!token) return res.status(401).json({ error: 'Refresh token required' });
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken)
+    return res.status(401).json({ error: 'Refresh token required' });
 
   try {
-    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const user = await User.findByPk(decoded.id);
 
     if (!user) return res.status(403).json({ error: 'Invalid refresh token' });
 
-    const { accessToken, refreshToken } = generateTokens(user);
-    res.json({ accessToken, refreshToken });
+    const { accessToken, newRefreshToken } = generateTokens(user);
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+    });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    res.json({ accessToken });
   } catch (error) {
     res.status(403).json({ error: 'Invalid refresh token' });
   }
-}
-
-function generateTokens(user) {
-  const accessToken = jwt.sign(
-    { id: user.id, email: user.email },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: '1h',
-    },
-  );
-
-  const refreshToken = jwt.sign(
-    { id: user.id },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: '7d',
-    },
-  );
-
-  return { accessToken, refreshToken };
 }
 
 passport.use(
