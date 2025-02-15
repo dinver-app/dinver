@@ -5,8 +5,20 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 
-// Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
+  try {
+    const restaurants = await Restaurant.findAll({
+      attributes: ['id', 'name'],
+    });
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error fetching all restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch all restaurants' });
+  }
+};
+
+// Get all restaurants with specific fields
+const getRestaurants = async (req, res) => {
   try {
     const totalRestaurantsCount = await Restaurant.count();
 
@@ -537,6 +549,7 @@ const updateImageOrder = async (req, res) => {
 
 module.exports = {
   getAllRestaurants,
+  getRestaurants,
   getRestaurantDetails,
   viewRestaurant,
   updateRestaurant,

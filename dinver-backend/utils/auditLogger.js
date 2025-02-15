@@ -1,9 +1,9 @@
 const { AuditLog } = require('../models');
 
 const ActionTypes = {
-  CREATE: 'create',
-  UPDATE: 'update',
-  DELETE: 'delete',
+  CREATE: 'created',
+  UPDATE: 'updated',
+  DELETE: 'deleted',
 };
 
 const Entities = {

@@ -494,6 +494,18 @@ async function updateRestaurantAdminRole(req, res) {
   }
 }
 
+async function listAllUsers(req, res) {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'email', 'firstName', 'lastName'],
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    res.status(500).json({ error: 'Failed to fetch all users' });
+  }
+}
+
 module.exports = {
   createOrganization,
   updateOrganization,
@@ -515,4 +527,5 @@ module.exports = {
   addRestaurantAdmin,
   removeRestaurantAdmin,
   updateRestaurantAdminRole,
+  listAllUsers,
 };

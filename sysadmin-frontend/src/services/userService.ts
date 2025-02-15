@@ -9,6 +9,11 @@ export const listUsers = async (page: number, search?: string) => {
   return response.data;
 };
 
+export const listAllUsers = async () => {
+  const response = await apiClient.get("/api/sysadmin/users/all");
+  return response.data;
+};
+
 export const createUser = async (user: User) => {
   const response = await apiClient.post(`api/sysadmin/users`, user);
   return response.data;

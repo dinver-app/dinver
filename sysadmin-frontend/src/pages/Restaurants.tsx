@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getAllRestaurants,
+  getRestaurants,
   createRestaurant,
 } from "../services/restaurantService";
 import { Restaurant } from "../interfaces/Interfaces";
@@ -53,7 +53,7 @@ const Restaurants = () => {
 
   const fetchRestaurants = async (page: number, search: string) => {
     try {
-      const data = await getAllRestaurants(page, search);
+      const data = await getRestaurants(page, search);
       console.log(data.restaurants.length);
       setRestaurants(data.restaurants);
       setTotalPages(data.totalPages);

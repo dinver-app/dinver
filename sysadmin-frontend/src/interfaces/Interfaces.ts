@@ -98,3 +98,14 @@ export interface Category {
   restaurantId: string;
   menuItems: MenuItem[];
 }
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  restaurantId: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  changes: string;
+  createdAt: string;
+}

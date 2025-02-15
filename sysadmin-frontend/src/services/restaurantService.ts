@@ -1,12 +1,20 @@
 import { apiClient } from "./authService";
 
-export const getAllRestaurants = async (page: number, search?: string) => {
+export const getRestaurants = async (page: number, search?: string) => {
   const response = await apiClient.get(
     `api/restaurants?page=${page}${
       search ? `&search=${encodeURIComponent(search)}` : ""
     }`
   );
   return response.data;
+};
+
+export const getAllRestaurants = async () => {
+  const response = await apiClient.get("/api/restaurants/all");
+  return response.data.map((restaurant: any) => ({
+    id: restaurant.id,
+    name: restaurant.name,
+  }));
 };
 
 export const getRestaurantDetails = async (slug: string) => {

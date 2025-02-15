@@ -850,4 +850,40 @@ router.patch(
   sysadminController.updateRestaurantAdminRole,
 );
 
+/**
+ * @swagger
+ * /users/all:
+ *   get:
+ *     summary: List all users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of all users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.get(
+  '/users/all',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.listAllUsers,
+);
+
 module.exports = router;

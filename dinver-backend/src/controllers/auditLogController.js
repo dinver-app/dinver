@@ -1,13 +1,38 @@
 const { AuditLog } = require('../../models');
+const { Op } = require('sequelize');
 
 async function getAuditLogs(req, res) {
   try {
-    const logs = await AuditLog.findAll();
-    res.json(logs);
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const { search } = req.query;
+
+    const whereClause = search
+      ? {
+          [Op.or]: [
+            { action: { [Op.iLike]: `%${search}%` } },
+            { entity: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    const { count, rows: logs } = await AuditLog.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.json({
+      totalLogs: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      logs,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching audit logs' });
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 }
 

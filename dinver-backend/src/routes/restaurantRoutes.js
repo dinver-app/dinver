@@ -12,11 +12,80 @@ const router = express.Router();
  * @swagger
  * /restaurants:
  *   get:
- *     summary: Get all restaurants
+ *     summary: Get paginated list of restaurants with details
+ *     tags: [Restaurants]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for filtering restaurants by name or address
+ *     responses:
+ *       200:
+ *         description: A paginated list of restaurants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalRestaurants:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 restaurants:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       address:
+ *                         type: string
+ *                       latitude:
+ *                         type: number
+ *                       longitude:
+ *                         type: number
+ *                       rating:
+ *                         type: number
+ *                       user_ratings_total:
+ *                         type: integer
+ *                       price_level:
+ *                         type: integer
+ *                       opening_hours:
+ *                         type: string
+ *                       icon_url:
+ *                         type: string
+ *                       slug:
+ *                         type: string
+ *                       isOpen:
+ *                         type: boolean
+ *                       isClaimed:
+ *                         type: boolean
+ *                 totalRestaurantsCount:
+ *                   type: integer
+ *                 claimedRestaurantsCount:
+ *                   type: integer
+ */
+router.get('/', authenticateToken, restaurantController.getRestaurants);
+
+/**
+ * @swagger
+ * /restaurants/all:
+ *   get:
+ *     summary: Get all restaurants with only ID and name
  *     tags: [Restaurants]
  *     responses:
  *       200:
- *         description: A list of restaurants
+ *         description: A list of all restaurants with ID and name
  *         content:
  *           application/json:
  *             schema:
@@ -24,26 +93,12 @@ const router = express.Router();
  *               items:
  *                 type: object
  *                 properties:
+ *                   id:
+ *                     type: string
  *                   name:
  *                     type: string
- *                   address:
- *                     type: string
- *                   latitude:
- *                     type: number
- *                   longitude:
- *                     type: number
- *                   rating:
- *                     type: number
- *                   user_ratings_total:
- *                     type: integer
- *                   price_level:
- *                     type: integer
- *                   opening_hours:
- *                     type: string
- *                   icon_url:
- *                     type: string
  */
-router.get('/', authenticateToken, restaurantController.getAllRestaurants);
+router.get('/all', authenticateToken, restaurantController.getAllRestaurants);
 
 /**
  * @swagger
