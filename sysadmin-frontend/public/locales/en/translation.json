@@ -244,5 +244,9 @@
   "save": "Save",
   "restaurant_details": "Restaurant Details",
   "all_actions": "All Actions",
-  "page": "Page"
+  "page": "Page",
+  "menu_item": "Menu Item",
+  "menu_category": "Menu Category",
+  "changes_saved_successfully": "Changes saved successfully",
+  "saving_changes": "Saving changes..."
 }

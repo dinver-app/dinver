@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { updateRestaurant } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 
 interface GeneralTabProps {
   restaurant: Restaurant;
@@ -65,6 +66,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   };
 
   const handleSave = async () => {
+    const toastId = toast.loading(t("saving_changes"));
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("restaurantId", restaurant.id || "");
@@ -93,8 +95,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
 
       await updateRestaurant(restaurant.id || "", formDataToSend);
       onUpdate({ ...restaurant, ...formData });
+
+      // Show success toast
+      toast.success(t("changes_saved_successfully"), { id: toastId });
     } catch (error) {
       console.error("Failed to save restaurant details", error);
+      // Show error toast
+      toast.error(t("failed_to_save_changes"), { id: toastId });
     }
   };
 

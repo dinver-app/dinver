@@ -22,6 +22,33 @@ const Entities = {
   },
 };
 
+function deepCompare(oldObj, newObj) {
+  const changes = { old: {}, new: {} };
+
+  function compare(oldItem, newItem, path = '') {
+    if (typeof oldItem === 'object' && typeof newItem === 'object') {
+      for (const key in oldItem) {
+        if (newItem.hasOwnProperty(key)) {
+          compare(oldItem[key], newItem[key], path ? `${path}.${key}` : key);
+        } else {
+          changes.old[path ? `${path}.${key}` : key] = oldItem[key];
+        }
+      }
+      for (const key in newItem) {
+        if (!oldItem.hasOwnProperty(key)) {
+          changes.new[path ? `${path}.${key}` : key] = newItem[key];
+        }
+      }
+    } else if (oldItem !== newItem) {
+      changes.old[path] = oldItem;
+      changes.new[path] = newItem;
+    }
+  }
+
+  compare(oldObj, newObj);
+  return changes;
+}
+
 async function logAudit({
   userId,
   action,
@@ -30,6 +57,13 @@ async function logAudit({
   restaurantId,
   changes,
 }) {
+  let change = null;
+
+  if (action === ActionTypes.UPDATE) {
+    const { old, new: newVersion } = changes;
+    change = deepCompare(old, newVersion);
+  }
+
   try {
     await AuditLog.create({
       userId,
@@ -37,7 +71,11 @@ async function logAudit({
       entity,
       entityId,
       restaurantId,
-      changes: JSON.stringify(changes),
+      changes: JSON.stringify({
+        old: changes.old,
+        new: changes.new,
+        change: change || {},
+      }),
     });
   } catch (error) {
     console.error('Failed to log audit:', error);

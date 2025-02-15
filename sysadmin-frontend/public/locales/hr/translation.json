@@ -243,6 +243,10 @@
   "no_logs_available": "Trenutno nema zapisa",
   "save": "Spremi",
   "restaurant_details": "Detalji restorana",
-  "all_actions": "Sve akcije",
-  "page": "Stranica"
+  "all_actions": "Sve radnje",
+  "page": "Stranica",
+  "menu_item": "Stavka jelovnika",
+  "menu_category": "Kategorija jelovnika",
+  "changes_saved_successfully": "Promjene su uspješno spremljene",
+  "saving_changes": "Spremanje promjena..."
 }
