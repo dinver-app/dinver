@@ -6,16 +6,19 @@ async function getAuditLogs(req, res) {
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const offset = (page - 1) * limit;
-    const { search } = req.query;
+    const { search, action } = req.query;
 
-    const whereClause = search
-      ? {
-          [Op.or]: [
-            { action: { [Op.iLike]: `%${search}%` } },
-            { entity: { [Op.iLike]: `%${search}%` } },
-          ],
-        }
-      : {};
+    const whereClause = {
+      ...(search && {
+        [Op.or]: [
+          { action: { [Op.iLike]: `%${search}%` } },
+          { entity: { [Op.iLike]: `%${search}%` } },
+        ],
+      }),
+      ...(action && { action }),
+    };
+
+    console.log('Where Clause:', whereClause);
 
     const { count, rows: logs } = await AuditLog.findAndCountAll({
       where: whereClause,
@@ -39,8 +42,13 @@ async function getAuditLogs(req, res) {
 async function getAuditLogsForRestaurant(req, res) {
   try {
     const { restaurantId } = req.params;
+    const { action } = req.query;
+    const filter = { restaurantId };
+    if (action) {
+      filter.action = action;
+    }
     const logs = await AuditLog.findAll({
-      where: { restaurantId },
+      where: filter,
     });
     res.json(logs);
   } catch (error) {

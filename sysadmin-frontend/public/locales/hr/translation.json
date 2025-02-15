@@ -242,5 +242,7 @@
   "deleted": "Uklonjeno",
   "no_logs_available": "Trenutno nema zapisa",
   "save": "Spremi",
-  "restaurant_details": "Detalji restorana"
+  "restaurant_details": "Detalji restorana",
+  "all_actions": "Sve akcije",
+  "page": "Stranica"
 }

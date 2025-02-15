@@ -13,20 +13,23 @@ const Logs = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [actionFilter, setActionFilter] = useState("ALL");
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, actionFilter]);
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const [logsData, usersData, restaurantsData] = await Promise.all([
-        getAuditLogs(currentPage, searchTerm),
+        getAuditLogs(
+          currentPage,
+          searchTerm,
+          actionFilter !== "ALL" ? actionFilter : ""
+        ),
         listAllUsers(),
         getAllRestaurants(),
       ]);
@@ -36,8 +39,6 @@ const Logs = () => {
       setRestaurants(restaurantsData);
     } catch (error) {
       console.error("Failed to fetch data", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -61,10 +62,6 @@ const Logs = () => {
     setSelectedLog(null);
   };
 
-  if (loading) {
-    return <div>{t("loading")}</div>;
-  }
-
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
@@ -80,6 +77,16 @@ const Logs = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
         />
+        <select
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+          className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
+        >
+          <option value="all">{t("all_actions")}</option>
+          <option value="created">{t("created")}</option>
+          <option value="updated">{t("updated")}</option>
+          <option value="deleted">{t("deleted")}</option>
+        </select>
       </div>
       {logs.length === 0 ? (
         <div className="text-center text-gray-500">

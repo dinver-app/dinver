@@ -12,6 +12,13 @@ const router = express.Router();
  *     tags: [AuditLogs]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *           enum: [CREATE, UPDATE, DELETE]
+ *         description: Filter logs by action type
  *     responses:
  *       200:
  *         description: A list of audit logs
@@ -62,6 +69,12 @@ router.get('/', authenticateToken, auditLogController.getAuditLogs);
  *         schema:
  *           type: string
  *         description: The ID of the restaurant
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *           enum: [CREATE, UPDATE, DELETE]
+ *         description: Filter logs by action type
  *     responses:
  *       200:
  *         description: A list of audit logs for the specified restaurant

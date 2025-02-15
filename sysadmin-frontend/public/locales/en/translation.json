@@ -242,5 +242,7 @@
   "deleted": "Deleted",
   "no_logs_available": "No logs available currently",
   "save": "Save",
-  "restaurant_details": "Restaurant Details"
+  "restaurant_details": "Restaurant Details",
+  "all_actions": "All Actions",
+  "page": "Page"
 }
