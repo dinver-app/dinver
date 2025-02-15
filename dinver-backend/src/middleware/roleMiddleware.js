@@ -1,6 +1,6 @@
 const { UserSysadmin, UserAdmin, User } = require('../../models');
 const jwt = require('jsonwebtoken');
-const { generateTokens } = require('../utils/tokenUtils');
+const { generateTokens } = require('../../utils/tokenUtils');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 async function checkSysadmin(req, res, next) {

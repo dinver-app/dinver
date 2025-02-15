@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { generateTokens } = require('../utils/tokenUtils');
+const { generateTokens } = require('../../utils/tokenUtils');
 
 const register = async (req, res) => {
   try {

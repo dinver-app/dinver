@@ -3,6 +3,7 @@ const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
+const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 
 // Get all restaurants with specific fields
 const getAllRestaurants = async (req, res) => {
@@ -155,6 +156,16 @@ const addRestaurant = async (req, res) => {
       slug,
     });
 
+    // Log the create action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.RESTAURANT,
+      entityId: newRestaurant.id,
+      restaurantId: newRestaurant.id,
+      changes: { new: newRestaurant.get() },
+    });
+
     res.status(201).json({
       message: 'Restaurant added successfully',
       restaurant: newRestaurant,
@@ -168,7 +179,7 @@ const addRestaurant = async (req, res) => {
 };
 
 // Update restaurant details
-const updateRestaurant = async (req, res) => {
+async function updateRestaurant(req, res) {
   try {
     const { id } = req.params;
     const { name, address, website_url, fb_url, ig_url, phone, tt_url } =
@@ -179,6 +190,8 @@ const updateRestaurant = async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
+
+    const oldData = { ...restaurant.get() };
 
     let thumbnail_url = restaurant.thumbnail_url;
 
@@ -199,15 +212,24 @@ const updateRestaurant = async (req, res) => {
       fb_url,
       ig_url,
       phone,
-      thumbnail_url,
       tt_url,
+      thumbnail_url,
+    });
+
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.UPDATE,
+      resource: Entities.RESTAURANT,
+      resourceId: id,
+      restaurantId: id,
+      changes: { old: oldData, new: restaurant.get() },
     });
 
     res.json(restaurant);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update restaurant' });
   }
-};
+}
 
 const deleteRestaurant = async (req, res) => {
   try {
@@ -216,6 +238,16 @@ const deleteRestaurant = async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
+
+    // Log the delete action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.RESTAURANT,
+      entityId: id,
+      restaurantId: id,
+      changes: { old: restaurant.get() },
+    });
 
     // Delete the image from S3 if it exists
     if (restaurant.thumbnailUrl) {
@@ -310,7 +342,21 @@ async function updateWorkingHours(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const oldOpeningHours = restaurant.get('opening_hours');
+
     await restaurant.update({ opening_hours });
+
+    // Log the update action
+    if (oldOpeningHours !== opening_hours) {
+      await logAudit({
+        userId: req.user ? req.user.id : null,
+        action: ActionTypes.UPDATE,
+        entity: Entities.WORKING_HOURS,
+        entityId: restaurant.id,
+        restaurantId: restaurant.id,
+        changes: { old: oldOpeningHours, new: opening_hours },
+      });
+    }
 
     res.json({ message: 'Working hours updated successfully', restaurant });
   } catch (error) {
@@ -331,11 +377,56 @@ async function updateFilters(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const oldData = {
+      food_types: restaurant.food_types || [],
+      establishment_types: restaurant.establishment_types || [],
+      establishment_perks: restaurant.establishment_perks || [],
+    };
+
     await restaurant.update({
       food_types: food_types,
       establishment_types: establishment_types,
       establishment_perks: establishment_perks,
     });
+
+    const logChange = async (oldValues, newValues, entity) => {
+      if (JSON.stringify(oldValues) !== JSON.stringify(newValues)) {
+        const action =
+          oldValues.length > newValues.length
+            ? ActionTypes.DELETE
+            : ActionTypes.CREATE;
+        const change =
+          action === ActionTypes.CREATE
+            ? { new: newValues.find((item) => !oldValues.includes(item)) }
+            : { old: oldValues.find((item) => !newValues.includes(item)) };
+
+        await logAudit({
+          userId: req.user ? req.user.id : null,
+          action,
+          entity,
+          entityId: restaurant.id,
+          restaurantId: restaurant.id,
+          changes: change,
+        });
+      }
+    };
+
+    // Log the changes for each filter type
+    await logChange(
+      oldData.food_types,
+      food_types,
+      Entities.FILTERS.FOOD_TYPES,
+    );
+    await logChange(
+      oldData.establishment_types,
+      establishment_types,
+      Entities.FILTERS.ESTABLISHMENT_TYPES,
+    );
+    await logChange(
+      oldData.establishment_perks,
+      establishment_perks,
+      Entities.FILTERS.ESTABLISHMENT_PERKS,
+    );
 
     res.json({ message: 'Filters updated successfully', restaurant });
   } catch (error) {
@@ -344,7 +435,7 @@ async function updateFilters(req, res) {
   }
 }
 
-const addRestaurantImages = async (req, res) => {
+async function addRestaurantImages(req, res) {
   try {
     const { id } = req.params;
     const { restaurant_slug } = req.body;
@@ -367,12 +458,22 @@ const addRestaurantImages = async (req, res) => {
     const updatedImages = [...(restaurant.images || []), ...imageUrls];
     await restaurant.update({ images: updatedImages });
 
+    // Log the add images action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { new: imageUrls },
+    });
+
     res.json({ message: 'Images added successfully', images: updatedImages });
   } catch (error) {
     console.error('Error adding images:', error);
     res.status(500).json({ error: 'Failed to add images' });
   }
-};
+}
 
 const deleteRestaurantImage = async (req, res) => {
   try {
@@ -393,6 +494,16 @@ const deleteRestaurantImage = async (req, res) => {
 
     const updatedImages = restaurant.images.filter((img) => img !== imageUrl);
     await restaurant.update({ images: updatedImages });
+
+    // Log the delete image action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { old: imageUrl },
+    });
 
     res.json({ message: 'Image deleted successfully', images: updatedImages });
   } catch (error) {

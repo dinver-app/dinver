@@ -7,6 +7,7 @@ const {
 } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
+const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 
 // Get all menu items for a specific restaurant
 const getMenuItems = async (req, res) => {
@@ -14,6 +15,7 @@ const getMenuItems = async (req, res) => {
     const { restaurantId } = req.params;
     const menuItems = await MenuItem.findAll({
       where: { restaurantId },
+      order: [['position', 'ASC']],
     });
 
     const formattedMenuItems = menuItems.map((item) => ({
@@ -32,6 +34,7 @@ const getCategoryItems = async (req, res) => {
     const { restaurantId } = req.params;
     const categories = await MenuCategory.findAll({
       where: { restaurantId },
+      order: [['position', 'ASC']],
     });
     res.json(categories);
   } catch (error) {
@@ -68,6 +71,17 @@ const createMenuItem = async (req, res) => {
       allergens: formattedAllergenIds,
       description,
     });
+
+    // Log the create action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.MENU_ITEM,
+      entityId: menuItem.id,
+      restaurantId: restaurantId,
+      changes: { new: menuItem.get() },
+    });
+
     res.status(201).json(menuItem);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create menu item' });
@@ -86,6 +100,8 @@ const updateMenuItem = async (req, res) => {
     if (!menuItem) {
       return res.status(404).json({ error: 'Menu item not found' });
     }
+
+    const oldData = { ...menuItem.get() };
 
     let imageUrl = menuItem.imageUrl;
 
@@ -112,13 +128,23 @@ const updateMenuItem = async (req, res) => {
         : [parseInt(allergenIds)];
     const formattedCategoryId = categoryId === '' ? null : categoryId;
     const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
-    await menuItem.update({
+    const updatedMenuItem = await menuItem.update({
       name,
       price: formattedPrice,
       categoryId: formattedCategoryId,
       imageUrl,
       allergens: formattedAllergenIds,
       description,
+    });
+
+    // Log the update action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.UPDATE,
+      entity: Entities.MENU_ITEM,
+      entityId: menuItem.id,
+      restaurantId: menuItem.restaurantId,
+      changes: { old: oldData, new: updatedMenuItem.get() },
     });
 
     res.json(menuItem);
@@ -142,6 +168,16 @@ const deleteMenuItem = async (req, res) => {
       const key = `menu_items/${fileName}`;
       await deleteFromS3(key);
     }
+
+    // Log the delete action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.MENU_ITEM,
+      entityId: menuItem.id,
+      restaurantId: menuItem.restaurantId,
+      changes: { old: menuItem.get() },
+    });
 
     await menuItem.destroy();
     res.status(204).send();
@@ -172,6 +208,16 @@ const createCategory = async (req, res) => {
       restaurantId,
     });
 
+    // Log the create action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.MENU_CATEGORY,
+      entityId: category.id,
+      restaurantId: restaurantId,
+      changes: { new: category.get() },
+    });
+
     res.status(201).json(category);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create category' });
@@ -187,8 +233,20 @@ const updateCategory = async (req, res) => {
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
+    const oldData = { ...category.get() };
     category.name = name;
     await category.save();
+
+    // Log the update action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.UPDATE,
+      entity: Entities.MENU_CATEGORY,
+      entityId: category.id,
+      restaurantId: category.restaurantId,
+      changes: { old: oldData, new: category.get() },
+    });
+
     res.json(category);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update category' });
@@ -218,6 +276,16 @@ const deleteCategory = async (req, res) => {
 
     // Delete all items in the category
     await MenuItem.destroy({ where: { categoryId: id } });
+
+    // Log the delete action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.MENU_CATEGORY,
+      entityId: category.id,
+      restaurantId: category.restaurantId,
+      changes: { old: category.get() },
+    });
 
     await category.destroy();
     res.status(204).send();
