@@ -23,7 +23,6 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   });
 
   const [file, setFile] = useState<File | null>(null);
-  const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
   const [errors, setErrors] = useState({
     website_url: "",
     fb_url: "",
@@ -65,8 +64,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     validateInput(name, value);
   };
 
-  const handleAutoSave = async () => {
-    setSaveStatus(t("saving"));
+  const handleSave = async () => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("restaurantId", restaurant.id || "");
@@ -94,11 +92,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       }
 
       await updateRestaurant(restaurant.id || "", formDataToSend);
-      setSaveStatus(t("all_changes_saved"));
       onUpdate({ ...restaurant, ...formData });
     } catch (error) {
-      console.error("Failed to auto-save restaurant details", error);
-      setSaveStatus(t("failed_to_save_changes"));
+      console.error("Failed to save restaurant details", error);
     }
   };
 
@@ -107,25 +103,6 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       validateInput(name, value);
     });
   }, []);
-
-  useEffect(() => {
-    const isFormModified = () => {
-      return (
-        formData.name !== restaurant.name ||
-        formData.address !== restaurant.address ||
-        formData.thumbnail_url !== restaurant.thumbnail_url ||
-        formData.website_url !== restaurant.website_url ||
-        formData.fb_url !== restaurant.fb_url ||
-        formData.ig_url !== restaurant.ig_url ||
-        formData.tt_url !== restaurant.tt_url ||
-        formData.phone !== restaurant.phone
-      );
-    };
-
-    if (isFormModified()) {
-      handleAutoSave();
-    }
-  }, [formData]);
 
   return (
     <div className="flex flex-col">
@@ -136,7 +113,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             {t("manage_your_restaurant_general_information")}
           </h3>
         </div>
-        <span className="text-sm text-gray-500">{saveStatus}</span>
+        <button onClick={handleSave} className="primary-button">
+          {t("save")}
+        </button>
       </div>
       <div className="h-line"></div>
       <div>

@@ -240,5 +240,7 @@
   "updated": "Updated",
   "created": "Created",
   "deleted": "Deleted",
-  "no_logs_available": "No logs available currently"
+  "no_logs_available": "No logs available currently",
+  "save": "Save",
+  "restaurant_details": "Restaurant Details"
 }

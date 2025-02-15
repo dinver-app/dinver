@@ -240,5 +240,7 @@
   "updated": "Ažurirano",
   "created": "Kreirano",
   "deleted": "Uklonjeno",
-  "no_logs_available": "Trenutno nema zapisa"
+  "no_logs_available": "Trenutno nema zapisa",
+  "save": "Spremi",
+  "restaurant_details": "Detalji restorana"
 }

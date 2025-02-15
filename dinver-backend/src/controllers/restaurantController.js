@@ -172,7 +172,7 @@ const addRestaurant = async (req, res) => {
     await logAudit({
       userId: req.user ? req.user.id : null,
       action: ActionTypes.CREATE,
-      entity: Entities.RESTAURANT,
+      entity: Entities.RESTAURANT.RESTAURANT,
       entityId: newRestaurant.id,
       restaurantId: newRestaurant.id,
       changes: { new: newRestaurant.get() },
@@ -231,8 +231,8 @@ async function updateRestaurant(req, res) {
     await logAudit({
       userId: req.user ? req.user.id : null,
       action: ActionTypes.UPDATE,
-      resource: Entities.RESTAURANT,
-      resourceId: id,
+      entity: Entities.RESTAURANT.RESTAURANT_DETAILS,
+      entityId: id,
       restaurantId: id,
       changes: { old: oldData, new: restaurant.get() },
     });
@@ -255,7 +255,7 @@ const deleteRestaurant = async (req, res) => {
     await logAudit({
       userId: req.user ? req.user.id : null,
       action: ActionTypes.DELETE,
-      entity: Entities.RESTAURANT,
+      entity: Entities.RESTAURANT.RESTAURANT,
       entityId: id,
       restaurantId: id,
       changes: { old: restaurant.get() },

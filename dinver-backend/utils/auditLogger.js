@@ -7,7 +7,10 @@ const ActionTypes = {
 };
 
 const Entities = {
-  RESTAURANT: 'restaurant',
+  RESTAURANT: {
+    RESTAURANT: 'restaurant',
+    RESTAURANT_DETAILS: 'restaurant_details',
+  },
   MENU_ITEM: 'menu_item',
   MENU_CATEGORY: 'menu_category',
   WORKING_HOURS: 'working_hours',
