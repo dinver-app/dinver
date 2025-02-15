@@ -6,6 +6,7 @@ import {
   FaCog,
   FaRegChartBar,
   FaSignOutAlt,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
@@ -39,6 +40,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("analytics"),
       path: "/analytics",
       icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("claim"),
+      path: "/claim",
+      icon: <FaShieldAlt className="h-4 w-4 mr-3" />,
     },
   ];
 
@@ -141,8 +147,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <img
             src={
               isSidebarOpen
-                ? "/public/images/left_arrows.svg"
-                : "/public/images/right_arrows.svg"
+                ? "/images/left_arrows.svg"
+                : "/images/right_arrows.svg"
             }
             alt={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
             className="h-5 w-5"

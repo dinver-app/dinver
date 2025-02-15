@@ -37,3 +37,8 @@ export const getUserLanguage = async () => {
   const response = await apiClient.get(`api/user/language`);
   return response.data;
 };
+
+export const getUserById = async (id: string) => {
+  const response = await apiClient.get(`/api/user/${id}`);
+  return response.data;
+};

@@ -510,4 +510,58 @@ router.put(
   restaurantController.updateImageOrder,
 );
 
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   get:
+ *     summary: Get restaurant details by ID
+ *     tags: [Restaurants]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       200:
+ *         description: Restaurant details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 latitude:
+ *                   type: number
+ *                 longitude:
+ *                   type: number
+ *                 rating:
+ *                   type: number
+ *                 user_ratings_total:
+ *                   type: integer
+ *                 price_level:
+ *                   type: integer
+ *                 opening_hours:
+ *                   type: string
+ *                 icon_url:
+ *                   type: string
+ *                 slug:
+ *                   type: string
+ *                 isClaimed:
+ *                   type: boolean
+ *       404:
+ *         description: Restaurant not found
+ */
+router.get(
+  '/details/:id',
+  authenticateToken,
+  restaurantController.getRestaurantById,
+);
+
 module.exports = router;

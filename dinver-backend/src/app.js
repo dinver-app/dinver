@@ -11,6 +11,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const typeRoutes = require('./routes/TypeRoutes');
 const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/AuditLogRoutes');
+const claimLogRoutes = require('./routes/claimLogRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -69,6 +70,7 @@ app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/claim-logs', claimLogRoutes);
 i18next
   .use(Backend)
   .use(i18nextMiddleware.LanguageDetector)

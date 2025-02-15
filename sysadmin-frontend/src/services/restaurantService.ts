@@ -120,3 +120,36 @@ export const updateImageOrder = async (id: string, images: string[]) => {
     throw error;
   }
 };
+
+export const handleClaimStatus = async (
+  restaurantId: string,
+  offer: string,
+  isClaimed: boolean
+) => {
+  try {
+    const response = await apiClient.post("/api/claim-logs/claim-status", {
+      restaurantId,
+      offer,
+      isClaimed,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error handling claim status:", error);
+    throw error;
+  }
+};
+
+export const getAllClaimLogs = async () => {
+  try {
+    const response = await apiClient.get("/api/claim-logs");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching claim logs:", error);
+    throw error;
+  }
+};
+
+export const getRestaurantById = async (id: string) => {
+  const response = await apiClient.get(`/api/restaurants/details/${id}`);
+  return response.data;
+};

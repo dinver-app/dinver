@@ -22,9 +22,8 @@ const getRestaurants = async (req, res) => {
   try {
     const totalRestaurantsCount = await Restaurant.count();
 
-    const claimedRestaurantsCount = await UserAdmin.count({
-      distinct: true,
-      col: 'restaurantId',
+    const claimedRestaurantsCount = await Restaurant.count({
+      where: { isClaimed: true },
     });
 
     const page = parseInt(req.query.page) || 1;
@@ -73,6 +72,7 @@ const getRestaurants = async (req, res) => {
         'opening_hours',
         'icon_url',
         'slug',
+        'isClaimed',
       ],
       limit,
       offset,
@@ -81,15 +81,9 @@ const getRestaurants = async (req, res) => {
 
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
-        const isClaimed = await UserAdmin.findOne({
-          where: { restaurantId: restaurant.id },
-          attributes: ['restaurantId'],
-        });
-
         return {
           ...restaurant.get(),
           isOpen: isRestaurantOpen(restaurant.opening_hours),
-          isClaimed: !!isClaimed,
         };
       }),
     );
@@ -547,6 +541,20 @@ const updateImageOrder = async (req, res) => {
   }
 };
 
+const getRestaurantById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    res.json(restaurant);
+  } catch (error) {
+    console.error('Error fetching restaurant by ID:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -560,4 +568,5 @@ module.exports = {
   addRestaurantImages,
   deleteRestaurantImage,
   updateImageOrder,
+  getRestaurantById,
 };
