@@ -17,6 +17,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isModalOpen, setModalOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   const menuItems = [
     {
@@ -65,7 +66,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex">
-      <aside className="fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 flex flex-col justify-between">
+      <aside
+        className={`fixed top-0 left-0 h-full bg-white shadow-lg z-50 flex flex-col justify-between transition-all duration-300 ${
+          isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
+        }`}
+      >
         <div>
           <div className="p-4 border-b select-none">
             <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" />
@@ -128,8 +133,42 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {t("logout")}
           </button>
         </div>
+        <button
+          onClick={() => setSidebarOpen(!isSidebarOpen)}
+          className={`absolute top-6 right-2 z-50 mb-4 rounded flex items-center justify-center `}
+          style={{ width: "32px", height: "32px" }}
+        >
+          <img
+            src={
+              isSidebarOpen
+                ? "/public/images/left_arrows.svg"
+                : "/public/images/right_arrows.svg"
+            }
+            alt={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+            className="h-5 w-5"
+          />
+        </button>
       </aside>
-      <main className="flex-1 ml-64 p-6">{children}</main>
+      <main
+        className={`flex-1 transition-all duration-300 ${
+          isSidebarOpen ? "ml-64" : "ml-0"
+        } p-6`}
+      >
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute left-0 top-6 bg-gray-200 rounded flex items-center justify-center"
+            style={{ width: "24px", height: "24px" }}
+          >
+            <img
+              src="/public/images/right_arrows.svg"
+              alt="Open Sidebar"
+              className="h-5 w-5"
+            />
+          </button>
+        )}
+        {children}
+      </main>
       <LogoutModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
