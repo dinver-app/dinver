@@ -56,6 +56,7 @@ export interface Restaurant {
   tt_url?: string;
   phone?: string;
   images?: string[];
+  reviewRating?: number;
 }
 
 export interface FoodType {
@@ -125,6 +126,7 @@ export interface Review {
   userFirstName: string;
   userLastName: string;
   userEmail: string;
+  createdAt?: string;
 }
 
 export interface RestaurantReviews {

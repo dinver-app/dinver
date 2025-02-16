@@ -103,3 +103,22 @@ export interface AuditLog {
   restaurantName?: string;
   userEmail?: string;
 }
+
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  images: string[];
+  user_id: string;
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+  restaurant?: string;
+  createdAt?: string;
+}
+
+export interface RestaurantReviews {
+  restaurant: string;
+  reviews: Review[];
+  totalReviews: number;
+}

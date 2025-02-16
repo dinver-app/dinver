@@ -541,8 +541,25 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
+    const sortOption = req.query.sort || 'date_desc';
 
-    // Fetch all users and create a map for quick lookup
+    let order;
+    switch (sortOption) {
+      case 'date_asc':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'rating_desc':
+        order = [['rating', 'DESC']];
+        break;
+      case 'rating_asc':
+        order = [['rating', 'ASC']];
+        break;
+      case 'date_desc':
+      default:
+        order = [['createdAt', 'DESC']];
+        break;
+    }
+
     const users = await User.findAll({
       attributes: ['id', 'firstName', 'lastName', 'email'],
     });
@@ -552,7 +569,10 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
     }, {});
 
     const claimedRestaurants = await Restaurant.findAll({
-      where: { isClaimed: true },
+      where: {
+        isClaimed: true,
+        name: { [Op.iLike]: `%${search}%` },
+      },
       attributes: ['id', 'name'],
     });
 
@@ -561,15 +581,18 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
         const { count, rows: reviews } = await Review.findAndCountAll({
           where: {
             restaurant_id: restaurant.id,
-            [Op.or]: [
-              { comment: { [Op.iLike]: `%${search}%` } },
-              { rating: parseFloat(search) || 0 },
-            ],
           },
-          attributes: ['id', 'rating', 'comment', 'images', 'user_id'],
+          attributes: [
+            'id',
+            'rating',
+            'comment',
+            'images',
+            'user_id',
+            'createdAt',
+          ],
           limit,
           offset,
-          order: [['createdAt', 'DESC']],
+          order,
         });
 
         const reviewsWithUserDetails = reviews.map((review) => {

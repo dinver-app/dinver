@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { getPaginatedReviewsForClaimedRestaurants } from "../services/reviewService";
+import { getPaginatedReviewsForRestaurant } from "../services/reviewService";
 import { useTranslation } from "react-i18next";
 import { Review } from "../interfaces/Interfaces";
-import { format } from "date-fns";
+import { useParams } from "react-router-dom";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
+import { format } from "date-fns";
 
 const formatRating = (rating: number, language: string) => {
   return language === "hr"
@@ -14,14 +15,15 @@ const formatRating = (rating: number, language: string) => {
 
 const Reviews = () => {
   const { t, i18n } = useTranslation();
+  const { restaurantId } = useParams();
   const [reviewsData, setReviewsData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedReview, setSelectedReview] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("date_desc");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [sortOption, setSortOption] = useState("date_desc");
 
   useEffect(() => {
     fetchReviews();
@@ -29,14 +31,14 @@ const Reviews = () => {
 
   const fetchReviews = async () => {
     try {
-      const { reviewsData, totalPages } =
-        await getPaginatedReviewsForClaimedRestaurants(
-          currentPage,
-          searchTerm,
-          10,
-          sortOption
-        );
-      setReviewsData(reviewsData);
+      const { totalPages, reviews } = await getPaginatedReviewsForRestaurant(
+        restaurantId ?? "",
+        currentPage,
+        10,
+        searchTerm,
+        sortOption
+      );
+      setReviewsData(reviews);
       setTotalPages(totalPages);
     } catch (error) {
       console.error("Failed to fetch reviews", error);
@@ -105,13 +107,9 @@ const Reviews = () => {
             <table className="min-w-full bg-white">
               <thead className="bg-gray-100">
                 <tr className="text-sm text-black">
-                  <th className="py-2 px-4 text-left font-normal w-64">
-                    {t("restaurant")}
-                  </th>
                   <th className="py-2 px-4 text-left font-normal w-48">
                     {t("user")}
                   </th>
-
                   <th className="py-2 px-4 text-left font-normal w-64">
                     {t("comment")}
                   </th>
@@ -125,44 +123,38 @@ const Reviews = () => {
                 </tr>
               </thead>
               <tbody>
-                {reviewsData.map((restaurant) =>
-                  restaurant.reviews.map((review: Review) => (
-                    <tr
-                      key={review.id}
-                      className="hover:bg-gray-100 border-b border-gray-200"
-                    >
-                      <td className="py-2 px-4 text-sm w-64">
-                        {restaurant.restaurant}
-                      </td>
-                      <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                        {review.userFirstName} {review.userLastName}
-                      </td>
-
-                      <td className="py-2 px-4 text-sm text-gray-600 w-64">
-                        {truncateComment(review.comment, 30)}
-                      </td>
-                      <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                        {format(
-                          new Date(review.createdAt ?? ""),
-                          "dd.MM.yyyy. HH:mm"
-                        )}
-                      </td>
-                      <td className="py-2 px-4 text-sm text-center text-gray-600 w-32">
-                        {formatRating(review.rating, i18n.language)}
-                      </td>
-                      <td className="py-2 px-4 text-sm text-gray-600 w-10">
-                        <button
-                          onClick={() =>
-                            handleOpenModal(review, restaurant.restaurant)
-                          }
-                          className="text-blue-500 hover:text-blue-700"
-                        >
-                          ...
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                {reviewsData.map((review: Review) => (
+                  <tr
+                    key={review.id}
+                    className="hover:bg-gray-100 border-b border-gray-200"
+                  >
+                    <td className="py-2 px-4 text-sm text-gray-600 w-48">
+                      {review.userFirstName} {review.userLastName}
+                    </td>
+                    <td className="py-2 px-4 text-sm text-gray-600 w-64">
+                      {truncateComment(review.comment, 30)}
+                    </td>
+                    <td className="py-2 px-4 text-sm text-gray-600 w-48">
+                      {format(
+                        new Date(review.createdAt ?? ""),
+                        "dd.MM.yyyy. HH:mm"
+                      )}
+                    </td>
+                    <td className="py-2 px-4 text-sm text-center text-gray-600 w-32">
+                      {formatRating(review.rating, i18n.language)}
+                    </td>
+                    <td className="py-2 px-4 text-sm text-gray-600 w-10">
+                      <button
+                        onClick={() =>
+                          handleOpenModal(review, review.restaurant ?? "")
+                        }
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        ...
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -215,12 +207,6 @@ const Reviews = () => {
             </div>
             <div className="h-line mb-4"></div>
             <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("restaurant")}</h3>
-              <p className="text-xs text-gray-600">
-                {selectedReview.restaurant}
-              </p>
-            </div>
-            <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("rating")}</h3>
               <p className="text-xs text-gray-600">
                 {formatRating(selectedReview.review.rating, i18n.language)}
@@ -239,6 +225,7 @@ const Reviews = () => {
                 {selectedReview.review.userLastName}
               </p>
             </div>
+
             <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("images")}</h3>
               <div className="flex gap-2">

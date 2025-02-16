@@ -291,5 +291,16 @@
   "failed_to_delete_restaurant": "Failed to delete restaurant",
   "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Are you sure you want to delete restaurant",
   "confirm_logout": "Confirm Logout",
-  "confirm_logout_message": "Are you sure you want to logout?"
+  "confirm_logout_message": "Are you sure you want to logout?",
+  "reviews": "Reviews",
+  "list_of_all_reviews": "List of All Reviews",
+  "no_reviews_available": "No reviews available currently",
+  "view_review_details": "View Review Details",
+  "review_details": "Review Details",
+  "comment": "Comment",
+  "date_asc": "Date Ascending",
+  "date_desc": "Date Descending",
+  "rating_asc": "Rating Ascending",
+  "rating_desc": "Rating Descending",
+  "no_images_in_review": "No images in review"
 }

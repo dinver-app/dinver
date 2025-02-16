@@ -10,6 +10,7 @@ import Analytics from "./pages/Analytics";
 import Logs from "./pages/Logs";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
+import Reviews from "./pages/Reviews";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/logs" element={<Logs />} />
+            <Route path="/reviews/:restaurantId" element={<Reviews />} />
           </Route>
         </Routes>
       </Router>

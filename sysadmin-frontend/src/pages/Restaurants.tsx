@@ -59,7 +59,6 @@ const Restaurants = () => {
   const fetchRestaurants = async (page: number, search: string) => {
     try {
       const data = await getRestaurants(page, search);
-      console.log(data.restaurants.length);
       setRestaurants(data.restaurants);
       setTotalPages(data.totalPages);
       setTotalRestaurants(data.totalRestaurants);
@@ -199,12 +198,14 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-left font-normal w-48">
                 {t("address")}
               </th>
-
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("claimed")}
               </th>
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("open")}
+              </th>
+              <th className="py-2 px-4 text-center font-normal w-20">
+                {t("rating")}
               </th>
               <th className="py-2 px-4 text-left w-10"></th>
             </tr>
@@ -218,7 +219,6 @@ const Restaurants = () => {
               >
                 <td className="py-3 px-4 text-sm w-32">{restaurant.name}</td>
                 <td className="py-3 px-4 text-sm w-48">{restaurant.address}</td>
-
                 <td className="py-3 px-4 text-sm w-20 text-center">
                   {restaurant.isClaimed ? t("yes") : t("no")}
                 </td>
@@ -232,6 +232,11 @@ const Restaurants = () => {
                         : "bg-gray-500"
                     }`}
                   ></div>
+                </td>
+                <td className="py-3 px-4 text-sm w-20 text-center">
+                  {restaurant.reviewRating !== null
+                    ? restaurant.reviewRating?.toFixed(1)
+                    : "-"}
                 </td>
                 <td className="py-2 px-4 w-10">
                   <div className="relative" ref={menuRef}>

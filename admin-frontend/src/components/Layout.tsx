@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaHome, FaCog, FaRegChartBar, FaSignOutAlt } from "react-icons/fa";
+import {
+  FaHome,
+  FaCog,
+  FaRegChartBar,
+  FaSignOutAlt,
+  FaComments,
+} from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 import LogoutModal from "./LogoutModal";
@@ -89,6 +95,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("analytics"),
       path: "/analytics",
       icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("reviews"),
+      path: `/reviews/${currentRestaurant?.id}`,
+      icon: <FaComments className="h-4 w-4 mr-3" />,
     },
   ];
 

@@ -81,9 +81,22 @@ const getRestaurants = async (req, res) => {
 
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
+        const reviews = await Review.findAll({
+          where: { restaurant_id: restaurant.id },
+          attributes: ['rating'],
+        });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
         return {
           ...restaurant.get(),
           isOpen: isRestaurantOpen(restaurant.opening_hours),
+          reviewRating,
         };
       }),
     );

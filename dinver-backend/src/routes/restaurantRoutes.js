@@ -659,6 +659,11 @@ router.post(
  *         schema:
  *           type: string
  *         description: The restaurant ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for filtering reviews by comment or rating
  *     responses:
  *       200:
  *         description: A list of reviews

@@ -294,5 +294,10 @@
   "no_reviews_available": "Trenutno nema recenzija",
   "view_review_details": "Pogledaj detalje recenzije",
   "review_details": "Detalji recenzije",
-  "comment": "Komentar"
+  "comment": "Komentar",
+  "date_asc": "Datum uzlazno",
+  "date_desc": "Datum silazno",
+  "rating_asc": "Ocjena uzlazno",
+  "rating_desc": "Ocjena silazno",
+  "no_images_in_review": "Nema slika u recenziji"
 }
