@@ -14,8 +14,15 @@ import {
   removeRestaurantAdmin,
 } from "../services/sysadminService";
 
+const formatRating = (rating: number | undefined, language: string) => {
+  if (rating === undefined) return "-";
+  return language === "hr"
+    ? rating.toFixed(1).replace(".", ",")
+    : rating.toFixed(1);
+};
+
 const Restaurants = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [restaurants, setRestaurants] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -235,7 +242,7 @@ const Restaurants = () => {
                 </td>
                 <td className="py-3 px-4 text-sm w-20 text-center">
                   {restaurant.reviewRating !== null
-                    ? restaurant.reviewRating?.toFixed(1)
+                    ? formatRating(restaurant.reviewRating, i18n.language)
                     : "-"}
                 </td>
                 <td className="py-2 px-4 w-10">
