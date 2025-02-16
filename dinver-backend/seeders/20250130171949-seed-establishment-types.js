@@ -3,7 +3,7 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // First, delete all existing establishment types
-    await queryInterface.bulkDelete('EstablishmentTypes', null, {}); // TODO - remove after revision
+    // await queryInterface.bulkDelete('EstablishmentTypes', null, {}); // TODO - remove after revision
 
     // Then, insert the new establishment types
     return queryInterface.bulkInsert('EstablishmentTypes', [
@@ -44,7 +44,7 @@ module.exports = {
       },
       {
         name_en: 'Food Truck',
-        name_hr: 'Hrana na vozilu',
+        name_hr: 'Food Truck',
         icon: '🚚',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -58,7 +58,7 @@ module.exports = {
       },
       {
         name_en: 'Buffet',
-        name_hr: 'Buffet',
+        name_hr: 'Bife',
         icon: '🍽',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -79,21 +79,21 @@ module.exports = {
       },
       {
         name_en: 'Cocktail Bar',
-        name_hr: 'Cocktail Bar',
+        name_hr: 'Koktel bar',
         icon: '🍸',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
         name_en: 'Hotel Restaurant',
-        name_hr: 'Hotel Restoran',
+        name_hr: 'Restoran u hotelu',
         icon: '🏨',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
         name_en: 'Cake Shop',
-        name_hr: 'Torta Shop',
+        name_hr: 'Slastičarnica',
         icon: '🍰',
         createdAt: new Date(),
         updatedAt: new Date(),

@@ -289,5 +289,7 @@
   "are_you_sure_you_want_to_delete_the_restaurant": "Are you sure you want to delete the restaurant",
   "restaurant_deleted_successfully": "Restaurant deleted successfully",
   "failed_to_delete_restaurant": "Failed to delete restaurant",
-  "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Are you sure you want to delete restaurant"
+  "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Are you sure you want to delete restaurant",
+  "confirm_logout": "Confirm Logout",
+  "confirm_logout_message": "Are you sure you want to logout?"
 }

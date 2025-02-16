@@ -63,7 +63,7 @@ const handleClaimStatus = async (req, res) => {
       await sendEmailNotification(
         ['ivankikic49@gmail.com'],
         'Dogovorena nova suradnja s restoranom',
-        `Poštovani,\n\nS veseljem vas obavještavamo da je dogovorena nova suradnja s restoranom ${restaurant.name}.\nSuradnju je dogovorio/la ${req.user.email} dana ${format(new Date(), 'dd.MM.yyyy')} s ponudom: ${offerHR}.\n\nSrdačan pozdrav,\nDinver Team`,
+        `Poštovani,\n\nS veseljem vas obavještavamo da je dogovorena nova suradnja s restoranom ${restaurant.name}.\nSuradnju je dogovorio/la ${req.user.email} dana ${format(new Date(), 'dd.MM.yyyy.')} s ponudom: ${offerHR}.\n\nSrdačan pozdrav,\nDinver Team`,
       );
 
       return res.status(201).json({

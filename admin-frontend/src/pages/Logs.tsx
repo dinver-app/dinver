@@ -122,7 +122,7 @@ const Logs = () => {
                       {log.restaurantName || t("unknown_restaurant")}
                     </td>
                     <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                      {format(new Date(log.createdAt), "dd.MM.yyyy HH:mm")}
+                      {format(new Date(log.createdAt), "dd.MM.yyyy. HH:mm")}
                     </td>
                     <td className="py-2 px-4 text-sm text-gray-600 w-10">
                       <button
@@ -215,7 +215,7 @@ const Logs = () => {
             <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("date")}</h3>
               <p className="text-xs text-gray-600">
-                {format(new Date(selectedLog.createdAt), "dd.MM.yyyy HH:mm")}
+                {format(new Date(selectedLog.createdAt), "dd.MM.yyyy. HH:mm")}
               </p>
             </div>
             <div className="mb-4">

@@ -272,7 +272,7 @@ const Settings = () => {
                       {sysadmin.user.lastName}
                     </td>
                     <td className="py-2 px-4 text-sm text-gray-600">
-                      {format(new Date(sysadmin.createdAt), "dd.MM.yyyy")}
+                      {format(new Date(sysadmin.createdAt), "dd.MM.yyyy.")}
                     </td>
                     <td className="py-2 px-4">
                       <div className="relative" ref={menuRef}>
@@ -369,7 +369,7 @@ const Settings = () => {
                         <td className="py-2 px-4 text-sm text-gray-600">
                           {format(
                             new Date(backup.backupDate),
-                            "dd.MM.yyyy HH:mm"
+                            "dd.MM.yyyy. HH:mm"
                           )}
                         </td>
                         <td className="py-2 px-4 text-right">

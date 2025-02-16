@@ -56,6 +56,7 @@
 
    ```bash
    npx sequelize-cli db:seed:all
+      npx sequelize-cli db:seed --seed 20250126121000-seed-food-types.js
    ```
 
 8. **Pokreni seedere na Heroku bazi (opcionalno):**
