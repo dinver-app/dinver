@@ -109,3 +109,9 @@ export interface AuditLog {
   changes: string;
   createdAt: string;
 }
+
+export interface Backup {
+  restaurantId: string;
+  backupDate: string;
+  key: string;
+}

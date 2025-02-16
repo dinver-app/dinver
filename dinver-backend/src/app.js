@@ -11,6 +11,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const typeRoutes = require('./routes/TypeRoutes');
 const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/AuditLogRoutes');
+const backupRoutes = require('./routes/backupRoutes');
 const claimLogRoutes = require('./routes/claimLogRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
@@ -18,9 +19,14 @@ const cookieParser = require('cookie-parser');
 const i18next = require('i18next');
 const i18nextMiddleware = require('i18next-express-middleware');
 const Backend = require('i18next-fs-backend');
+const cron = require('node-cron');
+const { createDailyBackups } = require('./cron/backupCron');
 dotenv.config();
 
 const app = express();
+
+// Schedule the cron job to run every day at 3:00 AM
+cron.schedule('0 3 * * *', createDailyBackups);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -70,6 +76,7 @@ app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api', backupRoutes);
 app.use('/api/claim-logs', claimLogRoutes);
 i18next
   .use(Backend)

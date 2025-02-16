@@ -18,8 +18,6 @@ async function getAuditLogs(req, res) {
       ...(action && { action }),
     };
 
-    console.log('Where Clause:', whereClause);
-
     const { count, rows: logs } = await AuditLog.findAndCountAll({
       where: whereClause,
       limit,
