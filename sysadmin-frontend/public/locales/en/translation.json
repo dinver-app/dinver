@@ -281,5 +281,13 @@
   "download": "Download",
   "restore": "Restore",
   "backup_restored_successfully": "Backup restored successfully",
-  "search_for_restaurant": "Search for restaurant"
+  "search_for_restaurant": "Search for restaurant",
+  "restaurant_added_successfully": "Restaurant added successfully",
+  "failed_to_create_restaurant": "Failed to create restaurant",
+  "delete_restaurant": "Delete Restaurant",
+  "delete_restaurant_description": "Delete a restaurant from the system.",
+  "are_you_sure_you_want_to_delete_the_restaurant": "Are you sure you want to delete the restaurant",
+  "restaurant_deleted_successfully": "Restaurant deleted successfully",
+  "failed_to_delete_restaurant": "Failed to delete restaurant",
+  "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Are you sure you want to delete restaurant"
 }

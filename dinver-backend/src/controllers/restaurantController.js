@@ -245,16 +245,6 @@ const deleteRestaurant = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Log the delete action
-    await logAudit({
-      userId: req.user ? req.user.id : null,
-      action: ActionTypes.DELETE,
-      entity: Entities.RESTAURANT.RESTAURANT,
-      entityId: id,
-      restaurantId: id,
-      changes: { old: restaurant.get() },
-    });
-
     // Delete the image from S3 if it exists
     if (restaurant.thumbnailUrl) {
       const key = restaurant.thumbnailUrl.split('/').pop();
@@ -262,6 +252,7 @@ const deleteRestaurant = async (req, res) => {
     }
 
     await restaurant.destroy();
+
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete restaurant' });

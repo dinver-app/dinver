@@ -27,10 +27,8 @@ export const createRestaurant = async (restaurant: any) => {
   return response.data;
 };
 
-export const deleteRestaurant = async (name: string) => {
-  const response = await apiClient.delete("api/restaurants", {
-    data: { name },
-  });
+export const deleteRestaurant = async (id: string) => {
+  const response = await apiClient.delete(`api/restaurants/${id}`);
   return response.data;
 };
 

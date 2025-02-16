@@ -564,4 +564,34 @@ router.get(
   restaurantController.getRestaurantById,
 );
 
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   delete:
+ *     summary: Delete a restaurant by ID
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       204:
+ *         description: Restaurant deleted successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to delete restaurant
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.deleteRestaurant,
+);
+
 module.exports = router;

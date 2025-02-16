@@ -7,11 +7,13 @@ module.exports = (sequelize, DataTypes) => {
       AuditLog.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'user',
+        onDelete: 'CASCADE',
       });
 
       AuditLog.belongsTo(models.Restaurant, {
         foreignKey: 'restaurantId',
         as: 'restaurant',
+        onDelete: 'CASCADE',
       });
     }
   }

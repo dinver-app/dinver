@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   getRestaurants,
   createRestaurant,
+  deleteRestaurant,
 } from "../services/restaurantService";
 import { Restaurant } from "../interfaces/Interfaces";
 import toast from "react-hot-toast";
@@ -46,6 +47,10 @@ const Restaurants = () => {
     email: string;
   } | null>(null);
   const [isDeleteAdminModalOpen, setDeleteAdminModalOpen] = useState(false);
+  const [isDeleteRestaurantModalOpen, setDeleteRestaurantModalOpen] =
+    useState(false);
+  const [restaurantToDelete, setRestaurantToDelete] =
+    useState<Restaurant | null>(null);
 
   useEffect(() => {
     fetchRestaurants(currentPage, searchTerm);
@@ -147,6 +152,22 @@ const Restaurants = () => {
     }
   };
 
+  const handleDeleteRestaurant = async () => {
+    if (restaurantToDelete) {
+      try {
+        await deleteRestaurant(restaurantToDelete.id || "");
+        fetchRestaurants(currentPage, searchTerm);
+        toast.success(t("restaurant_deleted_successfully"));
+      } catch (error) {
+        console.error("Failed to delete restaurant", error);
+        toast.error(t("failed_to_delete_restaurant"));
+      } finally {
+        setDeleteRestaurantModalOpen(false);
+        setRestaurantToDelete(null);
+      }
+    }
+  };
+
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
@@ -220,7 +241,7 @@ const Restaurants = () => {
                         setSelectedRestaurantId(restaurant.id || null);
                         setIsMenuOpen(!isMenuOpen);
                       }}
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-gray-500 hover:text-gray-700 px-2"
                     >
                       &#x22EE;
                     </button>
@@ -234,6 +255,16 @@ const Restaurants = () => {
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                         >
                           {t("manage_admins")}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRestaurantToDelete(restaurant);
+                            setDeleteRestaurantModalOpen(true);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        >
+                          {t("delete_restaurant")}
                         </button>
                       </div>
                     )}
@@ -532,6 +563,52 @@ const Restaurants = () => {
                 {t("cancel")}
               </button>
               <button onClick={handleDeleteAdmin} className="delete-button">
+                {t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteRestaurantModalOpen && restaurantToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setDeleteRestaurantModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/trash.svg"
+                alt="Trash Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("delete_restaurant")}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t(
+                    "are_you_sure_you_want_to_delete_the_restaurant_with_name"
+                  )}{" "}
+                  <span className="font-bold">{restaurantToDelete.name}</span>
+                </p>
+              </div>
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteRestaurantModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleDeleteRestaurant}
+                className="delete-button"
+              >
                 {t("delete")}
               </button>
             </div>

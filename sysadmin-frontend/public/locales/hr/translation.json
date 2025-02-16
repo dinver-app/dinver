@@ -281,5 +281,10 @@
   "search_backups": "Pretraži rezervne kopije...",
   "download": "Preuzmi",
   "restore": "Vraćanje",
-  "backup_restored_successfully": "Rezervna kopija uspješno vraćena"
+  "backup_restored_successfully": "Rezervna kopija uspješno vraćena",
+  "restaurant_added_successfully": "Restoran uspješno dodan",
+  "failed_to_create_restaurant": "Greška pri dodavanju restorana",
+  "delete_restaurant": "Ukloni restoran",
+  "delete_restaurant_description": "Ukloni restoran iz sustava.",
+  "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Jesi li siguran da želiš ukloniti restoran"
 }
