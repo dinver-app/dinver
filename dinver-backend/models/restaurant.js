@@ -39,6 +39,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      address: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       working_hours_info: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -50,19 +54,15 @@ module.exports = (sequelize, DataTypes) => {
       place_id: {
         type: DataTypes.STRING,
         unique: true,
-        allowNull: false,
-      },
-      address: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       latitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
       },
       longitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
       },
       rating: {
         type: DataTypes.FLOAT,
@@ -166,7 +166,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       isClaimed: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
+        allowNull: true,
         defaultValue: false,
       },
     },
