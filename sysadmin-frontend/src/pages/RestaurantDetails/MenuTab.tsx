@@ -120,8 +120,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewCategoryName("");
       setAddCategoryModalOpen(false);
       toast.success(t("category_created"));
-    } catch (error) {
-      const errorMessage = (error as Error).message;
+    } catch (error: any) {
+      const errorMessage = error.response.data.message;
       toast.error(t(errorMessage));
       console.error("Failed to create category", error);
     } finally {
