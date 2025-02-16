@@ -399,9 +399,14 @@ router.post(
  *       401:
  *         description: Invalid email or password
  */
-router.post('/login', authController.login, checkSysadmin, (req, res) => {
-  res.json({ accessToken: res.locals.accessToken });
-});
+router.post(
+  '/login',
+  sysadminController.sysadminLogin,
+  checkSysadmin,
+  (req, res) => {
+    res.json({ accessToken: res.locals.accessToken });
+  },
+);
 
 /**
  * @swagger

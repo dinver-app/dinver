@@ -6,12 +6,40 @@ const {
   UserSysadmin,
   UserAdmin,
 } = require('../../models');
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
+const { generateTokens } = require('../../utils/tokenUtils');
 
-// Secret key for JWT
-const JWT_SECRET = process.env.JWT_SECRET;
+async function sysadminLogin(req, res) {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if the user is a sysadmin
+    const sysadmin = await UserSysadmin.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!sysadmin) {
+      return res.status(403).json({ error: 'Access denied. Sysadmin only.' });
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    res
+      .status(200)
+      .json({ message: 'Login successful', language: user.language });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred during login' });
+  }
+}
 
 // Create a new organization
 async function createOrganization(req, res) {
@@ -507,6 +535,7 @@ async function listAllUsers(req, res) {
 }
 
 module.exports = {
+  sysadminLogin,
   createOrganization,
   updateOrganization,
   deleteOrganization,
