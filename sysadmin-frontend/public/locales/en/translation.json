@@ -280,5 +280,6 @@
   "search_backups": "Search Backups...",
   "download": "Download",
   "restore": "Restore",
-  "backup_restored_successfully": "Backup restored successfully"
+  "backup_restored_successfully": "Backup restored successfully",
+  "search_for_restaurant": "Search for restaurant"
 }
