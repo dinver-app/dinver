@@ -7,6 +7,7 @@ import {
   FaRegChartBar,
   FaSignOutAlt,
   FaShieldAlt,
+  FaComments,
 } from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
@@ -45,6 +46,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("claim"),
       path: "/claim",
       icon: <FaShieldAlt className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("reviews"),
+      path: "/reviews",
+      icon: <FaComments className="h-4 w-4 mr-3" />,
     },
   ];
 

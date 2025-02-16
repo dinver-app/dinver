@@ -115,3 +115,20 @@ export interface Backup {
   backupDate: string;
   key: string;
 }
+
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  images: string[];
+  user_id: string;
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+}
+
+export interface RestaurantReviews {
+  restaurant: string;
+  reviews: Review[];
+  totalReviews: number;
+}

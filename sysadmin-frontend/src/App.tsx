@@ -13,6 +13,7 @@ import Logs from "./pages/Logs";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import Claim from "./pages/Claim";
+import Reviews from "./pages/Reviews";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/claim" element={<Claim />} />
+            <Route path="/reviews" element={<Reviews />} />
           </Route>
         </Routes>
       </Router>

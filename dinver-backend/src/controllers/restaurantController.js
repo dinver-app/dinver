@@ -1,4 +1,4 @@
-const { Restaurant, UserAdmin } = require('../../models');
+const { Restaurant, Review } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');

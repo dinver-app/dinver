@@ -50,8 +50,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      photo_reference: {
-        type: DataTypes.STRING,
+      images: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
     },

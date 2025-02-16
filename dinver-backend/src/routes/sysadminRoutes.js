@@ -1,6 +1,5 @@
 const express = require('express');
 const sysadminController = require('../controllers/sysadminController');
-const authController = require('../controllers/authController');
 const {
   checkSysadmin,
   authenticateToken,
@@ -889,6 +888,53 @@ router.get(
   authenticateToken,
   checkSysadmin,
   sysadminController.listAllUsers,
+);
+
+/**
+ * @swagger
+ * /restaurants/claimed/reviews:
+ *   get:
+ *     summary: Get all reviews for claimed restaurants
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of reviews for claimed restaurants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   restaurant:
+ *                     type: string
+ *                   reviews:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         rating:
+ *                           type: number
+ *                         comment:
+ *                           type: string
+ *                         images:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         user_id:
+ *                           type: string
+ *       500:
+ *         description: Failed to fetch reviews for claimed restaurants
+ */
+router.get(
+  '/claimed/reviews',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.getAllReviewsForClaimedRestaurants,
 );
 
 module.exports = router;

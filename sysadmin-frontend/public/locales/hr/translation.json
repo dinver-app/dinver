@@ -288,5 +288,11 @@
   "delete_restaurant_description": "Ukloni restoran iz sustava.",
   "are_you_sure_you_want_to_delete_the_restaurant_with_name": "Jesi li siguran/na da želiš ukloniti restoran",
   "confirm_logout": "Potvrdi odjavu",
-  "confirm_logout_message": "Jesi li siguran/na da se želiš odjaviti?"
+  "confirm_logout_message": "Jesi li siguran/na da se želiš odjaviti?",
+  "reviews": "Recenzije",
+  "list_of_all_reviews": "Popis svih recenzija",
+  "no_reviews_available": "Trenutno nema recenzija",
+  "view_review_details": "Pogledaj detalje recenzije",
+  "review_details": "Detalji recenzije",
+  "comment": "Komentar"
 }

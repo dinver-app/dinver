@@ -1,8 +1,10 @@
 const express = require('express');
+const reviewController = require('../controllers/reviewController');
 const restaurantController = require('../controllers/restaurantController');
 const {
   checkAdmin,
   authenticateToken,
+  checkSysadmin,
 } = require('../middleware/roleMiddleware');
 const upload = require('../../utils/uploadMiddleware');
 
@@ -593,5 +595,99 @@ router.delete(
   checkAdmin,
   restaurantController.deleteRestaurant,
 );
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/reviews:
+ *   post:
+ *     summary: Create a new review for a restaurant
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rating:
+ *                 type: number
+ *                 description: Rating of the restaurant
+ *               comment:
+ *                 type: string
+ *                 description: Comment about the restaurant
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while creating the review
+ */
+router.post(
+  '/:restaurantId/reviews',
+  authenticateToken,
+  upload.array('images'),
+  reviewController.createReview,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/reviews:
+ *   get:
+ *     summary: Get all reviews for a restaurant
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       200:
+ *         description: A list of reviews
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   user_id:
+ *                     type: string
+ *                   restaurant_id:
+ *                     type: string
+ *                   rating:
+ *                     type: number
+ *                   comment:
+ *                     type: string
+ *                   images:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while fetching reviews
+ */
+router.get('/:restaurantId/reviews', reviewController.getReviews);
 
 module.exports = router;

@@ -5,6 +5,7 @@ const {
   UserOrganization,
   UserSysadmin,
   UserAdmin,
+  Review,
 } = require('../../models');
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
@@ -534,6 +535,81 @@ async function listAllUsers(req, res) {
   }
 }
 
+async function getAllReviewsForClaimedRestaurants(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    // Fetch all users and create a map for quick lookup
+    const users = await User.findAll({
+      attributes: ['id', 'firstName', 'lastName', 'email'],
+    });
+    const userMap = users.reduce((map, user) => {
+      map[user.id] = user;
+      return map;
+    }, {});
+
+    const claimedRestaurants = await Restaurant.findAll({
+      where: { isClaimed: true },
+      attributes: ['id', 'name'],
+    });
+
+    const reviewsData = await Promise.all(
+      claimedRestaurants.map(async (restaurant) => {
+        const { count, rows: reviews } = await Review.findAndCountAll({
+          where: {
+            restaurant_id: restaurant.id,
+            [Op.or]: [
+              { comment: { [Op.iLike]: `%${search}%` } },
+              { rating: parseFloat(search) || 0 },
+            ],
+          },
+          attributes: ['id', 'rating', 'comment', 'images', 'user_id'],
+          limit,
+          offset,
+          order: [['createdAt', 'DESC']],
+        });
+
+        const reviewsWithUserDetails = reviews.map((review) => {
+          const user = userMap[review.user_id] || {};
+          return {
+            ...review.toJSON(),
+            userFirstName: user.firstName || 'Unknown',
+            userLastName: user.lastName || 'Unknown',
+            userEmail: user.email || 'Unknown',
+          };
+        });
+
+        return {
+          restaurant: restaurant.name,
+          reviews: reviewsWithUserDetails,
+          totalReviews: count,
+        };
+      }),
+    );
+
+    const totalReviews = reviewsData.reduce(
+      (acc, data) => acc + data.totalReviews,
+      0,
+    );
+    const totalPages = Math.ceil(totalReviews / limit);
+
+    res.json({
+      totalReviews,
+      totalPages,
+      currentPage: page,
+      reviewsData,
+    });
+  } catch (error) {
+    console.error('Error fetching reviews for claimed restaurants:', error);
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch reviews for claimed restaurants' });
+  }
+}
+
 module.exports = {
   sysadminLogin,
   createOrganization,
@@ -557,4 +633,5 @@ module.exports = {
   removeRestaurantAdmin,
   updateRestaurantAdminRole,
   listAllUsers,
+  getAllReviewsForClaimedRestaurants,
 };

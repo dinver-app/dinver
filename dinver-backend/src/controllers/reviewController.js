@@ -1,13 +1,23 @@
 const { Review, Restaurant } = require('../../models');
+const { uploadToS3 } = require('../../utils/s3Upload');
 
 async function createReview(req, res) {
   try {
     const { restaurantId } = req.params;
-    const { rating, comment, photo_reference } = req.body;
+    const { rating, comment } = req.body;
+    const files = req.files;
 
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    let imageUrls = [];
+    if (files && files.length > 0) {
+      const folder = `review_images/${restaurantId}`;
+      imageUrls = await Promise.all(
+        files.map((file) => uploadToS3(file, folder)),
+      );
     }
 
     const review = await Review.create({
@@ -15,7 +25,7 @@ async function createReview(req, res) {
       restaurant_id: restaurantId,
       rating,
       comment,
-      photo_reference,
+      images: imageUrls,
     });
     res.status(201).json(review);
   } catch (error) {
