@@ -16,9 +16,7 @@ const claimLogRoutes = require('./routes/claimLogRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const i18next = require('i18next');
-const i18nextMiddleware = require('i18next-express-middleware');
-const Backend = require('i18next-fs-backend');
+
 const cron = require('node-cron');
 const { createDailyBackups } = require('./cron/backupCron');
 dotenv.config();
@@ -78,18 +76,6 @@ app.use('/api/user', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api', backupRoutes);
 app.use('/api/claim-logs', claimLogRoutes);
-i18next
-  .use(Backend)
-  .use(i18nextMiddleware.LanguageDetector)
-  .init({
-    fallbackLng: 'en',
-    preload: ['en', 'hr'],
-    backend: {
-      loadPath: __dirname + '/locales/{{lng}}/{{ns}}.json',
-    },
-  });
-
-app.use(i18nextMiddleware.handle(i18next));
 
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');

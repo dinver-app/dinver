@@ -1,0 +1,98 @@
+import { apiClient } from "./authService";
+
+export const getRestaurantDetails = async (slug: string) => {
+  const response = await apiClient.get(`api/restaurants/${slug}`);
+  return response.data;
+};
+
+export const updateRestaurant = async (id: string, updatedData: any) => {
+  try {
+    const response = await apiClient.put(`/api/restaurants/${id}`, updatedData);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating restaurant:", error);
+    throw error;
+  }
+};
+
+export const updateWorkingHours = async (id: string, workingHours: any) => {
+  const response = await apiClient.put(`/api/restaurants/${id}/working-hours`, {
+    opening_hours: workingHours,
+  });
+  return response.data;
+};
+
+export const updateFilters = async (id: string, filters: any) => {
+  const response = await apiClient.put(
+    `/api/restaurants/${id}/filters`,
+    filters
+  );
+  return response.data;
+};
+
+export const getAllFoodTypes = async () => {
+  const response = await apiClient.get("api/types/food-types");
+  return response.data;
+};
+
+export const getAllEstablishmentTypes = async () => {
+  const response = await apiClient.get("api/types/establishment-types");
+  return response.data;
+};
+
+export const getAllEstablishmentPerks = async () => {
+  const response = await apiClient.get("api/types/establishment-perks");
+  return response.data;
+};
+
+export const addRestaurantImages = async (
+  id: string,
+  restaurant_slug: string,
+  images: File[]
+) => {
+  const formData = new FormData();
+  images.forEach((image) => formData.append("images", image));
+  formData.append("restaurant_slug", restaurant_slug);
+
+  const response = await apiClient.post(
+    `/api/restaurants/${id}/images`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+  return response.data;
+};
+
+export const deleteRestaurantImage = async (
+  id: string,
+  restaurant_slug: string,
+  imageUrl: string
+) => {
+  const response = await apiClient.delete(`/api/restaurants/${id}/images`, {
+    data: { imageUrl, restaurant_slug },
+  });
+  return response.data;
+};
+
+export const updateImageOrder = async (id: string, images: string[]) => {
+  try {
+    const response = await apiClient.put(
+      `/api/restaurants/${id}/images/order`,
+      {
+        images,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating image order:", error);
+    throw error;
+  }
+};
+
+export const getRestaurantById = async (id: string) => {
+  const response = await apiClient.get(`/api/restaurants/details/${id}`);
+  return response.data;
+};

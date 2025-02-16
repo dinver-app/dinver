@@ -24,7 +24,6 @@ async function checkSysadmin(req, res, next) {
 
 async function checkAdmin(req, res, next) {
   try {
-    const { restaurantId } = req.body;
     const sysadmin = await UserSysadmin.findOne({
       where: { userId: req.user.id },
     });
@@ -34,7 +33,7 @@ async function checkAdmin(req, res, next) {
     }
 
     const admin = await UserAdmin.findOne({
-      where: { userId: req.user.id, restaurantId, role: 'admin' },
+      where: { userId: req.user.id, role: 'admin' },
     });
 
     if (!admin) {

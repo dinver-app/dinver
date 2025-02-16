@@ -19,6 +19,11 @@ const router = express.Router();
  *           type: string
  *           enum: [CREATE, UPDATE, DELETE]
  *         description: Filter logs by action type
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search logs by action or entity
  *     responses:
  *       200:
  *         description: A list of audit logs
@@ -75,6 +80,11 @@ router.get('/', authenticateToken, auditLogController.getAuditLogs);
  *           type: string
  *           enum: [CREATE, UPDATE, DELETE]
  *         description: Filter logs by action type
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search logs by action or entity
  *     responses:
  *       200:
  *         description: A list of audit logs for the specified restaurant
