@@ -79,7 +79,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       >
         <div>
           <div className="p-4 border-b select-none">
-            <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" />
+            <img
+              src="/images/sysadmin_logo.svg"
+              alt="Logo"
+              className="h-16 mb-4"
+            />
+            {/* <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" /> */}
           </div>
           <div className="p-4 select-none">
             <h2 className="text-sm font-semibold text-gray-500">
