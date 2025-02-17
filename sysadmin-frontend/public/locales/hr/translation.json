@@ -299,5 +299,8 @@
   "date_desc": "Datum silazno",
   "rating_asc": "Ocjena uzlazno",
   "rating_desc": "Ocjena silazno",
-  "no_images_in_review": "Nema slika u recenziji"
+  "no_images_in_review": "Nema slika u recenziji",
+  "owner": "Vlasnik",
+  "admin": "Administrator",
+  "helper": "Pomoćnik"
 }

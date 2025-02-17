@@ -438,7 +438,7 @@ const Restaurants = () => {
                           {admin.user.email}
                         </td>
                         <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                          {admin.role}
+                          {t(admin.role)}
                         </td>
                         <td className="py-2 px-4 w-10">
                           <button
@@ -521,9 +521,9 @@ const Restaurants = () => {
                 onChange={(e) => setNewAdminRole(e.target.value)}
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
               >
-                <option value="owner">Owner</option>
-                <option value="admin">Admin</option>
-                <option value="helper">Helper</option>
+                <option value="owner">{t("owner")}</option>
+                <option value="admin">{t("admin")}</option>
+                <option value="helper">{t("helper")}</option>
               </select>
             </div>
             <div className="h-line"></div>

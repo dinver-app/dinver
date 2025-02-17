@@ -299,5 +299,12 @@
   "date_desc": "Datum silazno",
   "rating_asc": "Ocjena uzlazno",
   "rating_desc": "Ocjena silazno",
-  "no_images_in_review": "Nema slika u recenziji"
+  "no_images_in_review": "Nema slika u recenziji",
+  "owner": "Vlasnik",
+  "admin": "Administrator",
+  "helper": "Pomoćnik",
+  "administrators": "Administratori",
+  "manage_your_restaurant_administrators": "Upravljaj administratorima restorana.",
+  "access_denied_admin_only": "Pristup odbijen. Samo administrator.",
+  "insufficient_role_privileges": "Pristup odbijen. Nedovoljan pristup."
 }

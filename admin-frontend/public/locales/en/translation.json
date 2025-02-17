@@ -302,5 +302,12 @@
   "date_desc": "Date Descending",
   "rating_asc": "Rating Ascending",
   "rating_desc": "Rating Descending",
-  "no_images_in_review": "No images in review"
+  "no_images_in_review": "No images in review",
+  "owner": "Owner",
+  "admin": "Admin",
+  "helper": "Helper",
+  "administrators": "Administrators",
+  "manage_your_restaurant_administrators": "Manage your restaurant administrators.",
+  "access_denied_admin_only": "Access denied. Admin only.",
+  "insufficient_role_privileges": "Insufficient role privileges."
 }
