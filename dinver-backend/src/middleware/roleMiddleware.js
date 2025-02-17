@@ -33,7 +33,7 @@ async function checkAdmin(req, res, next) {
     }
 
     const admin = await UserAdmin.findOne({
-      where: { userId: req.user.id, role: 'admin' },
+      where: { userId: req.user.id },
     });
 
     if (!admin) {
