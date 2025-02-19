@@ -31,8 +31,17 @@ async function sysadminLogin(req, res) {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie('token', accessToken, {
+      httpOnly: true,
+      secure: true,
+      maxAge: 60 * 60 * 1000,
+    });
 
     res
       .status(200)
