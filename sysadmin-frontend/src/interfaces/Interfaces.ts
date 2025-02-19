@@ -5,6 +5,7 @@ export interface User {
   lastName: string;
   role: string;
   createdAt?: string;
+  banned?: boolean;
 }
 
 export interface Sysadmin {
@@ -19,7 +20,7 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
-  description?: string;
+  working_hours_info?: string;
   thumbnail_url?: string;
   thumbnail?: string;
   latitude?: number;
@@ -45,27 +46,37 @@ export interface Restaurant {
   createdAt?: string;
   updatedAt?: string;
   organizationId?: string;
-  isOpen?: boolean;
+  isOpen?: string;
   isClaimed?: boolean;
   slug?: string;
   isDirty?: boolean;
+  website_url?: string;
+  fb_url?: string;
+  ig_url?: string;
+  tt_url?: string;
+  phone?: string;
+  images?: string[];
+  reviewRating?: number;
 }
 
 export interface FoodType {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 
 export interface EstablishmentType {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 
 export interface EstablishmentPerk {
   id: number;
-  name: string;
+  name_en: string;
+  name_hr: string;
   icon: string;
 }
 
@@ -75,6 +86,11 @@ export interface MenuItem {
   price: number;
   restaurantId: string;
   categoryId: string;
+  imageUrl?: string;
+  ingredients?: string[];
+  allergens?: string[];
+  description?: string;
+  imageFile?: File;
 }
 
 export interface Category {
@@ -82,4 +98,39 @@ export interface Category {
   name: string;
   restaurantId: string;
   menuItems: MenuItem[];
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  restaurantId: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  changes: string;
+  createdAt: string;
+}
+
+export interface Backup {
+  restaurantId: string;
+  backupDate: string;
+  key: string;
+}
+
+export interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  images: string[];
+  user_id: string;
+  userFirstName: string;
+  userLastName: string;
+  userEmail: string;
+  createdAt?: string;
+}
+
+export interface RestaurantReviews {
+  restaurant: string;
+  reviews: Review[];
+  totalReviews: number;
 }

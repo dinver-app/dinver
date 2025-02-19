@@ -12,7 +12,6 @@ async function addSysadmin(userId) {
 
     // Dodaj korisnika u UserSysadmin tablicu
     const sysadmin = await UserSysadmin.create({ userId });
-    console.log('User added as sysadmin:', sysadmin);
   } catch (error) {
     console.error('An error occurred while adding the sysadmin:', error);
   } finally {

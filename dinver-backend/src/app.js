@@ -9,18 +9,28 @@ const menuRoutes = require('./routes/menuRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const typeRoutes = require('./routes/TypeRoutes');
+const userRoutes = require('./routes/userRoutes');
+const auditLogRoutes = require('./routes/AuditLogRoutes');
+const backupRoutes = require('./routes/backupRoutes');
+const claimLogRoutes = require('./routes/claimLogRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+
+const cron = require('node-cron');
+const { createDailyBackups } = require('./cron/backupCron');
 dotenv.config();
 
 const app = express();
+
+// Schedule the cron job to run every day at 3:00 AM
+cron.schedule('0 3 * * *', createDailyBackups);
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true,
   }),
 );
@@ -62,6 +72,10 @@ app.use('/api/types', typeRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api', backupRoutes);
+app.use('/api/claim-logs', claimLogRoutes);
 
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');

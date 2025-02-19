@@ -1,11 +1,11 @@
 const { UserSysadmin, UserAdmin, User } = require('../../models');
 const jwt = require('jsonwebtoken');
+const { generateTokens } = require('../../utils/tokenUtils');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 async function checkSysadmin(req, res, next) {
   try {
     const userId = req.user.id;
-
     const sysadmin = await UserSysadmin.findOne({
       where: { userId },
     });
@@ -24,7 +24,6 @@ async function checkSysadmin(req, res, next) {
 
 async function checkAdmin(req, res, next) {
   try {
-    const { restaurantId } = req.body;
     const sysadmin = await UserSysadmin.findOne({
       where: { userId: req.user.id },
     });
@@ -34,7 +33,7 @@ async function checkAdmin(req, res, next) {
     }
 
     const admin = await UserAdmin.findOne({
-      where: { userId: req.user.id, restaurantId, role: 'admin' },
+      where: { userId: req.user.id },
     });
 
     if (!admin) {
@@ -53,8 +52,44 @@ function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Access denied' });
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
+    if (err) {
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ error: 'Access denied' });
+      }
+
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET,
+        );
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+          return res.status(403).json({ error: 'Invalid refresh token' });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } =
+          generateTokens(user);
+
+        res.cookie('refreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+        });
+
+        res.cookie('token', accessToken, {
+          httpOnly: true,
+          secure: true,
+        });
+
+        req.user = user;
+        return next();
+      } catch (refreshError) {
+        return res.status(403).json({ error: 'Invalid refresh token' });
+      }
+    }
+
     req.user = user;
     next();
   });

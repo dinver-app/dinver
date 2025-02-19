@@ -9,10 +9,6 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-    await queryInterface.changeColumn('MenuItems', 'categoryId', {
-      type: Sequelize.UUID,
-      allowNull: true,
-    });
 
     await queryInterface.renameColumn(
       'MenuCategories',
@@ -28,10 +24,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.changeColumn('MenuItems', 'category_id', {
-      type: Sequelize.UUID,
-      allowNull: false,
-    });
 
     await queryInterface.renameColumn(
       'MenuCategories',

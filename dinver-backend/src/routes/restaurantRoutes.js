@@ -1,8 +1,10 @@
 const express = require('express');
+const reviewController = require('../controllers/reviewController');
 const restaurantController = require('../controllers/restaurantController');
 const {
   checkAdmin,
   authenticateToken,
+  checkSysadmin,
 } = require('../middleware/roleMiddleware');
 const upload = require('../../utils/uploadMiddleware');
 
@@ -12,11 +14,80 @@ const router = express.Router();
  * @swagger
  * /restaurants:
  *   get:
- *     summary: Get all restaurants
+ *     summary: Get paginated list of restaurants with details
+ *     tags: [Restaurants]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number for pagination
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for filtering restaurants by name or address
+ *     responses:
+ *       200:
+ *         description: A paginated list of restaurants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalRestaurants:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 restaurants:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       address:
+ *                         type: string
+ *                       latitude:
+ *                         type: number
+ *                       longitude:
+ *                         type: number
+ *                       rating:
+ *                         type: number
+ *                       user_ratings_total:
+ *                         type: integer
+ *                       price_level:
+ *                         type: integer
+ *                       opening_hours:
+ *                         type: string
+ *                       icon_url:
+ *                         type: string
+ *                       slug:
+ *                         type: string
+ *                       isOpen:
+ *                         type: boolean
+ *                       isClaimed:
+ *                         type: boolean
+ *                 totalRestaurantsCount:
+ *                   type: integer
+ *                 claimedRestaurantsCount:
+ *                   type: integer
+ */
+router.get('/', authenticateToken, restaurantController.getRestaurants);
+
+/**
+ * @swagger
+ * /restaurants/all:
+ *   get:
+ *     summary: Get all restaurants with only ID and name
  *     tags: [Restaurants]
  *     responses:
  *       200:
- *         description: A list of restaurants
+ *         description: A list of all restaurants with ID and name
  *         content:
  *           application/json:
  *             schema:
@@ -24,26 +95,12 @@ const router = express.Router();
  *               items:
  *                 type: object
  *                 properties:
+ *                   id:
+ *                     type: string
  *                   name:
  *                     type: string
- *                   address:
- *                     type: string
- *                   latitude:
- *                     type: number
- *                   longitude:
- *                     type: number
- *                   rating:
- *                     type: number
- *                   user_ratings_total:
- *                     type: integer
- *                   price_level:
- *                     type: integer
- *                   opening_hours:
- *                     type: string
- *                   icon_url:
- *                     type: string
  */
-router.get('/', authenticateToken, restaurantController.getAllRestaurants);
+router.get('/all', authenticateToken, restaurantController.getAllRestaurants);
 
 /**
  * @swagger
@@ -325,5 +382,317 @@ router.put(
   authenticateToken,
   restaurantController.updateFilters,
 );
+
+/**
+ * @swagger
+ * /restaurants/{id}/images:
+ *   post:
+ *     summary: Add images to a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images added successfully
+ *       400:
+ *         description: No images provided
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to add images
+ */
+router.post(
+  '/:id/images',
+  authenticateToken,
+  checkAdmin,
+  upload.array('images'),
+  restaurantController.addRestaurantImages,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}/images:
+ *   delete:
+ *     summary: Delete an image from a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 description: The URL of the image to delete
+ *     responses:
+ *       200:
+ *         description: Image deleted successfully
+ *       400:
+ *         description: Image not found in restaurant
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to delete image
+ */
+router.delete(
+  '/:id/images',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.deleteRestaurantImage,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}/images/order:
+ *   put:
+ *     summary: Update the order of images for a restaurant
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: The reordered list of image URLs
+ *     responses:
+ *       200:
+ *         description: Image order updated successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to update image order
+ */
+router.put(
+  '/:id/images/order',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateImageOrder,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   get:
+ *     summary: Get restaurant details by ID
+ *     tags: [Restaurants]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       200:
+ *         description: Restaurant details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 latitude:
+ *                   type: number
+ *                 longitude:
+ *                   type: number
+ *                 rating:
+ *                   type: number
+ *                 user_ratings_total:
+ *                   type: integer
+ *                 price_level:
+ *                   type: integer
+ *                 opening_hours:
+ *                   type: string
+ *                 icon_url:
+ *                   type: string
+ *                 slug:
+ *                   type: string
+ *                 isClaimed:
+ *                   type: boolean
+ *       404:
+ *         description: Restaurant not found
+ */
+router.get(
+  '/details/:id',
+  authenticateToken,
+  restaurantController.getRestaurantById,
+);
+
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   delete:
+ *     summary: Delete a restaurant by ID
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       204:
+ *         description: Restaurant deleted successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Failed to delete restaurant
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.deleteRestaurant,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/reviews:
+ *   post:
+ *     summary: Create a new review for a restaurant
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rating:
+ *                 type: number
+ *                 description: Rating of the restaurant
+ *               comment:
+ *                 type: string
+ *                 description: Comment about the restaurant
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Review created successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while creating the review
+ */
+router.post(
+  '/:restaurantId/reviews',
+  authenticateToken,
+  upload.array('images'),
+  reviewController.createReview,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/reviews:
+ *   get:
+ *     summary: Get all reviews for a restaurant
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for filtering reviews by comment or rating
+ *     responses:
+ *       200:
+ *         description: A list of reviews
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   user_id:
+ *                     type: string
+ *                   restaurant_id:
+ *                     type: string
+ *                   rating:
+ *                     type: number
+ *                   comment:
+ *                     type: string
+ *                   images:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: An error occurred while fetching reviews
+ */
+router.get('/:restaurantId/reviews', reviewController.getReviews);
 
 module.exports = router;

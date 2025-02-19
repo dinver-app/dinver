@@ -4,8 +4,10 @@ const {
   checkAdmin,
   authenticateToken,
 } = require('../middleware/roleMiddleware');
+const multer = require('multer');
 
 const router = express.Router();
+const upload = multer();
 
 /**
  * @swagger
@@ -131,6 +133,7 @@ router.post(
   '/menuItems',
   authenticateToken,
   checkAdmin,
+  upload.single('imageFile'),
   menuController.createMenuItem,
 );
 
@@ -172,6 +175,7 @@ router.put(
   '/menuItems/:id',
   authenticateToken,
   checkAdmin,
+  upload.single('imageFile'),
   menuController.updateMenuItem,
 );
 
@@ -215,6 +219,34 @@ router.get(
   authenticateToken,
   checkAdmin,
   menuController.getCategoryItems,
+);
+
+router.get(
+  '/ingredients',
+  authenticateToken,
+  checkAdmin,
+  menuController.getAllIngredients,
+);
+
+router.get(
+  '/allergens',
+  authenticateToken,
+  checkAdmin,
+  menuController.getAllAllergens,
+);
+
+router.put(
+  '/categories-order',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateCategoryOrder,
+);
+
+router.put(
+  '/menuItems-order',
+  authenticateToken,
+  checkAdmin,
+  menuController.updateItemOrder,
 );
 
 module.exports = router;

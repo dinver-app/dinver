@@ -1,21 +1,29 @@
-const {
-  Restaurant,
-  UserOrganization,
-  UserAdmin,
-  FoodType,
-} = require('../../models');
+const { Restaurant, Review } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
+const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+
+const getAllRestaurants = async (req, res) => {
+  try {
+    const restaurants = await Restaurant.findAll({
+      attributes: ['id', 'name'],
+    });
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error fetching all restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch all restaurants' });
+  }
+};
 
 // Get all restaurants with specific fields
-const getAllRestaurants = async (req, res) => {
+const getRestaurants = async (req, res) => {
   try {
     const totalRestaurantsCount = await Restaurant.count();
 
-    const claimedRestaurantsCount = await UserAdmin.count({
-      distinct: true,
-      col: 'restaurantId',
+    const claimedRestaurantsCount = await Restaurant.count({
+      where: { isClaimed: true },
     });
 
     const page = parseInt(req.query.page) || 1;
@@ -64,6 +72,7 @@ const getAllRestaurants = async (req, res) => {
         'opening_hours',
         'icon_url',
         'slug',
+        'isClaimed',
       ],
       limit,
       offset,
@@ -72,15 +81,22 @@ const getAllRestaurants = async (req, res) => {
 
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
-        const isClaimed = await UserAdmin.findOne({
-          where: { restaurantId: restaurant.id },
-          attributes: ['restaurantId'],
+        const reviews = await Review.findAll({
+          where: { restaurant_id: restaurant.id },
+          attributes: ['rating'],
         });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
 
         return {
           ...restaurant.get(),
           isOpen: isRestaurantOpen(restaurant.opening_hours),
-          isClaimed: !!isClaimed,
+          reviewRating,
         };
       }),
     );
@@ -159,6 +175,16 @@ const addRestaurant = async (req, res) => {
       slug,
     });
 
+    // Log the create action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.RESTAURANT.RESTAURANT,
+      entityId: newRestaurant.id,
+      restaurantId: newRestaurant.id,
+      changes: { new: newRestaurant.get() },
+    });
+
     res.status(201).json({
       message: 'Restaurant added successfully',
       restaurant: newRestaurant,
@@ -175,7 +201,8 @@ const addRestaurant = async (req, res) => {
 async function updateRestaurant(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, address } = req.body;
+    const { name, address, website_url, fb_url, ig_url, phone, tt_url } =
+      req.body;
     const file = req.file;
 
     const restaurant = await Restaurant.findByPk(id);
@@ -183,62 +210,111 @@ async function updateRestaurant(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const oldData = { ...restaurant.get() };
+
     let thumbnail_url = restaurant.thumbnail_url;
+
+    // Delete the old image if a new one is uploaded
     if (file) {
-      thumbnail_url = await uploadToS3(file);
+      if (restaurant.thumbnail_url) {
+        const oldKey = restaurant.thumbnail_url.split('/').pop();
+        await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
+      }
+      const folder = 'restaurant_thumbnails';
+      thumbnail_url = await uploadToS3(file, folder);
     }
-
-    const typesArray = req.body.types
-      ? req.body.types.split(',').map((type) => type.trim())
-      : [];
-
-    const venuePerksArray = req.body.venue_perks
-      ? req.body.venue_perks.split(',').map((perk) => perk.trim())
-      : [];
 
     await restaurant.update({
       name,
-      thumbnail_url,
-      description,
-      venue_perks: venuePerksArray,
-      types: typesArray,
       address,
+      website_url,
+      fb_url,
+      ig_url,
+      phone,
+      tt_url,
+      thumbnail_url,
+    });
+
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.UPDATE,
+      entity: Entities.RESTAURANT.RESTAURANT_DETAILS,
+      entityId: id,
+      restaurantId: id,
+      changes: { old: oldData, new: restaurant.get() },
     });
 
     res.json(restaurant);
   } catch (error) {
-    console.error('Error updating restaurant:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while updating the restaurant' });
+    res.status(500).json({ error: 'Failed to update restaurant' });
   }
 }
 
+const deleteRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Delete the image from S3 if it exists
+    if (restaurant.thumbnailUrl) {
+      const key = restaurant.thumbnailUrl.split('/').pop();
+      await deleteFromS3(`restaurant_thumbnails/${key}`);
+    }
+
+    await restaurant.destroy();
+
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete restaurant' });
+  }
+};
+
 function isRestaurantOpen(openingHours) {
   const now = new Date();
-  const currentDay = now.getDay();
+  const currentDay = now.getDay() - 1;
   const currentTime = now.getHours() * 100 + now.getMinutes();
 
   if (!openingHours || !openingHours.periods) {
-    return false;
+    return 'undefined';
+  }
+
+  const allTimesEmpty = openingHours.periods.every(
+    (period) => period.open.time === '' && period.close.time === '',
+  );
+
+  if (allTimesEmpty) {
+    return 'undefined';
   }
 
   for (const period of openingHours.periods) {
     const openDay = period.open.day;
-    const openTime = parseInt(period.open.time);
+    const openTime = parseInt(period.open.time, 10);
     const closeDay = period.close.day;
-    const closeTime = parseInt(period.close.time);
+    const closeTime = parseInt(period.close.time, 10);
 
-    if (
-      (currentDay === openDay && currentTime >= openTime) ||
-      (currentDay === closeDay && currentTime < closeTime) ||
-      (openDay < closeDay && currentDay > openDay && currentDay < closeDay) ||
-      (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
-    ) {
-      return true;
+    if (openDay === closeDay) {
+      if (
+        currentDay === openDay &&
+        currentTime >= openTime &&
+        currentTime < closeTime
+      ) {
+        return 'true';
+      }
+    } else {
+      if (
+        (currentDay === openDay && currentTime >= openTime) ||
+        (currentDay === closeDay && currentTime < closeTime) ||
+        (currentDay > openDay && currentDay < closeDay) ||
+        (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
+      ) {
+        return 'true';
+      }
     }
   }
-  return false;
+  return 'false';
 }
 
 const generateSlug = async (name) => {
@@ -276,7 +352,21 @@ async function updateWorkingHours(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const oldOpeningHours = restaurant.get('opening_hours');
+
     await restaurant.update({ opening_hours });
+
+    // Log the update action
+    if (oldOpeningHours !== opening_hours) {
+      await logAudit({
+        userId: req.user ? req.user.id : null,
+        action: ActionTypes.UPDATE,
+        entity: Entities.WORKING_HOURS,
+        entityId: restaurant.id,
+        restaurantId: restaurant.id,
+        changes: { old: oldOpeningHours, new: opening_hours },
+      });
+    }
 
     res.json({ message: 'Working hours updated successfully', restaurant });
   } catch (error) {
@@ -297,11 +387,56 @@ async function updateFilters(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    const oldData = {
+      food_types: restaurant.food_types || [],
+      establishment_types: restaurant.establishment_types || [],
+      establishment_perks: restaurant.establishment_perks || [],
+    };
+
     await restaurant.update({
       food_types: food_types,
       establishment_types: establishment_types,
       establishment_perks: establishment_perks,
     });
+
+    const logChange = async (oldValues, newValues, entity) => {
+      if (JSON.stringify(oldValues) !== JSON.stringify(newValues)) {
+        const action =
+          oldValues.length > newValues.length
+            ? ActionTypes.DELETE
+            : ActionTypes.CREATE;
+        const change =
+          action === ActionTypes.CREATE
+            ? { new: newValues.find((item) => !oldValues.includes(item)) }
+            : { old: oldValues.find((item) => !newValues.includes(item)) };
+
+        await logAudit({
+          userId: req.user ? req.user.id : null,
+          action,
+          entity,
+          entityId: restaurant.id,
+          restaurantId: restaurant.id,
+          changes: change,
+        });
+      }
+    };
+
+    // Log the changes for each filter type
+    await logChange(
+      oldData.food_types,
+      food_types,
+      Entities.FILTERS.FOOD_TYPES,
+    );
+    await logChange(
+      oldData.establishment_types,
+      establishment_types,
+      Entities.FILTERS.ESTABLISHMENT_TYPES,
+    );
+    await logChange(
+      oldData.establishment_perks,
+      establishment_perks,
+      Entities.FILTERS.ESTABLISHMENT_PERKS,
+    );
 
     res.json({ message: 'Filters updated successfully', restaurant });
   } catch (error) {
@@ -310,12 +445,132 @@ async function updateFilters(req, res) {
   }
 }
 
+async function addRestaurantImages(req, res) {
+  try {
+    const { id } = req.params;
+    const { restaurant_slug } = req.body;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No images provided' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const folder = `restaurant_images/${restaurant_slug}`;
+    const imageUrls = await Promise.all(
+      files.map((file) => uploadToS3(file, folder)),
+    );
+
+    const updatedImages = [...(restaurant.images || []), ...imageUrls];
+    await restaurant.update({ images: updatedImages });
+
+    // Log the add images action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.CREATE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { new: imageUrls },
+    });
+
+    res.json({ message: 'Images added successfully', images: updatedImages });
+  } catch (error) {
+    console.error('Error adding images:', error);
+    res.status(500).json({ error: 'Failed to add images' });
+  }
+}
+
+const deleteRestaurantImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageUrl, restaurant_slug } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (!restaurant.images || !restaurant.images.includes(imageUrl)) {
+      return res.status(400).json({ error: 'Image not found in restaurant' });
+    }
+
+    const key = imageUrl.split('/').pop();
+    await deleteFromS3(`restaurant_images/${restaurant_slug}/${key}`);
+
+    const updatedImages = restaurant.images.filter((img) => img !== imageUrl);
+    await restaurant.update({ images: updatedImages });
+
+    // Log the delete image action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { old: imageUrl },
+    });
+
+    res.json({ message: 'Image deleted successfully', images: updatedImages });
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
+};
+
+const updateImageOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { images } = req.body;
+
+    if (!images || !Array.isArray(images)) {
+      return res.status(400).json({ error: 'Invalid images array' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    await restaurant.update({ images });
+
+    res.json({ message: 'Image order updated successfully', images });
+  } catch (error) {
+    console.error('Error updating image order:', error);
+    res.status(500).json({ error: 'Failed to update image order' });
+  }
+};
+
+const getRestaurantById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    res.json(restaurant);
+  } catch (error) {
+    console.error('Error fetching restaurant by ID:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
+  getRestaurants,
   getRestaurantDetails,
   viewRestaurant,
   updateRestaurant,
   addRestaurant,
   updateWorkingHours,
   updateFilters,
+  deleteRestaurant,
+  addRestaurantImages,
+  deleteRestaurantImage,
+  updateImageOrder,
+  getRestaurantById,
 };

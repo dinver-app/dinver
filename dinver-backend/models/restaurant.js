@@ -39,7 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
+      address: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      working_hours_info: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
@@ -50,19 +54,15 @@ module.exports = (sequelize, DataTypes) => {
       place_id: {
         type: DataTypes.STRING,
         unique: true,
-        allowNull: false,
-      },
-      address: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       latitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
       },
       longitude: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
       },
       rating: {
         type: DataTypes.FLOAT,
@@ -135,6 +135,39 @@ module.exports = (sequelize, DataTypes) => {
       establishment_perks: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
+      },
+      slug: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      website_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fb_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      ig_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      images: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      tt_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      isClaimed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
       },
     },
     {

@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       MenuItem.belongsTo(models.MenuCategory, {
         foreignKey: 'categoryId',
         as: 'category',
+        onDelete: 'CASCADE',
       });
       MenuItem.belongsTo(models.Restaurant, {
         foreignKey: 'restaurantId',
@@ -52,16 +53,21 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       ingredients: {
-        type: DataTypes.JSONB,
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
       allergens: {
-        type: DataTypes.JSONB,
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
-      type: {
+      description: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      position: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
       },
     },
     {

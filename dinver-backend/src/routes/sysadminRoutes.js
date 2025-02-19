@@ -287,6 +287,7 @@ router.delete(
 router.post(
   '/organizations/users',
   authenticateToken,
+  checkSysadmin,
   sysadminController.addUserToOrganization,
 );
 
@@ -399,22 +400,12 @@ router.post(
  */
 router.post(
   '/login',
-  sysadminController.login,
-  authenticateToken,
+  sysadminController.sysadminLogin,
   checkSysadmin,
+  (req, res) => {
+    res.json({ accessToken: res.locals.accessToken });
+  },
 );
-
-/**
- * @swagger
- * /sysadmin/logout:
- *   get:
- *     summary: Log out as a sysadmin
- *     tags: [Authentication]
- *     responses:
- *       200:
- *         description: Logout successful
- */
-router.get('/sysadmin/logout', sysadminController.logout);
 
 /**
  * @swagger
@@ -571,12 +562,7 @@ router.delete(
  *       403:
  *         description: Access denied. Sysadmin only.
  */
-router.get(
-  '/users',
-  authenticateToken,
-  checkSysadmin,
-  sysadminController.listUsers,
-);
+router.get('/users', authenticateToken, sysadminController.listUsers);
 
 /**
  * @swagger
@@ -673,6 +659,282 @@ router.post(
   authenticateToken,
   checkSysadmin,
   sysadminController.createUser,
+);
+
+/**
+ * @swagger
+ * /users/ban:
+ *   post:
+ *     summary: Ban or unban a user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email of the user to ban/unban
+ *               banned:
+ *                 type: boolean
+ *                 description: The ban status to set
+ *     responses:
+ *       200:
+ *         description: User ban status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.post(
+  '/users/ban',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.setUserBanStatus,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins:
+ *   get:
+ *     summary: Get all admins for a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *     responses:
+ *       200:
+ *         description: A list of admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *       404:
+ *         description: Restaurant not found
+ */
+router.get(
+  '/restaurants/:restaurantId/admins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.getRestaurantAdmins,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins:
+ *   post:
+ *     summary: Add an admin to a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [owner, admin, helper]
+ *     responses:
+ *       201:
+ *         description: Admin added successfully
+ *       404:
+ *         description: Restaurant or user not found
+ */
+router.post(
+  '/restaurants/:restaurantId/admins',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.addRestaurantAdmin,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins/{userId}:
+ *   delete:
+ *     summary: Remove an admin from a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     responses:
+ *       204:
+ *         description: Admin removed successfully
+ *       404:
+ *         description: Admin not found
+ */
+router.delete(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.removeRestaurantAdmin,
+);
+
+/**
+ * @swagger
+ * /restaurants/{restaurantId}/admins/{userId}:
+ *   patch:
+ *     summary: Update an admin's role in a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The restaurant ID
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [owner, admin, helper]
+ *     responses:
+ *       200:
+ *         description: Admin role updated successfully
+ *       404:
+ *         description: Admin not found
+ */
+router.patch(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.updateRestaurantAdminRole,
+);
+
+/**
+ * @swagger
+ * /users/all:
+ *   get:
+ *     summary: List all users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of all users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *       403:
+ *         description: Access denied. Sysadmin only.
+ */
+router.get(
+  '/users/all',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.listAllUsers,
+);
+
+/**
+ * @swagger
+ * /restaurants/claimed/reviews:
+ *   get:
+ *     summary: Get all reviews for claimed restaurants
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of reviews for claimed restaurants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   restaurant:
+ *                     type: string
+ *                   reviews:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         rating:
+ *                           type: number
+ *                         comment:
+ *                           type: string
+ *                         images:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         user_id:
+ *                           type: string
+ *       500:
+ *         description: Failed to fetch reviews for claimed restaurants
+ */
+router.get(
+  '/claimed/reviews',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.getAllReviewsForClaimedRestaurants,
 );
 
 module.exports = router;

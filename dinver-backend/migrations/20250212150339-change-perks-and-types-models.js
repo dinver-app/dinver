@@ -2,18 +2,24 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    // Drop the 'VenuePerks' table
-    await queryInterface.dropTable('VenuePerks');
+  async up(queryInterface, Sequelize) {
+    // Drop existing tables
+    await queryInterface.dropTable('EstablishmentPerks');
+    await queryInterface.dropTable('EstablishmentTypes');
+    await queryInterface.dropTable('FoodTypes');
 
-    // Create the 'EstablishmentPerks' table
+    // Recreate EstablishmentPerks table with new fields
     await queryInterface.createTable('EstablishmentPerks', {
       id: {
         type: Sequelize.INTEGER,
         autoIncrement: true,
         primaryKey: true,
       },
-      name: {
+      name_en: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      name_hr: {
         type: Sequelize.STRING,
         allowNull: false,
       },
@@ -22,25 +28,27 @@ module.exports = {
         allowNull: false,
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
+        allowNull: false,
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
+        allowNull: false,
       },
     });
 
-    // Create the 'EstablishmentType' table
-    await queryInterface.createTable('EstablishmentType', {
+    // Recreate EstablishmentTypes table with new fields
+    await queryInterface.createTable('EstablishmentTypes', {
       id: {
         type: Sequelize.INTEGER,
         autoIncrement: true,
         primaryKey: true,
       },
-      name: {
+      name_en: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      name_hr: {
         type: Sequelize.STRING,
         allowNull: false,
       },
@@ -49,50 +57,49 @@ module.exports = {
         allowNull: false,
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
+        allowNull: false,
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
+        allowNull: false,
+      },
+    });
+
+    // Recreate FoodTypes table with new fields
+    await queryInterface.createTable('FoodTypes', {
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      name_en: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      name_hr: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      icon: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
       },
     });
   },
 
-  down: async (queryInterface, Sequelize) => {
-    // Drop the 'EstablishmentPerks' table
+  async down(queryInterface, Sequelize) {
+    // Drop the tables
     await queryInterface.dropTable('EstablishmentPerks');
-
-    // Drop the 'EstablishmentType' table
-    await queryInterface.dropTable('EstablishmentType');
-
-    // Recreate the 'VenuePerks' table
-    await queryInterface.createTable('VenuePerks', {
-      id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-      },
-      name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      icon: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('now'),
-      },
-    });
+    await queryInterface.dropTable('EstablishmentTypes');
+    await queryInterface.dropTable('FoodTypes');
   },
 };

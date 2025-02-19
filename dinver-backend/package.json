@@ -20,12 +20,18 @@
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-session": "^1.18.1",
+    "i18next": "^24.2.2",
+    "i18next-express-middleware": "^2.0.0",
+    "i18next-fs-backend": "^2.6.0",
     "jsonwebtoken": "^9.0.2",
+    "mailgun-js": "^0.22.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.4",
+    "node-cron": "^3.0.3",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.13.1",
@@ -40,6 +46,7 @@
     "eslint": "^9.15.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.0",
-    "prettier": "^3.4.1"
+    "prettier": "^3.4.1",
+    "sequelize-cli": "^6.6.2"
   }
 }

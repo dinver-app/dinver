@@ -5,13 +5,15 @@ module.exports = (sequelize, DataTypes) => {
   class AuditLog extends Model {
     static associate(models) {
       AuditLog.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user',
+        onDelete: 'CASCADE',
       });
 
       AuditLog.belongsTo(models.Restaurant, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'restaurant',
+        onDelete: 'CASCADE',
       });
     }
   }
@@ -22,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -30,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      restaurant_id: {
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -46,7 +48,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      entity_id: {
+      entityId: {
         type: DataTypes.UUID,
         allowNull: false,
       },
@@ -54,10 +56,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
-      timestamp: {
+      createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
         allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
       },
     },
     {

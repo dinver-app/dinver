@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { generateTokens } = require('../../utils/tokenUtils');
 
 const register = async (req, res) => {
   try {
@@ -39,7 +40,11 @@ const login = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user);
 
     res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.json({ accessToken });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    res
+      .status(200)
+      .json({ message: 'Login successful', language: user.language });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }
@@ -83,6 +88,11 @@ const checkAuth = async (req, res) => {
           secure: true,
         });
 
+        res.cookie('token', accessToken, {
+          httpOnly: true,
+          secure: true,
+        });
+
         return res.json({ isAuthenticated: true, accessToken });
       } catch (refreshError) {
         return res.status(403).json({ isAuthenticated: false });
@@ -94,40 +104,27 @@ const checkAuth = async (req, res) => {
 };
 
 async function refreshToken(req, res) {
-  const { token } = req.body;
-  if (!token) return res.status(401).json({ error: 'Refresh token required' });
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken)
+    return res.status(401).json({ error: 'Refresh token required' });
 
   try {
-    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const user = await User.findByPk(decoded.id);
 
     if (!user) return res.status(403).json({ error: 'Invalid refresh token' });
 
-    const { accessToken, refreshToken } = generateTokens(user);
-    res.json({ accessToken, refreshToken });
+    const { accessToken, newRefreshToken } = generateTokens(user);
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+    });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    res.json({ accessToken });
   } catch (error) {
     res.status(403).json({ error: 'Invalid refresh token' });
   }
-}
-
-function generateTokens(user) {
-  const accessToken = jwt.sign(
-    { id: user.id, email: user.email },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: '1h',
-    },
-  );
-
-  const refreshToken = jwt.sign(
-    { id: user.id },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: '7d',
-    },
-  );
-
-  return { accessToken, refreshToken };
 }
 
 passport.use(

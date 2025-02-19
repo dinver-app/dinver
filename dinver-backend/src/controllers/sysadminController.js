@@ -4,13 +4,43 @@ const {
   User,
   UserOrganization,
   UserSysadmin,
+  UserAdmin,
+  Review,
 } = require('../../models');
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
+const { generateTokens } = require('../../utils/tokenUtils');
 
-// Secret key for JWT
-const JWT_SECRET = process.env.JWT_SECRET;
+async function sysadminLogin(req, res) {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if the user is a sysadmin
+    const sysadmin = await UserSysadmin.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!sysadmin) {
+      return res.status(403).json({ error: 'Access denied. Sysadmin only.' });
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
+    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+
+    res
+      .status(200)
+      .json({ message: 'Login successful', language: user.language });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred during login' });
+  }
+}
 
 // Create a new organization
 async function createOrganization(req, res) {
@@ -187,46 +217,6 @@ async function addRestaurantToOrganization(req, res) {
   }
 }
 
-// Login function
-async function login(req, res) {
-  try {
-    const { email, password } = req.body;
-
-    // Find user by email
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: '1h',
-    });
-
-    // Set the token as an HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: 3600000,
-    });
-
-    res.json({ message: 'Login successful' });
-  } catch (error) {
-    res.status(500).json({ error: 'An error occurred during login' });
-  }
-}
-
-async function logout(req, res) {
-  res.status(200).json({ message: 'Logout successful' });
-}
-
 // List all sysadmins
 async function listSysadmins(req, res) {
   try {
@@ -322,9 +312,18 @@ async function listUsers(req, res) {
 
     const { count, rows: users } = await User.findAndCountAll({
       where: whereClause,
-      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'createdAt'],
+      attributes: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'createdAt',
+        'banned',
+      ],
       limit,
       offset,
+      order: [['createdAt', 'ASC']],
     });
 
     res.json({
@@ -390,7 +389,252 @@ async function deleteUser(req, res) {
   }
 }
 
+// Ban or unban a user
+async function setUserBanStatus(req, res) {
+  try {
+    const { email, banned } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update the banned status
+    user.banned = banned;
+    await user.save();
+
+    res
+      .status(200)
+      .json({ message: `User ${banned ? 'banned' : 'unbanned'} successfully` });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating the user ban status' });
+  }
+}
+
+// Get all admins for a restaurant
+async function getRestaurantAdmins(req, res) {
+  try {
+    const { restaurantId } = req.params;
+    const admins = await UserAdmin.findAll({
+      where: { restaurantId },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName'],
+        },
+      ],
+    });
+    res.json(admins);
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching admins' });
+  }
+}
+
+// Add an admin to a restaurant
+async function addRestaurantAdmin(req, res) {
+  try {
+    const { restaurantId } = req.params;
+    const { email, role } = req.body;
+
+    // Check if the user and restaurant exist
+    const user = await User.findOne({ where: { email } });
+    const restaurant = await Restaurant.findByPk(restaurantId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    // Check if the user is already an admin for this restaurant
+    const existingAdmin = await UserAdmin.findOne({
+      where: { userId: user.id, restaurantId },
+    });
+
+    if (existingAdmin) {
+      if (existingAdmin.role === role) {
+        return res.status(400).json({ error: 'user_already_has_this_role' });
+      } else {
+        // Remove the existing admin with a different role
+        await existingAdmin.destroy();
+      }
+    }
+
+    // Add the admin with the new role
+    const admin = await UserAdmin.create({
+      userId: user.id,
+      restaurantId,
+      role,
+    });
+    res.status(201).json(admin);
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while adding the admin' });
+  }
+}
+
+// Remove an admin from a restaurant
+async function removeRestaurantAdmin(req, res) {
+  try {
+    const { restaurantId, userId } = req.params;
+    const admin = await UserAdmin.findOne({
+      where: { restaurantId, userId },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    await admin.destroy();
+    res.status(204).send();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while removing the admin' });
+  }
+}
+
+// Update an admin's role in a restaurant
+async function updateRestaurantAdminRole(req, res) {
+  try {
+    const { restaurantId, userId } = req.params;
+    const { role } = req.body;
+
+    const admin = await UserAdmin.findOne({
+      where: { restaurantId, userId },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    admin.role = role;
+    await admin.save();
+    res.status(200).json(admin);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating the admin role' });
+  }
+}
+
+async function listAllUsers(req, res) {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'email', 'firstName', 'lastName'],
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    res.status(500).json({ error: 'Failed to fetch all users' });
+  }
+}
+
+async function getAllReviewsForClaimedRestaurants(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const sortOption = req.query.sort || 'date_desc';
+
+    let order;
+    switch (sortOption) {
+      case 'date_asc':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'rating_desc':
+        order = [['rating', 'DESC']];
+        break;
+      case 'rating_asc':
+        order = [['rating', 'ASC']];
+        break;
+      case 'date_desc':
+      default:
+        order = [['createdAt', 'DESC']];
+        break;
+    }
+
+    const users = await User.findAll({
+      attributes: ['id', 'firstName', 'lastName', 'email'],
+    });
+    const userMap = users.reduce((map, user) => {
+      map[user.id] = user;
+      return map;
+    }, {});
+
+    const claimedRestaurants = await Restaurant.findAll({
+      where: {
+        isClaimed: true,
+        name: { [Op.iLike]: `%${search}%` },
+      },
+      attributes: ['id', 'name'],
+    });
+
+    const reviewsData = await Promise.all(
+      claimedRestaurants.map(async (restaurant) => {
+        const { count, rows: reviews } = await Review.findAndCountAll({
+          where: {
+            restaurant_id: restaurant.id,
+          },
+          attributes: [
+            'id',
+            'rating',
+            'comment',
+            'images',
+            'user_id',
+            'createdAt',
+          ],
+          limit,
+          offset,
+          order,
+        });
+
+        const reviewsWithUserDetails = reviews.map((review) => {
+          const user = userMap[review.user_id] || {};
+          return {
+            ...review.toJSON(),
+            userFirstName: user.firstName || 'Unknown',
+            userLastName: user.lastName || 'Unknown',
+            userEmail: user.email || 'Unknown',
+          };
+        });
+
+        return {
+          restaurant: restaurant.name,
+          reviews: reviewsWithUserDetails,
+          totalReviews: count,
+        };
+      }),
+    );
+
+    const totalReviews = reviewsData.reduce(
+      (acc, data) => acc + data.totalReviews,
+      0,
+    );
+    const totalPages = Math.ceil(totalReviews / limit);
+
+    res.json({
+      totalReviews,
+      totalPages,
+      currentPage: page,
+      reviewsData,
+    });
+  } catch (error) {
+    console.error('Error fetching reviews for claimed restaurants:', error);
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch reviews for claimed restaurants' });
+  }
+}
+
 module.exports = {
+  sysadminLogin,
   createOrganization,
   updateOrganization,
   deleteOrganization,
@@ -400,12 +644,17 @@ module.exports = {
   addUserToOrganization,
   removeUserFromOrganization,
   addRestaurantToOrganization,
-  login,
-  logout,
   listSysadmins,
   addSysadmin,
   removeSysadmin,
   listUsers,
   createUser,
   deleteUser,
+  setUserBanStatus,
+  getRestaurantAdmins,
+  addRestaurantAdmin,
+  removeRestaurantAdmin,
+  updateRestaurantAdminRole,
+  listAllUsers,
+  getAllReviewsForClaimedRestaurants,
 };

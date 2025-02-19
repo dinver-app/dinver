@@ -9,7 +9,7 @@ module.exports = {
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
       },
-      category_id: {
+      categoryId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {

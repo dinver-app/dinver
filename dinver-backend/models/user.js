@@ -49,6 +49,16 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'user',
       },
+      language: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'hr',
+      },
+      banned: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     {
       sequelize,
