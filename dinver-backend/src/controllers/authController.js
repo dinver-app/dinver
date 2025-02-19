@@ -86,13 +86,11 @@ const checkAuth = async (req, res) => {
         res.cookie('refreshToken', newRefreshToken, {
           httpOnly: true,
           secure: true,
-          maxAge: 24 * 60 * 60 * 1000,
         });
 
         res.cookie('token', accessToken, {
           httpOnly: true,
           secure: true,
-          maxAge: 60 * 60 * 1000,
         });
 
         return res.json({ isAuthenticated: true, accessToken });
