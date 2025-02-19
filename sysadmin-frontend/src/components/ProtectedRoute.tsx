@@ -16,8 +16,8 @@ const ProtectedRoute = () => {
         console.log(response);
         setIsAuthenticated(response.isAuthenticated);
       } catch (error) {
-        // setIsAuthenticated(false);
-        // window.location.href = "/login";
+        setIsAuthenticated(false);
+        window.location.href = "/login";
       } finally {
         setIsLoading(false);
       }
