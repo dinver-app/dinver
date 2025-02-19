@@ -31,9 +31,16 @@ async function sysadminLogin(req, res) {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
-
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
+    res.cookie('token', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
     res
       .status(200)
       .json({ message: 'Login successful', language: user.language });
