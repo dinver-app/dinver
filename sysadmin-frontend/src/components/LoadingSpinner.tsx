@@ -1,7 +1,26 @@
+import { useState, useEffect } from "react";
+
 const LoadingSpinner = () => {
+  const [dots, setDots] = useState("");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prevDots) => (prevDots.length < 3 ? prevDots + "." : ""));
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+    <div className="fixed inset-0 flex items-center justify-center bg-[#1E3329] z-50">
+      <div className="text-center">
+        <img
+          src="/images/logo_big_primary.svg"
+          alt="Logo"
+          className="h-16 mb-4"
+        />
+        <p className="text-[#FFF5C4] text-md">Loading data{dots}</p>
+      </div>
     </div>
   );
 };

@@ -13,11 +13,9 @@ const ProtectedRoute = () => {
       setIsLoading(true);
       try {
         const response = await checkAuth();
-        console.log(response);
         setIsAuthenticated(response.isAuthenticated);
       } catch (error) {
         setIsAuthenticated(false);
-        window.location.href = "/login";
       } finally {
         setIsLoading(false);
       }
