@@ -44,44 +44,28 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
   useEffect(() => {
-    const fetchFoodTypes = async () => {
+    const fetchAllFilters = async () => {
       const loadingToastId = toast.loading(t("loading"));
-      try {
-        const types = await getAllFoodTypes();
-        setFoodTypes(types);
-      } catch (error) {
-        console.error("Failed to fetch food types", error);
-      } finally {
-        toast.dismiss(loadingToastId);
-      }
-    };
-    fetchFoodTypes();
 
-    const fetchEstablishmentTypes = async () => {
-      const loadingToastId = toast.loading(t("loading"));
       try {
-        const types = await getAllEstablishmentTypes();
-        setEstablishmentTypes(types);
-      } catch (error) {
-        console.error("Failed to fetch establishment types", error);
-      } finally {
-        toast.dismiss(loadingToastId);
-      }
-    };
-    fetchEstablishmentTypes();
+        const [foodTypes, establishmentTypes, establishmentPerks] =
+          await Promise.all([
+            getAllFoodTypes(),
+            getAllEstablishmentTypes(),
+            getAllEstablishmentPerks(),
+          ]);
 
-    const fetchEstablishmentPerks = async () => {
-      const loadingToastId = toast.loading(t("loading"));
-      try {
-        const perks = await getAllEstablishmentPerks();
-        setEstablishmentPerks(perks);
+        setFoodTypes(foodTypes);
+        setEstablishmentTypes(establishmentTypes);
+        setEstablishmentPerks(establishmentPerks);
       } catch (error) {
-        console.error("Failed to fetch establishment perks", error);
+        console.error("Failed to fetch filters", error);
       } finally {
         toast.dismiss(loadingToastId);
       }
     };
-    fetchEstablishmentPerks();
+
+    fetchAllFilters();
   }, []);
 
   useEffect(() => {

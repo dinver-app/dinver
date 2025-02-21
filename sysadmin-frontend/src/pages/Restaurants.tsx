@@ -64,7 +64,6 @@ const Restaurants = () => {
   }, [currentPage, searchTerm]);
 
   const fetchRestaurants = async (page: number, search: string) => {
-    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getRestaurants(page, search);
       setRestaurants(data.restaurants);
@@ -74,10 +73,28 @@ const Restaurants = () => {
       setTotalRestaurantsCount(data.totalRestaurantsCount);
     } catch (error) {
       console.error("Failed to fetch restaurants", error);
-    } finally {
-      toast.dismiss(loadingToastId);
     }
   };
+
+  useEffect(() => {
+    const fetchInitialRestaurants = async () => {
+      const loadingToastId = toast.loading(t("loading"));
+      try {
+        const data = await getRestaurants(currentPage, searchTerm);
+        setRestaurants(data.restaurants);
+        setTotalPages(data.totalPages);
+        setTotalRestaurants(data.totalRestaurants);
+        setClaimedRestaurantsCount(data.claimedRestaurantsCount);
+        setTotalRestaurantsCount(data.totalRestaurantsCount);
+      } catch (error) {
+        console.error("Failed to fetch restaurants", error);
+      } finally {
+        toast.dismiss(loadingToastId);
+      }
+    };
+
+    fetchInitialRestaurants();
+  }, []);
 
   const handleCreateRestaurant = async () => {
     try {
