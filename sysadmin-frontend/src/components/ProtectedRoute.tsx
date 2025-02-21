@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import LoadingSpinner from "./LoadingSpinner";
+import LoadingScreen from "./LoadingScreen";
 import { useEffect } from "react";
 import { checkAuth } from "../services/authService";
 
@@ -25,7 +25,7 @@ const ProtectedRoute = () => {
   }, [setIsAuthenticated, setIsLoading]);
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <LoadingScreen />;
   }
 
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;

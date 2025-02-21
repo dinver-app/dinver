@@ -33,6 +33,7 @@ const Users = () => {
   }, [currentPage, searchTerm]);
 
   const fetchUsers = async (page: number, search: string) => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await listUsers(page, search);
       setTotalUsers(data.totalUsers);
@@ -40,6 +41,8 @@ const Users = () => {
       setTotalPages(data.totalPages);
     } catch (error) {
       console.error("Failed to fetch users", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

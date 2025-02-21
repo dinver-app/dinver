@@ -35,15 +35,19 @@ const Claim = () => {
   }, [searchTerm]);
 
   const fetchRestaurants = async (page: number, search: string) => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getRestaurants(page, search);
       setRestaurants(data.restaurants);
     } catch (error) {
       console.error("Failed to fetch restaurants", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchClaimLogs = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getAllClaimLogs();
       const enrichedLogs = await Promise.all(
@@ -60,6 +64,8 @@ const Claim = () => {
       setClaimLogs(enrichedLogs);
     } catch (error) {
       console.error("Failed to fetch claim logs", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

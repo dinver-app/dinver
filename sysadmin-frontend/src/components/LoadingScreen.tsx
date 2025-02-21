@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-
-const LoadingSpinner = () => {
+import { useTranslation } from "react-i18next";
+const LoadingScreen = () => {
   const [dots, setDots] = useState("");
-
+  const { t } = useTranslation();
   useEffect(() => {
     const interval = setInterval(() => {
       setDots((prevDots) => (prevDots.length < 3 ? prevDots + "." : ""));
@@ -19,10 +19,13 @@ const LoadingSpinner = () => {
           alt="Logo"
           className="h-16 mb-4"
         />
-        <p className="text-[#FFF5C4] text-md">Loading data{dots}</p>
+        <p className="text-[#FFF5C4] text-md">
+          {t("loading_data")}
+          {dots}
+        </p>
       </div>
     </div>
   );
 };
 
-export default LoadingSpinner;
+export default LoadingScreen;

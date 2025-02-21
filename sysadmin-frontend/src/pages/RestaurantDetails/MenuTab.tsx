@@ -84,6 +84,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   useEffect(() => {
     const fetchMenuData = async () => {
+      const loadingToastId = toast.loading(t("loading"));
       try {
         const items: MenuItem[] = await getMenuItems(restaurantId as string);
         setMenuItems(items);
@@ -93,6 +94,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         setCategoryOrder(cats.map((cat) => cat.id));
       } catch (error) {
         console.error("Failed to fetch menu data", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
 
@@ -101,8 +104,15 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   useEffect(() => {
     const fetchAllergens = async () => {
-      const data = await getAllAllergens();
-      setAllergens(data);
+      const loadingToastId = toast.loading(t("loading"));
+      try {
+        const data = await getAllAllergens();
+        setAllergens(data);
+      } catch (error) {
+        console.error("Failed to fetch allergens", error);
+      } finally {
+        toast.dismiss(loadingToastId);
+      }
     };
     fetchAllergens();
   }, []);
