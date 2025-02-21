@@ -49,6 +49,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             "currentRestaurant",
             JSON.stringify(defaultRestaurant)
           );
+        } else {
+          navigate("/login");
         }
       } catch (error) {
         console.error("Failed to fetch admin restaurants", error);
