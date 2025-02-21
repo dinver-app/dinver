@@ -31,10 +31,30 @@ const Settings = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchSysadmins();
-    fetchUserLanguage();
-    fetchBackups();
-    fetchRestaurants();
+    const fetchAllData = async () => {
+      const loadingToastId = toast.loading(t("loading"));
+      try {
+        const [sysadmins, userLanguage, backups, restaurants] =
+          await Promise.all([
+            listSysadmins(),
+            getUserLanguage(),
+            listBackups(searchTerm),
+            getAllRestaurants(),
+          ]);
+
+        setSysadmins(sysadmins);
+        setSelectedLanguage(userLanguage.language);
+        setBackups(backups);
+        setRestaurants(restaurants);
+      } catch (error) {
+        console.error("Failed to fetch data", error);
+        toast.error(t("failed_to_fetch_data"));
+      } finally {
+        toast.dismiss(loadingToastId);
+      }
+    };
+
+    fetchAllData();
   }, []);
 
   const fetchSysadmins = async () => {
@@ -45,43 +65,6 @@ const Settings = () => {
     } catch (error: any) {
       toast.error(error.message);
       console.error("Failed to fetch sysadmins", error);
-    } finally {
-      toast.dismiss(loadingToastId);
-    }
-  };
-
-  const fetchUserLanguage = async () => {
-    const loadingToastId = toast.loading(t("loading"));
-    try {
-      const { language } = await getUserLanguage();
-      setSelectedLanguage(language);
-    } catch (error: any) {
-      console.error("Failed to fetch user language", error);
-    } finally {
-      toast.dismiss(loadingToastId);
-    }
-  };
-
-  const fetchBackups = async () => {
-    const loadingToastId = toast.loading(t("loading"));
-    try {
-      const data = await listBackups(searchTerm);
-      setBackups(data);
-    } catch (error: any) {
-      toast.error(error.message);
-      console.error("Failed to fetch backups", error);
-    } finally {
-      toast.dismiss(loadingToastId);
-    }
-  };
-
-  const fetchRestaurants = async () => {
-    const loadingToastId = toast.loading(t("loading"));
-    try {
-      const data = await getAllRestaurants();
-      setRestaurants(data);
-    } catch (error: any) {
-      toast.error(error.message);
     } finally {
       toast.dismiss(loadingToastId);
     }
