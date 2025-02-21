@@ -12,7 +12,9 @@ const Home = () => {
       <div className="flex flex-col items-center mb-8">
         <h2 className="text-2xl font-semibold mb-2">Dinver</h2>
         <div className="w-24 border-t border-gray-300 mb-2"></div>
-        <p className="text-sm italic mb-4">"Your favorite dining solution"</p>
+        <p className="text-sm italic mb-4">
+          {t("your_favorite_dining_solution")}
+        </p>
         <div className="flex space-x-4">
           <a href="#" className="hover:opacity-75">
             <img
