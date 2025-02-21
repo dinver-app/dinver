@@ -12,6 +12,7 @@ import {
   EstablishmentPerk,
 } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-hot-toast";
 
 interface FiltersTabProps {
   restaurant: Restaurant;
@@ -44,31 +45,40 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
   useEffect(() => {
     const fetchFoodTypes = async () => {
+      const loadingToastId = toast.loading(t("loading"));
       try {
         const types = await getAllFoodTypes();
         setFoodTypes(types);
       } catch (error) {
         console.error("Failed to fetch food types", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
     fetchFoodTypes();
 
     const fetchEstablishmentTypes = async () => {
+      const loadingToastId = toast.loading(t("loading"));
       try {
         const types = await getAllEstablishmentTypes();
         setEstablishmentTypes(types);
       } catch (error) {
         console.error("Failed to fetch establishment types", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
     fetchEstablishmentTypes();
 
     const fetchEstablishmentPerks = async () => {
+      const loadingToastId = toast.loading(t("loading"));
       try {
         const perks = await getAllEstablishmentPerks();
         setEstablishmentPerks(perks);
       } catch (error) {
         console.error("Failed to fetch establishment perks", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
     fetchEstablishmentPerks();

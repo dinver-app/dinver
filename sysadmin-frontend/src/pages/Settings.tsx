@@ -38,40 +38,52 @@ const Settings = () => {
   }, []);
 
   const fetchSysadmins = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await listSysadmins();
       setSysadmins(data);
     } catch (error: any) {
       toast.error(error.message);
       console.error("Failed to fetch sysadmins", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchUserLanguage = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const { language } = await getUserLanguage();
       setSelectedLanguage(language);
     } catch (error: any) {
       console.error("Failed to fetch user language", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchBackups = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await listBackups(searchTerm);
       setBackups(data);
     } catch (error: any) {
       toast.error(error.message);
       console.error("Failed to fetch backups", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchRestaurants = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getAllRestaurants();
       setRestaurants(data);
     } catch (error: any) {
       toast.error(error.message);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

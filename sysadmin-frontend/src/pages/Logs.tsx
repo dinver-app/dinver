@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AuditLog, User, Restaurant } from "../interfaces/Interfaces"; // Pretpostavi da su definirani
 import { format } from "date-fns";
 import ReactJson from "react-json-view";
+import { toast } from "react-hot-toast";
 
 const Logs = () => {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ const Logs = () => {
   }, [currentPage, searchTerm, actionFilter]);
 
   const fetchData = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const [logsData, usersData, restaurantsData] = await Promise.all([
         getAuditLogs(
@@ -39,6 +41,8 @@ const Logs = () => {
       setRestaurants(restaurantsData);
     } catch (error) {
       console.error("Failed to fetch data", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
