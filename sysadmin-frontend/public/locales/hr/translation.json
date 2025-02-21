@@ -304,5 +304,6 @@
   "admin": "Administrator",
   "helper": "Pomoćnik",
   "your_favorite_dining_solution": "Tvoje omiljeno rješenje za hranu",
-  "loading_data": "Učitavanje podataka"
+  "loading_data": "Učitavanje podataka",
+  "failed_to_fetch_data": "Greška pri učitavanju podataka"
 }

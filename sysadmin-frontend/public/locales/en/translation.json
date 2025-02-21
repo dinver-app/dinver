@@ -307,5 +307,6 @@
   "admin": "Admin",
   "helper": "Helper",
   "your_favorite_dining_solution": "Your favorite dining solution",
-  "loading_data": "Loading data"
+  "loading_data": "Loading data",
+  "failed_to_fetch_data": "Failed to fetch data"
 }

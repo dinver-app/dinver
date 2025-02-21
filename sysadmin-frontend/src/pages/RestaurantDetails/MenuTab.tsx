@@ -85,13 +85,17 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   useEffect(() => {
     const fetchMenuData = async () => {
       const loadingToastId = toast.loading(t("loading"));
+
       try {
-        const items: MenuItem[] = await getMenuItems(restaurantId as string);
+        const [items, categories] = await Promise.all([
+          getMenuItems(restaurantId as string),
+          getCategoryItems(restaurantId as string),
+        ]);
+
         setMenuItems(items);
-        const cats: Category[] = await getCategoryItems(restaurantId as string);
-        setCategories(cats);
-        setCategoriesForSorting(cats);
-        setCategoryOrder(cats.map((cat) => cat.id));
+        setCategories(categories);
+        setCategoriesForSorting(categories);
+        setCategoryOrder(categories.map((cat: Category) => cat.id));
       } catch (error) {
         console.error("Failed to fetch menu data", error);
       } finally {
