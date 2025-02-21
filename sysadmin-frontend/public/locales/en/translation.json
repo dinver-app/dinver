@@ -306,5 +306,6 @@
   "owner": "Owner",
   "admin": "Admin",
   "helper": "Helper",
-  "your_favorite_dining_solution": "Your favorite dining solution"
+  "your_favorite_dining_solution": "Your favorite dining solution",
+  "loading_data": "Loading data"
 }
