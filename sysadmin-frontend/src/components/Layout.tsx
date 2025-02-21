@@ -178,7 +178,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             style={{ width: "24px", height: "24px" }}
           >
             <img
-              src="/public/images/right_arrows.svg"
+              src="/images/right_arrows.svg"
               alt="Open Sidebar"
               className="h-5 w-5"
             />

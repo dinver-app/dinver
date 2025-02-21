@@ -49,6 +49,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             "currentRestaurant",
             JSON.stringify(defaultRestaurant)
           );
+        } else {
+          navigate("/login");
         }
       } catch (error) {
         console.error("Failed to fetch admin restaurants", error);
@@ -243,7 +245,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             style={{ width: "24px", height: "24px" }}
           >
             <img
-              src="/public/images/right_arrows.svg"
+              src="/images/right_arrows.svg"
               alt="Open Sidebar"
               className="h-5 w-5"
             />
