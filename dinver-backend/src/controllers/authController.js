@@ -86,11 +86,13 @@ const checkAuth = async (req, res) => {
         res.cookie('refreshToken', newRefreshToken, {
           httpOnly: true,
           secure: true,
+          sameSite: 'none',
         });
 
         res.cookie('token', accessToken, {
           httpOnly: true,
           secure: true,
+          sameSite: 'none',
         });
 
         return res.json({ isAuthenticated: true, accessToken });

@@ -8,9 +8,9 @@ const passport = require('passport');
 const menuRoutes = require('./routes/menuRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const typeRoutes = require('./routes/TypeRoutes');
+const typeRoutes = require('./routes/typeRoutes');
 const userRoutes = require('./routes/userRoutes');
-const auditLogRoutes = require('./routes/AuditLogRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const claimLogRoutes = require('./routes/claimLogRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -30,7 +30,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://app.dinver.eu',
+      'https://admin.dinver.eu',
+      'https://sysadmin.dinver.eu',
+    ],
     credentials: true,
   }),
 );
