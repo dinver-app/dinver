@@ -167,7 +167,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("establishment_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedEstablishmentTypes.length > 0 ? (
+          {establishmentTypes.length > 0 &&
+          selectedEstablishmentTypes.length > 0 ? (
             selectedEstablishmentTypes.map((id) => {
               const establishmentType = establishmentTypes.find(
                 (et) => et.id === id
@@ -213,7 +214,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("food_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedFoodTypes.length > 0 ? (
+          {foodTypes.length > 0 && selectedFoodTypes.length > 0 ? (
             selectedFoodTypes.map((id: number) => {
               const foodType = foodTypes.find((ft: FoodType) => ft.id === id);
               return (
@@ -257,7 +258,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("establishment_perks")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedEstablishmentPerks.length > 0 ? (
+          {establishmentPerks.length > 0 &&
+          selectedEstablishmentPerks.length > 0 ? (
             selectedEstablishmentPerks.map((id) => {
               const establishmentPerk = establishmentPerks.find(
                 (ep) => ep.id === id
