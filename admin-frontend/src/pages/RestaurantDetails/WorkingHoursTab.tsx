@@ -232,9 +232,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       toast.success(t("custom_day_added_successfully"));
       setIsAddModalOpen(false);
       setNewCustomDay({ name: "", date: "", times: [{ open: "", close: "" }] });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add custom working day", error);
-      toast.error(t("failed_to_add_custom_day"));
+      toast.error(t(error.response.data.error));
     }
   };
 
@@ -257,8 +257,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       toast.success(t("custom_day_updated_successfully"));
       setIsEditModalOpen(false);
       setEditCustomDay(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update custom working day", error);
+      toast.error(t(error.response.data.error));
     }
   };
 
