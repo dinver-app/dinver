@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { zonedTimeToUtc, utcToZonedTime, format } = require('date-fns-tz');
+const { utcToZonedTime } = require('date-fns-tz');
 
 const getAllRestaurants = async (req, res) => {
   try {
@@ -259,7 +259,6 @@ const deleteRestaurant = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Delete the image from S3 if it exists
     if (restaurant.thumbnailUrl) {
       const key = restaurant.thumbnailUrl.split('/').pop();
       await deleteFromS3(`restaurant_thumbnails/${key}`);
@@ -275,9 +274,15 @@ const deleteRestaurant = async (req, res) => {
 
 function isRestaurantOpen(openingHours, timeZone = 'Europe/Zagreb') {
   const now = new Date();
-  const zonedNow = utcToZonedTime(now, timeZone);
-  const currentDay = zonedNow.getDay() - 1;
-  const currentTime = zonedNow.getHours() * 100 + zonedNow.getMinutes();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const [hour, minute] = formatter.format(now).split(':');
+  const currentDay = new Date().getDay() - 1;
+  const currentTime = parseInt(hour, 10) * 100 + parseInt(minute, 10);
 
   if (!openingHours || !openingHours.periods) {
     return 'undefined';
