@@ -30,11 +30,14 @@ const Settings = () => {
 
   useEffect(() => {
     const fetchUserRole = async () => {
+      const loadingToastId = toast.loading(t("loading"));
       try {
         const userRole = await getUserRole(restaurantId);
         setRole(userRole);
       } catch (error) {
         console.error("Failed to fetch user role", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
 
@@ -46,20 +49,26 @@ const Settings = () => {
   }, [activeTab, restaurantId]);
 
   const fetchUserLanguage = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const { language } = await getUserLanguage();
       setSelectedLanguage(language);
     } catch (error: any) {
       console.error("Failed to fetch user language", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchAdmins = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getRestaurantAdmins(restaurantId);
       setAdmins(data);
     } catch (error) {
       console.error("Failed to fetch admins", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

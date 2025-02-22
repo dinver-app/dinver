@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import { format } from "date-fns";
+import { toast } from "react-hot-toast";
 
 const formatRating = (rating: number, language: string) => {
   return language === "hr"
@@ -30,6 +31,7 @@ const Reviews = () => {
   }, [currentPage, searchTerm, sortOption]);
 
   const fetchReviews = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const { totalPages, reviews } = await getPaginatedReviewsForRestaurant(
         restaurantId ?? "",
@@ -42,6 +44,8 @@ const Reviews = () => {
       setTotalPages(totalPages);
     } catch (error) {
       console.error("Failed to fetch reviews", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

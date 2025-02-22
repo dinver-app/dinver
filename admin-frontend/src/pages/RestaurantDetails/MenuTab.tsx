@@ -83,29 +83,30 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   ] = useState(false);
 
   useEffect(() => {
-    const fetchMenuData = async () => {
+    const fetchData = async () => {
+      const loadingToastId = toast.loading(t("loading"));
+
       try {
-        const items: MenuItem[] = await getMenuItems(restaurantId as string);
+        const [items, categories, allergens] = await Promise.all([
+          getMenuItems(restaurantId as string),
+          getCategoryItems(restaurantId as string),
+          getAllAllergens(),
+        ]);
+
         setMenuItems(items);
-        const cats: Category[] = await getCategoryItems(restaurantId as string);
-        setCategories(cats);
-        setCategoriesForSorting(cats);
-        setCategoryOrder(cats.map((cat) => cat.id));
+        setCategories(categories);
+        setCategoriesForSorting(categories);
+        setCategoryOrder(categories.map((cat: Category) => cat.id));
+        setAllergens(allergens);
       } catch (error) {
-        console.error("Failed to fetch menu data", error);
+        console.error("Failed to fetch data", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
 
-    fetchMenuData();
+    fetchData();
   }, [restaurantId]);
-
-  useEffect(() => {
-    const fetchAllergens = async () => {
-      const data = await getAllAllergens();
-      setAllergens(data);
-    };
-    fetchAllergens();
-  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategoryName) return;
@@ -120,8 +121,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewCategoryName("");
       setAddCategoryModalOpen(false);
       toast.success(t("category_created"));
-    } catch (error) {
-      const errorMessage = (error as Error).message;
+    } catch (error: any) {
+      const errorMessage = error.response.data.message;
       toast.error(t(errorMessage));
       console.error("Failed to create category", error);
     } finally {
