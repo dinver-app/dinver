@@ -338,5 +338,6 @@
   "edit_admin": "Edit Admin",
   "edit_admin_description": "Edit an admin in the system.",
   "admin_updated_successfully": "Admin updated successfully",
-  "user_already_admin": "User is already an admin"
+  "user_already_admin": "User is already an admin",
+  "date_cannot_be_empty": "Date cannot be empty"
 }
