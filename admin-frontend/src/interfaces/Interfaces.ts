@@ -122,3 +122,12 @@ export interface RestaurantReviews {
   reviews: Review[];
   totalReviews: number;
 }
+
+export interface CustomWorkingDay {
+  id?: string;
+  date: string;
+  times: {
+    start: string;
+    end: string;
+  }[];
+}

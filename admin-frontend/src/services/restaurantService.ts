@@ -96,3 +96,60 @@ export const getRestaurantById = async (id: string) => {
   const response = await apiClient.get(`/api/restaurants/details/${id}`);
   return response.data;
 };
+
+export const getCustomWorkingDays = async (restaurantId: string) => {
+  const response = await apiClient.get(
+    `/api/restaurants/${restaurantId}/custom-working-days`
+  );
+  return response.data;
+};
+
+export const getUpcomingCustomWorkingDays = async (restaurantId: string) => {
+  const response = await apiClient.get(
+    `/api/restaurants/${restaurantId}/upcoming-custom-working-days`
+  );
+  return response.data;
+};
+
+export const addCustomWorkingDay = async (
+  restaurantId: string,
+  customDay: {
+    name: string;
+    date: string;
+    times: { open: string; close: string }[];
+  }
+) => {
+  const response = await apiClient.post(
+    `/api/restaurants/${restaurantId}/custom-working-days`,
+    customDay
+  );
+  return response.data;
+};
+
+export const updateCustomWorkingDay = async (
+  restaurantId: string,
+  customDay: {
+    name: string;
+    date: string;
+    times: { open: string; close: string }[];
+  }
+) => {
+  const response = await apiClient.put(
+    `/api/restaurants/${restaurantId}/custom-working-days`,
+    customDay
+  );
+  return response.data;
+};
+
+export const deleteCustomWorkingDay = async (
+  restaurantId: string,
+  date: string
+) => {
+  const response = await apiClient.delete(
+    `/api/restaurants/${restaurantId}/custom-working-days`,
+    {
+      data: { date },
+    }
+  );
+  return response.data;
+};

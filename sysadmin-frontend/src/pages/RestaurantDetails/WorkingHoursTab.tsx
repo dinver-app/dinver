@@ -39,7 +39,6 @@ const unformatTime = (time: string) => {
 const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const { t, i18n } = useTranslation();
 
-  // Determine the locale based on the current language
   const locale = i18n.language === "hr" ? hr : enUS;
 
   const daysOfWeek = [
@@ -202,7 +201,6 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     if (!validateCustomDay(newCustomDay)) return;
 
     try {
-      // Determine the times to send based on isSplitShift
       const timesToSend = isSplitShift
         ? newCustomDay.times
         : [newCustomDay.times[0]];
@@ -224,7 +222,6 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     if (!editCustomDay || !validateCustomDay(editCustomDay)) return;
 
     try {
-      // Determine the times to send based on isSplitShift
       const timesToSend = isSplitShift
         ? editCustomDay.times
         : [editCustomDay.times[0]];
