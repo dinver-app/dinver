@@ -778,6 +778,39 @@ router.post(
 
 /**
  * @swagger
+ * /restaurants/{restaurantId}/admins:
+ *   post:
+ *     summary: Add an admin to a restaurant
+ *     tags: [Restaurant Admins]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [owner, admin, helper]
+ *     responses:
+ *       201:
+ *         description: Admin added successfully
+ *       404:
+ *         description: Restaurant or user not found
+ */
+router.put(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkSysadmin,
+  sysadminController.updateRestaurantAdmin,
+);
+
+/**
+ * @swagger
  * /restaurants/{restaurantId}/admins/{userId}:
  *   delete:
  *     summary: Remove an admin from a restaurant

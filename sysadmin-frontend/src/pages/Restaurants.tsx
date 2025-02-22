@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import {
   getRestaurantAdmins,
   addRestaurantAdmin,
+  updateRestaurantAdmin,
   removeRestaurantAdmin,
 } from "../services/sysadminService";
 
@@ -58,6 +59,8 @@ const Restaurants = () => {
     useState(false);
   const [restaurantToDelete, setRestaurantToDelete] =
     useState<Restaurant | null>(null);
+  const [isEditAdminModalOpen, setEditAdminModalOpen] = useState(false);
+  const [adminToEdit, setAdminToEdit] = useState<any | null>(null);
 
   useEffect(() => {
     fetchRestaurants(currentPage, searchTerm);
@@ -190,6 +193,31 @@ const Restaurants = () => {
       } finally {
         setDeleteRestaurantModalOpen(false);
         setRestaurantToDelete(null);
+      }
+    }
+  };
+
+  const handleEditButtonClick = (admin: any) => {
+    setAdminToEdit(admin);
+    setEditAdminModalOpen(true);
+  };
+
+  const handleEditAdmin = async () => {
+    if (selectedRestaurantId && adminToEdit) {
+      try {
+        await updateRestaurantAdmin(
+          selectedRestaurantId,
+          adminToEdit.userId,
+          adminToEdit.role
+        );
+        fetchAdmins(selectedRestaurantId);
+        toast.success(t("admin_updated_successfully"));
+      } catch (error: any) {
+        console.error("Failed to update admin", error);
+        toast.error(t(error.message));
+      } finally {
+        setEditAdminModalOpen(false);
+        setAdminToEdit(null);
       }
     }
   };
@@ -444,7 +472,7 @@ const Restaurants = () => {
                     <th className="py-2 px-4 text-left font-normal w-48">
                       {t("role")}
                     </th>
-                    <th className="py-2 px-4 text-left w-10"></th>
+                    <th className="py-2 px-4 text-left w-32"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -460,19 +488,27 @@ const Restaurants = () => {
                         <td className="py-2 px-4 text-sm text-gray-600 w-48">
                           {t(admin.role)}
                         </td>
-                        <td className="py-2 px-4 w-10">
-                          <button
-                            onClick={() => {
-                              setAdminToDelete({
-                                userId: admin.userId,
-                                email: admin.user.email,
-                              });
-                              setDeleteAdminModalOpen(true);
-                            }}
-                            className="text-red-500 hover:text-red-700 text-sm"
-                          >
-                            {t("remove")}
-                          </button>
+                        <td className="py-2 px-4 w-32">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEditButtonClick(admin)}
+                              className="text-gray-500 hover:text-gray-700 text-sm"
+                            >
+                              {t("edit")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setAdminToDelete({
+                                  userId: admin.userId,
+                                  email: admin.user.email,
+                                });
+                                setDeleteAdminModalOpen(true);
+                              }}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              {t("remove")}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -583,6 +619,7 @@ const Restaurants = () => {
                   {t("are_you_sure_you_want_to_delete_admin", {
                     email: adminToDelete.email,
                   })}
+                  <span className="font-bold">{adminToDelete.email}</span>?
                 </p>
               </div>
             </div>
@@ -642,6 +679,61 @@ const Restaurants = () => {
                 className="delete-button"
               >
                 {t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditAdminModalOpen && adminToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setEditAdminModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/admin.svg"
+                alt="Edit Admin Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("edit_admin")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("edit_admin_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line mb-4"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("role")}
+              </label>
+              <select
+                value={adminToEdit.role}
+                onChange={(e) =>
+                  setAdminToEdit({ ...adminToEdit, role: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              >
+                <option value="owner">{t("owner")}</option>
+                <option value="admin">{t("admin")}</option>
+                <option value="helper">{t("helper")}</option>
+              </select>
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setEditAdminModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button onClick={handleEditAdmin} className="primary-button">
+                {t("save")}
               </button>
             </div>
           </div>

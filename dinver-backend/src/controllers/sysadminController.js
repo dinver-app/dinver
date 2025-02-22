@@ -465,12 +465,7 @@ async function addRestaurantAdmin(req, res) {
     });
 
     if (existingAdmin) {
-      if (existingAdmin.role === role) {
-        return res.status(400).json({ error: 'user_already_has_this_role' });
-      } else {
-        // Remove the existing admin with a different role
-        await existingAdmin.destroy();
-      }
+      return res.status(400).json({ error: 'user_already_admin' });
     }
 
     // Add the admin with the new role
@@ -482,6 +477,31 @@ async function addRestaurantAdmin(req, res) {
     res.status(201).json(admin);
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while adding the admin' });
+  }
+}
+
+// Update an admin's role for a restaurant
+async function updateRestaurantAdmin(req, res) {
+  try {
+    const { restaurantId, userId } = req.params;
+    const { role } = req.body;
+
+    const admin = await UserAdmin.findOne({
+      where: { restaurantId, userId },
+    });
+
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    admin.role = role;
+    await admin.save();
+
+    res.status(200).json(admin);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while updating the admin' });
   }
 }
 
@@ -662,6 +682,7 @@ module.exports = {
   addRestaurantAdmin,
   removeRestaurantAdmin,
   updateRestaurantAdminRole,
+  updateRestaurantAdmin,
   listAllUsers,
   getAllReviewsForClaimedRestaurants,
 };

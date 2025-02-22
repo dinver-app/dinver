@@ -100,3 +100,19 @@ export const updateRestaurantAdminRole = async (
     throw new Error(error.response.data.error);
   }
 };
+
+export const updateRestaurantAdmin = async (
+  restaurantId: string,
+  userId: string,
+  role: string
+) => {
+  try {
+    const response = await apiClient.put(
+      `api/sysadmin/restaurants/${restaurantId}/admins/${userId}`,
+      { role }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response.data.error);
+  }
+};

@@ -30,6 +30,13 @@ router.post(
   adminController.addRestaurantAdmin,
 );
 
+router.put(
+  '/restaurants/:restaurantId/admins/:userId',
+  authenticateToken,
+  checkAdmin,
+  adminController.updateRestaurantAdmin,
+);
+
 router.delete(
   '/restaurants/:restaurantId/admins/:userId',
   authenticateToken,

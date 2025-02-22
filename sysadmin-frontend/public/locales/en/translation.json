@@ -218,7 +218,7 @@
   "remove_admin": "Remove Admin",
   "remove_admin_description": "Remove an admin from the restaurant.",
   "confirm_delete": "Confirm Delete",
-  "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin?",
+  "are_you_sure_you_want_to_delete_admin": "Are you sure you want to delete this admin ",
   "admin_removed_successfully": "Admin removed successfully",
   "order_uncategorized_items": "Order Uncategorized Items",
   "uncategorized_item_order_updated": "Uncategorized item order updated",
@@ -334,5 +334,9 @@
   "cannot_update_to_past_date": "Cannot update to past date",
   "time_cannot_be_empty": "Time cannot be empty",
   "custom_day_added_successfully": "Custom day added successfully",
-  "split_shift_button": "Split Shift"
+  "split_shift_button": "Split Shift",
+  "edit_admin": "Edit Admin",
+  "edit_admin_description": "Edit an admin in the system.",
+  "admin_updated_successfully": "Admin updated successfully",
+  "user_already_admin": "User is already an admin"
 }
