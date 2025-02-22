@@ -695,4 +695,37 @@ router.post(
  */
 router.get('/:restaurantId/reviews', reviewController.getReviews);
 
+router.get(
+  '/:id/custom-working-days',
+  authenticateToken,
+  restaurantController.getCustomWorkingDays,
+);
+
+router.get(
+  '/:id/upcoming-custom-working-days',
+  authenticateToken,
+  restaurantController.getUpcomingCustomWorkingDays,
+);
+
+router.post(
+  '/:id/custom-working-days',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.addCustomWorkingDay,
+);
+
+router.put(
+  '/:id/custom-working-days',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.updateCustomWorkingDay,
+);
+
+router.delete(
+  '/:id/custom-working-days',
+  authenticateToken,
+  checkAdmin,
+  restaurantController.deleteCustomWorkingDay,
+);
+
 module.exports = router;

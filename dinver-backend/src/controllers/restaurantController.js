@@ -282,7 +282,13 @@ function isRestaurantOpen(openingHours) {
   }
 
   const allTimesEmpty = openingHours.periods.every(
-    (period) => period.open.time === '' && period.close.time === '',
+    (period) =>
+      period.open.time === '' &&
+      period.close.time === '' &&
+      (!period.shifts ||
+        period.shifts.every(
+          (shift) => shift.open.time === '' && shift.close.time === '',
+        )),
   );
 
   if (allTimesEmpty) {
@@ -290,27 +296,35 @@ function isRestaurantOpen(openingHours) {
   }
 
   for (const period of openingHours.periods) {
-    const openDay = period.open.day;
-    const openTime = parseInt(period.open.time, 10);
-    const closeDay = period.close.day;
-    const closeTime = parseInt(period.close.time, 10);
+    const periodsToCheck = [
+      { open: period.open, close: period.close },
+      ...(period.shifts || []),
+    ];
 
-    if (openDay === closeDay) {
-      if (
-        currentDay === openDay &&
-        currentTime >= openTime &&
-        currentTime < closeTime
-      ) {
-        return 'true';
-      }
-    } else {
-      if (
-        (currentDay === openDay && currentTime >= openTime) ||
-        (currentDay === closeDay && currentTime < closeTime) ||
-        (currentDay > openDay && currentDay < closeDay) ||
-        (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
-      ) {
-        return 'true';
+    for (const { open, close } of periodsToCheck) {
+      const openDay = open.day;
+      const openTime = parseInt(open.time, 10);
+      const closeDay = close.day;
+      const closeTime = parseInt(close.time, 10);
+
+      if (openDay === closeDay) {
+        if (
+          currentDay === openDay &&
+          currentTime >= openTime &&
+          currentTime < closeTime
+        ) {
+          return 'true';
+        }
+      } else {
+        if (
+          (currentDay === openDay && currentTime >= openTime) ||
+          (currentDay === closeDay && currentTime < closeTime) ||
+          (currentDay > openDay && currentDay < closeDay) ||
+          (openDay > closeDay &&
+            (currentDay > openDay || currentDay < closeDay))
+        ) {
+          return 'true';
+        }
       }
     }
   }
@@ -559,6 +573,184 @@ const getRestaurantById = async (req, res) => {
   }
 };
 
+const getCustomWorkingDays = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const customWorkingDays = restaurant.customWorkingDays || [];
+    res.json(customWorkingDays);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch custom working days' });
+  }
+};
+
+const getUpcomingCustomWorkingDays = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    const now = new Date();
+    const twoWeeksLater = new Date();
+    twoWeeksLater.setDate(now.getDate() + 14);
+
+    const customWorkingDays = (restaurant.customWorkingDays || []).filter(
+      (day) => {
+        const date = new Date(day.date);
+        return date >= now && date <= twoWeeksLater;
+      },
+    );
+
+    customWorkingDays.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    res.json(customWorkingDays);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch upcoming custom working days' });
+  }
+};
+
+const addCustomWorkingDay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, date, times } = req.body;
+
+    if (!Array.isArray(times) || times.length > 2) {
+      return res.status(400).json({ error: 'maximum_two_time_periods' });
+    }
+
+    const dateObj = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return res.status(400).json({ error: 'cannot_add_date_in_the_past' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    let customWorkingDays = restaurant.customWorkingDays;
+
+    if (
+      !customWorkingDays ||
+      !Array.isArray(customWorkingDays.customWorkingDays)
+    ) {
+      customWorkingDays = { customWorkingDays: [] };
+    }
+
+    if (customWorkingDays.customWorkingDays.some((day) => day.date === date)) {
+      return res
+        .status(400)
+        .json({ error: 'custom_working_day_for_this_date_already_exists' });
+    }
+
+    customWorkingDays.customWorkingDays.push({ name, date, times });
+    const updatedCustomWorkingDays = {
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    };
+    await restaurant.update({ customWorkingDays: {} });
+    await restaurant.update({ customWorkingDays: updatedCustomWorkingDays });
+
+    res.status(201).json({
+      message: 'Custom working day added successfully',
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'failed_to_add_custom_working_day' });
+  }
+};
+
+const updateCustomWorkingDay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, date, times } = req.body;
+
+    if (!Array.isArray(times) || times.length > 2) {
+      return res.status(400).json({ error: 'maximum_two_time_periods' });
+    }
+
+    const dateObj = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return res.status(400).json({ error: 'cannot_update_to_past_date' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    const customWorkingDays = restaurant.customWorkingDays || {
+      customWorkingDays: [],
+    };
+    const index = customWorkingDays.customWorkingDays.findIndex(
+      (day) => day.date === date,
+    );
+
+    if (index === -1) {
+      return res.status(404).json({ error: 'custom_working_day_not_found' });
+    }
+
+    customWorkingDays.customWorkingDays[index] = { name, date, times };
+    const updatedCustomWorkingDays = {
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    };
+    await restaurant.update({ customWorkingDays: {} });
+    await restaurant.update({ customWorkingDays: updatedCustomWorkingDays });
+
+    res.json({
+      message: 'Custom working day updated successfully',
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'failed_to_update_custom_working_day' });
+  }
+};
+
+const deleteCustomWorkingDay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.body;
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    const customWorkingDays = restaurant.customWorkingDays || {
+      customWorkingDays: [],
+    };
+    const updatedDays = customWorkingDays.customWorkingDays.filter(
+      (day) => day.date !== date,
+    );
+
+    const updatedCustomWorkingDays = {
+      customWorkingDays: updatedDays,
+    };
+
+    await restaurant.update({
+      customWorkingDays: updatedCustomWorkingDays,
+    });
+
+    res.json({
+      message: 'Custom working day deleted successfully',
+      customWorkingDays: updatedDays,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'failed_to_delete_custom_working_day' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -573,4 +765,9 @@ module.exports = {
   deleteRestaurantImage,
   updateImageOrder,
   getRestaurantById,
+  getCustomWorkingDays,
+  getUpcomingCustomWorkingDays,
+  addCustomWorkingDay,
+  updateCustomWorkingDay,
+  deleteCustomWorkingDay,
 };

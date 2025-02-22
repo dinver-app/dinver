@@ -122,3 +122,14 @@ export interface RestaurantReviews {
   reviews: Review[];
   totalReviews: number;
 }
+
+export interface WorkingHoursTabProps {
+  restaurant: Restaurant;
+  onUpdate: (updatedRestaurant: Restaurant) => void;
+}
+
+export interface CustomWorkingDay {
+  name: string;
+  date: string;
+  times: { open: string; close: string }[];
+}
