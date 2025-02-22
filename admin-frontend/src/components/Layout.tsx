@@ -12,6 +12,7 @@ import { LuLogs } from "react-icons/lu";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 import { getAdminRestaurants } from "../services/adminService";
+import { useRole } from "../context/RoleContext";
 
 interface Restaurant {
   id: string;
@@ -29,6 +30,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(
     null
   );
+  const { role } = useRole();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -79,6 +81,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         JSON.stringify(newCurrentRestaurant)
       );
       navigate("/");
+      window.location.reload();
     }
   };
 
@@ -93,24 +96,32 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       path: `/restaurants/${currentRestaurant?.slug}`,
       icon: <IoRestaurant className="h-4 w-4 mr-3" />,
     },
-    {
-      name: t("analytics"),
-      path: "/analytics",
-      icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
-    },
-    {
-      name: t("reviews"),
-      path: `/reviews/${currentRestaurant?.id}`,
-      icon: <FaComments className="h-4 w-4 mr-3" />,
-    },
+    ...(role === "owner"
+      ? [
+          {
+            name: t("analytics"),
+            path: "/analytics",
+            icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
+          },
+          {
+            name: t("reviews"),
+            path: `/reviews/${currentRestaurant?.id}`,
+            icon: <FaComments className="h-4 w-4 mr-3" />,
+          },
+        ]
+      : []),
   ];
 
   const preferenceItems = [
-    {
-      name: t("logs"),
-      path: "/logs",
-      icon: <LuLogs className="h-4 w-4 mr-3" />,
-    },
+    ...(role === "owner" || role === "admin"
+      ? [
+          {
+            name: t("logs"),
+            path: "/logs",
+            icon: <LuLogs className="h-4 w-4 mr-3" />,
+          },
+        ]
+      : []),
     {
       name: t("settings"),
       path: "/settings",

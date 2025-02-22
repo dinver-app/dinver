@@ -12,6 +12,7 @@ import {
   EstablishmentPerk,
 } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-hot-toast";
 
 interface FiltersTabProps {
   restaurant: Restaurant;
@@ -43,35 +44,28 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
   useEffect(() => {
-    const fetchFoodTypes = async () => {
-      try {
-        const types = await getAllFoodTypes();
-        setFoodTypes(types);
-      } catch (error) {
-        console.error("Failed to fetch food types", error);
-      }
-    };
-    fetchFoodTypes();
+    const fetchAllFilters = async () => {
+      const loadingToastId = toast.loading(t("loading"));
 
-    const fetchEstablishmentTypes = async () => {
       try {
-        const types = await getAllEstablishmentTypes();
-        setEstablishmentTypes(types);
-      } catch (error) {
-        console.error("Failed to fetch establishment types", error);
-      }
-    };
-    fetchEstablishmentTypes();
+        const [foodTypes, establishmentTypes, establishmentPerks] =
+          await Promise.all([
+            getAllFoodTypes(),
+            getAllEstablishmentTypes(),
+            getAllEstablishmentPerks(),
+          ]);
 
-    const fetchEstablishmentPerks = async () => {
-      try {
-        const perks = await getAllEstablishmentPerks();
-        setEstablishmentPerks(perks);
+        setFoodTypes(foodTypes);
+        setEstablishmentTypes(establishmentTypes);
+        setEstablishmentPerks(establishmentPerks);
       } catch (error) {
-        console.error("Failed to fetch establishment perks", error);
+        console.error("Failed to fetch filters", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
-    fetchEstablishmentPerks();
+
+    fetchAllFilters();
   }, []);
 
   useEffect(() => {
@@ -173,7 +167,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("establishment_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedEstablishmentTypes.length > 0 ? (
+          {establishmentTypes.length > 0 &&
+          selectedEstablishmentTypes.length > 0 ? (
             selectedEstablishmentTypes.map((id) => {
               const establishmentType = establishmentTypes.find(
                 (et) => et.id === id
@@ -219,7 +214,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("food_types")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedFoodTypes.length > 0 ? (
+          {foodTypes.length > 0 && selectedFoodTypes.length > 0 ? (
             selectedFoodTypes.map((id: number) => {
               const foodType = foodTypes.find((ft: FoodType) => ft.id === id);
               return (
@@ -263,7 +258,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           {t("establishment_perks")}
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedEstablishmentPerks.length > 0 ? (
+          {establishmentPerks.length > 0 &&
+          selectedEstablishmentPerks.length > 0 ? (
             selectedEstablishmentPerks.map((id) => {
               const establishmentPerk = establishmentPerks.find(
                 (ep) => ep.id === id

@@ -7,12 +7,14 @@ import {
   getRestaurantAdmins,
   addRestaurantAdmin,
   removeRestaurantAdmin,
-  getUserRole,
+  updateRestaurantAdmin,
 } from "../services/adminService";
 import { canAccess } from "../utils/permissions";
+import { useRole } from "../context/RoleContext";
 
 const Settings = () => {
   const { t } = useTranslation();
+  const { role } = useRole();
   const [activeTab, setActiveTab] = useState("general");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [admins, setAdmins] = useState([]);
@@ -21,7 +23,8 @@ const Settings = () => {
   const [newAdminRole, setNewAdminRole] = useState("admin");
   const [adminToDelete, setAdminToDelete] = useState<any | null>(null);
   const [isDeleteAdminModalOpen, setDeleteAdminModalOpen] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
+  const [isEditAdminModalOpen, setEditAdminModalOpen] = useState(false);
+  const [adminToEdit, setAdminToEdit] = useState<any | null>(null);
 
   const currentRestaurant = JSON.parse(
     localStorage.getItem("currentRestaurant") || "{}"
@@ -29,16 +32,6 @@ const Settings = () => {
   const restaurantId = currentRestaurant.id;
 
   useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const userRole = await getUserRole(restaurantId);
-        setRole(userRole);
-      } catch (error) {
-        console.error("Failed to fetch user role", error);
-      }
-    };
-
-    fetchUserRole();
     fetchUserLanguage();
     if (activeTab === "administrators") {
       fetchAdmins();
@@ -46,20 +39,26 @@ const Settings = () => {
   }, [activeTab, restaurantId]);
 
   const fetchUserLanguage = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const { language } = await getUserLanguage();
       setSelectedLanguage(language);
     } catch (error: any) {
       console.error("Failed to fetch user language", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
   const fetchAdmins = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const data = await getRestaurantAdmins(restaurantId);
       setAdmins(data);
     } catch (error) {
       console.error("Failed to fetch admins", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 
@@ -114,6 +113,29 @@ const Settings = () => {
   const handleDeleteButtonClick = (admin: any) => {
     setAdminToDelete(admin);
     setDeleteAdminModalOpen(true);
+  };
+
+  const handleEditButtonClick = (admin: any) => {
+    setAdminToEdit(admin);
+    setEditAdminModalOpen(true);
+  };
+
+  const handleEditAdmin = async () => {
+    if (adminToEdit) {
+      try {
+        await updateRestaurantAdmin(restaurantId, adminToEdit.userId, {
+          role: adminToEdit.role,
+        });
+        fetchAdmins();
+        toast.success(t("admin_updated_successfully"));
+      } catch (error: any) {
+        console.error("Failed to update admin", error);
+        toast.error(t(error.message));
+      } finally {
+        setEditAdminModalOpen(false);
+        setAdminToEdit(null);
+      }
+    }
   };
 
   return (
@@ -194,7 +216,7 @@ const Settings = () => {
                   <th className="py-2 px-4 text-left font-normal w-48">
                     {t("role")}
                   </th>
-                  <th className="py-2 px-4 text-left w-10"></th>
+                  <th className="py-2 px-4 text-left w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -210,7 +232,13 @@ const Settings = () => {
                       <td className="py-2 px-4 text-sm text-gray-600 w-48">
                         {t(admin.role)}
                       </td>
-                      <td className="py-2 px-4 w-10">
+                      <td className="py-2 px-4 w-20 flex space-x-2">
+                        <button
+                          onClick={() => handleEditButtonClick(admin)}
+                          className="text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                          {t("edit")}
+                        </button>
                         <button
                           onClick={() => handleDeleteButtonClick(admin)}
                           className="text-red-500 hover:text-red-700 text-sm"
@@ -291,6 +319,61 @@ const Settings = () => {
               </button>
               <button onClick={handleAddAdmin} className="primary-button">
                 {t("add_admin")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditAdminModalOpen && adminToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setEditAdminModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <img
+                src="/images/admin.svg"
+                alt="Edit Admin Icon"
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
+              />
+              <div>
+                <h2 className="text-lg font-semibold">{t("edit_admin")}</h2>
+                <p className="text-sm text-gray-500">
+                  {t("edit_admin_description")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line mb-4"></div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("role")}
+              </label>
+              <select
+                value={adminToEdit.role}
+                onChange={(e) =>
+                  setAdminToEdit({ ...adminToEdit, role: e.target.value })
+                }
+                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+              >
+                <option value="owner">{t("owner")}</option>
+                <option value="admin">{t("admin")}</option>
+                <option value="helper">{t("helper")}</option>
+              </select>
+            </div>
+            <div className="h-line"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setEditAdminModalOpen(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button onClick={handleEditAdmin} className="primary-button">
+                {t("save")}
               </button>
             </div>
           </div>

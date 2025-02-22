@@ -16,6 +16,7 @@ import { MenuItem, Category } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { useRole } from "../../context/RoleContext";
 
 interface Allergen {
   id: number;
@@ -27,6 +28,7 @@ interface Allergen {
 const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const language = localStorage.getItem("language") || "en";
   const { t } = useTranslation();
+  const { role } = useRole();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesForSorting, setCategoriesForSorting] = useState<Category[]>(
@@ -83,29 +85,30 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   ] = useState(false);
 
   useEffect(() => {
-    const fetchMenuData = async () => {
+    const fetchData = async () => {
+      const loadingToastId = toast.loading(t("loading"));
+
       try {
-        const items: MenuItem[] = await getMenuItems(restaurantId as string);
+        const [items, categories, allergens] = await Promise.all([
+          getMenuItems(restaurantId as string),
+          getCategoryItems(restaurantId as string),
+          getAllAllergens(),
+        ]);
+
         setMenuItems(items);
-        const cats: Category[] = await getCategoryItems(restaurantId as string);
-        setCategories(cats);
-        setCategoriesForSorting(cats);
-        setCategoryOrder(cats.map((cat) => cat.id));
+        setCategories(categories);
+        setCategoriesForSorting(categories);
+        setCategoryOrder(categories.map((cat: Category) => cat.id));
+        setAllergens(allergens);
       } catch (error) {
-        console.error("Failed to fetch menu data", error);
+        console.error("Failed to fetch data", error);
+      } finally {
+        toast.dismiss(loadingToastId);
       }
     };
 
-    fetchMenuData();
+    fetchData();
   }, [restaurantId]);
-
-  useEffect(() => {
-    const fetchAllergens = async () => {
-      const data = await getAllAllergens();
-      setAllergens(data);
-    };
-    fetchAllergens();
-  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategoryName) return;
@@ -120,8 +123,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       setNewCategoryName("");
       setAddCategoryModalOpen(false);
       toast.success(t("category_created"));
-    } catch (error) {
-      const errorMessage = (error as Error).message;
+    } catch (error: any) {
+      const errorMessage = error.response.data.message;
       toast.error(t(errorMessage));
       console.error("Failed to create category", error);
     } finally {
@@ -268,6 +271,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   };
 
   const handleDeleteCategory = async (id: string) => {
+    if (!(role === "owner" || role === "admin")) return;
     setIsLoading(true);
     try {
       await deleteCategory(id);
@@ -284,6 +288,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   };
 
   const handleDeleteMenuItem = async (id: string) => {
+    if (!(role === "owner" || role === "admin")) return;
     setIsLoading(true);
     try {
       await deleteMenuItem(id);
@@ -378,19 +383,21 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 </div>
               </div>
             </div>
-            <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
+            <div className="flex space-x-3 mt-4 md:mt-0">
               <button
                 onClick={() => openEditItemModal(item)}
                 className="secondary-button"
               >
                 {t("edit")}
               </button>
-              <button
-                onClick={() => handleDeleteItemModal(item)}
-                className="delete-button"
-              >
-                {t("delete")}
-              </button>
+              {role !== "helper" && (
+                <button
+                  onClick={() => handleDeleteItemModal(item)}
+                  className="delete-button"
+                >
+                  {t("delete")}
+                </button>
+              )}
             </div>
           </li>
         );
@@ -629,12 +636,14 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
                 >
                   {t("edit")}
                 </button>
-                <button
-                  onClick={() => handleDeleteCategoryModal(category)}
-                  className="text-red-500 hover:text-red-700 text-sm"
-                >
-                  {t("delete")}
-                </button>
+                {role !== "helper" && (
+                  <button
+                    onClick={() => handleDeleteCategoryModal(category)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    {t("delete")}
+                  </button>
+                )}
               </div>
             </h4>
             <ul className="bg-white flex flex-col mt-2">

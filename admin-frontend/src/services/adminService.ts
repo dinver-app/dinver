@@ -36,3 +36,15 @@ export const getUserRole = async (restaurantId: string) => {
   const response = await apiClient.get(`/api/admin/role/${restaurantId}`);
   return response.data.role;
 };
+
+export const updateRestaurantAdmin = async (
+  restaurantId: string,
+  userId: string,
+  adminData: { role: string }
+) => {
+  const response = await apiClient.put(
+    `/api/admin/restaurants/${restaurantId}/admins/${userId}`,
+    adminData
+  );
+  return response.data;
+};

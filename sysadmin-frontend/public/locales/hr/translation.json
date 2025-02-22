@@ -218,7 +218,7 @@
   "remove_admin": "Ukloni administratora",
   "remove_admin_description": "Ukloni administratora iz restorana.",
   "confirm_delete": "Potvrdi brisanje",
-  "are_you_sure_you_want_to_delete_admin": "Jesi li siguran/na da želiš ukloniti ovog administratora?",
+  "are_you_sure_you_want_to_delete_admin": "Jesi li siguran/na da želiš obrisati administratora ",
   "admin_removed_successfully": "Administrator je uspješno uklonjen",
   "order_uncategorized_items": "Redoslijed nekategoriziranih stavki",
   "uncategorized_item_order_updated": "Redoslijed nekategoriziranih stavki ažuriran",
@@ -331,5 +331,9 @@
   "cannot_update_to_past_date": "Ne možeš ažurirati na prošli datum",
   "time_cannot_be_empty": "Vrijeme ne može biti prazno",
   "custom_day_added_successfully": "Prilagođeni dan je uspješno dodan",
-  "split_shift_button": "Dvokratno"
+  "split_shift_button": "Dvokratno",
+  "edit_admin": "Uredi administratora",
+  "edit_admin_description": "Uredi administratora u sustavu.",
+  "admin_updated_successfully": "Administrator je uspješno ažuriran",
+  "user_already_admin": "Korisnik već je administrator"
 }

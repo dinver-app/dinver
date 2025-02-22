@@ -4,6 +4,7 @@ import { AuditLog } from "../interfaces/Interfaces"; // Pretpostavi da su defini
 import { format } from "date-fns";
 import ReactJson from "react-json-view";
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 const Logs = () => {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ const Logs = () => {
   }, [currentPage, searchTerm, actionFilter]);
 
   const fetchData = async () => {
+    const loadingToastId = toast.loading(t("loading"));
     try {
       const storedRestaurant = localStorage.getItem("currentRestaurant");
       if (!storedRestaurant) {
@@ -38,6 +40,8 @@ const Logs = () => {
       setTotalPages(logsData.totalPages);
     } catch (error) {
       console.error("Failed to fetch data", error);
+    } finally {
+      toast.dismiss(loadingToastId);
     }
   };
 

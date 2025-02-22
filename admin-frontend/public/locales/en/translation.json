@@ -338,5 +338,9 @@
   "cannot_update_to_past_date": "Cannot update to past date",
   "time_cannot_be_empty": "Time cannot be empty",
   "custom_day_added_successfully": "Custom day added successfully",
-  "split_shift_button": "Split Shift"
+  "split_shift_button": "Split Shift",
+  "edit_admin": "Edit Admin",
+  "edit_admin_description": "Edit an admin in the system.",
+  "admin_updated_successfully": "Admin updated successfully",
+  "user_already_admin": "User is already an admin"
 }

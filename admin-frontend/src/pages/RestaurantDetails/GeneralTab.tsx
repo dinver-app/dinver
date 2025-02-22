@@ -3,6 +3,7 @@ import { updateRestaurant } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { useRole } from "../../context/RoleContext";
 
 interface GeneralTabProps {
   restaurant: Restaurant;
@@ -11,6 +12,7 @@ interface GeneralTabProps {
 
 const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const { t } = useTranslation();
+  const { role } = useRole();
   const [formData, setFormData] = useState({
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",
@@ -120,9 +122,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             {t("manage_your_restaurant_general_information")}
           </h3>
         </div>
-        <button onClick={handleSave} className="primary-button">
-          {t("save")}
-        </button>
+        {role !== "helper" && (
+          <button onClick={handleSave} className="primary-button">
+            {t("save")}
+          </button>
+        )}
       </div>
       <div className="h-line"></div>
       <div>
@@ -135,6 +139,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           value={formData.name}
           onChange={handleInputChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          disabled={!(role === "owner" || role === "admin")}
         />
       </div>
       <div className="my-4">
@@ -146,12 +151,16 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             src={formData.thumbnail_url}
             alt="Thumbnail"
             className="mb-2 w-32 h-32 object-cover cursor-pointer"
-            onClick={() => document.getElementById("fileInput")?.click()}
+            onClick={() =>
+              role !== "helper" && document.getElementById("fileInput")?.click()
+            }
           />
         ) : (
           <div
             className="mb-2 w-32 h-32 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer"
-            onClick={() => document.getElementById("fileInput")?.click()}
+            onClick={() =>
+              role !== "helper" && document.getElementById("fileInput")?.click()
+            }
           >
             <span className="text-sm text-gray-500 p-2 text-center">
               {t("click_to_add_image")}
@@ -175,6 +184,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               reader.readAsDataURL(e.target.files[0]);
             }
           }}
+          disabled={!(role === "owner" || role === "admin")}
         />
         <p className="text-sm text-gray-500">
           {t("click_the_image_to_change_it")}
@@ -190,6 +200,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           value={formData.address}
           onChange={handleInputChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          disabled={!(role === "owner" || role === "admin")}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -203,6 +214,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             value={formData.website_url}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {errors.website_url && (
             <p className="text-sm text-red-500">{errors.website_url}</p>
@@ -218,6 +230,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             value={formData.phone}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {errors.phone && (
             <p className="text-sm text-red-500">{errors.phone}</p>
@@ -233,6 +246,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             value={formData.fb_url}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {errors.fb_url && (
             <p className="text-sm text-red-500">{errors.fb_url}</p>
@@ -248,6 +262,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             value={formData.ig_url}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {errors.ig_url && (
             <p className="text-sm text-red-500">{errors.ig_url}</p>
@@ -263,6 +278,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
             value={formData.tt_url}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {errors.tt_url && (
             <p className="text-sm text-red-500">{errors.tt_url}</p>
