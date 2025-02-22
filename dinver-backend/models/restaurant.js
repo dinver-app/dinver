@@ -170,7 +170,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
       customWorkingDays: {
-        type: DataTypes.ARRAY(DataTypes.JSONB),
+        type: DataTypes.JSONB,
         allowNull: true,
       },
     },

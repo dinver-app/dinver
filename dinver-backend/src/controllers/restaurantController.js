@@ -609,37 +609,49 @@ const addCustomWorkingDay = async (req, res) => {
     const { name, date, times } = req.body;
 
     if (!Array.isArray(times) || times.length > 2) {
-      return res
-        .status(400)
-        .json({ error: 'A maximum of two time periods is allowed' });
+      return res.status(400).json({ error: 'maximum_two_time_periods' });
     }
 
     const dateObj = new Date(date);
-    if (dateObj < new Date()) {
-      return res.status(400).json({ error: 'Cannot add a date in the past' });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return res.status(400).json({ error: 'cannot_add_date_in_the_past' });
     }
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found' });
     }
 
-    const customWorkingDays = restaurant.customWorkingDays || [];
-    if (customWorkingDays.some((day) => day.date === date)) {
+    let customWorkingDays = restaurant.customWorkingDays;
+
+    if (
+      !customWorkingDays ||
+      !Array.isArray(customWorkingDays.customWorkingDays)
+    ) {
+      customWorkingDays = { customWorkingDays: [] };
+    }
+
+    if (customWorkingDays.customWorkingDays.some((day) => day.date === date)) {
       return res
         .status(400)
-        .json({ error: 'Custom working day for this date already exists' });
+        .json({ error: 'custom_working_day_for_this_date_already_exists' });
     }
 
-    customWorkingDays.push({ name, date, times });
-    await restaurant.update({ customWorkingDays });
+    customWorkingDays.customWorkingDays.push({ name, date, times });
+    const updatedCustomWorkingDays = {
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    };
+    await restaurant.update({ customWorkingDays: {} });
+    await restaurant.update({ customWorkingDays: updatedCustomWorkingDays });
 
     res.status(201).json({
       message: 'Custom working day added successfully',
-      customWorkingDays,
+      customWorkingDays: customWorkingDays.customWorkingDays,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add custom working day' });
+    res.status(500).json({ error: 'failed_to_add_custom_working_day' });
   }
 };
 
@@ -649,38 +661,45 @@ const updateCustomWorkingDay = async (req, res) => {
     const { name, date, times } = req.body;
 
     if (!Array.isArray(times) || times.length > 2) {
-      return res
-        .status(400)
-        .json({ error: 'A maximum of two time periods is allowed' });
+      return res.status(400).json({ error: 'maximum_two_time_periods' });
     }
 
     const dateObj = new Date(date);
-    if (dateObj < new Date()) {
-      return res
-        .status(400)
-        .json({ error: 'Cannot update to a date in the past' });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dateObj < today) {
+      return res.status(400).json({ error: 'cannot_update_to_past_date' });
     }
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found' });
     }
 
-    const customWorkingDays = restaurant.customWorkingDays || [];
-    const index = customWorkingDays.findIndex((day) => day.date === date);
+    const customWorkingDays = restaurant.customWorkingDays || {
+      customWorkingDays: [],
+    };
+    const index = customWorkingDays.customWorkingDays.findIndex(
+      (day) => day.date === date,
+    );
+
     if (index === -1) {
-      return res.status(404).json({ error: 'Custom working day not found' });
+      return res.status(404).json({ error: 'custom_working_day_not_found' });
     }
 
-    customWorkingDays[index] = { name, date, times };
-    await restaurant.update({ customWorkingDays });
+    customWorkingDays.customWorkingDays[index] = { name, date, times };
+    const updatedCustomWorkingDays = {
+      customWorkingDays: customWorkingDays.customWorkingDays,
+    };
+    await restaurant.update({ customWorkingDays: {} });
+    await restaurant.update({ customWorkingDays: updatedCustomWorkingDays });
 
     res.json({
       message: 'Custom working day updated successfully',
-      customWorkingDays,
+      customWorkingDays: customWorkingDays.customWorkingDays,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update custom working day' });
+    res.status(500).json({ error: 'failed_to_update_custom_working_day' });
   }
 };
 
@@ -691,24 +710,30 @@ const deleteCustomWorkingDay = async (req, res) => {
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
+      return res.status(404).json({ error: 'restaurant_not_found' });
     }
 
-    const customWorkingDays = restaurant.customWorkingDays || [];
-    const updatedDays = customWorkingDays.filter((day) => day.date !== date);
+    const customWorkingDays = restaurant.customWorkingDays || {
+      customWorkingDays: [],
+    };
+    const updatedDays = customWorkingDays.customWorkingDays.filter(
+      (day) => day.date !== date,
+    );
 
-    if (customWorkingDays.length === updatedDays.length) {
-      return res.status(404).json({ error: 'Custom working day not found' });
-    }
+    const updatedCustomWorkingDays = {
+      customWorkingDays: updatedDays,
+    };
 
-    await restaurant.update({ customWorkingDays: updatedDays });
+    await restaurant.update({
+      customWorkingDays: updatedCustomWorkingDays,
+    });
 
     res.json({
       message: 'Custom working day deleted successfully',
       customWorkingDays: updatedDays,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete custom working day' });
+    res.status(500).json({ error: 'failed_to_delete_custom_working_day' });
   }
 };
 
