@@ -6,24 +6,16 @@ import {
   updateCustomWorkingDay,
   deleteCustomWorkingDay,
 } from "../../services/restaurantService";
-import { Restaurant } from "../../interfaces/Interfaces";
+import {
+  CustomWorkingDay,
+  WorkingHoursTabProps,
+} from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
 import { format, isBefore, startOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hr, enUS } from "date-fns/locale";
-
-interface WorkingHoursTabProps {
-  restaurant: Restaurant;
-  onUpdate: (updatedRestaurant: Restaurant) => void;
-}
-
-interface CustomWorkingDay {
-  name: string;
-  date: string;
-  times: { open: string; close: string }[];
-}
 
 const formatTime = (time: string) => {
   if (time.length === 4) {
@@ -55,12 +47,16 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     const initialHours = Array(7).fill({
       open: { day: 0, time: "" },
       close: { day: 0, time: "" },
+      shifts: [],
     });
 
     if (restaurant.opening_hours?.periods) {
       JSON.parse(JSON.stringify(restaurant.opening_hours.periods)).forEach(
         (period: any) => {
-          initialHours[period.open.day] = period;
+          initialHours[period.open.day] = {
+            ...period,
+            shifts: period.shifts || [],
+          };
         }
       );
     } else if (
@@ -125,6 +121,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
         Array(7).fill({
           open: { day: 0, time: "" },
           close: { day: 0, time: "" },
+          shifts: [],
         })
       );
     }
@@ -164,7 +161,8 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const handleTimeChange = (
     dayIndex: number,
     type: "open" | "close",
-    time: string
+    time: string,
+    shiftIndex: number = 0
   ) => {
     setWorkingHours((prev) => {
       const updated = [...prev];
@@ -172,20 +170,40 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
         updated[dayIndex] = {
           open: { day: dayIndex, time: "" },
           close: { day: dayIndex, time: "" },
+          shifts: [],
         };
       }
       const formattedTime = unformatTime(time);
-      updated[dayIndex][type].time = formattedTime;
-
-      if (type === "close") {
-        const openTime = updated[dayIndex].open.time;
-        if (formattedTime < openTime) {
-          updated[dayIndex][type].day = dayIndex + 1;
-        } else {
-          updated[dayIndex][type].day = dayIndex;
+      if (shiftIndex === 0) {
+        updated[dayIndex][type].time = formattedTime;
+        if (type === "close") {
+          const openTime = parseInt(updated[dayIndex].open.time, 10);
+          if (parseInt(formattedTime, 10) < openTime) {
+            updated[dayIndex][type].day = (dayIndex + 1) % 7;
+          } else {
+            updated[dayIndex][type].day = dayIndex;
+          }
         }
       } else {
-        updated[dayIndex][type].day = dayIndex;
+        if (!updated[dayIndex].shifts[shiftIndex - 1]) {
+          updated[dayIndex].shifts[shiftIndex - 1] = {
+            open: { day: dayIndex, time: "" },
+            close: { day: dayIndex, time: "" },
+          };
+        }
+        updated[dayIndex].shifts[shiftIndex - 1][type].time = formattedTime;
+        if (type === "close") {
+          const openTime = parseInt(
+            updated[dayIndex].shifts[shiftIndex - 1].open.time,
+            10
+          );
+          if (parseInt(formattedTime, 10) < openTime) {
+            updated[dayIndex].shifts[shiftIndex - 1][type].day =
+              (dayIndex + 1) % 7;
+          } else {
+            updated[dayIndex].shifts[shiftIndex - 1][type].day = dayIndex;
+          }
+        }
       }
 
       return updated;
@@ -201,6 +219,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     if (!validateCustomDay(newCustomDay)) return;
 
     try {
+      // Determine the times to send based on isSplitShift
       const timesToSend = isSplitShift
         ? newCustomDay.times
         : [newCustomDay.times[0]];
@@ -222,6 +241,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     if (!editCustomDay || !validateCustomDay(editCustomDay)) return;
 
     try {
+      // Determine the times to send based on isSplitShift
       const timesToSend = isSplitShift
         ? editCustomDay.times
         : [editCustomDay.times[0]];
@@ -302,24 +322,84 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       <div className="h-line"></div>
 
       {daysOfWeek.map((day, index) => (
-        <div key={day} className="flex items-center gap-2 my-2">
+        <div key={day} className="flex items-center gap-4 my-2">
           <span className="w-24 text-sm">{day}:</span>
           <input
             type="time"
-            value={formatTime(workingHours[index]?.open.time || "")}
+            value={formatTime(workingHours[index].open.time || "")}
             onChange={(e) => handleTimeChange(index, "open", e.target.value)}
             className="border p-1 rounded"
           />
           <span>-</span>
           <input
             type="time"
-            value={formatTime(workingHours[index]?.close.time || "")}
+            value={formatTime(workingHours[index].close.time || "")}
             onChange={(e) => handleTimeChange(index, "close", e.target.value)}
             className="border p-1 rounded"
           />
+          {workingHours[index].shifts.length > 0 && (
+            <>
+              <span>/</span>
+              <input
+                type="time"
+                value={formatTime(
+                  workingHours[index].shifts[0].open.time || ""
+                )}
+                onChange={(e) =>
+                  handleTimeChange(index, "open", e.target.value, 1)
+                }
+                className="border p-1 rounded"
+              />
+              <span>-</span>
+              <input
+                type="time"
+                value={formatTime(
+                  workingHours[index].shifts[0].close.time || ""
+                )}
+                onChange={(e) =>
+                  handleTimeChange(index, "close", e.target.value, 1)
+                }
+                className="border p-1 rounded"
+              />
+            </>
+          )}
           <button
-            onClick={() => handleClosed(index)}
-            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600 ml-4"
+            onClick={() => {
+              setWorkingHours((prev) => {
+                const updated = [...prev];
+                if (updated[index].shifts.length > 0) {
+                  updated[index].shifts = [];
+                } else {
+                  updated[index].shifts = [
+                    {
+                      open: { day: index, time: "" },
+                      close: { day: index, time: "" },
+                    },
+                  ];
+                }
+                return updated;
+              });
+            }}
+            className={`text-xs px-2 py-1 rounded-md ${
+              workingHours[index].shifts.length > 0
+                ? "text-white bg-gray-500 hover:bg-gray-600"
+                : "text-gray-500 bg-transparent hover:bg-gray-200 border border-gray-300"
+            }`}
+          >
+            {t("split_shift_button")}
+          </button>
+          <button
+            onClick={() => {
+              handleClosed(index);
+              setWorkingHours((prev) => {
+                const updated = [...prev];
+                updated[index].shifts = [];
+                updated[index].open.time = "";
+                updated[index].close.time = "";
+                return updated;
+              });
+            }}
+            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600"
           >
             {t("closed")}
           </button>

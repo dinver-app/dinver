@@ -334,5 +334,6 @@
   "no_custom_working_days": "Trenutno nema prilagođenih radnih dana",
   "cannot_update_to_past_date": "Ne možeš ažurirati na prošli datum",
   "time_cannot_be_empty": "Vrijeme ne može biti prazno",
-  "custom_day_added_successfully": "Prilagođeni dan je uspješno dodan"
+  "custom_day_added_successfully": "Prilagođeni dan je uspješno dodan",
+  "split_shift_button": "Dvokratno"
 }

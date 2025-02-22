@@ -282,7 +282,13 @@ function isRestaurantOpen(openingHours) {
   }
 
   const allTimesEmpty = openingHours.periods.every(
-    (period) => period.open.time === '' && period.close.time === '',
+    (period) =>
+      period.open.time === '' &&
+      period.close.time === '' &&
+      (!period.shifts ||
+        period.shifts.every(
+          (shift) => shift.open.time === '' && shift.close.time === '',
+        )),
   );
 
   if (allTimesEmpty) {
@@ -290,27 +296,35 @@ function isRestaurantOpen(openingHours) {
   }
 
   for (const period of openingHours.periods) {
-    const openDay = period.open.day;
-    const openTime = parseInt(period.open.time, 10);
-    const closeDay = period.close.day;
-    const closeTime = parseInt(period.close.time, 10);
+    const periodsToCheck = [
+      { open: period.open, close: period.close },
+      ...(period.shifts || []),
+    ];
 
-    if (openDay === closeDay) {
-      if (
-        currentDay === openDay &&
-        currentTime >= openTime &&
-        currentTime < closeTime
-      ) {
-        return 'true';
-      }
-    } else {
-      if (
-        (currentDay === openDay && currentTime >= openTime) ||
-        (currentDay === closeDay && currentTime < closeTime) ||
-        (currentDay > openDay && currentDay < closeDay) ||
-        (openDay > closeDay && (currentDay > openDay || currentDay < closeDay))
-      ) {
-        return 'true';
+    for (const { open, close } of periodsToCheck) {
+      const openDay = open.day;
+      const openTime = parseInt(open.time, 10);
+      const closeDay = close.day;
+      const closeTime = parseInt(close.time, 10);
+
+      if (openDay === closeDay) {
+        if (
+          currentDay === openDay &&
+          currentTime >= openTime &&
+          currentTime < closeTime
+        ) {
+          return 'true';
+        }
+      } else {
+        if (
+          (currentDay === openDay && currentTime >= openTime) ||
+          (currentDay === closeDay && currentTime < closeTime) ||
+          (currentDay > openDay && currentDay < closeDay) ||
+          (openDay > closeDay &&
+            (currentDay > openDay || currentDay < closeDay))
+        ) {
+          return 'true';
+        }
       }
     }
   }

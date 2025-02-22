@@ -123,11 +123,13 @@ export interface RestaurantReviews {
   totalReviews: number;
 }
 
+export interface WorkingHoursTabProps {
+  restaurant: Restaurant;
+  onUpdate: (updatedRestaurant: Restaurant) => void;
+}
+
 export interface CustomWorkingDay {
-  id?: string;
+  name: string;
   date: string;
-  times: {
-    start: string;
-    end: string;
-  }[];
+  times: { open: string; close: string }[];
 }
