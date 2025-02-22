@@ -16,6 +16,7 @@ import { format, isBefore, startOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hr, enUS } from "date-fns/locale";
+import { useRole } from "../../context/RoleContext";
 
 const formatTime = (time: string) => {
   if (time.length === 4) {
@@ -30,6 +31,7 @@ const unformatTime = (time: string) => {
 
 const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const { t, i18n } = useTranslation();
+  const { role } = useRole();
 
   const locale = i18n.language === "hr" ? hr : enUS;
 
@@ -327,6 +329,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             value={formatTime(workingHours[index].open.time || "")}
             onChange={(e) => handleTimeChange(index, "open", e.target.value)}
             className="border p-1 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           <span>-</span>
           <input
@@ -334,6 +337,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             value={formatTime(workingHours[index].close.time || "")}
             onChange={(e) => handleTimeChange(index, "close", e.target.value)}
             className="border p-1 rounded"
+            disabled={!(role === "owner" || role === "admin")}
           />
           {workingHours[index].shifts.length > 0 && (
             <>
@@ -347,6 +351,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   handleTimeChange(index, "open", e.target.value, 1)
                 }
                 className="border p-1 rounded"
+                disabled={!(role === "owner" || role === "admin")}
               />
               <span>-</span>
               <input
@@ -358,6 +363,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   handleTimeChange(index, "close", e.target.value, 1)
                 }
                 className="border p-1 rounded"
+                disabled={!(role === "owner" || role === "admin")}
               />
             </>
           )}
@@ -383,6 +389,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                 ? "text-white bg-gray-500 hover:bg-gray-600"
                 : "text-gray-500 bg-transparent hover:bg-gray-200 border border-gray-300"
             }`}
+            disabled={!(role === "owner" || role === "admin")}
           >
             {t("split_shift_button")}
           </button>
@@ -398,6 +405,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               });
             }}
             className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600"
+            disabled={!(role === "owner" || role === "admin")}
           >
             {t("closed")}
           </button>
@@ -406,7 +414,11 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
 
       <div className="flex justify-between items-center">
         <h2 className="section-title text-md">{t("custom_working_days")}</h2>
-        <button onClick={handleOpenAddModal} className="secondary-button">
+        <button
+          onClick={handleOpenAddModal}
+          className="secondary-button"
+          disabled={!(role === "owner" || role === "admin")}
+        >
           {t("add_custom_day")}
         </button>
       </div>
@@ -453,12 +465,14 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   <button
                     onClick={() => handleOpenEditModal(day)}
                     className="text-xs text-blue-500 hover:underline"
+                    disabled={!(role === "owner" || role === "admin")}
                   >
                     {t("edit")}
                   </button>
                   <button
                     onClick={() => handleDeleteCustomDay(index)}
                     className="text-xs text-red-500 hover:underline"
+                    disabled={!(role === "owner" || role === "admin")}
                   >
                     {t("delete")}
                   </button>
@@ -475,6 +489,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              disabled={!(role === "owner" || role === "admin")}
             >
               &times;
             </button>
@@ -503,6 +518,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   setNewCustomDay({ ...newCustomDay, name: e.target.value })
                 }
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                disabled={!(role === "owner" || role === "admin")}
               />
             </div>
             <div className="mb-4">
@@ -522,6 +538,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                 dateFormat="dd.MM.yyyy"
                 locale={locale}
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                disabled={!(role === "owner" || role === "admin")}
               />
             </div>
             <div className="mb-4">
@@ -531,6 +548,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   checked={isSplitShift}
                   onChange={handleSplitShiftChange}
                   className="mr-2"
+                  disabled={!(role === "owner" || role === "admin")}
                 />
                 {t("split_shift")}
               </label>
@@ -552,6 +570,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setNewCustomDay({ ...newCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                   <input
                     type="time"
@@ -562,6 +581,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setNewCustomDay({ ...newCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                 </div>
               </div>
@@ -583,6 +603,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setNewCustomDay({ ...newCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                   <input
                     type="time"
@@ -593,6 +614,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setNewCustomDay({ ...newCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                 </div>
               </div>
@@ -602,10 +624,15 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="secondary-button"
+                disabled={!(role === "owner" || role === "admin")}
               >
                 {t("cancel")}
               </button>
-              <button onClick={handleAddCustomDay} className="primary-button">
+              <button
+                onClick={handleAddCustomDay}
+                className="primary-button"
+                disabled={!(role === "owner" || role === "admin")}
+              >
                 {t("add")}
               </button>
             </div>
@@ -619,6 +646,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             <button
               onClick={() => setIsEditModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              disabled={!(role === "owner" || role === "admin")}
             >
               &times;
             </button>
@@ -649,6 +677,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   setEditCustomDay({ ...editCustomDay, name: e.target.value })
                 }
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                disabled={!(role === "owner" || role === "admin")}
               />
             </div>
             <div className="mb-4">
@@ -668,6 +697,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                 dateFormat="dd.MM.yyyy"
                 locale={locale}
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                disabled={!(role === "owner" || role === "admin")}
               />
             </div>
             <div className="mb-4">
@@ -677,6 +707,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                   checked={isSplitShift}
                   onChange={handleSplitShiftChange}
                   className="mr-2"
+                  disabled={!(role === "owner" || role === "admin")}
                 />
                 {t("split_shift")}
               </label>
@@ -697,6 +728,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                         setEditCustomDay({ ...editCustomDay, times: newTimes });
                       }}
                       className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                      disabled={!(role === "owner" || role === "admin")}
                     />
                     <input
                       type="time"
@@ -707,6 +739,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                         setEditCustomDay({ ...editCustomDay, times: newTimes });
                       }}
                       className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                      disabled={!(role === "owner" || role === "admin")}
                     />
                   </div>
                 </div>
@@ -730,6 +763,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setEditCustomDay({ ...editCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                   <input
                     type="time"
@@ -744,6 +778,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                       setEditCustomDay({ ...editCustomDay, times: newTimes });
                     }}
                     className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                    disabled={!(role === "owner" || role === "admin")}
                   />
                 </div>
               </div>
@@ -753,12 +788,14 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="secondary-button"
+                disabled={!(role === "owner" || role === "admin")}
               >
                 {t("cancel")}
               </button>
               <button
                 onClick={handleUpdateCustomDay}
                 className="primary-button"
+                disabled={!(role === "owner" || role === "admin")}
               >
                 {t("edit")}
               </button>

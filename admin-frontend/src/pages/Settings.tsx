@@ -7,12 +7,13 @@ import {
   getRestaurantAdmins,
   addRestaurantAdmin,
   removeRestaurantAdmin,
-  getUserRole,
 } from "../services/adminService";
 import { canAccess } from "../utils/permissions";
+import { useRole } from "../context/RoleContext";
 
 const Settings = () => {
   const { t } = useTranslation();
+  const { role } = useRole();
   const [activeTab, setActiveTab] = useState("general");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [admins, setAdmins] = useState([]);
@@ -21,7 +22,6 @@ const Settings = () => {
   const [newAdminRole, setNewAdminRole] = useState("admin");
   const [adminToDelete, setAdminToDelete] = useState<any | null>(null);
   const [isDeleteAdminModalOpen, setDeleteAdminModalOpen] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
 
   const currentRestaurant = JSON.parse(
     localStorage.getItem("currentRestaurant") || "{}"
@@ -29,19 +29,6 @@ const Settings = () => {
   const restaurantId = currentRestaurant.id;
 
   useEffect(() => {
-    const fetchUserRole = async () => {
-      const loadingToastId = toast.loading(t("loading"));
-      try {
-        const userRole = await getUserRole(restaurantId);
-        setRole(userRole);
-      } catch (error) {
-        console.error("Failed to fetch user role", error);
-      } finally {
-        toast.dismiss(loadingToastId);
-      }
-    };
-
-    fetchUserRole();
     fetchUserLanguage();
     if (activeTab === "administrators") {
       fetchAdmins();
