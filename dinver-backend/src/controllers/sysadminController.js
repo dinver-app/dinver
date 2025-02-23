@@ -31,12 +31,12 @@ async function sysadminLogin(req, res) {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken_sysadmin', refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
     });
-    res.cookie('token', accessToken, {
+    res.cookie('token_sysadmin', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',

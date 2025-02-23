@@ -49,12 +49,25 @@ async function checkAdmin(req, res, next) {
 }
 
 function authenticateToken(req, res, next) {
-  const token = req.cookies.token;
+  let token, refreshToken;
+
+  if (req.hostname === 'sysadmin.dinver.eu' || req.hostname === 'localhost') {
+    token = req.cookies.token_sysadmin;
+    refreshToken = req.cookies.refreshToken_sysadmin;
+  } else if (
+    req.hostname === 'admin.dinver.eu' ||
+    req.hostname === 'localhost'
+  ) {
+    token = req.cookies.token_admin;
+    refreshToken = req.cookies.refreshToken_admin;
+  } else {
+    return res.status(401).json({ error: 'Access denied' });
+  }
+
   if (!token) return res.status(401).json({ error: 'Access denied' });
 
   jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err) {
-      const refreshToken = req.cookies.refreshToken;
       if (!refreshToken) {
         return res.status(401).json({ error: 'Access denied' });
       }
@@ -73,15 +86,41 @@ function authenticateToken(req, res, next) {
         const { accessToken, refreshToken: newRefreshToken } =
           generateTokens(user);
 
-        res.cookie('refreshToken', newRefreshToken, {
-          httpOnly: true,
-          secure: true,
-        });
+        if (
+          req.hostname === 'sysadmin.dinver.eu' ||
+          req.hostname === 'localhost'
+        ) {
+          res.cookie('refreshToken_sysadmin', newRefreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: 'sysadmin.dinver.eu',
+          });
 
-        res.cookie('token', accessToken, {
-          httpOnly: true,
-          secure: true,
-        });
+          res.cookie('token_sysadmin', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: 'sysadmin.dinver.eu',
+          });
+        } else if (
+          req.hostname === 'admin.dinver.eu' ||
+          req.hostname === 'localhost'
+        ) {
+          res.cookie('refreshToken_admin', newRefreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: 'admin.dinver.eu',
+          });
+
+          res.cookie('token_admin', accessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: 'admin.dinver.eu',
+          });
+        }
 
         req.user = user;
         return next();
