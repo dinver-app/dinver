@@ -9,7 +9,7 @@ export const getAuditLogs = async (
   const actionQuery =
     action && action !== "all" ? `&action=${encodeURIComponent(action)}` : "";
   const response = await apiClient.get(
-    `/api/audit-logs?page=${page}${searchQuery}${actionQuery}`
+    `/api/sysadmin/audit-logs?page=${page}${searchQuery}${actionQuery}`
   );
   return response.data;
 };

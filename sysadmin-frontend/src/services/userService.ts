@@ -27,18 +27,18 @@ export const deleteUser = async (email: string) => {
 };
 
 export const updateUserLanguage = async (language: string) => {
-  const response = await apiClient.put(`api/user/language`, {
+  const response = await apiClient.put(`api/sysadmin/users/language`, {
     language,
   });
   return response.data;
 };
 
 export const getUserLanguage = async () => {
-  const response = await apiClient.get(`api/user/language`);
+  const response = await apiClient.get(`api/sysadmin/users/language`);
   return response.data;
 };
 
 export const getUserById = async (id: string) => {
-  const response = await apiClient.get(`/api/user/${id}`);
+  const response = await apiClient.get(`api/sysadmin/users/${id}`);
   return response.data;
 };

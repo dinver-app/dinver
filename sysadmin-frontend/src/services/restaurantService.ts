@@ -2,7 +2,7 @@ import { apiClient } from "./authService";
 
 export const getRestaurants = async (page: number, search?: string) => {
   const response = await apiClient.get(
-    `api/restaurants?page=${page}${
+    `api/sysadmin/restaurants?page=${page}${
       search ? `&search=${encodeURIComponent(search)}` : ""
     }`
   );
@@ -10,7 +10,7 @@ export const getRestaurants = async (page: number, search?: string) => {
 };
 
 export const getAllRestaurants = async () => {
-  const response = await apiClient.get("/api/restaurants/all");
+  const response = await apiClient.get("/api/sysadmin/restaurants/all");
   return response.data.map((restaurant: any) => ({
     id: restaurant.id,
     name: restaurant.name,
@@ -18,23 +18,26 @@ export const getAllRestaurants = async () => {
 };
 
 export const getRestaurantDetails = async (slug: string) => {
-  const response = await apiClient.get(`api/restaurants/${slug}`);
+  const response = await apiClient.get(`api/sysadmin/restaurants/${slug}`);
   return response.data;
 };
 
 export const createRestaurant = async (restaurant: any) => {
-  const response = await apiClient.post("api/restaurants", restaurant);
+  const response = await apiClient.post("api/sysadmin/restaurants", restaurant);
   return response.data;
 };
 
 export const deleteRestaurant = async (id: string) => {
-  const response = await apiClient.delete(`api/restaurants/${id}`);
+  const response = await apiClient.delete(`api/sysadmin/restaurants/${id}`);
   return response.data;
 };
 
 export const updateRestaurant = async (id: string, updatedData: any) => {
   try {
-    const response = await apiClient.put(`/api/restaurants/${id}`, updatedData);
+    const response = await apiClient.put(
+      `api/sysadmin/restaurants/${id}`,
+      updatedData
+    );
     return response.data;
   } catch (error) {
     console.error("Error updating restaurant:", error);
@@ -43,32 +46,39 @@ export const updateRestaurant = async (id: string, updatedData: any) => {
 };
 
 export const updateWorkingHours = async (id: string, workingHours: any) => {
-  const response = await apiClient.put(`/api/restaurants/${id}/working-hours`, {
-    opening_hours: workingHours,
-  });
+  const response = await apiClient.put(
+    `api/sysadmin/restaurants/${id}/working-hours`,
+    {
+      opening_hours: workingHours,
+    }
+  );
   return response.data;
 };
 
 export const updateFilters = async (id: string, filters: any) => {
   const response = await apiClient.put(
-    `/api/restaurants/${id}/filters`,
+    `api/sysadmin/restaurants/${id}/filters`,
     filters
   );
   return response.data;
 };
 
 export const getAllFoodTypes = async () => {
-  const response = await apiClient.get("api/types/food-types");
+  const response = await apiClient.get("api/sysadmin/types/food-types");
   return response.data;
 };
 
 export const getAllEstablishmentTypes = async () => {
-  const response = await apiClient.get("api/types/establishment-types");
+  const response = await apiClient.get(
+    "api/sysadmin/types/establishment-types"
+  );
   return response.data;
 };
 
 export const getAllEstablishmentPerks = async () => {
-  const response = await apiClient.get("api/types/establishment-perks");
+  const response = await apiClient.get(
+    "api/sysadmin/types/establishment-perks"
+  );
   return response.data;
 };
 
@@ -82,7 +92,7 @@ export const addRestaurantImages = async (
   formData.append("restaurant_slug", restaurant_slug);
 
   const response = await apiClient.post(
-    `/api/restaurants/${id}/images`,
+    `api/sysadmin/restaurants/${id}/images`,
     formData,
     {
       headers: {
@@ -98,16 +108,19 @@ export const deleteRestaurantImage = async (
   restaurant_slug: string,
   imageUrl: string
 ) => {
-  const response = await apiClient.delete(`/api/restaurants/${id}/images`, {
-    data: { imageUrl, restaurant_slug },
-  });
+  const response = await apiClient.delete(
+    `api/sysadmin/restaurants/${id}/images`,
+    {
+      data: { imageUrl, restaurant_slug },
+    }
+  );
   return response.data;
 };
 
 export const updateImageOrder = async (id: string, images: string[]) => {
   try {
     const response = await apiClient.put(
-      `/api/restaurants/${id}/images/order`,
+      `api/sysadmin/restaurants/${id}/images/order`,
       {
         images,
       }
@@ -125,11 +138,14 @@ export const handleClaimStatus = async (
   isClaimed: boolean
 ) => {
   try {
-    const response = await apiClient.post("/api/claim-logs/claim-status", {
-      restaurantId,
-      offer,
-      isClaimed,
-    });
+    const response = await apiClient.post(
+      "/api/sysadmin/claim-logs/claim-status",
+      {
+        restaurantId,
+        offer,
+        isClaimed,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error("Error handling claim status:", error);
@@ -139,7 +155,7 @@ export const handleClaimStatus = async (
 
 export const getAllClaimLogs = async () => {
   try {
-    const response = await apiClient.get("/api/claim-logs");
+    const response = await apiClient.get("/api/sysadmin/claim-logs");
     return response.data;
   } catch (error) {
     console.error("Error fetching claim logs:", error);
@@ -148,20 +164,22 @@ export const getAllClaimLogs = async () => {
 };
 
 export const getRestaurantById = async (id: string) => {
-  const response = await apiClient.get(`/api/restaurants/details/${id}`);
+  const response = await apiClient.get(
+    `api/sysadmin/restaurants/details/${id}`
+  );
   return response.data;
 };
 
 export const getCustomWorkingDays = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/restaurants/${restaurantId}/custom-working-days`
+    `api/sysadmin/restaurants/${restaurantId}/custom-working-days`
   );
   return response.data;
 };
 
 export const getUpcomingCustomWorkingDays = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/restaurants/${restaurantId}/upcoming-custom-working-days`
+    `api/sysadmin/restaurants/${restaurantId}/upcoming-custom-working-days`
   );
   return response.data;
 };
@@ -175,7 +193,7 @@ export const addCustomWorkingDay = async (
   }
 ) => {
   const response = await apiClient.post(
-    `/api/restaurants/${restaurantId}/custom-working-days`,
+    `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
     customDay
   );
   return response.data;
@@ -190,7 +208,7 @@ export const updateCustomWorkingDay = async (
   }
 ) => {
   const response = await apiClient.put(
-    `/api/restaurants/${restaurantId}/custom-working-days`,
+    `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
     customDay
   );
   return response.data;
@@ -201,7 +219,7 @@ export const deleteCustomWorkingDay = async (
   date: string
 ) => {
   const response = await apiClient.delete(
-    `/api/restaurants/${restaurantId}/custom-working-days`,
+    `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
     {
       data: { date },
     }

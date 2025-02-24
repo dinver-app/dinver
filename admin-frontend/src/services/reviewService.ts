@@ -8,7 +8,7 @@ export const getPaginatedReviewsForRestaurant = async (
   sort: string = "date_desc"
 ) => {
   const response = await apiClient.get(
-    `/api/restaurants/${restaurantId}/reviews?page=${page}&limit=${limit}&search=${encodeURIComponent(
+    `/api/admin/restaurant/${restaurantId}/reviews?page=${page}&limit=${limit}&search=${encodeURIComponent(
       search
     )}&sort=${sort}`
   );
