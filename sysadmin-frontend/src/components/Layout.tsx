@@ -21,6 +21,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
+  // Retrieve the user's name from localStorage
+  const userName = localStorage.getItem("sys_user_name") || t("logout");
+  const firstLetter = userName.charAt(0).toUpperCase();
+
   const menuItems = [
     {
       name: t("homepage"),
@@ -141,14 +145,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </ul>
           </nav>
         </div>
-        <div className="py-4 border-t">
-          <button
-            onClick={handleLogout}
-            className="flex items-center p-3 pl-4 w-full text-left text-sm font-light hover:bg-gray-100"
-          >
-            <FaSignOutAlt className="h-4 w-4 mr-3" />
-            {t("logout")}
-          </button>
+        <div className="py-4 border-t flex items-center justify-between px-4">
+          <div className="flex justify-between items-center border border-gray-300 rounded-md p-2 flex-grow select-none">
+            <div className="flex items-center">
+              <div className="flex items-center justify-center bg-gray-200 rounded-full h-8 w-8 mr-2">
+                {firstLetter}
+              </div>
+              <span className="text-sm font-light">{userName}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-sm font-light hover:bg-gray-100 p-2 rounded-md ml-4"
+            >
+              <FaSignOutAlt className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <button
           onClick={() => setSidebarOpen(!isSidebarOpen)}
