@@ -1,6 +1,7 @@
 const { UserSysadmin, UserAdmin, User } = require('../../models');
 const jwt = require('jsonwebtoken');
 const { generateTokens } = require('../../utils/tokenUtils');
+require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 

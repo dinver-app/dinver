@@ -1,7 +1,7 @@
 import { apiClient } from "./authService";
 
 export const getRestaurantDetails = async (slug: string) => {
-  const response = await apiClient.get(`api/restaurants/${slug}`);
+  const response = await apiClient.get(`api/admin/restaurants/${slug}`);
   return response.data;
 };
 

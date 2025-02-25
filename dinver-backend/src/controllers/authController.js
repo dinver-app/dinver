@@ -83,13 +83,111 @@ const checkAuth = async (req, res) => {
         const { accessToken, refreshToken: newRefreshToken } =
           generateTokens(user);
 
-        res.cookie('refreshToken', newRefreshToken, {
+        res.cookie('appRefreshToken', newRefreshToken, {
           httpOnly: true,
           secure: true,
           sameSite: 'none',
         });
 
-        res.cookie('token', accessToken, {
+        res.cookie('appAccessToken', accessToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+
+        return res.json({ isAuthenticated: true, accessToken });
+      } catch (refreshError) {
+        return res.status(403).json({ isAuthenticated: false });
+      }
+    }
+
+    res.json({ isAuthenticated: true });
+  });
+};
+
+const sysadminCheckAuth = async (req, res) => {
+  const token = req.cookies.sysadminAccessToken;
+  if (!token) {
+    return res.status(401).json({ isAuthenticated: false });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+    if (err) {
+      const refreshToken = req.cookies.sysadminRefreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ isAuthenticated: false });
+      }
+
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET,
+        );
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+          return res.status(403).json({ isAuthenticated: false });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } =
+          generateTokens(user);
+
+        res.cookie('sysadminRefreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+
+        res.cookie('sysadminAccessToken', accessToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+
+        return res.json({ isAuthenticated: true, accessToken });
+      } catch (refreshError) {
+        return res.status(403).json({ isAuthenticated: false });
+      }
+    }
+
+    res.json({ isAuthenticated: true });
+  });
+};
+
+const adminCheckAuth = async (req, res) => {
+  const token = req.cookies.adminAccessToken;
+  if (!token) {
+    return res.status(401).json({ isAuthenticated: false });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+    if (err) {
+      const refreshToken = req.cookies.adminRefreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ isAuthenticated: false });
+      }
+
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET,
+        );
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+          return res.status(403).json({ isAuthenticated: false });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } =
+          generateTokens(user);
+
+        res.cookie('adminRefreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+
+        res.cookie('adminAccessToken', accessToken, {
           httpOnly: true,
           secure: true,
           sameSite: 'none',
@@ -117,11 +215,14 @@ async function refreshToken(req, res) {
     if (!user) return res.status(403).json({ error: 'Invalid refresh token' });
 
     const { accessToken, newRefreshToken } = generateTokens(user);
-    res.cookie('refreshToken', newRefreshToken, {
+    res.cookie('sysadminRefreshToken', newRefreshToken, {
       httpOnly: true,
       secure: true,
     });
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('sysadminAccessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+    });
 
     res.json({ accessToken });
   } catch (error) {
@@ -174,4 +275,6 @@ module.exports = {
   logout,
   checkAuth,
   refreshToken,
+  sysadminCheckAuth,
+  adminCheckAuth,
 };

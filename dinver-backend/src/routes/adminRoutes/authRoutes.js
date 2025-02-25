@@ -8,6 +8,6 @@ router.post('/auth/login', adminController.adminLogin);
 
 router.get('/auth/logout', authController.logout);
 
-router.get('/auth/check-auth', authController.checkAuth);
+router.get('/auth/check-auth', authController.adminCheckAuth);
 
 module.exports = router;

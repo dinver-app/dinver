@@ -1,20 +1,24 @@
 const express = require('express');
-const adminRoutes = require('./sysadminRoutes/adminRoutes');
-const auditLogRoutes = require('./sysadminRoutes/auditLogRoutes');
 const authRoutes = require('./sysadminRoutes/authRoutes');
+const sysadminRoutes = require('./sysadminRoutes/syadminRoutes');
+const auditLogRoutes = require('./sysadminRoutes/auditLogRoutes');
 const menuRoutes = require('./sysadminRoutes/menuRoutes');
 const restaurantRoutes = require('./sysadminRoutes/restaurantRoutes');
 const typeRoutes = require('./sysadminRoutes/typeRoutes');
 const userRoutes = require('./sysadminRoutes/userRoutes');
+const claimLogRoutes = require('./sysadminRoutes/claimLogRoutes');
+const backupRoutes = require('./sysadminRoutes/backupRoutes');
 
 const router = express.Router();
 
-router.use(adminRoutes);
+router.use(sysadminRoutes);
 router.use(auditLogRoutes);
 router.use(authRoutes);
 router.use(menuRoutes);
 router.use(restaurantRoutes);
 router.use(typeRoutes);
 router.use(userRoutes);
+router.use(claimLogRoutes);
+router.use(backupRoutes);
 
 module.exports = router;
