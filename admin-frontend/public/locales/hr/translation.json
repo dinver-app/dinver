@@ -340,5 +340,6 @@
   "edit_admin_description": "Uredi administratora u sustavu.",
   "admin_updated_successfully": "Administrator je uspješno ažuriran",
   "user_already_admin": "Korisnik već je administrator",
-  "date_cannot_be_empty": "Datum ne može biti prazan"
+  "date_cannot_be_empty": "Datum ne može biti prazan",
+  "welcome_name": "Dobrodošao/la,"
 }
