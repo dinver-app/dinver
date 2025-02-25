@@ -22,8 +22,14 @@ async function adminLogin(req, res) {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('adminRefreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+    });
+    res.cookie('adminAccessToken', accessToken, {
+      httpOnly: true,
+      secure: true,
+    });
 
     res
       .status(200)

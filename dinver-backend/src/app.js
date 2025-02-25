@@ -1,18 +1,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const authRoutes = require('./routes/authRoutes');
-const restaurantRoutes = require('./routes/restaurantRoutes');
 const swaggerUi = require('swagger-ui-express');
 const session = require('express-session');
 const passport = require('passport');
-const menuRoutes = require('./routes/menuRoutes');
-const sysadminRoutes = require('./routes/sysadminRoutes');
+
 const adminRoutes = require('./routes/adminRoutes');
-const typeRoutes = require('./routes/typeRoutes');
-const userRoutes = require('./routes/userRoutes');
-const auditLogRoutes = require('./routes/auditLogRoutes');
-const backupRoutes = require('./routes/backupRoutes');
-const claimLogRoutes = require('./routes/claimLogRoutes');
+const sysadminRoutes = require('./routes/sysadminRoutes');
+
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -72,16 +66,8 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/restaurants', restaurantRoutes);
-app.use('/api/types', typeRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/audit-logs', auditLogRoutes);
-app.use('/api', backupRoutes);
-app.use('/api/claim-logs', claimLogRoutes);
+app.use('/api/sysadmin', sysadminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');

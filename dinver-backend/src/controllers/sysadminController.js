@@ -31,12 +31,12 @@ async function sysadminLogin(req, res) {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('sysadminRefreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
     });
-    res.cookie('token', accessToken, {
+    res.cookie('sysadminAccessToken', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -46,58 +46,6 @@ async function sysadminLogin(req, res) {
       .json({ message: 'Login successful', language: user.language });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
-  }
-}
-
-// Create a new organization
-async function createOrganization(req, res) {
-  try {
-    const { name } = req.body;
-    const organization = await Organization.create({ name });
-    res.status(201).json(organization);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: 'An error occurred while creating the organization' });
-  }
-}
-
-// Update an organization
-async function updateOrganization(req, res) {
-  try {
-    const { id } = req.params;
-    const { name } = req.body;
-    const organization = await Organization.findByPk(id);
-
-    if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
-
-    await organization.update({ name });
-    res.json(organization);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: 'An error occurred while updating the organization' });
-  }
-}
-
-// Delete an organization
-async function deleteOrganization(req, res) {
-  try {
-    const { id } = req.params;
-    const organization = await Organization.findByPk(id);
-
-    if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
-
-    await organization.destroy();
-    res.status(204).send();
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: 'An error occurred while deleting the organization' });
   }
 }
 
@@ -154,73 +102,6 @@ async function deleteRestaurant(req, res) {
     res
       .status(500)
       .json({ error: 'An error occurred while deleting the restaurant' });
-  }
-}
-
-// Add a user to an organization
-async function addUserToOrganization(req, res) {
-  try {
-    const { userId, organizationId } = req.body;
-    const userOrganization = await UserOrganization.create({
-      userId,
-      organizationId,
-    });
-    res.status(201).json(userOrganization);
-  } catch (error) {
-    res.status(500).json({
-      error: 'An error occurred while adding the user to the organization',
-    });
-  }
-}
-
-// Remove a user from an organization
-async function removeUserFromOrganization(req, res) {
-  try {
-    const { userId, organizationId } = req.body;
-    const userOrganization = await UserOrganization.findOne({
-      where: { userId, organizationId },
-    });
-
-    if (!userOrganization) {
-      return res.status(404).json({ error: 'User not found in organization' });
-    }
-
-    await userOrganization.destroy();
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).json({
-      error: 'An error occurred while removing the user from the organization',
-    });
-  }
-}
-
-// Add a restaurant to an organization
-async function addRestaurantToOrganization(req, res) {
-  try {
-    const { restaurantId, organizationId } = req.body;
-
-    // Check if the organization exists
-    const organization = await Organization.findByPk(organizationId);
-    if (!organization) {
-      return res.status(404).json({ error: 'Organization not found' });
-    }
-
-    // Check if the restaurant exists
-    const restaurant = await Restaurant.findByPk(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    // Associate the restaurant with the organization
-    await restaurant.update({ organizationId });
-    res
-      .status(200)
-      .json({ message: 'Restaurant added to organization successfully' });
-  } catch (error) {
-    res.status(500).json({
-      error:
-        'An error occurred while adding the restaurant to the organization',
-    });
   }
 }
 
@@ -662,15 +543,9 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
 
 module.exports = {
   sysadminLogin,
-  createOrganization,
-  updateOrganization,
-  deleteOrganization,
   createRestaurant,
   updateRestaurant,
   deleteRestaurant,
-  addUserToOrganization,
-  removeUserFromOrganization,
-  addRestaurantToOrganization,
   listSysadmins,
   addSysadmin,
   removeSysadmin,

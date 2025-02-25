@@ -10,7 +10,7 @@ export const getAuditLogsForRestaurant = async (
   const actionQuery =
     action && action !== "all" ? `&action=${encodeURIComponent(action)}` : "";
   const response = await apiClient.get(
-    `/api/audit-logs/restaurant/${restaurantId}?page=${page}${searchQuery}${actionQuery}`
+    `/api/admin/audit-logs/restaurant/${restaurantId}?page=${page}${searchQuery}${actionQuery}`
   );
   return response.data;
 };

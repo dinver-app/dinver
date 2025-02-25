@@ -1,54 +1,20 @@
 const express = require('express');
-const adminController = require('../controllers/adminController');
-const {
-  authenticateToken,
-  checkAdmin,
-} = require('../middleware/roleMiddleware');
+const adminRoutes = require('./adminRoutes/adminRoutes');
+const auditLogRoutes = require('./adminRoutes/auditLogRoutes');
+const authRoutes = require('./adminRoutes/authRoutes');
+const menuRoutes = require('./adminRoutes/menuRoutes');
+const restaurantRoutes = require('./adminRoutes/restaurantRoutes');
+const typeRoutes = require('./adminRoutes/typeRoutes');
+const userRoutes = require('./adminRoutes/userRoutes');
 
 const router = express.Router();
 
-router.post('/login', adminController.adminLogin);
-
-router.get(
-  '/admin-restaurants',
-  authenticateToken,
-  checkAdmin,
-  adminController.getAdminRestaurants,
-);
-
-router.get(
-  '/restaurants/:restaurantId/admins',
-  authenticateToken,
-  checkAdmin,
-  adminController.getRestaurantAdmins,
-);
-
-router.post(
-  '/restaurants/:restaurantId/admins',
-  authenticateToken,
-  checkAdmin,
-  adminController.addRestaurantAdmin,
-);
-
-router.put(
-  '/restaurants/:restaurantId/admins/:userId',
-  authenticateToken,
-  checkAdmin,
-  adminController.updateRestaurantAdmin,
-);
-
-router.delete(
-  '/restaurants/:restaurantId/admins/:userId',
-  authenticateToken,
-  checkAdmin,
-  adminController.removeRestaurantAdmin,
-);
-
-router.get(
-  '/role/:restaurantId',
-  authenticateToken,
-  checkAdmin,
-  adminController.getUserRole,
-);
+router.use(adminRoutes);
+router.use(auditLogRoutes);
+router.use(authRoutes);
+router.use(menuRoutes);
+router.use(restaurantRoutes);
+router.use(typeRoutes);
+router.use(userRoutes);
 
 module.exports = router;
