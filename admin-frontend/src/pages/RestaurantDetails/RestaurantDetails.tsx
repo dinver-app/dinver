@@ -25,8 +25,9 @@ const RestaurantDetails = () => {
           toast.error("Restaurant slug is required");
           return;
         }
+        const loadingToastId = toast.loading(t("loading"));
         const data = await getRestaurantDetails(slug);
-
+        toast.dismiss(loadingToastId);
         setRestaurant(data);
       } catch (error) {
         console.error("Failed to fetch restaurant details", error);
@@ -36,10 +37,6 @@ const RestaurantDetails = () => {
 
     fetchRestaurantDetails();
   }, [slug]);
-
-  if (!restaurant) {
-    return <div>{t("loading")}</div>;
-  }
 
   const handleUpdate = (updatedRestaurant: Restaurant) => {
     setRestaurant(updatedRestaurant);
@@ -62,28 +59,30 @@ const RestaurantDetails = () => {
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
-      case "General":
-        return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
-      case "Menu":
-        return <MenuTab restaurantId={restaurant.id} />;
-      case "Filters":
-        return <FiltersTab restaurant={restaurant} onUpdate={handleUpdate} />;
-      case "Working Hours":
-        return (
-          <WorkingHoursTab restaurant={restaurant} onUpdate={handleUpdate} />
-        );
-      case "Images":
-        return <Images restaurant={restaurant} onUpdate={handleUpdate} />;
-      default:
-        return null;
+    if (restaurant) {
+      switch (activeTab) {
+        case "General":
+          return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
+        case "Menu":
+          return <MenuTab restaurantId={restaurant.id} />;
+        case "Filters":
+          return <FiltersTab restaurant={restaurant} onUpdate={handleUpdate} />;
+        case "Working Hours":
+          return (
+            <WorkingHoursTab restaurant={restaurant} onUpdate={handleUpdate} />
+          );
+        case "Images":
+          return <Images restaurant={restaurant} onUpdate={handleUpdate} />;
+        default:
+          return null;
+      }
     }
   };
 
   return (
     <div className="mx-auto p-4">
       <div className="flex justify-between items-center mb-4 gap-4">
-        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
+        <h1 className="text-2xl font-bold">{restaurant?.name}</h1>
       </div>
       <div className="h-line mb-4"></div>
       <div className="tabs flex mb-4">

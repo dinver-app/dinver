@@ -310,7 +310,7 @@
   "manage_your_restaurant_administrators": "Manage your restaurant administrators.",
   "access_denied_admin_only": "Access denied. Admin only.",
   "insufficient_role_privileges": "Insufficient role privileges.",
-  "your_favorite_dining_solution": "Your favorite dining solution",
+  "your_favorite_dining_solution": "\"Your favorite dining solution\"",
   "loading_data": "Loading data",
   "failed_to_fetch_data": "Failed to fetch data",
   "maximum_two_time_periods": "A maximum of two time periods is allowed",
