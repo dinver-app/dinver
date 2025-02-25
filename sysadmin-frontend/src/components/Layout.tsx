@@ -21,9 +21,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
-  // Retrieve the user's name from localStorage
-  const userName = localStorage.getItem("sys_user_name") || t("logout");
-  const firstLetter = userName.charAt(0).toUpperCase();
+  const confirmLogout = () => {
+    setModalOpen(false);
+    navigate("/login");
+  };
+
+  const userName = localStorage.getItem("sys_user_name");
+  if (!userName) {
+    confirmLogout();
+  }
+  const firstLetter = userName?.charAt(0).toUpperCase();
 
   const menuItems = [
     {
@@ -73,11 +80,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const handleLogout = () => {
     setModalOpen(true);
-  };
-
-  const confirmLogout = () => {
-    setModalOpen(false);
-    navigate("/login");
   };
 
   return (
