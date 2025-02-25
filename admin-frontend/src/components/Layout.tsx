@@ -30,6 +30,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(
     null
   );
+  const [userName, setUserName] = useState<string | null>(null);
   const { role } = useRole();
 
   const confirmLogout = () => {
@@ -37,11 +38,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     navigate("/login");
   };
 
-  const userName = localStorage.getItem("admin_user_name");
-  if (!userName) {
-    confirmLogout();
-  }
-  const firstLetter = userName?.charAt(0).toUpperCase();
+  useEffect(() => {
+    const userName = localStorage.getItem("admin_user_name");
+    if (!userName) {
+      confirmLogout();
+    }
+    setUserName(userName);
+  }, []);
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -229,7 +232,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex justify-between items-center border border-gray-300 rounded-md p-2 flex-grow select-none">
             <div className="flex items-center">
               <div className="flex items-center justify-center bg-gray-200 rounded-full h-8 w-8 mr-2">
-                {firstLetter}
+                {userName?.charAt(0).toUpperCase()}
               </div>
               <span className="text-sm font-light">{userName}</span>
             </div>
