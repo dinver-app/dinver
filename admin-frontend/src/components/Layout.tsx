@@ -32,6 +32,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   );
   const { role } = useRole();
 
+  const confirmLogout = () => {
+    setModalOpen(false);
+    navigate("/login");
+  };
+
+  const userName = localStorage.getItem("admin_user_name");
+  if (!userName) {
+    confirmLogout();
+  }
+  const firstLetter = userName?.charAt(0).toUpperCase();
+
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
@@ -132,15 +143,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const handleLogout = () => {
     setModalOpen(true);
   };
-
-  const confirmLogout = () => {
-    setModalOpen(false);
-    navigate("/login");
-  };
-
-  // Retrieve the user's name from localStorage
-  const userName = localStorage.getItem("admin_user_name") || t("logout");
-  const firstLetter = userName.charAt(0).toUpperCase();
 
   return (
     <div className="flex">
