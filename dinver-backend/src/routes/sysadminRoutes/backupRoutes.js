@@ -4,33 +4,33 @@ const {
   restoreBackup,
   listBackups,
   downloadBackup,
-} = require('../controllers/backupController');
+} = require('../../controllers/backupController');
 const {
-  authenticateToken,
+  sysadminAuthenticateToken,
   checkSysadmin,
-} = require('../middleware/roleMiddleware');
+} = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
 router.post(
   '/backup/:restaurantId',
-  authenticateToken,
+  sysadminAuthenticateToken,
   checkSysadmin,
   createBackup,
 );
 
 router.post(
   '/restore/:restaurantId/:backupDate',
-  authenticateToken,
+  sysadminAuthenticateToken,
   checkSysadmin,
   restoreBackup,
 );
 
-router.get('/backups', authenticateToken, checkSysadmin, listBackups);
+router.get('/backups', sysadminAuthenticateToken, checkSysadmin, listBackups);
 
 router.get(
   '/download/:restaurantId/:backupDate',
-  authenticateToken,
+  sysadminAuthenticateToken,
   checkSysadmin,
   downloadBackup,
 );

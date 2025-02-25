@@ -35,7 +35,7 @@ apiClient.interceptors.response.use(
 
 export const login = async (email: string, password: string) => {
   try {
-    const response = await apiClient.post("/api/sysadmin/login", {
+    const response = await apiClient.post("/api/sysadmin/auth/login", {
       email,
       password,
     });
@@ -46,11 +46,11 @@ export const login = async (email: string, password: string) => {
 };
 
 export const logout = async () => {
-  const response = await apiClient.get("/api/auth/logout");
+  const response = await apiClient.get("/api/sysadmin/auth/logout");
   return response.data;
 };
 
 export const checkAuth = async () => {
-  const response = await apiClient.get("/api/auth/check-auth");
+  const response = await apiClient.get("/api/sysadmin/auth/check-auth");
   return response.data;
 };

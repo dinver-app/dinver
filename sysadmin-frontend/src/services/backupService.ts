@@ -2,7 +2,9 @@ import { apiClient } from "./authService";
 
 export const createBackup = async (restaurantId: string) => {
   try {
-    const response = await apiClient.post(`/api/backup/${restaurantId}`);
+    const response = await apiClient.post(
+      `/api/sysadmin/backup/${restaurantId}`
+    );
     return response.data;
   } catch (error) {
     console.error("Error creating backup:", error);
@@ -16,7 +18,7 @@ export const restoreBackup = async (
 ) => {
   try {
     const response = await apiClient.post(
-      `/api/restore/${restaurantId}/${backupDate}`
+      `/api/sysadmin/restore/${restaurantId}/${backupDate}`
     );
     return response.data;
   } catch (error) {
@@ -28,7 +30,7 @@ export const restoreBackup = async (
 export const listBackups = async (search: string = "") => {
   try {
     const searchQuery = search ? `?search=${encodeURIComponent(search)}` : "";
-    const response = await apiClient.get(`/api/backups${searchQuery}`);
+    const response = await apiClient.get(`/api/sysadmin/backups${searchQuery}`);
     return response.data;
   } catch (error) {
     console.error("Error listing backups:", error);
@@ -42,7 +44,7 @@ export const downloadBackup = async (
 ) => {
   try {
     const response = await apiClient.get(
-      `/api/download/${restaurantId}/${backupDate}`,
+      `/api/sysadmin/download/${restaurantId}/${backupDate}`,
       { responseType: "blob" }
     );
     return response.data;
