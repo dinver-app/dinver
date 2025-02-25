@@ -8,6 +8,7 @@ const Home = () => {
   const { t } = useTranslation();
   const { setRole } = useRole();
   const [isLoading, setIsLoading] = useState(true);
+  const userName = localStorage.getItem("admin_user_name");
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -34,7 +35,11 @@ const Home = () => {
   return (
     <div className="w-full h-screen flex flex-col justify-between pb-6">
       <div className="flex flex-col items-center mt-36">
-        <h1 className="text-3xl font-bold mb-4">{t("welcome_message")}</h1>
+        <h1 className="text-3xl font-bold mb-4">
+          {userName
+            ? t("welcome_name") + " " + userName.split(" ")[0]
+            : t("welcome_message")}
+        </h1>
         <p className="text-lg">{t("homepage_description")}</p>
       </div>
       <div className="flex flex-col items-center mb-8">
