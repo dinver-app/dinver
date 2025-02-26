@@ -13,6 +13,8 @@ const Entities = {
   },
   MENU_ITEM: 'menu_item',
   MENU_CATEGORY: 'menu_category',
+  DRINK_ITEM: 'drink_item',
+  DRINK_CATEGORY: 'drink_category',
   WORKING_HOURS: 'working_hours',
   IMAGES: 'images',
   FILTERS: {
