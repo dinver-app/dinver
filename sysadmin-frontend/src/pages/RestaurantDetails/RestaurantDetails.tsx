@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Restaurant } from "../../interfaces/Interfaces";
 import GeneralTab from "./GeneralTab";
 import MenuTab from "./MenuTab";
+import DrinkTab from "./DrinkTab";
 import WorkingHoursTab from "./WorkingHoursTab";
 import FiltersTab from "./FiltersTab";
 import { useTranslation } from "react-i18next";
@@ -68,6 +69,8 @@ const RestaurantDetails = () => {
         return <GeneralTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Menu":
         return <MenuTab restaurantId={restaurant.id} />;
+      case "Drinks":
+        return <DrinkTab restaurantId={restaurant.id} />;
       case "Filters":
         return <FiltersTab restaurant={restaurant} onUpdate={handleUpdate} />;
       case "Working Hours":
@@ -111,6 +114,14 @@ const RestaurantDetails = () => {
           onClick={() => handleTabChange("Menu")}
         >
           {t("menu")}
+        </button>
+        <button
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "Drinks" ? "border-b-2 border-black" : "text-gray-500"
+          }`}
+          onClick={() => handleTabChange("Drinks")}
+        >
+          {t("drinks")}
         </button>
         <button
           className={`py-2 px-4 border-b-2 text-sm ${

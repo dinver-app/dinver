@@ -6,7 +6,9 @@ const Analytics = () => {
         <h3 className="page-subtitle">Manage your analytics here.</h3>
       </div>
       <div className="h-line mb-4"></div>
-      <div className="flex justify-between items-center mb-4">TBD</div>
+      <div className="flex justify-between items-center mb-4">
+        Work in progress. Please check back later!
+      </div>
     </div>
   );
 };
