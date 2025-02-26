@@ -1,4 +1,6 @@
 const { DrinkItem, DrinkCategory } = require('../../models');
+const { uploadToS3 } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 
 // Get all drink items for a specific restaurant
@@ -38,6 +40,13 @@ const getDrinkCategories = async (req, res) => {
 const createDrinkItem = async (req, res) => {
   try {
     const { name, price, categoryId, restaurantId, description } = req.body;
+    const file = req.file;
+
+    let imageUrl = null;
+    if (file) {
+      const folder = 'drink_items';
+      imageUrl = await uploadToS3(file, folder);
+    }
 
     const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
     const drinkItem = await DrinkItem.create({
@@ -45,6 +54,7 @@ const createDrinkItem = async (req, res) => {
       price: formattedPrice,
       restaurantId,
       categoryId,
+      imageUrl,
       description,
     });
 
@@ -68,7 +78,8 @@ const createDrinkItem = async (req, res) => {
 const updateDrinkItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, categoryId, description } = req.body;
+    const { name, price, categoryId, removeImage, description } = req.body;
+    const file = req.file;
 
     const drinkItem = await DrinkItem.findByPk(id);
     if (!drinkItem) {
@@ -77,11 +88,30 @@ const updateDrinkItem = async (req, res) => {
 
     const oldData = { ...drinkItem.get() };
 
+    let imageUrl = drinkItem.imageUrl;
+
+    // Delete the old image if a new one is uploaded
+    if (file) {
+      if (drinkItem.imageUrl) {
+        const oldKey = drinkItem.imageUrl.split('/').pop();
+        await deleteFromS3(`drink_items/${oldKey}`);
+      }
+      const folder = 'drink_items';
+      imageUrl = await uploadToS3(file, folder);
+    } else if (removeImage === 'true') {
+      if (drinkItem.imageUrl) {
+        const oldKey = drinkItem.imageUrl.split('/').pop();
+        await deleteFromS3(`drink_items/${oldKey}`);
+      }
+      imageUrl = null;
+    }
+
     const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
     const updatedDrinkItem = await drinkItem.update({
       name,
       price: formattedPrice,
       categoryId,
+      imageUrl,
       description,
     });
 
@@ -95,7 +125,7 @@ const updateDrinkItem = async (req, res) => {
       changes: { old: oldData, new: updatedDrinkItem.get() },
     });
 
-    res.json(drinkItem);
+    res.json(updatedDrinkItem);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update drink item' });
   }

@@ -4,9 +4,10 @@ const {
   checkAdmin,
   adminAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
+const multer = require('multer');
 
 const router = express.Router();
-
+const upload = multer();
 router.get(
   '/drinks/categories/:restaurantId',
   adminAuthenticateToken,
@@ -46,6 +47,7 @@ router.post(
   '/drinks/drinkItems',
   adminAuthenticateToken,
   checkAdmin,
+  upload.single('imageFile'),
   drinkController.createDrinkItem,
 );
 
@@ -53,6 +55,7 @@ router.put(
   '/drinks/drinkItems/:id',
   adminAuthenticateToken,
   checkAdmin,
+  upload.single('imageFile'),
   drinkController.updateDrinkItem,
 );
 

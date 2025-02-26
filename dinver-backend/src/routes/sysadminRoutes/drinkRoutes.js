@@ -4,8 +4,10 @@ const {
   checkSysadmin,
   sysadminAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
+const multer = require('multer');
 
 const router = express.Router();
+const upload = multer();
 
 router.post(
   '/drinks/categories',
@@ -32,6 +34,7 @@ router.post(
   '/drinks/drinkItems',
   sysadminAuthenticateToken,
   checkSysadmin,
+  upload.single('imageFile'),
   drinkController.createDrinkItem,
 );
 
@@ -39,6 +42,7 @@ router.put(
   '/drinks/drinkItems/:id',
   sysadminAuthenticateToken,
   checkSysadmin,
+  upload.single('imageFile'),
   drinkController.updateDrinkItem,
 );
 
