@@ -1,5 +1,6 @@
 import { apiClient } from "./authService";
 
+// Initialize Google
 export const getAdminRestaurants = async () => {
   const response = await apiClient.get("/api/admin/admin-restaurants");
   return response.data;
@@ -47,4 +48,23 @@ export const updateRestaurantAdmin = async (
     adminData
   );
   return response.data;
+};
+
+export const translateText = async (text: string, targetLanguage: string) => {
+  const apiKey = import.meta.env.GOOGLE_TRANSLATE_API_KEY;
+  const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      q: text,
+      target: targetLanguage,
+    }),
+  });
+
+  const data = await response.json();
+  return data.data.translations[0].translatedText;
 };
