@@ -367,5 +367,6 @@
   "drink_item_created": "Drink item created successfully",
   "drink_item_updated": "Drink item updated successfully",
   "drink_item_deleted": "Drink item deleted successfully",
-  "update_drink_item": "Update Drink Item"
+  "update_drink_item": "Update Drink Item",
+  "place": "Place"
 }

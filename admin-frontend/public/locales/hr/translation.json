@@ -364,5 +364,6 @@
   "drink_item_updated": "Stavka cjenika pića ažurirana uspješno",
   "drink_item_deleted": "Stavka cjenika pića uklonjena uspješno",
   "edit_drink_item_description": "Uredi stavku cjenika pića u restoranu.",
-  "update_drink_item": "Ažuriraj stavku cjenika pića"
+  "update_drink_item": "Ažuriraj stavku cjenika pića",
+  "place": "Mjesto"
 }
