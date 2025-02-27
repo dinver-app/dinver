@@ -16,11 +16,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     thumbnail: restaurant.thumbnail || "",
     thumbnail_url: restaurant.thumbnail_url || "",
     address: restaurant.address || "",
+    place: restaurant.place || "",
     website_url: restaurant.website_url || "",
     fb_url: restaurant.fb_url || "",
     ig_url: restaurant.ig_url || "",
     tt_url: restaurant.tt_url || "",
     phone: restaurant.phone || "",
+    email: restaurant.email || "",
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -89,6 +91,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         errors.tt_url === "" ? formData.tt_url : ""
       );
       formDataToSend.append("phone", errors.phone === "" ? formData.phone : "");
+      formDataToSend.append("email", formData.email);
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -180,17 +183,31 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           {t("click_the_image_to_change_it")}
         </p>
       </div>
-      <div className="my-4">
-        <label className="block text-sm font-medium text-gray-700">
-          {t("address")}
-        </label>
-        <input
-          type="text"
-          name="address"
-          value={formData.address}
-          onChange={handleInputChange}
-          className="mt-1 block w-full p-2 border border-gray-300 rounded"
-        />
+      <div className="my-4 grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            {t("address")}
+          </label>
+          <input
+            type="text"
+            name="address"
+            value={formData.address}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            {t("place")}
+          </label>
+          <input
+            type="text"
+            name="place"
+            value={formData.place}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -222,6 +239,18 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           {errors.phone && (
             <p className="text-sm text-red-500">{errors.phone}</p>
           )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            {t("email")}
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            className="mt-1 block w-full p-2 border border-gray-300 rounded"
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">

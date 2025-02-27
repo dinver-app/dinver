@@ -26,12 +26,7 @@ router.get(
 router.get('/restaurants/:slug', restaurantController.getRestaurantDetails);
 
 router.put(
-  '/restaurants/:id',
-  (req, res, next) => {
-    console.log(req.body);
-    console.log(req.file);
-    next();
-  },
+  '/restaurants/details/:id',
   upload.single('thumbnail'),
   sysadminAuthenticateToken,
   checkSysadmin,

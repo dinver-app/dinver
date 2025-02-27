@@ -43,6 +43,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      place: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       working_hours_info: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -153,6 +157,10 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      email: {
         type: DataTypes.STRING,
         allowNull: true,
       },

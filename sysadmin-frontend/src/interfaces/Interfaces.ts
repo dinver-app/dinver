@@ -57,6 +57,8 @@ export interface Restaurant {
   phone?: string;
   images?: string[];
   reviewRating?: number;
+  email?: string;
+  place?: string;
 }
 
 export interface FoodType {

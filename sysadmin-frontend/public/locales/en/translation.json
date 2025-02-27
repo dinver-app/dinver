@@ -363,5 +363,6 @@
   "drink_item_updated": "Drink item updated successfully",
   "drink_item_deleted": "Drink item deleted successfully",
   "edit_drink_item_description": "Edit a drink item in the system.",
-  "update_drink_item": "Update Drink Item"
+  "update_drink_item": "Update Drink Item",
+  "place": "Place"
 }

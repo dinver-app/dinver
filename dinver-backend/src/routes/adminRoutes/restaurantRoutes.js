@@ -24,12 +24,7 @@ router.get(
 );
 
 router.put(
-  '/restaurants/:id',
-  (req, res, next) => {
-    console.log(req.body);
-    console.log(req.file);
-    next();
-  },
+  '/restaurants/details/:id',
   upload.single('thumbnail'),
   adminAuthenticateToken,
   checkAdmin,
