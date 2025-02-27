@@ -48,6 +48,8 @@ export interface Restaurant {
   tt_url?: string;
   phone?: string;
   images?: string[];
+  place?: string;
+  email?: string;
 }
 
 export interface FoodType {
