@@ -401,7 +401,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                 return updated;
               });
             }}
-            className="text-xs text-white bg-red-500 px-2 py-1 rounded-md hover:bg-red-600"
+            className="text-xs border border-red-600 text-red-600 bg-transparent px-2 py-1 rounded-md hover:bg-red-700 hover:bg-opacity-10"
           >
             {t("closed")}
           </button>
@@ -456,7 +456,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                 <div className="flex space-x-2 mt-2">
                   <button
                     onClick={() => handleOpenEditModal(day)}
-                    className="text-xs text-blue-500 hover:underline"
+                    className="text-xs text-gray-500 hover:underline"
                   >
                     {t("edit")}
                   </button>
