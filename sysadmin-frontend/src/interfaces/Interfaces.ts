@@ -149,7 +149,7 @@ export interface CustomWorkingDay {
 }
 
 export interface Allergen {
-  id: string;
+  id: number;
   name_en: string;
   name_hr: string;
   icon: string;

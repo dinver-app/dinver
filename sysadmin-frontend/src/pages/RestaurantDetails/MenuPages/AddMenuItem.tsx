@@ -24,7 +24,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   const [itemPrice, setItemPrice] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
-  const [selectedAllergenIds, setSelectedAllergenIds] = useState<string[]>([]);
+  const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>([]);
   const [allergenSearch, setAllergenSearch] = useState("");
   const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
 
@@ -35,7 +35,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
         itemPrice,
         itemDescription,
         itemImageFile,
-        selectedAllergenIds
+        selectedAllergenIds.map(String)
       );
     }
   };
@@ -46,7 +46,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
     }
   };
 
-  const handleAllergenSelect = (id: string) => {
+  const handleAllergenSelect = (id: number) => {
     setSelectedAllergenIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -54,10 +54,22 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
 
   return (
     <div className="py-2">
-      <h2 className="text-xl font-bold text-gray-800">{t("add_menu_item")}</h2>
-      <p className="text-gray-600 mb-4 text-sm">
-        {t("add_menu_item_description")}
-      </p>
+      <button
+        onClick={onCancel}
+        className="mr-2 text-gray-500 hover:text-gray-700 text-xs"
+      >
+        ← {t("back")}
+      </button>
+      <div className="flex items-start">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">
+            {t("add_menu_item")}
+          </h2>
+          <p className="text-gray-600 mb-4 text-sm">
+            {t("add_menu_item_description")}
+          </p>
+        </div>
+      </div>
       <div className="h-line"></div>
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -132,7 +144,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
               {allergens
                 .filter(
                   (allergen) =>
-                    !selectedAllergenIds.includes(allergen.id.toString()) &&
+                    !selectedAllergenIds.includes(allergen.id) &&
                     allergen.name_en
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
@@ -141,9 +153,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                   <div
                     key={allergen.id}
                     className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
-                    onMouseDown={() =>
-                      handleAllergenSelect(allergen.id.toString())
-                    }
+                    onMouseDown={() => handleAllergenSelect(allergen.id)}
                   >
                     <span className="flex items-center">
                       {allergen.icon} {allergen.name_en}
@@ -152,6 +162,26 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                 ))}
             </div>
           )}
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedAllergenIds.map((id) => {
+            const allergen = allergens.find((all) => all.id === id);
+            return (
+              <div
+                key={id}
+                className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+              >
+                <span className="mr-2">{allergen?.icon}</span>
+                <span>{allergen?.name_en}</span>
+                <button
+                  onClick={() => handleAllergenSelect(id)}
+                  className="ml-2 text-xs text-red-500 hover:text-red-700"
+                >
+                  &times;
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="flex justify-start space-x-3 mt-6">

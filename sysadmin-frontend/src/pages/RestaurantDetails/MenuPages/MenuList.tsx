@@ -170,7 +170,7 @@ const MenuList: React.FC<MenuListProps> = ({
                             )}
                             {item.allergens?.map((allergenId) => {
                               const allergen = allergens.find(
-                                (a) => a.id === allergenId
+                                (a) => a.id === Number(allergenId)
                               );
                               return (
                                 allergen && (

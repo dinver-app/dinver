@@ -18,12 +18,22 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
 
   return (
     <div className="py-2">
-      <h2 className="text-xl font-bold text-gray-800">
-        {t("Dodaj kategoriju")}
-      </h2>
-      <p className="text-gray-600 text-sm mb-4">
-        {t("Dodaj novu kategoriju u jelovnik.")}
-      </p>
+      <button
+        onClick={onCancel}
+        className="mr-2 text-gray-500 hover:text-gray-700 text-xs"
+      >
+        ← {t("back")}
+      </button>
+      <div className="flex items-start">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">
+            {t("Dodaj kategoriju")}
+          </h2>
+          <p className="text-gray-600 text-sm mb-4">
+            {t("Dodaj novu kategoriju u jelovnik.")}
+          </p>
+        </div>
+      </div>
       <div className="h-line mb-6"></div>
       <div className="mb-6 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -30,8 +30,8 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     menuItem.description || ""
   );
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
-  const [selectedAllergenIds, setSelectedAllergenIds] = useState<string[]>(
-    menuItem.allergens || []
+  const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>(
+    menuItem.allergens?.map(Number) || []
   );
   const [allergenSearch, setAllergenSearch] = useState("");
   const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
@@ -45,7 +45,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
         itemPrice,
         itemDescription,
         itemImageFile,
-        selectedAllergenIds,
+        selectedAllergenIds.map(String),
         removeImage
       );
     }
@@ -57,7 +57,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     }
   };
 
-  const handleAllergenSelect = (id: string) => {
+  const handleAllergenSelect = (id: number) => {
     setSelectedAllergenIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -65,11 +65,23 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
 
   return (
     <div className="py-2">
-      <h2 className="text-xl font-bold text-gray-800">{t("edit_menu_item")}</h2>
-      <p className="text-gray-600 mb-4 text-sm">
-        {t("edit_menu_item_description")}
-      </p>
-      <div className="h-line"></div>
+      <button
+        onClick={onCancel}
+        className="mr-2 text-gray-500 hover:text-gray-700  text-xs"
+      >
+        ← {t("back")}
+      </button>
+      <div className="flex items-start">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">
+            {t("edit_menu_item")}
+          </h2>
+          <p className="text-gray-600 text-sm mb-4">
+            {t("edit_menu_item_description")}
+          </p>
+        </div>
+      </div>
+      <div className="h-line mb-6"></div>
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("name")}
@@ -154,7 +166,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
               {allergens
                 .filter(
                   (allergen) =>
-                    !selectedAllergenIds.includes(allergen.id.toString()) &&
+                    !selectedAllergenIds.includes(allergen.id) &&
                     allergen.name_en
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
@@ -163,9 +175,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
                   <div
                     key={allergen.id}
                     className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
-                    onMouseDown={() =>
-                      handleAllergenSelect(allergen.id.toString())
-                    }
+                    onMouseDown={() => handleAllergenSelect(allergen.id)}
                   >
                     <span className="flex items-center">
                       {allergen.icon} {allergen.name_en}
