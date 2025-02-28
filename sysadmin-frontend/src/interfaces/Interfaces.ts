@@ -147,3 +147,10 @@ export interface CustomWorkingDay {
   date: string;
   times: { open: string; close: string }[];
 }
+
+export interface Allergen {
+  id: string;
+  name_en: string;
+  name_hr: string;
+  icon: string;
+}
