@@ -14,6 +14,8 @@ import {
   deleteCategory,
   deleteMenuItem,
   getAllAllergens,
+  updateCategoryOrder,
+  updateItemOrder,
 } from "../../services/menuService";
 import { MenuItem, Category, Allergen } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
@@ -186,22 +188,39 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     }
   };
 
-  const handleSortCategories = (categoryOrder: string[]) => {
-    setCategories((prevCategories) =>
-      categoryOrder.map((id) => prevCategories.find((cat) => cat.id === id)!)
-    );
+  const handleSortCategories = async (categoryOrder: string[]) => {
+    try {
+      await updateCategoryOrder(categoryOrder);
+      setCategories((prevCategories) =>
+        categoryOrder.map((id) => prevCategories.find((cat) => cat.id === id)!)
+      );
+      toast.success(t("category_order_updated"));
+    } catch (error) {
+      console.error("Failed to update category order", error);
+      toast.error(t("failed_to_update_category_order"));
+    }
   };
 
-  const handleSortItems = (categoryId: string, itemOrder: string[]) => {
-    setMenuItems((prevItems) =>
-      prevItems
-        .map((item) =>
-          item.categoryId === categoryId
-            ? itemOrder.map((id) => prevItems.find((i) => i.id === id)!)
-            : item
-        )
-        .flat()
-    );
+  const handleSortItems = async (categoryId: string, itemOrder: string[]) => {
+    try {
+      await updateItemOrder(itemOrder);
+      setMenuItems((prevItems) => {
+        const itemsInCategory = prevItems.filter(
+          (item) => item.categoryId === categoryId
+        );
+        const sortedItems = itemOrder.map(
+          (id) => itemsInCategory.find((item) => item.id === id)!
+        );
+        const otherItems = prevItems.filter(
+          (item) => item.categoryId !== categoryId
+        );
+        return [...otherItems, ...sortedItems];
+      });
+      toast.success(t("item_order_updated"));
+    } catch (error) {
+      console.error("Failed to update item order", error);
+      toast.error(t("failed_to_update_item_order"));
+    }
   };
 
   const renderView = () => {

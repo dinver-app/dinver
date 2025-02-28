@@ -36,9 +36,7 @@ const MenuList: React.FC<MenuListProps> = ({
   const [isOrderItemsModalOpen, setIsOrderItemsModalOpen] = useState(false);
   const [itemsForSorting, setItemsForSorting] = useState<MenuItem[]>([]);
   const [itemOrder, setItemOrder] = useState<string[]>([]);
-  const [categoryOrder, setCategoryOrder] = useState<string[]>(
-    categories.map((cat) => cat.id)
-  );
+  const [localCategoryOrder, setLocalCategoryOrder] = useState<string[]>([]);
 
   const openSortItemsModal = (categoryId: string) => {
     const itemsInCategory = menuItems.filter(
@@ -65,19 +63,27 @@ const MenuList: React.FC<MenuListProps> = ({
     setItemOrder(updatedItems.map((item) => item.id));
   };
 
-  const handleSaveCategoryOrder = () => {
-    onSortCategories(categoryOrder);
-    setIsOrderCategoriesModalOpen(false);
+  const openSortCategoriesModal = () => {
+    setLocalCategoryOrder(categories.map((cat) => cat.id));
+    setIsOrderCategoriesModalOpen(true);
   };
 
   const onCategoryDragEnd = (result: any) => {
     if (!result.destination) return;
 
-    const updatedCategories = Array.from(categories);
-    const [movedCategory] = updatedCategories.splice(result.source.index, 1);
-    updatedCategories.splice(result.destination.index, 0, movedCategory);
+    const updatedCategoryOrder = Array.from(localCategoryOrder);
+    const [movedCategoryId] = updatedCategoryOrder.splice(
+      result.source.index,
+      1
+    );
+    updatedCategoryOrder.splice(result.destination.index, 0, movedCategoryId);
 
-    setCategoryOrder(updatedCategories.map((cat) => cat.id));
+    setLocalCategoryOrder(updatedCategoryOrder);
+  };
+
+  const handleSaveCategoryOrder = () => {
+    onSortCategories(localCategoryOrder);
+    setIsOrderCategoriesModalOpen(false);
   };
 
   return (
@@ -97,7 +103,7 @@ const MenuList: React.FC<MenuListProps> = ({
             {t("add_menu_item")}
           </button>
           <button
-            onClick={() => setIsOrderCategoriesModalOpen(true)}
+            onClick={openSortCategoriesModal}
             className="secondary-button"
           >
             {t("order_categories")}
@@ -230,31 +236,38 @@ const MenuList: React.FC<MenuListProps> = ({
                     ref={provided.innerRef}
                     className="space-y-2"
                   >
-                    {categories.map((category, index) => (
-                      <Draggable
-                        key={category.id}
-                        draggableId={category.id.toString()}
-                        index={index}
-                      >
-                        {(provided) => (
-                          <li
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            ref={provided.innerRef}
-                            className="p-2 border border-gray-300 rounded bg-white cursor-pointer flex items-center w-full"
+                    {localCategoryOrder.map((categoryId, index) => {
+                      const category = categories.find(
+                        (cat) => cat.id === categoryId
+                      );
+                      return (
+                        category && (
+                          <Draggable
+                            key={category.id}
+                            draggableId={category.id.toString()}
+                            index={index}
                           >
-                            <span className="flex items-center mr-2">
-                              <img
-                                src="/images/drag.png"
-                                alt="Drag Icon"
-                                className="w-4 h-4"
-                              />
-                            </span>
-                            {category.name}
-                          </li>
-                        )}
-                      </Draggable>
-                    ))}
+                            {(provided) => (
+                              <li
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                ref={provided.innerRef}
+                                className="p-2 border border-gray-300 rounded bg-white cursor-pointer flex items-center w-full"
+                              >
+                                <span className="flex items-center mr-2">
+                                  <img
+                                    src="/images/drag.png"
+                                    alt="Drag Icon"
+                                    className="w-4 h-4"
+                                  />
+                                </span>
+                                {category.name}
+                              </li>
+                            )}
+                          </Draggable>
+                        )
+                      );
+                    })}
                     {provided.placeholder}
                   </ul>
                 )}
