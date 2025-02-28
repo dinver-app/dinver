@@ -57,6 +57,10 @@
 
   .item-grid {
     @apply grid grid-cols-2 gap-4;
+    min-height: 400px;
+    overflow-y: auto;
+    align-items: start; /* Sprječava rastezanje elemenata */
+    grid-auto-rows: min-content; /* Sprječava razvlačenje redaka */
   }
 
   .item-card {

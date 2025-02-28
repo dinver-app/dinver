@@ -177,8 +177,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 <div
                   key={id}
                   onClick={() => handleRemoveItem(id, "establishment")}
-                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
+                  <span>{establishmentType?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? establishmentType?.name_en
@@ -224,8 +225,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 <div
                   key={id}
                   onClick={() => handleRemoveItem(id, "food")}
-                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
+                  <span>{foodType?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? foodType?.name_en
@@ -274,8 +276,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 <div
                   key={id}
                   onClick={() => handleRemoveItem(id, "perk")}
-                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
+                  <span>{establishmentPerk?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? establishmentPerk?.name_en
@@ -333,8 +336,9 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   <div
                     key={item.id}
                     onClick={() => handleAddItem(item.id, activeModal)}
-                    className="item-card"
+                    className="item-card flex items-center gap-2"
                   >
+                    <span>{item.icon}</span>
                     <span>
                       {i18n.language === "en" ? item.name_en : item.name_hr}
                     </span>
