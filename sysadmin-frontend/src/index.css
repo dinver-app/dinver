@@ -4,15 +4,15 @@
 
 @layer components {
   .primary-button {
-    @apply bg-green-600 text-white text-sm py-2 px-3 rounded-md hover:bg-green-700;
+    @apply border-green-600 border text-green-600 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-green-700 hover:bg-opacity-10;
   }
 
   .secondary-button {
-    @apply bg-gray-500 text-white text-sm py-2 px-3 rounded-md hover:bg-gray-600;
+    @apply border-gray-500 border text-gray-500 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-gray-600 hover:bg-opacity-10;
   }
 
   .delete-button {
-    @apply bg-red-600 text-white text-sm py-2 px-3 rounded-md hover:bg-red-700;
+    @apply border-red-600 border text-red-600 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-red-700 hover:bg-opacity-10;
   }
 
   .page-title {
@@ -53,5 +53,18 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  .item-grid {
+    @apply grid grid-cols-2 gap-4;
+  }
+
+  .item-card {
+    @apply flex items-center justify-center p-2 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 transition cursor-pointer text-center text-sm;
+    height: 40px;
+  }
+
+  .modal-content {
+    @apply bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full mx-4;
   }
 }

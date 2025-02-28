@@ -176,16 +176,19 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               return (
                 <div
                   key={id}
-                  className="flex items-center px-2 py-1 rounded-lg bg-gray-100"
+                  onClick={() => handleRemoveItem(id, "establishment")}
+                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
-                  <span className="mr-2">{establishmentType?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? establishmentType?.name_en
                       : establishmentType?.name_hr}
                   </span>
                   <button
-                    onClick={() => handleRemoveItem(id, "establishment")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveItem(id, "establishment");
+                    }}
                     className="ml-2 text-md text-gray-500 hover:text-gray-700"
                   >
                     &times;
@@ -220,16 +223,19 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               return (
                 <div
                   key={id}
-                  className="flex items-center px-2 py-1 rounded-lg bg-gray-100"
+                  onClick={() => handleRemoveItem(id, "food")}
+                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
-                  <span className="mr-2">{foodType?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? foodType?.name_en
                       : foodType?.name_hr}
                   </span>
                   <button
-                    onClick={() => handleRemoveItem(id, "food")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveItem(id, "food");
+                    }}
                     className="ml-2 text-md text-gray-500 hover:text-gray-700"
                   >
                     &times;
@@ -267,16 +273,19 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               return (
                 <div
                   key={id}
-                  className="flex items-center px-2 py-1 rounded-lg bg-gray-100"
+                  onClick={() => handleRemoveItem(id, "perk")}
+                  className="flex items-center px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
                 >
-                  <span className="mr-2">{establishmentPerk?.icon}</span>
                   <span>
                     {i18n.language === "en"
                       ? establishmentPerk?.name_en
                       : establishmentPerk?.name_hr}
                   </span>
                   <button
-                    onClick={() => handleRemoveItem(id, "perk")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveItem(id, "perk");
+                    }}
                     className="ml-2 text-md text-gray-500 hover:text-gray-700"
                   >
                     &times;
@@ -300,7 +309,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
       {activeModal && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
+          <div className="modal-content">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">{title}</h2>
             </div>
@@ -311,7 +320,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full p-2 mb-4 border border-gray-300 rounded"
             />
-            <div className="h-60 overflow-y-auto">
+            <div className="h-96 overflow-y-auto item-grid">
               {items
                 .filter(
                   (item) =>
@@ -323,26 +332,18 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 .map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-2 border-b hover:bg-gray-100 transition"
+                    onClick={() => handleAddItem(item.id, activeModal)}
+                    className="item-card"
                   >
-                    <span className="flex items-center">
-                      {item.icon}{" "}
-                      <span className="ml-2">
-                        {i18n.language === "en" ? item.name_en : item.name_hr}
-                      </span>
+                    <span>
+                      {i18n.language === "en" ? item.name_en : item.name_hr}
                     </span>
-                    <button
-                      onClick={() => handleAddItem(item.id, activeModal)}
-                      className="text-blue-500 hover:underline"
-                    >
-                      {t("add")}
-                    </button>
                   </div>
                 ))}
             </div>
             <button
               onClick={() => setActiveModal(null)}
-              className="mt-4 w-full py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+              className="mt-4 w-full py-2 delete-button"
             >
               {t("close")}
             </button>
