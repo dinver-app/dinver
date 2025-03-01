@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Allergen } from "../../../interfaces/Interfaces";
+import { FaTrash } from "react-icons/fa";
 
 interface AddMenuItemProps {
   onCancel: () => void;
@@ -43,7 +44,12 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setItemImageFile(event.target.files[0]);
+      event.target.value = ""; // Reset input to allow re-selection of the same file
     }
+  };
+
+  const handleRemoveImage = () => {
+    setItemImageFile(null);
   };
 
   const handleAllergenSelect = (id: number) => {
@@ -116,13 +122,30 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           />
           <button
             onClick={() => document.getElementById("fileInput")?.click()}
-            className="secondary-button"
+            className="secondary-button text-xs"
           >
-            {t("choose_image")}
+            {itemImageFile ? t("choose_another_image") : t("choose_image")}
           </button>
-          <span className="ml-2 truncate">
-            {itemImageFile?.name ? itemImageFile?.name : t("no_file_chosen")}
-          </span>
+          {itemImageFile ? (
+            <div className="flex items-center ml-4">
+              <img
+                src={URL.createObjectURL(itemImageFile)}
+                alt={itemImageFile.name}
+                className="w-10 h-10 object-cover rounded mr-2"
+              />
+              <span className="text-xs">{itemImageFile.name}</span>
+            </div>
+          ) : (
+            <span className="text-xs ml-2">{t("no_file_chosen")}</span>
+          )}
+          {itemImageFile && (
+            <button
+              onClick={handleRemoveImage}
+              className="text-gray-500 hover:text-gray-700 text-xs ml-auto border border-gray-300 rounded p-1 px-2 hover:bg-gray-100"
+            >
+              <FaTrash />
+            </button>
+          )}
         </div>
       </div>
       <div className="mb-3 max-w-xl">

@@ -139,7 +139,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     price: string,
     description: string,
     imageFile: File | null,
-    selectedAllergenIds: string[]
+    selectedAllergenIds: string[],
+    removeImage: boolean
   ) => {
     try {
       const formData = new FormData();
@@ -152,6 +153,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       selectedAllergenIds.forEach((id) => {
         formData.append("allergenIds", id);
       });
+      formData.append("removeImage", String(removeImage));
 
       const updatedMenuItem = await updateMenuItem(id, formData);
       setMenuItems(

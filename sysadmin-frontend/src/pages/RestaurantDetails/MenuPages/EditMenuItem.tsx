@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { MenuItem, Allergen } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import { FaTrash } from "react-icons/fa";
 
 interface EditMenuItemProps {
   menuItem: MenuItem;
@@ -54,7 +55,16 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setItemImageFile(event.target.files[0]);
+      setRemoveImage(false);
+      event.target.value = "";
     }
+  };
+
+  const handleRemoveImage = () => {
+    setItemImageFile(null);
+    setRemoveImage(true);
+    setItemImageFile(null);
+    menuItem.imageUrl = "";
   };
 
   const handleAllergenSelect = (id: number) => {
@@ -67,7 +77,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     <div className="py-2">
       <button
         onClick={onCancel}
-        className="mr-2 text-gray-500 hover:text-gray-700  text-xs"
+        className="mr-2 text-gray-500 hover:text-gray-700 text-xs"
       >
         ← {t("back")}
       </button>
@@ -127,24 +137,43 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
           />
           <button
             onClick={() => document.getElementById("fileInput")?.click()}
-            className="secondary-button"
+            className="secondary-button text-xs"
           >
-            {t("choose_image")}
+            {menuItem.imageUrl || itemImageFile
+              ? t("choose_another_image")
+              : t("choose_image")}
           </button>
-          <span className="ml-2 truncate">
-            {itemImageFile?.name ? itemImageFile?.name : t("no_file_chosen")}
-          </span>
-        </div>
-        <div className="mt-2">
-          <label className="inline-flex items-center">
-            <input
-              type="checkbox"
-              checked={removeImage}
-              onChange={(e) => setRemoveImage(e.target.checked)}
-              className="form-checkbox"
-            />
-            <span className="ml-2">{t("remove_image")}</span>
-          </label>
+          {itemImageFile ? (
+            <div className="flex items-center ml-4">
+              <img
+                src={URL.createObjectURL(itemImageFile)}
+                alt={itemImageFile.name}
+                className="w-10 h-10 object-cover rounded mr-2"
+              />
+              <span className="text-xs">{itemImageFile.name}</span>
+            </div>
+          ) : menuItem.imageUrl ? (
+            <div className="flex items-center ml-4">
+              <img
+                src={menuItem.imageUrl}
+                alt={menuItem.name}
+                className="w-10 h-10 object-cover rounded mr-2"
+              />
+              <span className="text-xs">
+                {menuItem.imageUrl.split("/").pop()}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs ml-2">{t("no_file_chosen")}</span>
+          )}
+          {(itemImageFile || menuItem.imageUrl) && (
+            <button
+              onClick={handleRemoveImage}
+              className="text-gray-500 hover:text-gray-700 text-xs ml-auto border border-gray-300 rounded p-1 px-2 hover:bg-gray-100"
+            >
+              <FaTrash />
+            </button>
+          )}
         </div>
       </div>
       <div className="mb-3 max-w-xl">
