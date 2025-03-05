@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+      DrinkItem.hasMany(models.DrinkItemTranslation, {
+        foreignKey: 'drinkItemId',
+        as: 'translations',
+        onDelete: 'CASCADE',
+      });
     }
   }
   DrinkItem.init(
@@ -40,19 +45,11 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       price: {
         type: DataTypes.DECIMAL,
         allowNull: false,
       },
       imageUrl: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      description: {
         type: DataTypes.STRING,
         allowNull: true,
       },
