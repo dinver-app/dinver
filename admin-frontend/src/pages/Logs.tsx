@@ -1,6 +1,6 @@
 import { getAuditLogsForRestaurant } from "../services/auditLogsService";
 import { useTranslation } from "react-i18next";
-import { AuditLog } from "../interfaces/Interfaces"; // Pretpostavi da su definirani
+import { AuditLog } from "../interfaces/Interfaces";
 import { format } from "date-fns";
 import ReactJson from "react-json-view";
 import { useState, useEffect } from "react";
