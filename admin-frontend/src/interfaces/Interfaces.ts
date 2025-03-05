@@ -128,6 +128,7 @@ export interface Review {
   userLastName: string;
   userEmail: string;
   createdAt?: string;
+  restaurant?: string;
 }
 
 export interface RestaurantReviews {
