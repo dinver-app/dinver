@@ -114,6 +114,8 @@ export interface AuditLog {
   entityId: string;
   changes: string;
   createdAt: string;
+  restaurantName?: string;
+  userEmail?: string;
 }
 
 export interface Review {
