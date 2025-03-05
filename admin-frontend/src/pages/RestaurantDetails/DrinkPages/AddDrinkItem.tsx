@@ -325,12 +325,9 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           disabled={isSaving}
         >
           {isSaving ? t("saving") : t("save")}
+          {t("save")}
         </button>
-        <button
-          onClick={onCancel}
-          className="secondary-button"
-          disabled={isSaving}
-        >
+        <button onClick={onCancel} className="secondary-button">
           {t("cancel")}
         </button>
       </div>

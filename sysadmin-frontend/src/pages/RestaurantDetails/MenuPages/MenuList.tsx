@@ -207,13 +207,13 @@ const MenuList: React.FC<MenuListProps> = memo(
                       <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
                         <button
                           onClick={() => onEditMenuItem(item)}
-                          className="secondary-button"
+                          className="secondary-button text-xs"
                         >
                           {t("edit")}
                         </button>
                         <button
                           onClick={() => handleDeleteItemModal(item)}
-                          className="delete-button"
+                          className="delete-button text-xs"
                         >
                           {t("delete")}
                         </button>
@@ -225,7 +225,8 @@ const MenuList: React.FC<MenuListProps> = memo(
             </div>
           ))}
 
-          {menuItems.filter((item) => !item.categoryId).length > 0 && (
+          {(menuItems.filter((item) => !item.categoryId).length > 0 ||
+            categories.length === 0) && (
             <div className="my-4">
               <h4 className="text-lg font-semibold flex justify-between">
                 {t("uncategorized_items")}
@@ -296,13 +297,13 @@ const MenuList: React.FC<MenuListProps> = memo(
                       <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
                         <button
                           onClick={() => onEditMenuItem(item)}
-                          className="secondary-button"
+                          className="secondary-button text-xs"
                         >
                           {t("edit")}
                         </button>
                         <button
                           onClick={() => handleDeleteItemModal(item)}
-                          className="delete-button"
+                          className="delete-button text-xs"
                         >
                           {t("delete")}
                         </button>

@@ -1,18 +1,5 @@
-import { Translation } from "../interfaces/Interfaces";
+import { DrinkCategoryData, Translation } from "../interfaces/Interfaces";
 import { apiClient } from "./authService";
-
-interface DrinkItemData {
-  price: string;
-  categoryId?: string;
-  restaurantId: string;
-  translations: Translation[];
-  imageFile?: File;
-}
-
-interface DrinkCategoryData {
-  restaurantId: string;
-  translations: Translation[];
-}
 
 // Drink Category API calls
 

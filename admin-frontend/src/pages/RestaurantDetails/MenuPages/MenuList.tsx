@@ -1,36 +1,38 @@
 import React, { useState, memo } from "react";
-import { DrinkItem, Category } from "../../../interfaces/Interfaces";
+import { MenuItem, Category, Allergen } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { OrderCategoriesModal } from "../../../components/modals/OrderCategoriesModal";
+import { OrderCategoriesModal } from "../../../components/OrderCategoriesModal";
 
-interface DrinksListProps {
+interface MenuListProps {
   categories: Category[];
-  drinkItems: DrinkItem[];
+  menuItems: MenuItem[];
+  allergens: Allergen[];
   onAddCategory: () => void;
-  onAddDrinkItem: () => void;
+  onAddMenuItem: () => void;
   onEditCategory: (
     category: Category,
     onSuccess?: (updatedCategory: Category) => void
   ) => void;
-  onEditDrinkItem: (drinkItem: DrinkItem) => void;
+  onEditMenuItem: (menuItem: MenuItem) => void;
   onDeleteCategory: (id: string) => void;
-  onDeleteDrinkItem: (id: string) => void;
+  onDeleteMenuItem: (id: string) => void;
   onSortCategories: (categoryOrder: string[]) => void;
   onSortItems: (categoryId: string | null, itemOrder: string[]) => void;
   onCategoriesUpdate?: (updatedCategories: Category[]) => void;
 }
 
-const DrinksList: React.FC<DrinksListProps> = memo(
+const MenuList: React.FC<MenuListProps> = memo(
   ({
     categories,
-    drinkItems,
+    menuItems,
+    allergens,
     onAddCategory,
-    onAddDrinkItem,
+    onAddMenuItem,
     onEditCategory,
-    onEditDrinkItem,
+    onEditMenuItem,
     onDeleteCategory,
-    onDeleteDrinkItem,
+    onDeleteMenuItem,
     onSortCategories,
     onSortItems,
     onCategoriesUpdate,
@@ -39,7 +41,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
     const [isOrderCategoriesModalOpen, setIsOrderCategoriesModalOpen] =
       useState(false);
     const [isOrderItemsModalOpen, setIsOrderItemsModalOpen] = useState(false);
-    const [itemsForSorting, setItemsForSorting] = useState<DrinkItem[]>([]);
+    const [itemsForSorting, setItemsForSorting] = useState<MenuItem[]>([]);
     const [itemOrder, setItemOrder] = useState<string[]>([]);
     const [isDeleteCategoryModalOpen, setDeleteCategoryModalOpen] =
       useState(false);
@@ -47,10 +49,10 @@ const DrinksList: React.FC<DrinksListProps> = memo(
       null
     );
     const [isDeleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<DrinkItem | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<MenuItem | null>(null);
 
     const openSortItemsModal = (categoryId: string | null) => {
-      const itemsInCategory = drinkItems.filter((item) =>
+      const itemsInCategory = menuItems.filter((item) =>
         categoryId ? item.categoryId === categoryId : !item.categoryId
       );
       setItemsForSorting(itemsInCategory);
@@ -89,7 +91,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
       setDeleteCategoryModalOpen(true);
     };
 
-    const handleDeleteItemModal = (item: DrinkItem) => {
+    const handleDeleteItemModal = (item: MenuItem) => {
       setItemToDelete(item);
       setDeleteItemModalOpen(true);
     };
@@ -98,17 +100,17 @@ const DrinksList: React.FC<DrinksListProps> = memo(
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="section-title">{t("drinks")}</h2>
+            <h2 className="section-title">{t("menu")}</h2>
             <h3 className="section-subtitle">
-              {t("manage_your_drinks_and_categories")}
+              {t("manage_your_menu_items_and_categories")}
             </h3>
           </div>
           <div className="flex gap-2">
             <button onClick={onAddCategory} className="primary-button">
               {t("add_category")}
             </button>
-            <button onClick={onAddDrinkItem} className="primary-button">
-              {t("add_drink")}
+            <button onClick={onAddMenuItem} className="primary-button">
+              {t("add_menu_item")}
             </button>
             <button
               onClick={() => setIsOrderCategoriesModalOpen(true)}
@@ -148,7 +150,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                 </div>
               </h4>
               <ul className="bg-white flex flex-col mt-2">
-                {drinkItems
+                {menuItems
                   .filter((item) => item.categoryId === category.id)
                   .map((item) => (
                     <li
@@ -175,11 +177,36 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                           <p className="text-sm text-gray-700 mt-2">
                             {item.description}
                           </p>
+                          <div className="flex space-x-4 mt-3">
+                            <div className="flex items-center space-x-2">
+                              {item.allergens && item.allergens.length > 0 && (
+                                <span className="font-semibold text-gray-800">
+                                  {t("allergens")}:
+                                </span>
+                              )}
+                              {item.allergens?.map((allergenId) => {
+                                const allergen = allergens.find(
+                                  (a) => a.id === Number(allergenId)
+                                );
+                                return (
+                                  allergen && (
+                                    <span
+                                      key={allergen.id}
+                                      className="tooltip cursor-default"
+                                      title={allergen.name_en}
+                                    >
+                                      {allergen.icon}
+                                    </span>
+                                  )
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
                         <button
-                          onClick={() => onEditDrinkItem(item)}
+                          onClick={() => onEditMenuItem(item)}
                           className="secondary-button text-xs"
                         >
                           {t("edit")}
@@ -198,7 +225,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
             </div>
           ))}
 
-          {(drinkItems.filter((item) => !item.categoryId).length > 0 ||
+          {(menuItems.filter((item) => !item.categoryId).length > 0 ||
             categories.length === 0) && (
             <div className="my-4">
               <h4 className="text-lg font-semibold flex justify-between">
@@ -213,7 +240,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                 </div>
               </h4>
               <ul className="bg-white flex flex-col mt-2">
-                {drinkItems
+                {menuItems
                   .filter((item) => !item.categoryId)
                   .map((item) => (
                     <li
@@ -240,11 +267,36 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                           <p className="text-sm text-gray-700 mt-2">
                             {item.description}
                           </p>
+                          <div className="flex space-x-4 mt-3">
+                            <div className="flex items-center space-x-2">
+                              {item.allergens && item.allergens.length > 0 && (
+                                <span className="font-semibold text-gray-800">
+                                  {t("allergens")}:
+                                </span>
+                              )}
+                              {item.allergens?.map((allergenId) => {
+                                const allergen = allergens.find(
+                                  (a) => a.id === Number(allergenId)
+                                );
+                                return (
+                                  allergen && (
+                                    <span
+                                      key={allergen.id}
+                                      className="tooltip cursor-default"
+                                      title={allergen.name_en}
+                                    >
+                                      {allergen.icon}
+                                    </span>
+                                  )
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
                         <button
-                          onClick={() => onEditDrinkItem(item)}
+                          onClick={() => onEditMenuItem(item)}
                           className="secondary-button text-xs"
                         >
                           {t("edit")}
@@ -409,16 +461,16 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                   className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
                 />
                 <div>
-                  <h2 className="text-lg font-semibold">{t("delete_drink")}</h2>
+                  <h2 className="text-lg font-semibold">{t("delete_item")}</h2>
                   <p className="text-sm text-gray-500">
-                    {t("delete_drink_description")}
+                    {t("delete_item_description")}
                   </p>
                 </div>
               </div>
               <div className="h-line"></div>
               <div className="mb-4">
                 <p className="text-sm text-black">
-                  {t("are_you_sure_you_want_to_delete_the_drink")}{" "}
+                  {t("are_you_sure_you_want_to_delete_the_item")}{" "}
                   <span className="font-bold">{itemToDelete.name}</span>?
                 </p>
               </div>
@@ -432,12 +484,12 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                 </button>
                 <button
                   onClick={() => {
-                    onDeleteDrinkItem(itemToDelete.id);
+                    onDeleteMenuItem(itemToDelete.id);
                     setDeleteItemModalOpen(false);
                   }}
                   className="delete-button"
                 >
-                  {t("delete_drink")}
+                  {t("delete_item")}
                 </button>
               </div>
             </div>
@@ -448,4 +500,4 @@ const DrinksList: React.FC<DrinksListProps> = memo(
   }
 );
 
-export default DrinksList;
+export default MenuList;

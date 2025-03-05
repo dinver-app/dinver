@@ -1,19 +1,5 @@
-import { Translation } from "../interfaces/Interfaces";
+import { CategoryData, Translation } from "../interfaces/Interfaces";
 import { apiClient } from "./authService";
-
-interface MenuItemData {
-  price: string;
-  categoryId?: string;
-  restaurantId: string;
-  allergenIds?: string[];
-  translations: Translation[];
-  imageFile?: File;
-}
-
-interface CategoryData {
-  restaurantId: string;
-  translations: Translation[];
-}
 
 // Category API calls
 
@@ -145,12 +131,6 @@ export const getCategoryItems = async (restaurantId: string) => {
   const response = await apiClient.get(
     `/api/sysadmin/menu/categories/${restaurantId}`
   );
-  return response.data;
-};
-
-// Get all ingredients
-export const getAllIngredients = async () => {
-  const response = await apiClient.get("/api/sysadmin/menu/ingredients");
   return response.data;
 };
 

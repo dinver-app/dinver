@@ -182,3 +182,8 @@ export interface DrinkCategoryData {
   translations: Translation[];
   restaurantId: string;
 }
+
+export interface CategoryData {
+  restaurantId: string;
+  translations: Translation[];
+}

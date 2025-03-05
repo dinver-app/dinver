@@ -1,37 +1,28 @@
 import React, { useState } from "react";
-import {
-  Category,
-  Language,
-  Translation,
-} from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import { Language } from "../../../interfaces/Interfaces";
 import toast from "react-hot-toast";
 import { translateText } from "../../../services/translateService";
 import TranslateButton from "../../../components/TranslateButton";
 
-interface EditCategoryProps {
-  category: Category;
+interface AddCategoryProps {
   onCancel: () => void;
-  onSave: (id: string, data: { translations: Translation[] }) => Promise<void>;
+  onSave: (translates: {
+    translates: { name: string; language: string }[];
+  }) => Promise<void>;
 }
 
-const EditCategory: React.FC<EditCategoryProps> = ({
-  category,
-  onCancel,
-  onSave,
-}) => {
+const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
-  const [translations, setTranslations] = useState<Record<Language, string>>({
-    [Language.HR]:
-      category.translations.find((t) => t.language === Language.HR)?.name || "",
-    [Language.EN]:
-      category.translations.find((t) => t.language === Language.EN)?.name || "",
+  const [translates, setTranslates] = useState<Record<Language, string>>({
+    [Language.HR]: "",
+    [Language.EN]: "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    const hasAnyName = Object.values(translations).some(
+    const hasAnyName = Object.values(translates).some(
       (value) => value.trim() !== ""
     );
 
@@ -40,27 +31,29 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       return;
     }
 
-    const translationsArray = Object.entries(translations)
+    const translatesArray = Object.entries(translates)
       .filter(([_, value]) => value.trim() !== "")
       .map(([language, name]) => ({
         name: name.trim(),
-        language: language as Language,
+        language: language as string,
       }));
 
     setIsSaving(true);
     const loadingToast = toast.loading(t("saving"));
 
     try {
-      await onSave(category.id, { translations: translationsArray });
+      await onSave({ translates: translatesArray });
+      toast.dismiss(loadingToast);
+    } catch (error) {
+      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
-      toast.dismiss(loadingToast);
     }
   };
 
   const handleTranslate = async () => {
     try {
-      const sourceText = translations[activeTab];
+      const sourceText = translates[activeTab];
       if (!sourceText.trim()) {
         toast.error(t("nothing_to_translate"));
         return;
@@ -72,7 +65,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         targetLang.toLowerCase()
       );
 
-      setTranslations((prev) => ({
+      setTranslates((prev) => ({
         ...prev,
         [targetLang]: translatedText,
       }));
@@ -94,10 +87,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       <div className="flex items-start">
         <div>
           <h2 className="text-xl font-bold text-gray-800">
-            {t("Uredi kategoriju")}
+            {t("Dodaj kategoriju")}
           </h2>
           <p className="text-gray-600 text-sm mb-4">
-            {t("Uredi postojeću kategoriju u jelovniku.")}
+            {t("Dodaj novu kategoriju u jelovnik.")}
           </p>
         </div>
       </div>
@@ -130,7 +123,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translations.hr ? "bg-green-500" : "bg-gray-300"
+              translates.hr ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("croatian")}</span>
@@ -138,7 +131,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translations.en ? "bg-green-500" : "bg-gray-300"
+              translates.en ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("english")}</span>
@@ -155,16 +148,16 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         </div>
         <input
           type="text"
-          value={translations[activeTab]}
+          value={translates[activeTab]}
           onChange={(e) =>
-            setTranslations((prev) => ({
+            setTranslates((prev) => ({
               ...prev,
               [activeTab]: e.target.value,
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
           placeholder={
-            activeTab === Language.HR
+            activeTab === "hr"
               ? t("enter_category_name")
               : t("enter_category_name")
           }
@@ -191,4 +184,4 @@ const EditCategory: React.FC<EditCategoryProps> = ({
   );
 };
 
-export default EditCategory;
+export default AddCategory;

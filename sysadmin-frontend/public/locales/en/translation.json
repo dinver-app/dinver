@@ -74,7 +74,7 @@
   "no_food_types_selected": "No food types selected",
   "all_changes_saved": "All changes saved",
   "failed_to_save_changes": "Failed to save changes",
-  "saving": "Saving...",
+  "saving": "Saving",
   "add": "Add",
   "close": "Close",
   "search": "Search",
@@ -385,5 +385,9 @@
   "add_new_drink_category": "Add New Drink Category",
   "add_new_drink_item": "Add New Drink Item",
   "enter_price": "Enter price",
-  "add_drink": "Add Drink"
+  "add_drink": "Add Drink",
+  "edit_existing_drink_category": "Edit Existing Drink Category",
+  "edit_existing_drink_category_description": "Edit an existing drink category in the system.",
+  "edit_existing_category": "Edit Existing Category",
+  "edit_existing_category_description": "Edit an existing category in the system."
 }

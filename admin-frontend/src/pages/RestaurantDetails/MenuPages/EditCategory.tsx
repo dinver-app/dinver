@@ -52,9 +52,11 @@ const EditCategory: React.FC<EditCategoryProps> = ({
 
     try {
       await onSave(category.id, { translations: translationsArray });
+      toast.dismiss(loadingToast);
+    } catch (error) {
+      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
-      toast.dismiss(loadingToast);
     }
   };
 
@@ -94,10 +96,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       <div className="flex items-start">
         <div>
           <h2 className="text-xl font-bold text-gray-800">
-            {t("Uredi kategoriju")}
+            {t("edit_existing_category")}
           </h2>
           <p className="text-gray-600 text-sm mb-4">
-            {t("Uredi postojeću kategoriju u jelovniku.")}
+            {t("edit_existing_category_description")}
           </p>
         </div>
       </div>

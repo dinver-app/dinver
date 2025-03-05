@@ -128,6 +128,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     price: string;
     allergens: string[];
     categoryId?: string | null;
+    imageFile?: File;
   }) => {
     try {
       const menuItem = await createMenuItem({
@@ -139,6 +140,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         restaurantId: restaurantId as string,
         allergenIds: data.allergens,
         categoryId: data.categoryId,
+        imageFile: data.imageFile,
       });
 
       setMenuItems([...menuItems, menuItem]);

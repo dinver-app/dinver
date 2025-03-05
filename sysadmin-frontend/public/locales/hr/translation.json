@@ -74,7 +74,7 @@
   "no_food_types_selected": "Nema odabranih tipova hrane",
   "all_changes_saved": "Sve su promjene spremljene",
   "failed_to_save_changes": "Greška pri spremanju promjena",
-  "saving": "Spremanje...",
+  "saving": "Spremanje",
   "add": "Dodaj",
   "close": "Zatvori",
   "search": "Pretraži",
@@ -383,5 +383,9 @@
   "add_new_drink_category": "Dodaj novu kategoriju cjenika pića",
   "add_new_drink_item": "Dodaj novu stavku cjenika pića",
   "enter_price": "Unesi cijenu stavke cjenika pića",
-  "add_drink": "Dodaj piće"
+  "add_drink": "Dodaj piće",
+  "edit_existing_drink_category": "Uredi postojeću kategoriju cjenika pića",
+  "edit_existing_drink_category_description": "Uredi postojeću kategoriju cjenika pića u sustavu.",
+  "edit_existing_category": "Uredi postojeću kategoriju",
+  "edit_existing_category_description": "Uredi postojeću kategoriju u sustavu."
 }

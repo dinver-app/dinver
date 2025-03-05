@@ -9,7 +9,7 @@ interface AddCategoryProps {
   onCancel: () => void;
   onSave: (translates: {
     translates: { name: string; language: string }[];
-  }) => void;
+  }) => Promise<void>;
 }
 
 const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
@@ -19,8 +19,9 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
     [Language.HR]: "",
     [Language.EN]: "",
   });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const hasAnyName = Object.values(translates).some(
       (value) => value.trim() !== ""
     );
@@ -37,7 +38,15 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
         language: language as string,
       }));
 
-    onSave({ translates: translatesArray });
+    setIsSaving(true);
+    const loadingToast = toast.loading(t("saving"));
+
+    try {
+      await onSave({ translates: translatesArray });
+    } finally {
+      setIsSaving(false);
+      toast.dismiss(loadingToast);
+    }
   };
 
   const handleTranslate = async () => {
@@ -154,10 +163,18 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
       </div>
 
       <div className="flex justify-start space-x-3">
-        <button onClick={handleSave} className="primary-button">
-          {t("save")}
+        <button
+          onClick={handleSave}
+          className="primary-button"
+          disabled={isSaving}
+        >
+          {isSaving ? t("saving") : t("save")}
         </button>
-        <button onClick={onCancel} className="secondary-button">
+        <button
+          onClick={onCancel}
+          className="secondary-button"
+          disabled={isSaving}
+        >
           {t("cancel")}
         </button>
       </div>

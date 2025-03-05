@@ -17,6 +17,7 @@ interface AddMenuItemProps {
     price: string;
     allergens: string[];
     categoryId?: string | null;
+    imageFile?: File;
   }) => void;
   allergens: Allergen[];
   categories: Category[];
@@ -42,8 +43,9 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   const [allergenSearch, setAllergenSearch] = useState("");
   const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const translatesArray = Object.entries(translations)
       .filter(([_, value]) => value.name.trim() !== "")
       .map(([language, value]) => ({
@@ -67,12 +69,21 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
       return;
     }
 
-    onSave({
-      translates: translatesArray,
-      price: itemPrice,
-      allergens: selectedAllergenIds.map(String),
-      categoryId: selectedCategoryId || null,
-    });
+    setIsSaving(true);
+    const loadingToast = toast.loading(t("saving"));
+
+    try {
+      await onSave({
+        translates: translatesArray,
+        price: itemPrice,
+        allergens: selectedAllergenIds.map(String),
+        categoryId: selectedCategoryId || null,
+        imageFile: itemImageFile || undefined,
+      });
+    } finally {
+      setIsSaving(false);
+      toast.dismiss(loadingToast);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,13 +281,13 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
             {itemImageFile ? t("choose_another_image") : t("choose_image")}
           </button>
           {itemImageFile ? (
-            <div className="flex items-center ml-4">
+            <div className="flex items-center ml-4 flex-1 min-w-0">
               <img
                 src={URL.createObjectURL(itemImageFile)}
                 alt={itemImageFile.name}
-                className="w-10 h-10 object-cover rounded mr-2"
+                className="w-10 h-10 object-cover rounded mr-2 flex-shrink-0"
               />
-              <span className="text-xs">{itemImageFile.name}</span>
+              <span className="text-xs truncate">{itemImageFile.name}</span>
             </div>
           ) : (
             <span className="text-xs ml-2">{t("no_file_chosen")}</span>
@@ -284,7 +295,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           {itemImageFile && (
             <button
               onClick={handleRemoveImage}
-              className="text-gray-500 hover:text-gray-700 text-xs ml-auto border border-gray-300 rounded p-1 px-2 hover:bg-gray-100"
+              className="text-gray-500 hover:text-gray-700 text-xs ml-auto flex-shrink-0"
             >
               <FaTrash />
             </button>
@@ -378,10 +389,20 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
         </div>
       </div>
       <div className="flex justify-start space-x-3 mt-6">
-        <button onClick={handleSave} className="primary-button">
-          {t("save")}
+        <button
+          onClick={handleSave}
+          className={`primary-button ${
+            isSaving ? "bg-green-600/70 hover:bg-green-600/70" : ""
+          }`}
+          disabled={isSaving}
+        >
+          {isSaving ? t("saving") : t("save")}
         </button>
-        <button onClick={onCancel} className="secondary-button">
+        <button
+          onClick={onCancel}
+          className="secondary-button"
+          disabled={isSaving}
+        >
           {t("cancel")}
         </button>
       </div>

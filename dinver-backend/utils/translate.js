@@ -6,10 +6,21 @@ const translate = new Translate({
 });
 
 const autoTranslate = async (translations) => {
-  const hrTranslation = translations.find((t) => t.language === 'hr');
-  const enTranslation = translations.find((t) => t.language === 'en');
+  let hrTranslation = translations.find((t) => t.language === 'hr');
+  let enTranslation = translations.find((t) => t.language === 'en');
 
-  if (hrTranslation?.description && !enTranslation?.description) {
+  // Inicijaliziraj objekte ako ne postoje
+  if (!hrTranslation) {
+    hrTranslation = { language: 'hr', name: '', description: '' };
+    translations.push(hrTranslation);
+  }
+  if (!enTranslation) {
+    enTranslation = { language: 'en', name: '', description: '' };
+    translations.push(enTranslation);
+  }
+
+  // Provjeri i prevedi opise
+  if (hrTranslation.description && !enTranslation.description) {
     const [descriptionTranslation] = await translate.translate(
       hrTranslation.description,
       {
@@ -18,7 +29,7 @@ const autoTranslate = async (translations) => {
       },
     );
     enTranslation.description = descriptionTranslation;
-  } else if (enTranslation?.description && !hrTranslation?.description) {
+  } else if (enTranslation.description && !hrTranslation.description) {
     const [descriptionTranslation] = await translate.translate(
       enTranslation.description,
       {
@@ -29,35 +40,19 @@ const autoTranslate = async (translations) => {
     hrTranslation.description = descriptionTranslation;
   }
 
-  if (!hrTranslation || !enTranslation) {
-    const sourceLang = hrTranslation ? 'hr' : 'en';
-    const sourceTranslation = hrTranslation || enTranslation;
-    const targetLang = sourceLang === 'hr' ? 'en' : 'hr';
-
-    const [nameTranslation] = await translate.translate(
-      sourceTranslation.name,
-      {
-        from: sourceLang,
-        to: targetLang,
-      },
-    );
-
-    let descriptionTranslation = '';
-    if (sourceTranslation.description) {
-      [descriptionTranslation] = await translate.translate(
-        sourceTranslation.description,
-        {
-          from: sourceLang,
-          to: targetLang,
-        },
-      );
-    }
-
-    translations.push({
-      language: targetLang,
-      name: nameTranslation,
-      description: descriptionTranslation || '',
+  // Provjeri i prevedi imena
+  if (hrTranslation.name && !enTranslation.name) {
+    const [nameTranslation] = await translate.translate(hrTranslation.name, {
+      from: 'hr',
+      to: 'en',
     });
+    enTranslation.name = nameTranslation;
+  } else if (enTranslation.name && !hrTranslation.name) {
+    const [nameTranslation] = await translate.translate(enTranslation.name, {
+      from: 'en',
+      to: 'hr',
+    });
+    hrTranslation.name = nameTranslation;
   }
 
   return translations;

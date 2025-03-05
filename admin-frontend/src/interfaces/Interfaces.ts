@@ -73,24 +73,36 @@ export interface EstablishmentPerk {
   icon: string;
 }
 
+export enum Language {
+  HR = "hr",
+  EN = "en",
+}
+
+export interface Translation {
+  language: Language;
+  name: string;
+  description?: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
-  price: number;
+  description: string;
+  categoryId: string | null;
   restaurantId: string;
-  categoryId: string;
-  imageUrl?: string;
-  ingredients?: string[];
-  allergens?: string[];
-  description?: string;
-  imageFile?: File;
+  price: string;
+  imageUrl: string | null;
+  allergens: string[];
+  translations: Translation[];
+  position: number;
 }
 
 export interface Category {
   id: string;
   name: string;
   restaurantId: string;
-  menuItems: MenuItem[];
+  translations: Translation[];
+  position: number;
 }
 
 export interface AuditLog {
@@ -102,8 +114,6 @@ export interface AuditLog {
   entityId: string;
   changes: string;
   createdAt: string;
-  restaurantName?: string;
-  userEmail?: string;
 }
 
 export interface Review {
@@ -115,7 +125,6 @@ export interface Review {
   userFirstName: string;
   userLastName: string;
   userEmail: string;
-  restaurant?: string;
   createdAt?: string;
 }
 
@@ -134,4 +143,32 @@ export interface CustomWorkingDay {
   name: string;
   date: string;
   times: { open: string; close: string }[];
+}
+
+export interface Allergen {
+  id: number;
+  name_en: string;
+  name_hr: string;
+  icon: string;
+}
+
+export interface DrinkItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  categoryId: string | null;
+  imageUrl?: string;
+  translations: Translation[];
+  order?: number;
+}
+
+export interface DrinkCategoryData {
+  translations: Translation[];
+  restaurantId: string;
+}
+
+export interface CategoryData {
+  restaurantId: string;
+  translations: Translation[];
 }

@@ -2,7 +2,7 @@ import React, { useState, memo } from "react";
 import { DrinkItem, Category } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { OrderCategoriesModal } from "../../../components/modals/OrderCategoriesModal";
+import { OrderCategoriesModal } from "../../../components/OrderCategoriesModal";
 
 interface DrinksListProps {
   categories: Category[];

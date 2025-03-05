@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Language, Category } from "../../../interfaces/Interfaces";
+import { Allergen, Language, Category } from "../../../interfaces/Interfaces";
 import { FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { translateText } from "../../../services/translateService";
 import { MdTranslate } from "react-icons/md";
 
-interface AddDrinkItemProps {
+interface AddMenuItemProps {
   onCancel: () => void;
   onSave: (data: {
     translates: {
@@ -15,15 +15,18 @@ interface AddDrinkItemProps {
       language: string;
     }[];
     price: string;
+    allergens: string[];
     categoryId?: string | null;
     imageFile?: File;
   }) => Promise<void>;
+  allergens: Allergen[];
   categories: Category[];
 }
 
-const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
+const AddMenuItem: React.FC<AddMenuItemProps> = ({
   onCancel,
   onSave,
+  allergens,
   categories,
 }) => {
   const { t } = useTranslation();
@@ -36,6 +39,9 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
   });
   const [itemPrice, setItemPrice] = useState("");
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>([]);
+  const [allergenSearch, setAllergenSearch] = useState("");
+  const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -70,6 +76,7 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
       await onSave({
         translates: translatesArray,
         price: itemPrice,
+        allergens: selectedAllergenIds.map(String),
         categoryId: selectedCategoryId || null,
         imageFile: itemImageFile || undefined,
       });
@@ -92,9 +99,18 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
     setItemImageFile(null);
   };
 
+  const handleAllergenSelect = (id: number) => {
+    setSelectedAllergenIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   const isLanguageValid = (lang: Language) => {
     const translation = translations[lang];
     if (!translation.name.trim()) return false;
+
+    if (!translation.description.trim()) return true;
+
     return true;
   };
 
@@ -137,15 +153,14 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
       <div className="flex items-start">
         <div>
           <h2 className="text-xl font-bold text-gray-800">
-            {t("add_drink_item")}
+            {t("add_menu_item")}
           </h2>
-          <p className="text-gray-600 text-sm mb-4">
-            {t("add_drink_item_description")}
+          <p className="text-gray-600 mb-4 text-sm">
+            {t("add_menu_item_description")}
           </p>
         </div>
       </div>
-      <div className="h-line mb-6"></div>
-
+      <div className="h-line"></div>
       <div className="flex space-x-4 mb-6">
         <button
           onClick={() => setActiveTab(Language.HR)}
@@ -168,7 +183,6 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           {t("english")}
         </button>
       </div>
-
       <div className="flex space-x-4 mb-6">
         <div className="flex items-center">
           <div
@@ -187,7 +201,6 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           <span className="text-sm text-gray-600">{t("english")}</span>
         </div>
       </div>
-
       <div className="mb-3 max-w-xl">
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium text-gray-700">
@@ -213,10 +226,8 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-          placeholder={t("enter_drink_name")}
         />
       </div>
-
       <div className="mb-3 max-w-xl">
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium text-gray-700">
@@ -241,10 +252,8 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-          placeholder={t("enter_drink_description")}
         />
       </div>
-
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("price")}
@@ -254,10 +263,8 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           value={itemPrice}
           onChange={(e) => setItemPrice(e.target.value)}
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-          placeholder={t("enter_price")}
         />
       </div>
-
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700">
           {t("image")}
@@ -297,7 +304,6 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           )}
         </div>
       </div>
-
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("category")}
@@ -315,7 +321,75 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
           ))}
         </select>
       </div>
-
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("Alergeni")}
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder={t("Pretraži alergene")}
+            value={allergenSearch}
+            onChange={(e) => setAllergenSearch(e.target.value)}
+            onFocus={() => setAllergenDropdownOpen(true)}
+            onBlur={() => setAllergenDropdownOpen(false)}
+            className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          />
+          {isAllergenDropdownOpen && (
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
+              {allergens
+                .filter(
+                  (allergen) =>
+                    !selectedAllergenIds.includes(allergen.id) &&
+                    (activeTab === Language.EN
+                      ? allergen.name_en
+                      : allergen.name_hr
+                    )
+                      .toLowerCase()
+                      .includes(allergenSearch.toLowerCase())
+                )
+                .map((allergen) => (
+                  <div
+                    key={allergen.id}
+                    className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
+                    onMouseDown={() => handleAllergenSelect(allergen.id)}
+                  >
+                    <span className="flex items-center">
+                      {allergen.icon}{" "}
+                      {activeTab === Language.EN
+                        ? allergen.name_en
+                        : allergen.name_hr}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {selectedAllergenIds.map((id) => {
+            const allergen = allergens.find((all) => all.id === id);
+            return (
+              <div
+                key={id}
+                className="flex items-center px-2 py-1 rounded-full bg-gray-100"
+              >
+                <span className="mr-2">{allergen?.icon}</span>
+                <span>
+                  {activeTab === Language.EN
+                    ? allergen?.name_en
+                    : allergen?.name_hr}
+                </span>
+                <button
+                  onClick={() => handleAllergenSelect(id)}
+                  className="ml-2 text-xs text-red-500 hover:text-red-700"
+                >
+                  &times;
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <div className="flex justify-start space-x-3 mt-6">
         <button
           onClick={handleSave}
@@ -338,4 +412,4 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
   );
 };
 
-export default AddDrinkItem;
+export default AddMenuItem;
