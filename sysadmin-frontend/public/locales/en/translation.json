@@ -372,5 +372,18 @@
   "translate": "Translate",
   "nothing_to_translate": "Nothing to translate",
   "translation_success": "Translation successful",
-  "translation_failed": "Translation failed"
+  "translation_failed": "Translation failed",
+  "manage_your_drinks_and_categories": "Manage your drinks and categories.",
+  "are_you_sure_you_want_to_delete_the_drink": "Are you sure you want to delete the drink",
+  "are_you_sure_you_want_to_delete_the_drink_category": "Are you sure you want to delete the drink category",
+  "delete_drink": "Delete Drink",
+  "delete_drink_category": "Delete Drink Category",
+  "delete_drink_item_description": "Delete a drink item from the system.",
+  "delete_drink_category_description": "Delete a drink category from the system.",
+  "enter_drink_name": "Enter drink name",
+  "enter_drink_category_name": "Enter drink category name",
+  "add_new_drink_category": "Add New Drink Category",
+  "add_new_drink_item": "Add New Drink Item",
+  "enter_price": "Enter price",
+  "add_drink": "Add Drink"
 }

@@ -13,6 +13,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'categoryId',
         as: 'items',
       });
+
+      DrinkCategory.hasMany(models.DrinkCategoryTranslation, {
+        foreignKey: 'drinkCategoryId',
+        as: 'translations',
+        onDelete: 'CASCADE',
+      });
     }
   }
   DrinkCategory.init(
@@ -29,10 +35,6 @@ module.exports = (sequelize, DataTypes) => {
           model: 'Restaurants',
           key: 'id',
         },
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
       },
       position: {
         type: DataTypes.INTEGER,

@@ -166,3 +166,19 @@ export interface Allergen {
   name_hr: string;
   icon: string;
 }
+
+export interface DrinkItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  categoryId: string | null;
+  imageUrl?: string;
+  translations: Translation[];
+  order?: number;
+}
+
+export interface DrinkCategoryData {
+  translations: Translation[];
+  restaurantId: string;
+}

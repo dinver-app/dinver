@@ -8,6 +8,7 @@ const {
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { autoTranslate } = require('../../utils/translate');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -93,6 +94,7 @@ const getCategoryItems = async (req, res) => {
 const createMenuItem = async (req, res) => {
   try {
     const translations = JSON.parse(req.body.translations || '[]');
+    const translatedData = await autoTranslate(translations);
     const { price, restaurantId } = req.body;
     const allergenIds = req.body.allergenIds
       ? JSON.parse(req.body.allergenIds)
@@ -102,7 +104,7 @@ const createMenuItem = async (req, res) => {
     const file = req.file;
     const language = getUserLanguage(req);
 
-    if (!translations || translations.length === 0) {
+    if (!translatedData || translatedData.length === 0) {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
@@ -135,7 +137,7 @@ const createMenuItem = async (req, res) => {
     });
 
     // Create translations
-    for (const translation of translations) {
+    for (const translation of translatedData) {
       await MenuItemTranslation.create({
         menuItemId: menuItem.id,
         language: translation.language,
@@ -172,6 +174,7 @@ const updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     const translations = JSON.parse(req.body.translations || '[]');
+    const translatedData = await autoTranslate(translations);
     const price = req.body.price;
     const allergenIds = req.body.allergenIds
       ? JSON.parse(req.body.allergenIds)
@@ -182,7 +185,7 @@ const updateMenuItem = async (req, res) => {
     const file = req.file;
     const language = getUserLanguage(req);
 
-    if (!translations || translations.length === 0) {
+    if (!translatedData || translatedData.length === 0) {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
@@ -216,7 +219,7 @@ const updateMenuItem = async (req, res) => {
     });
 
     // Create new translations
-    for (const translation of translations) {
+    for (const translation of translatedData) {
       await MenuItemTranslation.create({
         menuItemId: menuItem.id,
         language: translation.language,
@@ -294,9 +297,10 @@ const deleteMenuItem = async (req, res) => {
 const createCategory = async (req, res) => {
   try {
     const { restaurantId, translations } = req.body;
+    const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
-    if (!translations || translations.length === 0) {
+    if (!translatedData || translatedData.length === 0) {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
@@ -316,7 +320,7 @@ const createCategory = async (req, res) => {
 
     const categoryExists = existingCategories.some((category) =>
       category.translations.some((translation) =>
-        translations.some(
+        translatedData.some(
           (t) =>
             t.language === translation.language && t.name === translation.name,
         ),
@@ -337,7 +341,7 @@ const createCategory = async (req, res) => {
     });
 
     // Create translations
-    const translationPromises = translations.map((translation) =>
+    const translationPromises = translatedData.map((translation) =>
       MenuCategoryTranslation.create({
         menuCategoryId: category.id,
         language: translation.language,
@@ -389,9 +393,10 @@ const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { translations } = req.body;
+    const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
-    if (!translations || translations.length === 0) {
+    if (!translatedData || translatedData.length === 0) {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
@@ -408,7 +413,7 @@ const updateCategory = async (req, res) => {
     });
 
     // Zatim kreiramo nove prijevode
-    for (const translation of translations) {
+    for (const translation of translatedData) {
       await MenuCategoryTranslation.create({
         menuCategoryId: category.id,
         language: translation.language,
