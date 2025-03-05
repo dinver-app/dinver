@@ -4,7 +4,6 @@ const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { utcToZonedTime } = require('date-fns-tz');
 
 const getAllRestaurants = async (req, res) => {
   try {
@@ -74,6 +73,7 @@ const getRestaurants = async (req, res) => {
         'icon_url',
         'slug',
         'isClaimed',
+        'email',
       ],
       limit,
       offset,
@@ -202,10 +202,17 @@ const addRestaurant = async (req, res) => {
 async function updateRestaurant(req, res) {
   try {
     const { id } = req.params;
-    const { name, address, website_url, fb_url, ig_url, phone, tt_url } =
-      req.body;
-    const file = req.file;
-
+    const {
+      name,
+      address,
+      place,
+      website_url,
+      fb_url,
+      ig_url,
+      phone,
+      tt_url,
+      email,
+    } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -215,7 +222,6 @@ async function updateRestaurant(req, res) {
 
     let thumbnail_url = restaurant.thumbnail_url;
 
-    // Delete the old image if a new one is uploaded
     if (file) {
       if (restaurant.thumbnail_url) {
         const oldKey = restaurant.thumbnail_url.split('/').pop();
@@ -228,11 +234,13 @@ async function updateRestaurant(req, res) {
     await restaurant.update({
       name,
       address,
+      place,
       website_url,
       fb_url,
       ig_url,
       phone,
       tt_url,
+      email,
       thumbnail_url,
     });
 

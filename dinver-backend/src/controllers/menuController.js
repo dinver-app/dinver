@@ -1,27 +1,52 @@
 const {
   MenuItem,
   MenuCategory,
-  IngredientAllergen,
-  Ingredient,
+  MenuItemTranslation,
+  MenuCategoryTranslation,
   Allergen,
 } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { autoTranslate } = require('../../utils/translate');
+
+// Helper function to get user language
+const getUserLanguage = (req) => {
+  return req.user?.language || 'hr';
+};
 
 // Get all menu items for a specific restaurant
 const getMenuItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
     const menuItems = await MenuItem.findAll({
       where: { restaurantId },
       order: [['position', 'ASC']],
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+        },
+      ],
     });
 
-    const formattedMenuItems = menuItems.map((item) => ({
-      ...item.toJSON(),
-      price: parseFloat(item.price).toFixed(2),
-    }));
+    const formattedMenuItems = menuItems.map((item) => {
+      const itemData = item.toJSON();
+      const userTranslation = itemData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = itemData.translations[0];
+
+      return {
+        ...itemData,
+        name: (userTranslation || anyTranslation)?.name || '',
+        description: (userTranslation || anyTranslation)?.description || '',
+        price: parseFloat(itemData.price).toFixed(2),
+      };
+    });
+
     res.json(formattedMenuItems);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch menu items' });
@@ -32,12 +57,35 @@ const getMenuItems = async (req, res) => {
 const getCategoryItems = async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
     const categories = await MenuCategory.findAll({
       where: { restaurantId },
       order: [['position', 'ASC']],
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
     });
-    res.json(categories);
+
+    const formattedCategories = categories.map((category) => {
+      const categoryData = category.toJSON();
+      const userTranslation = categoryData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = categoryData.translations[0];
+
+      return {
+        ...categoryData,
+        name: (userTranslation || anyTranslation)?.name || '',
+      };
+    });
+
+    res.json(formattedCategories);
   } catch (error) {
+    console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
 };
@@ -45,45 +93,78 @@ const getCategoryItems = async (req, res) => {
 // Create a new menu item for a specific restaurant
 const createMenuItem = async (req, res) => {
   try {
-    const { name, price, categoryId, restaurantId, allergenIds, description } =
-      req.body;
+    const translations = JSON.parse(req.body.translations || '[]');
+    const translatedData = await autoTranslate(translations);
+    const { price, restaurantId } = req.body;
+    const allergenIds = req.body.allergenIds
+      ? JSON.parse(req.body.allergenIds)
+      : [];
+    const categoryId =
+      req.body.categoryId === 'null' ? null : req.body.categoryId;
     const file = req.file;
+    const language = getUserLanguage(req);
 
+    if (!translatedData || translatedData.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'at_least_one_translation_required' });
+    }
+
+    // Get last position
+    const existingItems = await MenuItem.findAll({
+      where: { restaurantId },
+      order: [['position', 'DESC']],
+    });
+
+    const lastPosition = existingItems[0]?.position ?? -1;
+    const newPosition = lastPosition + 1;
+
+    // Handle image upload
     let imageUrl = null;
     if (file) {
       const folder = 'menu_items';
       imageUrl = await uploadToS3(file, folder);
     }
 
-    const formattedAllergenIds = Array.isArray(allergenIds)
-      ? allergenIds.map((id) => parseInt(id))
-      : allergenIds === undefined
-        ? []
-        : [parseInt(allergenIds)];
-
-    const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
+    // Create menu item
     const menuItem = await MenuItem.create({
-      name,
-      price: formattedPrice,
+      price,
       restaurantId,
-      categoryId,
+      position: newPosition,
+      allergens: allergenIds,
       imageUrl,
-      allergens: formattedAllergenIds,
-      description,
+      categoryId,
     });
 
-    // Log the create action
-    await logAudit({
-      userId: req.user ? req.user.id : null,
-      action: ActionTypes.CREATE,
-      entity: Entities.MENU_ITEM,
-      entityId: menuItem.id,
-      restaurantId: restaurantId,
-      changes: { new: menuItem.get() },
+    // Create translations
+    for (const translation of translatedData) {
+      await MenuItemTranslation.create({
+        menuItemId: menuItem.id,
+        language: translation.language,
+        name: translation.name,
+        description: translation.description || '',
+      });
+    }
+
+    // Fetch created item with translations
+    const createdItem = await MenuItem.findByPk(menuItem.id, {
+      include: [{ model: MenuItemTranslation, as: 'translations' }],
     });
 
-    res.status(201).json(menuItem);
+    const userTranslation = createdItem.translations.find(
+      (t) => t.language === language,
+    );
+    const anyTranslation = createdItem.translations[0];
+
+    const result = {
+      ...createdItem.get(),
+      name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
+    };
+
+    res.status(201).json(result);
   } catch (error) {
+    console.error('Error creating menu item:', error);
     res.status(500).json({ error: 'Failed to create menu item' });
   }
 };
@@ -92,20 +173,31 @@ const createMenuItem = async (req, res) => {
 const updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, categoryId, removeImage, allergenIds, description } =
-      req.body;
+    const translations = JSON.parse(req.body.translations || '[]');
+    const translatedData = await autoTranslate(translations);
+    const price = req.body.price;
+    const allergenIds = req.body.allergenIds
+      ? JSON.parse(req.body.allergenIds)
+      : undefined;
+    const removeImage = req.body.removeImage;
+    const categoryId =
+      req.body.categoryId === 'null' ? null : req.body.categoryId;
     const file = req.file;
+    const language = getUserLanguage(req);
+
+    if (!translatedData || translatedData.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'at_least_one_translation_required' });
+    }
 
     const menuItem = await MenuItem.findByPk(id);
     if (!menuItem) {
-      return res.status(404).json({ error: 'Menu item not found' });
+      return res.status(404).json({ message: 'Menu item not found' });
     }
 
-    const oldData = { ...menuItem.get() };
-
+    // Handle image
     let imageUrl = menuItem.imageUrl;
-
-    // Delete the old image if a new one is uploaded
     if (file) {
       if (menuItem.imageUrl) {
         const oldKey = menuItem.imageUrl.split('/').pop();
@@ -121,35 +213,50 @@ const updateMenuItem = async (req, res) => {
       imageUrl = null;
     }
 
-    const formattedAllergenIds = Array.isArray(allergenIds)
-      ? allergenIds.map((id) => parseInt(id))
-      : allergenIds === undefined
-        ? []
-        : [parseInt(allergenIds)];
-    const formattedCategoryId = categoryId === '' ? null : categoryId;
-    const formattedPrice = parseFloat(price.replace(',', '.')).toFixed(2);
-    const updatedMenuItem = await menuItem.update({
-      name,
-      price: formattedPrice,
-      categoryId: formattedCategoryId,
+    // Delete existing translations
+    await MenuItemTranslation.destroy({
+      where: { menuItemId: menuItem.id },
+    });
+
+    // Create new translations
+    for (const translation of translatedData) {
+      await MenuItemTranslation.create({
+        menuItemId: menuItem.id,
+        language: translation.language,
+        name: translation.name,
+        description: translation.description || '',
+      });
+    }
+
+    // Update menu item
+    await menuItem.update({
+      price: price !== undefined ? price : menuItem.price,
       imageUrl,
-      allergens: formattedAllergenIds,
-      description,
+      allergens: allergenIds !== undefined ? allergenIds : menuItem.allergens,
+      categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
     });
 
-    // Log the update action
-    await logAudit({
-      userId: req.user ? req.user.id : null,
-      action: ActionTypes.UPDATE,
-      entity: Entities.MENU_ITEM,
-      entityId: menuItem.id,
-      restaurantId: menuItem.restaurantId,
-      changes: { old: oldData, new: updatedMenuItem.get() },
+    // Fetch updated item
+    const updated = await MenuItem.findByPk(id, {
+      include: [{ model: MenuItemTranslation, as: 'translations' }],
     });
 
-    res.json(menuItem);
+    const userTranslation = updated.translations.find(
+      (t) => t.language === language,
+    );
+    const anyTranslation = updated.translations[0];
+
+    const result = {
+      ...updated.get(),
+      name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
+      translations: updated.translations,
+    };
+
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update menu item' });
+    console.error('Error updating menu item:', error);
+    res.status(500).json({ message: 'Failed to update menu item' });
   }
 };
 
@@ -189,37 +296,94 @@ const deleteMenuItem = async (req, res) => {
 // Create a new category for a specific restaurant
 const createCategory = async (req, res) => {
   try {
-    const { name, restaurantId } = req.body;
+    const { restaurantId, translations } = req.body;
+    const translatedData = await autoTranslate(translations);
+    const language = getUserLanguage(req);
 
-    // Provjera postoji li već kategorija s istim imenom i restaurantId
-    const existingCategory = await MenuCategory.findOne({
-      where: {
-        name,
-        restaurantId,
-      },
+    if (!translatedData || translatedData.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'at_least_one_translation_required' });
+    }
+
+    // Check if category with same name exists in any language
+    const existingCategories = await MenuCategory.findAll({
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+      where: { restaurantId },
+      order: [['position', 'DESC']],
     });
 
-    if (existingCategory) {
+    const categoryExists = existingCategories.some((category) =>
+      category.translations.some((translation) =>
+        translatedData.some(
+          (t) =>
+            t.language === translation.language && t.name === translation.name,
+        ),
+      ),
+    );
+
+    if (categoryExists) {
       return res.status(400).json({ message: 'category_already_exists' });
     }
 
+    const lastPosition = existingCategories[0]?.position ?? -1;
+    const newPosition = lastPosition + 1;
+
+    // Create category
     const category = await MenuCategory.create({
-      name,
       restaurantId,
+      position: newPosition,
     });
 
-    // Log the create action
+    // Create translations
+    const translationPromises = translatedData.map((translation) =>
+      MenuCategoryTranslation.create({
+        menuCategoryId: category.id,
+        language: translation.language,
+        name: translation.name,
+      }),
+    );
+
+    await Promise.all(translationPromises);
+
+    // Fetch the created category with translations
+    const createdCategory = await MenuCategory.findByPk(category.id, {
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+    });
+
+    // Format response
+    const userTranslation = createdCategory.translations.find(
+      (t) => t.language === language,
+    );
+    const anyTranslation = createdCategory.translations[0];
+
+    const result = {
+      ...createdCategory.get(),
+      name: (userTranslation || anyTranslation)?.name || '',
+    };
+
     await logAudit({
       userId: req.user ? req.user.id : null,
       action: ActionTypes.CREATE,
       entity: Entities.MENU_CATEGORY,
-      entityId: category.id,
+      entityId: result.id,
       restaurantId: restaurantId,
-      changes: { new: category.get() },
+      changes: { new: result },
     });
 
-    res.status(201).json(category);
+    res.status(201).json(result);
   } catch (error) {
+    console.error('Error creating category:', error);
     res.status(500).json({ error: 'Failed to create category' });
   }
 };
@@ -228,28 +392,55 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { translations } = req.body;
+    const translatedData = await autoTranslate(translations);
+    const language = getUserLanguage(req);
+
+    if (!translatedData || translatedData.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'at_least_one_translation_required' });
+    }
+
     const category = await MenuCategory.findByPk(id);
     if (!category) {
-      return res.status(404).json({ error: 'Category not found' });
+      return res.status(404).json({ message: 'Category not found' });
     }
-    const oldData = { ...category.get() };
-    category.name = name;
-    await category.save();
 
-    // Log the update action
-    await logAudit({
-      userId: req.user ? req.user.id : null,
-      action: ActionTypes.UPDATE,
-      entity: Entities.MENU_CATEGORY,
-      entityId: category.id,
-      restaurantId: category.restaurantId,
-      changes: { old: oldData, new: category.get() },
+    // Prvo obrišemo sve postojeće prijevode
+    await MenuCategoryTranslation.destroy({
+      where: { menuCategoryId: category.id },
     });
 
-    res.json(category);
+    // Zatim kreiramo nove prijevode
+    for (const translation of translatedData) {
+      await MenuCategoryTranslation.create({
+        menuCategoryId: category.id,
+        language: translation.language,
+        name: translation.name,
+      });
+    }
+
+    // Dohvatimo ažuriranu kategoriju
+    const updated = await MenuCategory.findByPk(id, {
+      include: [{ model: MenuCategoryTranslation, as: 'translations' }],
+    });
+
+    const userTranslation = updated.translations.find(
+      (t) => t.language === language,
+    );
+    const anyTranslation = updated.translations[0];
+
+    const result = {
+      ...updated.get(),
+      name: (userTranslation || anyTranslation)?.name || '',
+      translations: updated.translations,
+    };
+
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update category' });
+    console.error('Error updating category:', error);
+    res.status(500).json({ message: 'Failed to update category' });
   }
 };
 
@@ -291,15 +482,6 @@ const deleteCategory = async (req, res) => {
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete category' });
-  }
-};
-
-const getAllIngredients = async (req, res) => {
-  try {
-    const ingredients = await Ingredient.findAll();
-    res.json(ingredients);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch ingredients' });
   }
 };
 
@@ -347,7 +529,6 @@ module.exports = {
   createCategory,
   updateCategory,
   deleteCategory,
-  getAllIngredients,
   getAllAllergens,
   updateCategoryOrder,
   updateItemOrder,

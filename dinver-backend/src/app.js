@@ -6,7 +6,7 @@ const passport = require('passport');
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
-
+const translateRoutes = require('./routes/translateRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -68,6 +68,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
+app.use('/api/translate', translateRoutes);
 
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');

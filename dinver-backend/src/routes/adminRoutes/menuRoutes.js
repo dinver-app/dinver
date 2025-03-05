@@ -68,13 +68,6 @@ router.delete(
 );
 
 router.get(
-  '/menu/ingredients',
-  adminAuthenticateToken,
-  checkAdmin,
-  menuController.getAllIngredients,
-);
-
-router.get(
   '/menu/allergens',
   adminAuthenticateToken,
   checkAdmin,

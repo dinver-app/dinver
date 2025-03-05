@@ -35,7 +35,7 @@ export const deleteRestaurant = async (id: string) => {
 export const updateRestaurant = async (id: string, updatedData: any) => {
   try {
     const response = await apiClient.put(
-      `api/sysadmin/restaurants/${id}`,
+      `api/sysadmin/restaurants/details/${id}`,
       updatedData
     );
     return response.data;
