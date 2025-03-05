@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, memo } from "react";
 import { MenuItem, Category, Allergen } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
