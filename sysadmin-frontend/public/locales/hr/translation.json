@@ -363,5 +363,11 @@
   "update_drink_item": "Ažuriraj stavku cjenika pića",
   "place": "Mjesto",
   "back": "Povratak",
-  "choose_another_image": "Odaberi drugu sliku"
+  "choose_another_image": "Odaberi drugu sliku",
+  "enter_category_name": "Unesi ime kategorije",
+  "category_name_required": "Ime kategorije je obavezno",
+  "translate": "Prevedi",
+  "nothing_to_translate": "Nema teksta za prevođenje",
+  "translation_success": "Prijevod uspješan",
+  "translation_failed": "Prijevod nije uspio"
 }

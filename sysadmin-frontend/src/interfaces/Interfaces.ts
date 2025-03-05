@@ -82,24 +82,36 @@ export interface EstablishmentPerk {
   icon: string;
 }
 
+export enum Language {
+  HR = "hr",
+  EN = "en",
+}
+
+export interface Translation {
+  language: Language;
+  name: string;
+  description?: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
-  price: number;
+  description: string;
+  categoryId: string | null;
   restaurantId: string;
-  categoryId: string;
-  imageUrl?: string;
-  ingredients?: string[];
-  allergens?: string[];
-  description?: string;
-  imageFile?: File;
+  price: string;
+  imageUrl: string | null;
+  allergens: string[];
+  translations: Translation[];
+  position: number;
 }
 
 export interface Category {
   id: string;
   name: string;
   restaurantId: string;
-  menuItems: MenuItem[];
+  translations: Translation[];
+  position: number;
 }
 
 export interface AuditLog {

@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+      MenuItem.hasMany(models.MenuItemTranslation, {
+        foreignKey: 'menuItemId',
+        as: 'translations',
+        onDelete: 'CASCADE',
+      });
     }
   }
   MenuItem.init(
@@ -40,10 +45,6 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       price: {
         type: DataTypes.DECIMAL,
         allowNull: false,
@@ -58,10 +59,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       allergens: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
-        allowNull: true,
-      },
-      description: {
-        type: DataTypes.STRING,
         allowNull: true,
       },
       position: {

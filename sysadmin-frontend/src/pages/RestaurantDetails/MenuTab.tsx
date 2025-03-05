@@ -17,16 +17,24 @@ import {
   updateCategoryOrder,
   updateItemOrder,
 } from "../../services/menuService";
-import { MenuItem, Category, Allergen } from "../../interfaces/Interfaces";
+import {
+  MenuItem,
+  Category,
+  Allergen,
+  Translation,
+  Language,
+} from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
+import { VIEWS, ViewType } from "../../constants/menuConstants";
+import { MenuErrorBoundary } from "../../components/ErrorBoundary";
 
 const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
   const { t } = useTranslation();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allergens, setAllergens] = useState<Allergen[]>([]);
-  const [view, setView] = useState("list");
+  const [view, setView] = useState<ViewType>(VIEWS.LIST);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
@@ -59,22 +67,27 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     fetchData();
   }, [restaurantId, t]);
 
-  const handleAddCategory = () => setView("addCategory");
+  const handleAddCategory = () => setView(VIEWS.ADD_CATEGORY);
   const handleEditCategory = (category: Category) => {
     setSelectedCategory(category);
-    setView("editCategory");
+    setView(VIEWS.EDIT_CATEGORY);
   };
-  const handleAddMenuItem = () => setView("addMenuItem");
+  const handleAddMenuItem = () => setView(VIEWS.ADD_MENU_ITEM);
   const handleEditMenuItem = (menuItem: MenuItem) => {
     setSelectedMenuItem(menuItem);
-    setView("editMenuItem");
+    setView(VIEWS.EDIT_MENU_ITEM);
   };
-  const handleCancel = () => setView("list");
+  const handleCancel = () => setView(VIEWS.LIST);
 
-  const handleSaveCategory = async (name: string) => {
+  const handleSaveCategory = async (data: {
+    translates: { name: string; language: string }[];
+  }) => {
     try {
       const category = await createCategory({
-        name,
+        translations: data.translates.map((translate) => ({
+          name: translate.name,
+          language: translate.language as Language,
+        })),
         restaurantId: restaurantId as string,
       });
       setCategories([...categories, category]);
@@ -87,12 +100,16 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     }
   };
 
-  const handleUpdateCategory = async (id: string, name: string) => {
+  const handleUpdateCategory = async (
+    id: string,
+    data: { translations: Translation[] }
+  ) => {
     try {
-      const updatedCategory = await updateCategory(id, { name });
-      setCategories(
-        categories.map((cat) => (cat.id === id ? updatedCategory : cat))
-      );
+      await updateCategory(id, data);
+
+      const freshCategories = await getCategoryItems(restaurantId as string);
+      setCategories(freshCategories);
+
       toast.success(t("category_updated"));
     } catch (error) {
       console.error("Failed to update category", error);
@@ -102,27 +119,28 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     }
   };
 
-  const handleSaveMenuItem = async (
-    name: string,
-    price: string,
-    description: string,
-    imageFile: File | null,
-    selectedAllergenIds: string[]
-  ) => {
+  const handleSaveMenuItem = async (data: {
+    translates: {
+      name: string;
+      description: string;
+      language: string;
+    }[];
+    price: string;
+    allergens: string[];
+    categoryId?: string | null;
+  }) => {
     try {
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("price", price);
-      formData.append("description", description);
-      formData.append("restaurantId", restaurantId as string);
-      if (imageFile) {
-        formData.append("imageFile", imageFile);
-      }
-      selectedAllergenIds.forEach((id) => {
-        formData.append("allergenIds", id);
+      const menuItem = await createMenuItem({
+        translations: data.translates.map((t) => ({
+          ...t,
+          language: t.language as Language,
+        })),
+        price: data.price,
+        restaurantId: restaurantId as string,
+        allergenIds: data.allergens,
+        categoryId: data.categoryId,
       });
 
-      const menuItem = await createMenuItem(formData);
       setMenuItems([...menuItems, menuItem]);
       toast.success(t("menu_item_created"));
     } catch (error) {
@@ -135,27 +153,33 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleUpdateMenuItem = async (
     id: string,
-    name: string,
-    price: string,
-    description: string,
-    imageFile: File | null,
-    selectedAllergenIds: string[],
-    removeImage: boolean
+    data: {
+      translations: {
+        name: string;
+        description: string;
+        language: string;
+      }[];
+      price: string;
+      allergens: string[];
+      imageFile: File | null;
+      removeImage: boolean;
+      categoryId?: string | null;
+    }
   ) => {
     try {
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("price", price);
-      formData.append("description", description);
-      if (imageFile) {
-        formData.append("imageFile", imageFile);
-      }
-      selectedAllergenIds.forEach((id) => {
-        formData.append("allergenIds", id);
+      const updatedMenuItem = await updateMenuItem(id, {
+        translations: data.translations.map((t) => ({
+          ...t,
+          language: t.language as Language,
+        })),
+        price: data.price,
+        restaurantId: restaurantId as string,
+        allergenIds: data.allergens,
+        imageFile: data.imageFile || undefined,
+        removeImage: data.removeImage,
+        categoryId: data.categoryId,
       });
-      formData.append("removeImage", String(removeImage));
 
-      const updatedMenuItem = await updateMenuItem(id, formData);
       setMenuItems(
         menuItems.map((item) => (item.id === id ? updatedMenuItem : item))
       );
@@ -203,18 +227,21 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     }
   };
 
-  const handleSortItems = async (categoryId: string, itemOrder: string[]) => {
+  const handleSortItems = async (
+    categoryId: string | null,
+    itemOrder: string[]
+  ) => {
     try {
       await updateItemOrder(itemOrder);
       setMenuItems((prevItems) => {
-        const itemsInCategory = prevItems.filter(
-          (item) => item.categoryId === categoryId
+        const itemsInCategory = prevItems.filter((item) =>
+          categoryId ? item.categoryId === categoryId : !item.categoryId
         );
         const sortedItems = itemOrder.map(
           (id) => itemsInCategory.find((item) => item.id === id)!
         );
-        const otherItems = prevItems.filter(
-          (item) => item.categoryId !== categoryId
+        const otherItems = prevItems.filter((item) =>
+          categoryId ? item.categoryId !== categoryId : item.categoryId
         );
         return [...otherItems, ...sortedItems];
       });
@@ -227,11 +254,11 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const renderView = () => {
     switch (view) {
-      case "addCategory":
+      case VIEWS.ADD_CATEGORY:
         return (
           <AddCategory onCancel={handleCancel} onSave={handleSaveCategory} />
         );
-      case "editCategory":
+      case VIEWS.EDIT_CATEGORY:
         return (
           <EditCategory
             category={selectedCategory as Category}
@@ -239,21 +266,23 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             onSave={handleUpdateCategory}
           />
         );
-      case "addMenuItem":
+      case VIEWS.ADD_MENU_ITEM:
         return (
           <AddMenuItem
             onCancel={handleCancel}
             onSave={handleSaveMenuItem}
             allergens={allergens}
+            categories={categories}
           />
         );
-      case "editMenuItem":
+      case VIEWS.EDIT_MENU_ITEM:
         return (
           <EditMenuItem
             menuItem={selectedMenuItem as MenuItem}
             onCancel={handleCancel}
             onSave={handleUpdateMenuItem}
             allergens={allergens}
+            categories={categories}
           />
         );
       default:
@@ -275,7 +304,11 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     }
   };
 
-  return <div>{renderView()}</div>;
+  return (
+    <MenuErrorBoundary>
+      <div>{renderView()}</div>
+    </MenuErrorBoundary>
+  );
 };
 
 export default MenuTab;

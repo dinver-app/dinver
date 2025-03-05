@@ -1,50 +1,84 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Allergen } from "../../../interfaces/Interfaces";
+import { Allergen, Language, Category } from "../../../interfaces/Interfaces";
 import { FaTrash } from "react-icons/fa";
+import toast from "react-hot-toast";
+import { translateText } from "../../../services/translateService";
+import { MdTranslate } from "react-icons/md";
 
 interface AddMenuItemProps {
   onCancel: () => void;
-  onSave: (
-    name: string,
-    price: string,
-    description: string,
-    imageFile: File | null,
-    allergens: string[]
-  ) => void;
+  onSave: (data: {
+    translates: {
+      name: string;
+      description: string;
+      language: string;
+    }[];
+    price: string;
+    allergens: string[];
+    categoryId?: string | null;
+  }) => void;
   allergens: Allergen[];
+  categories: Category[];
 }
 
 const AddMenuItem: React.FC<AddMenuItemProps> = ({
   onCancel,
   onSave,
   allergens,
+  categories,
 }) => {
   const { t } = useTranslation();
-  const [itemName, setItemName] = useState("");
+  const [activeTab, setActiveTab] = useState<Language>(Language.HR);
+  const [translations, setTranslations] = useState<
+    Record<Language, { name: string; description: string }>
+  >({
+    [Language.HR]: { name: "", description: "" },
+    [Language.EN]: { name: "", description: "" },
+  });
   const [itemPrice, setItemPrice] = useState("");
-  const [itemDescription, setItemDescription] = useState("");
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>([]);
   const [allergenSearch, setAllergenSearch] = useState("");
   const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const handleSave = () => {
-    if (itemName && itemPrice) {
-      onSave(
-        itemName,
-        itemPrice,
-        itemDescription,
-        itemImageFile,
-        selectedAllergenIds.map(String)
-      );
+    const translatesArray = Object.entries(translations)
+      .filter(([_, value]) => value.name.trim() !== "")
+      .map(([language, value]) => ({
+        name: value.name.trim(),
+        description: value.description.trim(),
+        language: language as string,
+      }));
+
+    if (translatesArray.length === 0) {
+      toast.error(t("item_name_required"));
+      return;
     }
+
+    if (!itemPrice.trim()) {
+      toast.error(t("price_required"));
+      return;
+    }
+
+    if (isNaN(parseFloat(itemPrice))) {
+      toast.error(t("invalid_price"));
+      return;
+    }
+
+    onSave({
+      translates: translatesArray,
+      price: itemPrice,
+      allergens: selectedAllergenIds.map(String),
+      categoryId: selectedCategoryId || null,
+    });
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setItemImageFile(event.target.files[0]);
-      event.target.value = ""; // Reset input to allow re-selection of the same file
+      event.target.value = "";
     }
   };
 
@@ -56,6 +90,43 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
     setSelectedAllergenIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const isLanguageValid = (lang: Language) => {
+    const translation = translations[lang];
+    if (!translation.name.trim()) return false;
+
+    if (!translation.description.trim()) return true;
+
+    return true;
+  };
+
+  const handleTranslate = async (field: "name" | "description") => {
+    try {
+      const sourceText = translations[activeTab][field];
+      if (!sourceText.trim()) {
+        toast.error(t("nothing_to_translate"));
+        return;
+      }
+
+      const targetLang = activeTab === Language.HR ? Language.EN : Language.HR;
+      const translatedText = await translateText(
+        sourceText,
+        targetLang.toLowerCase()
+      );
+
+      setTranslations((prev) => ({
+        ...prev,
+        [targetLang]: {
+          ...prev[targetLang],
+          [field]: translatedText,
+        },
+      }));
+
+      toast.success(t("translation_success"));
+    } catch (error) {
+      toast.error(t("translation_failed"));
+    }
   };
 
   return (
@@ -77,14 +148,96 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
         </div>
       </div>
       <div className="h-line"></div>
+      <div className="flex space-x-4 mb-6">
+        <button
+          onClick={() => setActiveTab(Language.HR)}
+          className={`px-4 py-2 rounded-md text-sm ${
+            activeTab === Language.HR
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {t("croatian")}
+        </button>
+        <button
+          onClick={() => setActiveTab(Language.EN)}
+          className={`px-4 py-2 rounded-md text-sm ${
+            activeTab === Language.EN
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {t("english")}
+        </button>
+      </div>
+      <div className="flex space-x-4 mb-6">
+        <div className="flex items-center">
+          <div
+            className={`w-3 h-3 rounded-full mr-2 ${
+              isLanguageValid(Language.HR) ? "bg-green-500" : "bg-gray-300"
+            }`}
+          />
+          <span className="text-sm text-gray-600">{t("croatian")}</span>
+        </div>
+        <div className="flex items-center">
+          <div
+            className={`w-3 h-3 rounded-full mr-2 ${
+              isLanguageValid(Language.EN) ? "bg-green-500" : "bg-gray-300"
+            }`}
+          />
+          <span className="text-sm text-gray-600">{t("english")}</span>
+        </div>
+      </div>
       <div className="mb-3 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("name")}
-        </label>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {t("name")} (
+            {activeTab === Language.HR ? t("croatian") : t("english")})
+          </label>
+          <button
+            onClick={() => handleTranslate("name")}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
+            title={t("translate")}
+          >
+            <MdTranslate className="w-4 h-4" />
+            {t("translate")}
+          </button>
+        </div>
         <input
           type="text"
-          value={itemName}
-          onChange={(e) => setItemName(e.target.value)}
+          value={translations[activeTab].name}
+          onChange={(e) =>
+            setTranslations((prev) => ({
+              ...prev,
+              [activeTab]: { ...prev[activeTab], name: e.target.value },
+            }))
+          }
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+        />
+      </div>
+      <div className="mb-3 max-w-xl">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {t("description")} (
+            {activeTab === Language.HR ? t("croatian") : t("english")})
+          </label>
+          <button
+            onClick={() => handleTranslate("description")}
+            className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
+            title={t("translate")}
+          >
+            <MdTranslate className="w-4 h-4" />
+            {t("translate")}
+          </button>
+        </div>
+        <textarea
+          value={translations[activeTab].description}
+          onChange={(e) =>
+            setTranslations((prev) => ({
+              ...prev,
+              [activeTab]: { ...prev[activeTab], description: e.target.value },
+            }))
+          }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
         />
       </div>
@@ -96,16 +249,6 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           type="text"
           value={itemPrice}
           onChange={(e) => setItemPrice(e.target.value)}
-          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-        />
-      </div>
-      <div className="mb-3 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("description")}
-        </label>
-        <textarea
-          value={itemDescription}
-          onChange={(e) => setItemDescription(e.target.value)}
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
         />
       </div>
@@ -150,6 +293,23 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
       </div>
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("category")}
+        </label>
+        <select
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+        >
+          <option value="">{t("no_category")}</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("Alergeni")}
         </label>
         <div className="relative">
@@ -168,7 +328,10 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                 .filter(
                   (allergen) =>
                     !selectedAllergenIds.includes(allergen.id) &&
-                    allergen.name_en
+                    (activeTab === Language.EN
+                      ? allergen.name_en
+                      : allergen.name_hr
+                    )
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
                 )
@@ -179,7 +342,10 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                     onMouseDown={() => handleAllergenSelect(allergen.id)}
                   >
                     <span className="flex items-center">
-                      {allergen.icon} {allergen.name_en}
+                      {allergen.icon}{" "}
+                      {activeTab === Language.EN
+                        ? allergen.name_en
+                        : allergen.name_hr}
                     </span>
                   </div>
                 ))}
@@ -195,7 +361,11 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                 className="flex items-center px-2 py-1 rounded-full bg-gray-100"
               >
                 <span className="mr-2">{allergen?.icon}</span>
-                <span>{allergen?.name_en}</span>
+                <span>
+                  {activeTab === Language.EN
+                    ? allergen?.name_en
+                    : allergen?.name_hr}
+                </span>
                 <button
                   onClick={() => handleAllergenSelect(id)}
                   className="ml-2 text-xs text-red-500 hover:text-red-700"

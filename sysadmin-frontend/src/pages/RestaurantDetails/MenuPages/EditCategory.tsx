@@ -1,11 +1,18 @@
 import React, { useState } from "react";
-import { Category } from "../../../interfaces/Interfaces";
+import {
+  Category,
+  Language,
+  Translation,
+} from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
+import { translateText } from "../../../services/translateService";
+import TranslateButton from "../../../components/TranslateButton";
 
 interface EditCategoryProps {
   category: Category;
   onCancel: () => void;
-  onSave: (id: string, name: string) => void;
+  onSave: (id: string, data: { translations: Translation[] }) => void;
 }
 
 const EditCategory: React.FC<EditCategoryProps> = ({
@@ -14,11 +21,56 @@ const EditCategory: React.FC<EditCategoryProps> = ({
   onSave,
 }) => {
   const { t } = useTranslation();
-  const [categoryName, setCategoryName] = useState(category.name);
+  const [activeTab, setActiveTab] = useState<Language>(Language.HR);
+  const [translations, setTranslations] = useState<Record<Language, string>>({
+    [Language.HR]:
+      category.translations.find((t) => t.language === Language.HR)?.name || "",
+    [Language.EN]:
+      category.translations.find((t) => t.language === Language.EN)?.name || "",
+  });
 
   const handleSave = () => {
-    if (categoryName) {
-      onSave(category.id, categoryName);
+    const hasAnyName = Object.values(translations).some(
+      (value) => value.trim() !== ""
+    );
+
+    if (!hasAnyName) {
+      toast.error(t("category_name_required"));
+      return;
+    }
+
+    const translationsArray = Object.entries(translations)
+      .filter(([_, value]) => value.trim() !== "")
+      .map(([language, name]) => ({
+        name: name.trim(),
+        language: language as Language,
+      }));
+
+    onSave(category.id, { translations: translationsArray });
+  };
+
+  const handleTranslate = async () => {
+    try {
+      const sourceText = translations[activeTab];
+      if (!sourceText.trim()) {
+        toast.error(t("nothing_to_translate"));
+        return;
+      }
+
+      const targetLang = activeTab === Language.HR ? Language.EN : Language.HR;
+      const translatedText = await translateText(
+        sourceText,
+        targetLang.toLowerCase()
+      );
+
+      setTranslations((prev) => ({
+        ...prev,
+        [targetLang]: translatedText,
+      }));
+
+      toast.success(t("translation_success"));
+    } catch (error) {
+      toast.error(t("translation_failed"));
     }
   };
 
@@ -41,23 +93,81 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         </div>
       </div>
       <div className="h-line mb-6"></div>
+
+      <div className="flex space-x-4 mb-6">
+        <button
+          onClick={() => setActiveTab(Language.HR)}
+          className={`px-4 py-2 rounded-md text-sm ${
+            activeTab === Language.HR
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {t("croatian")}
+        </button>
+        <button
+          onClick={() => setActiveTab(Language.EN)}
+          className={`px-4 py-2 rounded-md text-sm ${
+            activeTab === Language.EN
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {t("english")}
+        </button>
+      </div>
+
+      <div className="flex space-x-4 mb-6">
+        <div className="flex items-center">
+          <div
+            className={`w-3 h-3 rounded-full mr-2 ${
+              translations.hr ? "bg-green-500" : "bg-gray-300"
+            }`}
+          />
+          <span className="text-sm text-gray-600">{t("croatian")}</span>
+        </div>
+        <div className="flex items-center">
+          <div
+            className={`w-3 h-3 rounded-full mr-2 ${
+              translations.en ? "bg-green-500" : "bg-gray-300"
+            }`}
+          />
+          <span className="text-sm text-gray-600">{t("english")}</span>
+        </div>
+      </div>
+
       <div className="mb-6 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("Ime kategorije")}
-        </label>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {t("category_name")} (
+            {activeTab === Language.HR ? t("croatian") : t("english")})
+          </label>
+          <TranslateButton onClick={handleTranslate} className="ml-2" />
+        </div>
         <input
           type="text"
-          value={categoryName}
-          onChange={(e) => setCategoryName(e.target.value)}
+          value={translations[activeTab]}
+          onChange={(e) =>
+            setTranslations((prev) => ({
+              ...prev,
+              [activeTab]: e.target.value,
+            }))
+          }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={
+            activeTab === Language.HR
+              ? t("enter_category_name")
+              : t("enter_category_name")
+          }
         />
       </div>
+
       <div className="flex justify-start space-x-3">
         <button onClick={handleSave} className="primary-button">
-          {t("Spremi")}
+          {t("save")}
         </button>
         <button onClick={onCancel} className="secondary-button">
-          {t("Odustani")}
+          {t("cancel")}
         </button>
       </div>
     </div>

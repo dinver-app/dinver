@@ -67,13 +67,6 @@ router.get(
 );
 
 router.get(
-  '/menu/ingredients',
-  sysadminAuthenticateToken,
-  checkSysadmin,
-  menuController.getAllIngredients,
-);
-
-router.get(
   '/menu/allergens',
   sysadminAuthenticateToken,
   checkSysadmin,

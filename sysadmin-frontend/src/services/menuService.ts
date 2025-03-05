@@ -1,16 +1,31 @@
+import { Translation } from "../interfaces/Interfaces";
 import { apiClient } from "./authService";
+
+interface MenuItemData {
+  price: string;
+  categoryId?: string;
+  restaurantId: string;
+  allergenIds?: string[];
+  translations: Translation[];
+  imageFile?: File;
+}
+
+interface CategoryData {
+  restaurantId: string;
+  translations: Translation[];
+}
 
 // Category API calls
 
-export const createCategory = async (data: {
-  name: string;
-  restaurantId: string;
-}) => {
+export const createCategory = async (data: CategoryData) => {
   const response = await apiClient.post(`/api/sysadmin/menu/categories`, data);
   return response.data;
 };
 
-export const updateCategory = async (id: string, data: { name: string }) => {
+export const updateCategory = async (
+  id: string,
+  data: { translations: Translation[] }
+) => {
   const response = await apiClient.put(
     `/api/sysadmin/menu/categories/${id}`,
     data
@@ -34,15 +49,88 @@ export const getMenuItems = async (restaurantId: string) => {
   return response.data;
 };
 
-export const createMenuItem = async (data: any) => {
-  const response = await apiClient.post("/api/sysadmin/menu/menuItems", data);
+export const createMenuItem = async (data: {
+  translations: Translation[];
+  price: string;
+  restaurantId: string;
+  allergenIds: string[];
+  categoryId?: string | null;
+  imageFile?: File;
+}) => {
+  const formData = new FormData();
+
+  formData.append("translations", JSON.stringify(data.translations));
+  formData.append("price", data.price);
+  formData.append("restaurantId", data.restaurantId);
+
+  if (data.allergenIds && data.allergenIds.length > 0) {
+    formData.append("allergenIds", JSON.stringify(data.allergenIds));
+  }
+
+  formData.append(
+    "categoryId",
+    data.categoryId === null ? "null" : data.categoryId || ""
+  );
+
+  if (data.imageFile) {
+    formData.append("imageFile", data.imageFile);
+  }
+
+  const response = await apiClient.post(
+    "/api/sysadmin/menu/menuItems",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
   return response.data;
 };
 
-export const updateMenuItem = async (id: string, data: any) => {
+export const updateMenuItem = async (
+  id: string,
+  data: {
+    translations: Translation[];
+    price: string;
+    restaurantId: string;
+    allergenIds: string[];
+    categoryId?: string | null;
+    imageFile?: File;
+    removeImage?: boolean;
+  }
+) => {
+  const formData = new FormData();
+
+  formData.append("translations", JSON.stringify(data.translations));
+  formData.append("price", data.price);
+  formData.append("restaurantId", data.restaurantId);
+
+  if (data.allergenIds && data.allergenIds.length > 0) {
+    formData.append("allergenIds", JSON.stringify(data.allergenIds));
+  }
+
+  formData.append(
+    "categoryId",
+    data.categoryId === null ? "null" : data.categoryId || ""
+  );
+
+  if (data.imageFile) {
+    formData.append("imageFile", data.imageFile);
+  }
+
+  if (data.removeImage) {
+    formData.append("removeImage", "true");
+  }
+
   const response = await apiClient.put(
     `/api/sysadmin/menu/menuItems/${id}`,
-    data
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response.data;
 };

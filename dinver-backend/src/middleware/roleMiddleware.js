@@ -10,7 +10,7 @@ function authenticateToken(tokenName, refreshTokenName) {
     const token = req.cookies[tokenName];
     if (!token) return res.status(401).json({ error: 'Access denied' });
 
-    jwt.verify(token, JWT_SECRET, async (err, user) => {
+    jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
       if (err) {
         const refreshToken = req.cookies[refreshTokenName];
         if (!refreshToken) {
@@ -43,6 +43,12 @@ function authenticateToken(tokenName, refreshTokenName) {
         } catch (refreshError) {
           return res.status(403).json({ error: 'Invalid refresh token' });
         }
+      }
+
+      // Dohvati potpune informacije o korisniku iz baze
+      const user = await User.findByPk(decodedUser.id);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
       }
 
       req.user = user;
