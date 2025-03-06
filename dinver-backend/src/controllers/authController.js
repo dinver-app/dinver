@@ -39,12 +39,18 @@ const login = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.cookie('token', accessToken, { httpOnly: true, secure: true });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
+    res.cookie('token', accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
 
-    res
-      .status(200)
-      .json({ message: 'Login successful', language: user.language });
+    res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }
