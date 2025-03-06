@@ -6,8 +6,8 @@ const passport = require('passport');
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
-const translateRoutes = require('./routes/translateRoutes');
 const appRoutes = require('./routes/appRoutes');
+const translateRoutes = require('./routes/translateRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
