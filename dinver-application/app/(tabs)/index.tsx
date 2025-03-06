@@ -1,12 +1,18 @@
 import { ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import * as Location from "expo-location";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function HomeScreen() {
-  const [address, setAddress] = useState<string | null>(null);
+  const { user } = useContext(AuthContext);
+  const [address, setAddress] = useState<string | null>(
+    "Ulica Grge Novaka 1, Zagreb"
+  );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Privremeno zakomentirano dohvaćanje lokacije
+  /*
   const getCurrentLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     console.log("Location permission status:", status);
@@ -39,11 +45,17 @@ export default function HomeScreen() {
   useEffect(() => {
     getCurrentLocation();
   }, []);
+  */
 
   return (
     <SafeAreaView className="h-full">
       <ScrollView contentContainerStyle={{ height: "100%" }}>
         <View className="flex-1 items-center justify-center">
+          {user && (
+            <Text className="text-white text-lg mb-4">
+              Dobrodošli, {user.firstName} {user.lastName}!
+            </Text>
+          )}
           <TouchableOpacity className="flex-row items-center mb-4">
             <Text className="text-lg text-white">
               📍 {address || "Odaberi lokaciju"}
