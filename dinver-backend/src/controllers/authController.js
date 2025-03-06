@@ -39,18 +39,27 @@ const login = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-    });
-    res.cookie('token', accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-    });
+    // Za web aplikaciju
+    if (req.headers['user-agent']?.includes('Mozilla')) {
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+      res.cookie('token', accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+    }
 
-    res.status(200).json({ message: 'Login successful', user });
+    // Dodaj tokene u response body za mobilnu aplikaciju
+    res.status(200).json({
+      message: 'Login successful',
+      user,
+      token: accessToken,
+      refreshToken: refreshToken,
+    });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during login' });
   }
