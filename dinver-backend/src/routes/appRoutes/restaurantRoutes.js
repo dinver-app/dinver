@@ -15,3 +15,5 @@ router.get(
   appAuthenticateToken,
   restaurantController.getAllRestaurants,
 );
+
+module.exports = router;
