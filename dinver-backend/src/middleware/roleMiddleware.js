@@ -115,10 +115,21 @@ async function checkAdmin(req, res, next) {
   }
 }
 
+const appApiKeyAuth = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey || apiKey !== process.env.MOBILE_APP_API_KEY) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  next();
+};
+
 module.exports = {
   appAuthenticateToken,
   adminAuthenticateToken,
   sysadminAuthenticateToken,
   checkSysadmin,
   checkAdmin,
+  appApiKeyAuth,
 };
