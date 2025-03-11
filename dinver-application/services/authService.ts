@@ -1,13 +1,16 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
+const MOBILE_APP_API_KEY = Constants.expoConfig?.extra?.mobileAppApiKey;
 const API_URL = "https://api.dinver.eu/api";
 
 // Create an axios instance with a base URL
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
+    "x-api-key": MOBILE_APP_API_KEY,
   },
 });
 
