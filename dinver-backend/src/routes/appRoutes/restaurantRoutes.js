@@ -12,4 +12,10 @@ router.get(
   restaurantController.getAllRestaurants,
 );
 
+router.get(
+  '/restaurants/all-with-details',
+  appApiKeyAuth,
+  restaurantController.getAllRestaurantsWithDetails,
+);
+
 module.exports = router;
