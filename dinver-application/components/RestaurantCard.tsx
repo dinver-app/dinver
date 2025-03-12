@@ -31,7 +31,8 @@ const RestaurantCard = ({
         }}
       >
         <Image
-          source={require("../assets/images/dinver-hero.png")}
+          // source={require("../assets/images/dinver-hero.png")}
+          source={require("../assets/images/dummy-restaurant-bck.jpeg")}
           style={{
             width: "100%",
             height: "100%",
