@@ -31,20 +31,22 @@ const Explore = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <ScrollView className="flex-1 my-4">
-        <View className="p-4">
-          {/* Search Bar */}
-          <View className="bg-[#1C1C1E] flex-row items-center rounded-full px-4 py-2 mb-4">
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              placeholder="Find your restaurant"
-              placeholderTextColor="#666"
-              className="flex-1 ml-2 text-white font-degular"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
+      {/* Search Bar - moved outside ScrollView */}
+      <View className="px-4 bg-black">
+        <View className="bg-[#1C1C1E] flex-row items-center rounded-full px-4 py-2 mb-4">
+          <Ionicons name="search" size={20} color="#666" />
+          <TextInput
+            placeholder="Find your restaurant"
+            placeholderTextColor="#666"
+            className="flex-1 ml-2 text-white font-degular"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
 
+      <ScrollView className="flex-1">
+        <View className="p-4">
           {/* Error Message */}
           {error && (
             <View className="bg-[#1C1C1E] p-4 rounded-lg mb-4">

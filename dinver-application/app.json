@@ -53,6 +53,18 @@
       {
         "asset": "assets/fonts/Degular-Semibold.otf",
         "family": "Degular-Semibold"
+      },
+      {
+        "asset": "assets/fonts/Onest-Regular.ttf",
+        "family": "Onest"
+      },
+      {
+        "asset": "assets/fonts/Onest-Medium.ttf",
+        "family": "Onest-Medium"
+      },
+      {
+        "asset": "assets/fonts/Onest-Bold.ttf",
+        "family": "Onest-Bold"
       }
     ]
   }

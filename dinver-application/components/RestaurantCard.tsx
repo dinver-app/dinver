@@ -87,16 +87,16 @@ const RestaurantCard = ({
             right: 10,
             zIndex: 10,
             backgroundColor: "black",
-            padding: 5,
+            padding: 7,
             borderRadius: 10,
             display: "flex",
             flexDirection: "row",
             alignItems: "center",
-            gap: 5,
+            gap: 2,
           }}
         >
           <Ionicons name="star" size={16} color="#FFD700" />
-          <Text className="text-white ml-1">
+          <Text className="text-white ml-1 font-onest">
             {rating} ({reviewCount})
           </Text>
         </View>
