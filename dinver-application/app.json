@@ -36,6 +36,24 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "fonts": [
+      {
+        "asset": "assets/fonts/Degular-Regular.otf",
+        "family": "Degular"
+      },
+      {
+        "asset": "assets/fonts/Degular-Medium.otf",
+        "family": "Degular-Medium"
+      },
+      {
+        "asset": "assets/fonts/Degular-Bold.otf",
+        "family": "Degular-Bold"
+      },
+      {
+        "asset": "assets/fonts/Degular-Semibold.otf",
+        "family": "Degular-Semibold"
+      }
+    ]
   }
 }

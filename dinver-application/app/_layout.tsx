@@ -22,7 +22,10 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isLoading, setIsLoading] = useState(true);
   const [loaded] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    Degular: require("../assets/fonts/Degular-Regular.otf"),
+    "Degular-Medium": require("../assets/fonts/Degular-Medium.otf"),
+    "Degular-Bold": require("../assets/fonts/Degular-Bold.otf"),
+    "Degular-Semibold": require("../assets/fonts/Degular-Semibold.otf"),
   });
 
   useEffect(() => {

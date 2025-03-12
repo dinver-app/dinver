@@ -14,33 +14,87 @@ const RestaurantCard = ({
   onFavoritePress,
 }: RestaurantCardProps) => {
   return (
-    <TouchableOpacity className="mb-4 w-full">
-      <View className="relative">
+    <View
+      style={{
+        width: "100%",
+        height: 220,
+        marginBottom: 16,
+        position: "relative",
+      }}
+    >
+      <View
+        style={{
+          width: "100%",
+          height: 160,
+          borderRadius: 8,
+          position: "relative",
+        }}
+      >
         <Image
-          source={{ uri: imageUrl }}
-          className="w-full h-48 rounded-lg"
+          source={require("../assets/images/dinver-hero.png")}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: 8,
+            position: "absolute",
+          }}
           resizeMode="cover"
         />
 
         {/* Promo badge */}
         {isPromo && (
-          <View className="absolute top-3 left-3 bg-purple-600 px-3 py-1 rounded-full">
+          <View
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              backgroundColor: "#5617E9",
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 10,
+            }}
+          >
             <Text className="text-white font-medium">Promo</Text>
           </View>
         )}
 
-        {/* Favorite button */}
-        <TouchableOpacity
-          onPress={onFavoritePress}
-          className="absolute top-3 right-3"
+        {/* Heart button */}
+        <View
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 10,
+          }}
         >
-          <View className="bg-black/30 p-2 rounded-full">
-            <Ionicons name="heart-outline" size={24} color="white" />
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onFavoritePress}
+            style={{
+              backgroundColor: "black",
+              padding: 5,
+              borderRadius: 10,
+            }}
+          >
+            <Ionicons name="heart-outline" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
 
-        {/* Rating */}
-        <View className="absolute bottom-3 right-3 bg-black/30 px-2 py-1 rounded-full flex-row items-center">
+        {/* Rating badge */}
+        <View
+          style={{
+            position: "absolute",
+            bottom: 10,
+            right: 10,
+            zIndex: 10,
+            backgroundColor: "black",
+            padding: 5,
+            borderRadius: 10,
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
           <Ionicons name="star" size={16} color="#FFD700" />
           <Text className="text-white ml-1">
             {rating} ({reviewCount})
@@ -49,27 +103,115 @@ const RestaurantCard = ({
       </View>
 
       {/* Restaurant info */}
-      <View className="flex-row justify-between items-center mt-2">
-        <View className="flex-row items-center">
-          <Text className="text-white text-lg font-semibold">{name}</Text>
-          {isClaimed && (
-            <Ionicons
-              name="checkmark-circle"
-              size={16}
-              color="#4CAF50"
-              className="ml-1"
-            />
-          )}
+      <View
+        style={{
+          marginTop: 10,
+        }}
+      >
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 0,
+            }}
+          >
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+                gap: 10,
+              }}
+            >
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Text className="text-white text-xl font-semibold font-degular-semibold">
+                  {name}
+                </Text>
+                {!isClaimed && (
+                  <View
+                    style={{
+                      marginLeft: 5,
+                    }}
+                  >
+                    <Image
+                      source={require("../assets/images/claimed-icon.png")}
+                      style={{
+                        width: 20,
+                        height: 20,
+                      }}
+                      resizeMode="contain"
+                    />
+                  </View>
+                )}
+              </View>
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  gap: 5,
+                }}
+              >
+                {/* Food type icons */}
+                <View
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: 5,
+                  }}
+                >
+                  <View
+                    style={{
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Ionicons
+                      name="restaurant-outline"
+                      size={18}
+                      color="#666"
+                    />
+                  </View>
+                  <View
+                    style={{
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Ionicons name="wine-outline" size={18} color="#666" />
+                  </View>
+                </View>
+              </View>
+            </View>
+            <Text
+              style={{
+                color: "#666",
+                fontSize: 16,
+                fontFamily: "degular-medium",
+                marginTop: -5,
+              }}
+            >
+              {distance}
+            </Text>
+          </View>
         </View>
-        <Text className="text-gray-400">{distance}</Text>
       </View>
-
-      {/* Icons at bottom */}
-      <View className="flex-row mt-1">
-        <Ionicons name="restaurant-outline" size={20} color="#666" />
-        <Ionicons name="wine-outline" size={20} color="#666" className="ml-2" />
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 

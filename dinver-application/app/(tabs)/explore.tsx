@@ -31,7 +31,7 @@ const Explore = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1 my-4">
         <View className="p-4">
           {/* Search Bar */}
           <View className="bg-[#1C1C1E] flex-row items-center rounded-full px-4 py-2 mb-4">
@@ -39,7 +39,7 @@ const Explore = () => {
             <TextInput
               placeholder="Find your restaurant"
               placeholderTextColor="#666"
-              className="flex-1 ml-2 text-white"
+              className="flex-1 ml-2 text-white font-degular"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -48,7 +48,9 @@ const Explore = () => {
           {/* Error Message */}
           {error && (
             <View className="bg-[#1C1C1E] p-4 rounded-lg mb-4">
-              <Text className="text-white text-center">{error}</Text>
+              <Text className="text-white text-center font-degular-medium">
+                {error}
+              </Text>
             </View>
           )}
 
