@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TextInput } from "react-native";
+import { View, Text, ScrollView, TextInput, Keyboard } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { restaurantService } from "../../services/restaurantService";
 import RestaurantCard from "../../components/RestaurantCard";
@@ -45,7 +45,11 @@ const Explore = () => {
         </View>
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        keyboardShouldPersistTaps="never"
+        onScrollBeginDrag={() => Keyboard.dismiss()}
+      >
         <View className="p-4">
           {/* Error Message */}
           {error && (
