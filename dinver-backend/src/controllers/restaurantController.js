@@ -317,10 +317,10 @@ function isRestaurantOpen(openingHours, timeZone = 'Europe/Zagreb') {
     ];
 
     for (const { open, close } of periodsToCheck) {
-      const openDay = open.day;
-      const openTime = parseInt(open.time, 10);
-      const closeDay = close.day;
-      const closeTime = parseInt(close.time, 10);
+      const openDay = open?.day;
+      const openTime = parseInt(open?.time, 10);
+      const closeDay = close?.day;
+      const closeTime = parseInt(close?.time, 10);
 
       if (openDay === closeDay) {
         if (
