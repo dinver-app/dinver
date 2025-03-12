@@ -766,6 +766,91 @@ const deleteCustomWorkingDay = async (req, res) => {
   }
 };
 
+const getAllRestaurantsWithDetails = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    const generateSearchVariations = (search) => {
+      if (!search) return [];
+
+      const variations = [search];
+      const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
+
+      for (const [lower, upper] of Object.entries(replacements)) {
+        if (search.includes(lower)) {
+          variations.push(search.replace(new RegExp(lower, 'g'), upper));
+        }
+      }
+
+      return variations;
+    };
+
+    const searchVariations = generateSearchVariations(search);
+
+    const whereClause =
+      searchVariations.length > 0
+        ? {
+            [Op.or]: searchVariations.flatMap((variation) => [
+              { name: { [Op.iLike]: `%${variation}%` } },
+              { address: { [Op.iLike]: `%${variation}%` } },
+            ]),
+          }
+        : {};
+
+    const restaurants = await Restaurant.findAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'name',
+        'address',
+        'latitude',
+        'longitude',
+        'rating',
+        'user_ratings_total',
+        'price_level',
+        'opening_hours',
+        'icon_url',
+        'slug',
+        'isClaimed',
+        'email',
+      ],
+      order: [['name', 'ASC']],
+    });
+
+    const restaurantsWithStatus = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        const reviews = await Review.findAll({
+          where: { restaurant_id: restaurant.id },
+          attributes: ['rating'],
+        });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
+        return {
+          ...restaurant.get(),
+          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          reviewRating,
+        };
+      }),
+    );
+
+    res.json({
+      totalRestaurants: restaurants.length,
+      restaurants: restaurantsWithStatus,
+    });
+  } catch (error) {
+    console.error('Error fetching all restaurants:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching all restaurants' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -785,4 +870,5 @@ module.exports = {
   addCustomWorkingDay,
   updateCustomWorkingDay,
   deleteCustomWorkingDay,
+  getAllRestaurantsWithDetails,
 };
