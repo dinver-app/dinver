@@ -245,6 +245,35 @@ async function refreshToken(req, res) {
   }
 }
 
+const socialLogin = async (req, res) => {
+  try {
+    const { email, firstName, lastName, photoURL, provider } = req.body;
+
+    let user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName,
+        lastName,
+        photoURL,
+        provider,
+      });
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    res.status(200).json({
+      message: 'Social login successful',
+      user,
+      token: accessToken,
+      refreshToken: refreshToken,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred during social login' });
+  }
+};
+
 passport.use(
   new GoogleStrategy(
     {
@@ -292,4 +321,5 @@ module.exports = {
   refreshToken,
   sysadminCheckAuth,
   adminCheckAuth,
+  socialLogin,
 };
