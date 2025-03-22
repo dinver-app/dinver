@@ -22,7 +22,39 @@ const register = async (req, res) => {
       email,
       password: hashedPassword,
     });
-    res.status(201).json({ message: 'User registered successfully', user });
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Za web aplikaciju
+    if (req.headers['user-agent']?.includes('Mozilla')) {
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+      res.cookie('token', accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+      });
+    }
+
+    // Filtriraj korisničke podatke
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      language: user.language,
+      banned: user.banned,
+    };
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: userData,
+      token: accessToken,
+      refreshToken: refreshToken,
+    });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred during registration' });
   }
@@ -53,10 +85,20 @@ const login = async (req, res) => {
       });
     }
 
+    // Filtriraj korisničke podatke
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      language: user.language,
+      banned: user.banned,
+    };
+
     // Dodaj tokene u response body za mobilnu aplikaciju
     res.status(200).json({
       message: 'Login successful',
-      user,
+      user: userData,
       token: accessToken,
       refreshToken: refreshToken,
     });
@@ -245,6 +287,35 @@ async function refreshToken(req, res) {
   }
 }
 
+const socialLogin = async (req, res) => {
+  try {
+    const { email, firstName, lastName, photoURL, provider } = req.body;
+
+    let user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName,
+        lastName,
+        photoURL,
+        provider,
+      });
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    res.status(200).json({
+      message: 'Social login successful',
+      user,
+      token: accessToken,
+      refreshToken: refreshToken,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred during social login' });
+  }
+};
+
 passport.use(
   new GoogleStrategy(
     {
@@ -292,4 +363,5 @@ module.exports = {
   refreshToken,
   sysadminCheckAuth,
   adminCheckAuth,
+  socialLogin,
 };

@@ -11,4 +11,6 @@ router.get('/auth/logout', authController.logout);
 
 router.get('/auth/check-auth', authController.checkAuth);
 
+router.post('/auth/social-login', authController.socialLogin);
+
 module.exports = router;
