@@ -18,4 +18,10 @@ router.get(
   restaurantController.getAllRestaurantsWithDetails,
 );
 
+router.get(
+  '/restaurants/sample',
+  // appApiKeyAuth,
+  restaurantController.getSampleRestaurants,
+);
+
 module.exports = router;
