@@ -851,6 +851,126 @@ const getAllRestaurantsWithDetails = async (req, res) => {
   }
 };
 
+// Cache za spremanje odabranih restorana
+let sampleRestaurantsCache = null;
+let sampleRestaurantsInitialized = false;
+
+const getSampleRestaurants = async (req, res) => {
+  try {
+    const MAX_SAMPLE_SIZE = 50; // Ukupan broj restorana u uzorku
+    const MAX_PAGE = 3;
+    const ITEMS_PER_PAGE = 10;
+
+    // Hardcodirani URL za sliku restorana
+    const RESTAURANT_IMAGE =
+      'https://plus.unsplash.com/premium_photo-1661883237884-263e8de8869b?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bHV4dXJ5JTIwcmVzdGF1cmFudHxlbnwwfHwwfHx8MA%3D%3D';
+
+    const page = parseInt(req.query.page) || 1;
+    const { search } = req.query;
+
+    // Ograničenje na maksimalno 3 stranice
+    if (page > MAX_PAGE) {
+      return res.status(400).json({
+        error: 'Maximum page limit exceeded',
+        maxPage: MAX_PAGE,
+      });
+    }
+
+    // Inicijalizacija fiksnog seta restorana ako još nije inicijaliziran
+    if (!sampleRestaurantsInitialized) {
+      // Dohvaćamo 50 random restorana iz baze
+      const allRestaurants = await Restaurant.findAll({
+        attributes: [
+          'id',
+          'name',
+          'address',
+          'rating',
+          'user_ratings_total',
+          'price_level',
+        ],
+        order: [
+          [Restaurant.sequelize.fn('RANDOM')], // Random redoslijed za nasumičan odabir
+        ],
+        limit: MAX_SAMPLE_SIZE,
+      });
+
+      // Dodajemo hardcodirani URL za sliku
+      sampleRestaurantsCache = allRestaurants.map((restaurant) => ({
+        ...restaurant.get(),
+        icon_url: RESTAURANT_IMAGE,
+      }));
+
+      sampleRestaurantsInitialized = true;
+    }
+
+    // Generiranje varijacija pretraživanja za hrvatske znakove
+    const generateSearchVariations = (search) => {
+      if (!search) return [];
+
+      const variations = [search];
+      const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
+
+      for (const [lower, upper] of Object.entries(replacements)) {
+        if (search.includes(lower)) {
+          variations.push(search.replace(new RegExp(lower, 'g'), upper));
+        }
+      }
+
+      return variations;
+    };
+
+    // Pretraga unutar fiksnog seta restorana
+    let filteredRestaurants = sampleRestaurantsCache;
+
+    if (search) {
+      const searchVariations = generateSearchVariations(search);
+
+      filteredRestaurants = sampleRestaurantsCache.filter((restaurant) => {
+        const name = restaurant.name.toLowerCase();
+        const address = restaurant.address
+          ? restaurant.address.toLowerCase()
+          : '';
+
+        return searchVariations.some((variation) => {
+          const lowerVariation = variation.toLowerCase();
+          return (
+            name.includes(lowerVariation) || address.includes(lowerVariation)
+          );
+        });
+      });
+    }
+
+    // Implementacija paginacije na filtriranom setu
+    const totalCount = filteredRestaurants.length;
+    const offset = (page - 1) * ITEMS_PER_PAGE;
+    const paginatedRestaurants = filteredRestaurants.slice(
+      offset,
+      offset + ITEMS_PER_PAGE,
+    );
+
+    // Izračunaj broj stranica
+    const totalPages = Math.min(
+      Math.ceil(totalCount / ITEMS_PER_PAGE),
+      MAX_PAGE,
+    );
+
+    res.json({
+      totalRestaurants: totalCount,
+      totalPages,
+      currentPage: page,
+      restaurants: paginatedRestaurants,
+      hasSampleLimit: true,
+      fixedSampleSize: MAX_SAMPLE_SIZE,
+      maxRecords: MAX_SAMPLE_SIZE,
+    });
+  } catch (error) {
+    console.error('Error fetching sample restaurants:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while fetching sample restaurants' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -871,4 +991,5 @@ module.exports = {
   updateCustomWorkingDay,
   deleteCustomWorkingDay,
   getAllRestaurantsWithDetails,
+  getSampleRestaurants,
 };
