@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { calculateDistance } = require('../../utils/distance');
 
 const getAllRestaurants = async (req, res) => {
   try {
@@ -20,11 +21,29 @@ const getAllRestaurants = async (req, res) => {
 // Get all restaurants with specific fields
 const getRestaurants = async (req, res) => {
   try {
+    const { latitude: userLat, longitude: userLon } = req.query;
     const totalRestaurantsCount = await Restaurant.count();
-
     const claimedRestaurantsCount = await Restaurant.count({
       where: { isClaimed: true },
     });
+
+    // Validate coordinates if provided
+    if ((userLat && !userLon) || (!userLat && userLon)) {
+      return res.status(400).json({
+        error: 'Both latitude and longitude must be provided together',
+      });
+    }
+
+    const hasCoordinates = userLat && userLon;
+
+    if (hasCoordinates) {
+      // Validate coordinate ranges
+      if (userLat < -90 || userLat > 90 || userLon < -180 || userLon > 180) {
+        return res.status(400).json({
+          error: 'Invalid coordinates provided',
+        });
+      }
+    }
 
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
@@ -94,13 +113,33 @@ const getRestaurants = async (req, res) => {
         const reviewRating =
           reviews.length > 0 ? totalRatings / reviews.length : null;
 
+        // Calculate distance if user coordinates are provided
+        const distance = hasCoordinates
+          ? calculateDistance(
+              parseFloat(userLat),
+              parseFloat(userLon),
+              restaurant.latitude,
+              restaurant.longitude,
+            )
+          : null;
+
         return {
           ...restaurant.get(),
           isOpen: isRestaurantOpen(restaurant.opening_hours),
           reviewRating,
+          distance,
         };
       }),
     );
+
+    // If coordinates are provided, sort by distance
+    if (hasCoordinates) {
+      restaurantsWithStatus.sort((a, b) => {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    }
 
     res.json({
       totalRestaurants: count,
@@ -851,22 +890,35 @@ const getAllRestaurantsWithDetails = async (req, res) => {
   }
 };
 
-// Cache za spremanje odabranih restorana
-let sampleRestaurantsCache = null;
-let sampleRestaurantsInitialized = false;
-
 const getSampleRestaurants = async (req, res) => {
   try {
-    const MAX_SAMPLE_SIZE = 50; // Ukupan broj restorana u uzorku
-    const MAX_PAGE = 3;
+    const MAX_SAMPLE_SIZE = 50;
+    const MAX_PAGE = 5;
     const ITEMS_PER_PAGE = 10;
-
-    // Hardcodirani URL za sliku restorana
     const RESTAURANT_IMAGE =
       'https://plus.unsplash.com/premium_photo-1661883237884-263e8de8869b?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bHV4dXJ5JTIwcmVzdGF1cmFudHxlbnwwfHwwfHx8MA%3D%3D';
 
+    const { latitude: userLat, longitude: userLon } = req.query;
     const page = parseInt(req.query.page) || 1;
     const { search } = req.query;
+
+    // Validate coordinates if provided
+    if ((userLat && !userLon) || (!userLat && userLon)) {
+      return res.status(400).json({
+        error: 'Both latitude and longitude must be provided together',
+      });
+    }
+
+    const hasCoordinates = userLat && userLon;
+
+    if (hasCoordinates) {
+      // Validate coordinate ranges
+      if (userLat < -90 || userLat > 90 || userLon < -180 || userLon > 180) {
+        return res.status(400).json({
+          error: 'Invalid coordinates provided',
+        });
+      }
+    }
 
     // Ograničenje na maksimalno 3 stranice
     if (page > MAX_PAGE) {
@@ -876,34 +928,6 @@ const getSampleRestaurants = async (req, res) => {
       });
     }
 
-    // Inicijalizacija fiksnog seta restorana ako još nije inicijaliziran
-    if (!sampleRestaurantsInitialized) {
-      // Dohvaćamo 50 random restorana iz baze
-      const allRestaurants = await Restaurant.findAll({
-        attributes: [
-          'id',
-          'name',
-          'address',
-          'rating',
-          'user_ratings_total',
-          'price_level',
-        ],
-        order: [
-          [Restaurant.sequelize.fn('RANDOM')], // Random redoslijed za nasumičan odabir
-        ],
-        limit: MAX_SAMPLE_SIZE,
-      });
-
-      // Dodajemo hardcodirani URL za sliku
-      sampleRestaurantsCache = allRestaurants.map((restaurant) => ({
-        ...restaurant.get(),
-        icon_url: RESTAURANT_IMAGE,
-      }));
-
-      sampleRestaurantsInitialized = true;
-    }
-
-    // Generiranje varijacija pretraživanja za hrvatske znakove
     const generateSearchVariations = (search) => {
       if (!search) return [];
 
@@ -919,49 +943,101 @@ const getSampleRestaurants = async (req, res) => {
       return variations;
     };
 
-    // Pretraga unutar fiksnog seta restorana
-    let filteredRestaurants = sampleRestaurantsCache;
+    const searchVariations = generateSearchVariations(search);
 
-    if (search) {
-      const searchVariations = generateSearchVariations(search);
+    const whereClause =
+      searchVariations.length > 0
+        ? {
+            [Op.or]: searchVariations.flatMap((variation) => [
+              { name: { [Op.iLike]: `%${variation}%` } },
+              { address: { [Op.iLike]: `%${variation}%` } },
+            ]),
+          }
+        : {};
 
-      filteredRestaurants = sampleRestaurantsCache.filter((restaurant) => {
-        const name = restaurant.name.toLowerCase();
-        const address = restaurant.address
-          ? restaurant.address.toLowerCase()
-          : '';
+    // Dohvaćamo random restorane iz baze
+    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'name',
+        'address',
+        'latitude',
+        'longitude',
+        'rating',
+        'user_ratings_total',
+        'price_level',
+        'opening_hours',
+        'icon_url',
+        'slug',
+        'isClaimed',
+        'email',
+      ],
+      order: [[Restaurant.sequelize.fn('RANDOM')]],
+      limit: MAX_SAMPLE_SIZE,
+    });
 
-        return searchVariations.some((variation) => {
-          const lowerVariation = variation.toLowerCase();
-          return (
-            name.includes(lowerVariation) || address.includes(lowerVariation)
-          );
+    const restaurantsWithStatus = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        const reviews = await Review.findAll({
+          where: { restaurant_id: restaurant.id },
+          attributes: ['rating'],
         });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
+        // Calculate distance if user coordinates are provided
+        const distance = hasCoordinates
+          ? calculateDistance(
+              parseFloat(userLat),
+              parseFloat(userLon),
+              restaurant.latitude,
+              restaurant.longitude,
+            )
+          : null;
+
+        return {
+          ...restaurant.get(),
+          icon_url: RESTAURANT_IMAGE, // Dodajemo fiksnu sliku
+          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          reviewRating,
+          distance,
+        };
+      }),
+    );
+
+    // If coordinates are provided, sort by distance
+    if (hasCoordinates) {
+      restaurantsWithStatus.sort((a, b) => {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
       });
     }
 
-    // Implementacija paginacije na filtriranom setu
-    const totalCount = filteredRestaurants.length;
+    // Implementacija paginacije
     const offset = (page - 1) * ITEMS_PER_PAGE;
-    const paginatedRestaurants = filteredRestaurants.slice(
+    const paginatedRestaurants = restaurantsWithStatus.slice(
       offset,
       offset + ITEMS_PER_PAGE,
     );
 
     // Izračunaj broj stranica
     const totalPages = Math.min(
-      Math.ceil(totalCount / ITEMS_PER_PAGE),
+      Math.ceil(restaurantsWithStatus.length / ITEMS_PER_PAGE),
       MAX_PAGE,
     );
 
     res.json({
-      totalRestaurants: totalCount,
+      totalRestaurants: restaurantsWithStatus.length,
       totalPages,
       currentPage: page,
       restaurants: paginatedRestaurants,
-      hasSampleLimit: true,
-      fixedSampleSize: MAX_SAMPLE_SIZE,
-      maxRecords: MAX_SAMPLE_SIZE,
     });
   } catch (error) {
     console.error('Error fetching sample restaurants:', error);

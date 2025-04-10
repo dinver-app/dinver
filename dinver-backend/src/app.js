@@ -60,8 +60,17 @@ const swaggerOptions = {
         url: 'http://localhost:3000',
       },
     ],
+    components: {
+      securitySchemes: {
+        ApiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+        },
+      },
+    },
   },
-  apis: ['./src/routes/*.js'],
+  apis: ['./src/routes/**/*.js'],
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
