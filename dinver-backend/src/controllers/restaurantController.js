@@ -1,4 +1,4 @@
-const { Restaurant, Review } = require('../../models');
+const { Restaurant, Review, UserFavorite } = require('../../models');
 const { recordInsight } = require('./insightController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -26,6 +26,9 @@ const getRestaurants = async (req, res) => {
     const claimedRestaurantsCount = await Restaurant.count({
       where: { isClaimed: true },
     });
+
+    // Dohvati user ID ako postoji u requestu
+    const userId = req.user?.id;
 
     // Validate coordinates if provided
     if ((userLat && !userLon) || (!userLat && userLon)) {
@@ -99,6 +102,16 @@ const getRestaurants = async (req, res) => {
       order: [['name', 'ASC']],
     });
 
+    // Ako imamo userId, dohvati favorite
+    let userFavorites = new Set();
+    if (userId) {
+      const favorites = await UserFavorite.findAll({
+        where: { userId },
+        attributes: ['restaurantId'],
+      });
+      userFavorites = new Set(favorites.map((f) => f.restaurantId));
+    }
+
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
@@ -128,6 +141,7 @@ const getRestaurants = async (req, res) => {
           isOpen: isRestaurantOpen(restaurant.opening_hours),
           reviewRating,
           distance,
+          isFavorite: userFavorites.has(restaurant.id),
         };
       }),
     );
@@ -902,6 +916,9 @@ const getSampleRestaurants = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const { search } = req.query;
 
+    // Dohvati user ID ako postoji u requestu
+    const userId = req.user?.id;
+
     // Validate coordinates if provided
     if ((userLat && !userLon) || (!userLat && userLon)) {
       return res.status(400).json({
@@ -977,6 +994,16 @@ const getSampleRestaurants = async (req, res) => {
       limit: MAX_SAMPLE_SIZE,
     });
 
+    // Dohvati favorite ako imamo userId
+    let userFavorites = new Set();
+    if (userId) {
+      const favorites = await UserFavorite.findAll({
+        where: { userId },
+        attributes: ['restaurantId'],
+      });
+      userFavorites = new Set(favorites.map((f) => f.restaurantId));
+    }
+
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
@@ -1003,10 +1030,11 @@ const getSampleRestaurants = async (req, res) => {
 
         return {
           ...restaurant.get(),
-          icon_url: RESTAURANT_IMAGE, // Dodajemo fiksnu sliku
+          icon_url: RESTAURANT_IMAGE,
           isOpen: isRestaurantOpen(restaurant.opening_hours),
           reviewRating,
           distance,
+          isFavorite: userFavorites.has(restaurant.id),
         };
       }),
     );
