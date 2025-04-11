@@ -906,75 +906,13 @@ const getAllRestaurantsWithDetails = async (req, res) => {
 
 const getSampleRestaurants = async (req, res) => {
   try {
-    const MAX_SAMPLE_SIZE = 50;
-    const MAX_PAGE = 5;
-    const ITEMS_PER_PAGE = 10;
-    const RESTAURANT_IMAGE =
-      'https://plus.unsplash.com/premium_photo-1661883237884-263e8de8869b?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bHV4dXJ5JTIwcmVzdGF1cmFudHxlbnwwfHwwfHx8MA%3D%3D';
-
     const { latitude: userLat, longitude: userLon } = req.query;
     const page = parseInt(req.query.page) || 1;
     const { search } = req.query;
-
-    // Dohvati user ID ako postoji u requestu
     const userId = req.user?.id;
 
-    // Validate coordinates if provided
-    if ((userLat && !userLon) || (!userLat && userLon)) {
-      return res.status(400).json({
-        error: 'Both latitude and longitude must be provided together',
-      });
-    }
-
-    const hasCoordinates = userLat && userLon;
-
-    if (hasCoordinates) {
-      // Validate coordinate ranges
-      if (userLat < -90 || userLat > 90 || userLon < -180 || userLon > 180) {
-        return res.status(400).json({
-          error: 'Invalid coordinates provided',
-        });
-      }
-    }
-
-    // Ograničenje na maksimalno 3 stranice
-    if (page > MAX_PAGE) {
-      return res.status(400).json({
-        error: 'Maximum page limit exceeded',
-        maxPage: MAX_PAGE,
-      });
-    }
-
-    const generateSearchVariations = (search) => {
-      if (!search) return [];
-
-      const variations = [search];
-      const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
-
-      for (const [lower, upper] of Object.entries(replacements)) {
-        if (search.includes(lower)) {
-          variations.push(search.replace(new RegExp(lower, 'g'), upper));
-        }
-      }
-
-      return variations;
-    };
-
-    const searchVariations = generateSearchVariations(search);
-
-    const whereClause =
-      searchVariations.length > 0
-        ? {
-            [Op.or]: searchVariations.flatMap((variation) => [
-              { name: { [Op.iLike]: `%${variation}%` } },
-              { address: { [Op.iLike]: `%${variation}%` } },
-            ]),
-          }
-        : {};
-
-    // Dohvaćamo random restorane iz baze
-    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
-      where: whereClause,
+    // Uvijek dohvaćamo istih 50 restorana (prvih 50 po imenu)
+    const sampleRestaurants = await Restaurant.findAll({
       attributes: [
         'id',
         'name',
@@ -990,9 +928,20 @@ const getSampleRestaurants = async (req, res) => {
         'isClaimed',
         'email',
       ],
-      order: [[Restaurant.sequelize.fn('RANDOM')]],
-      limit: MAX_SAMPLE_SIZE,
+      order: [['name', 'ASC']], // Sortiramo po imenu da uvijek dobijemo iste
+      limit: 50,
     });
+
+    // Primijeni search filter ako postoji
+    let filteredRestaurants = sampleRestaurants;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredRestaurants = sampleRestaurants.filter(
+        (restaurant) =>
+          restaurant.name.toLowerCase().includes(searchLower) ||
+          restaurant.address.toLowerCase().includes(searchLower),
+      );
+    }
 
     // Dohvati favorite ako imamo userId
     let userFavorites = new Set();
@@ -1004,8 +953,9 @@ const getSampleRestaurants = async (req, res) => {
       userFavorites = new Set(favorites.map((f) => f.restaurantId));
     }
 
+    // Dodaj dodatne informacije za svaki restoran
     const restaurantsWithStatus = await Promise.all(
-      restaurants.map(async (restaurant) => {
+      filteredRestaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
           where: { restaurant_id: restaurant.id },
           attributes: ['rating'],
@@ -1018,15 +968,15 @@ const getSampleRestaurants = async (req, res) => {
         const reviewRating =
           reviews.length > 0 ? totalRatings / reviews.length : null;
 
-        // Calculate distance if user coordinates are provided
-        const distance = hasCoordinates
-          ? calculateDistance(
-              parseFloat(userLat),
-              parseFloat(userLon),
-              restaurant.latitude,
-              restaurant.longitude,
-            )
-          : null;
+        const distance =
+          userLat && userLon
+            ? calculateDistance(
+                parseFloat(userLat),
+                parseFloat(userLon),
+                restaurant.latitude,
+                restaurant.longitude,
+              )
+            : null;
 
         return {
           ...restaurant.get(),
@@ -1039,8 +989,8 @@ const getSampleRestaurants = async (req, res) => {
       }),
     );
 
-    // If coordinates are provided, sort by distance
-    if (hasCoordinates) {
+    // Sortiraj po udaljenosti ako su dostupne koordinate
+    if (userLat && userLon) {
       restaurantsWithStatus.sort((a, b) => {
         if (a.distance === null) return 1;
         if (b.distance === null) return -1;
@@ -1049,13 +999,22 @@ const getSampleRestaurants = async (req, res) => {
     }
 
     // Implementacija paginacije
+    const ITEMS_PER_PAGE = 10;
+    const MAX_PAGE = 5;
+
+    if (page > MAX_PAGE) {
+      return res.status(400).json({
+        error: 'Maximum page limit exceeded',
+        maxPage: MAX_PAGE,
+      });
+    }
+
     const offset = (page - 1) * ITEMS_PER_PAGE;
     const paginatedRestaurants = restaurantsWithStatus.slice(
       offset,
       offset + ITEMS_PER_PAGE,
     );
 
-    // Izračunaj broj stranica
     const totalPages = Math.min(
       Math.ceil(restaurantsWithStatus.length / ITEMS_PER_PAGE),
       MAX_PAGE,
@@ -1069,9 +1028,9 @@ const getSampleRestaurants = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching sample restaurants:', error);
-    res
-      .status(500)
-      .json({ error: 'An error occurred while fetching sample restaurants' });
+    res.status(500).json({
+      error: 'An error occurred while fetching sample restaurants',
+    });
   }
 };
 
