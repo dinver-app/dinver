@@ -187,6 +187,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
+      meal_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      price_category_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'PriceCategories',
+          key: 'id',
+        },
+      },
     },
     {
       sequelize,
