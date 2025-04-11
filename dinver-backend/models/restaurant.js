@@ -20,6 +20,12 @@ module.exports = (sequelize, DataTypes) => {
         as: 'users',
       });
 
+      Restaurant.belongsToMany(models.User, {
+        through: 'UserFavorites',
+        foreignKey: 'restaurantId',
+        as: 'favoritedBy',
+      });
+
       Restaurant.hasMany(models.MenuItem, {
         foreignKey: 'restaurantId',
         as: 'menuItems',
@@ -180,6 +186,18 @@ module.exports = (sequelize, DataTypes) => {
       customWorkingDays: {
         type: DataTypes.JSONB,
         allowNull: true,
+      },
+      meal_types: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
+      price_category_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'PriceCategories',
+          key: 'id',
+        },
       },
     },
     {
