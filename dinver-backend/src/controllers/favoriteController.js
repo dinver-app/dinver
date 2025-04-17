@@ -4,7 +4,13 @@ const { User, Restaurant, UserFavorite } = require('../../models');
 const addToFavorites = async (req, res) => {
   try {
     const { restaurantId } = req.body;
-    const userId = req.user.id;
+    let userId;
+    try {
+      userId = req.user.id;
+    } catch (error) {
+      console.error('Error fetching user ID:', error);
+      return res.status(500).json({ error: 'Failed to fetch user ID' });
+    }
 
     // Provjeri postoji li već u favoritima
     const existingFavorite = await UserFavorite.findOne({
@@ -54,7 +60,13 @@ const removeFromFavorites = async (req, res) => {
 // Dohvati sve favorite za korisnika
 const getUserFavorites = async (req, res) => {
   try {
-    const userId = req.user.id;
+    let userId;
+    try {
+      userId = req.user.id;
+    } catch (error) {
+      console.error('Error fetching user ID:', error);
+      return res.status(500).json({ error: 'Failed to fetch user ID' });
+    }
 
     const favorites = await User.findByPk(userId, {
       include: [

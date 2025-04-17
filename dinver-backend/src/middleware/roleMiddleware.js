@@ -7,12 +7,21 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 function authenticateToken(tokenName, refreshTokenName) {
   return function (req, res, next) {
-    const token = req.cookies[tokenName];
+    // Prvo pokušaj dobiti token iz cookieja (web)
+    let token = req.cookies[tokenName];
+    let refreshToken = req.cookies[refreshTokenName];
+
+    // Ako nema u cookieju, provjeri Authorization header (mobile)
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+      // Za mobile, refresh token će biti poslan u posebnom headeru
+      refreshToken = req.headers['x-refresh-token'];
+    }
+
     if (!token) return res.status(401).json({ error: 'Access denied' });
 
     jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
       if (err) {
-        const refreshToken = req.cookies[refreshTokenName];
         if (!refreshToken) {
           return res.status(401).json({ error: 'Access denied' });
         }
@@ -28,15 +37,22 @@ function authenticateToken(tokenName, refreshTokenName) {
           const { accessToken, refreshToken: newRefreshToken } =
             generateTokens(user);
 
-          res.cookie(refreshTokenName, newRefreshToken, {
-            httpOnly: true,
-            secure: true,
-          });
+          // Ako je web request (ima cookies), postavi nove cookieje
+          if (req.cookies[tokenName]) {
+            res.cookie(refreshTokenName, newRefreshToken, {
+              httpOnly: true,
+              secure: true,
+            });
 
-          res.cookie(tokenName, accessToken, {
-            httpOnly: true,
-            secure: true,
-          });
+            res.cookie(tokenName, accessToken, {
+              httpOnly: true,
+              secure: true,
+            });
+          } else {
+            // Ako je mobile request, pošalji tokene u response headers
+            res.setHeader('X-Access-Token', accessToken);
+            res.setHeader('X-Refresh-Token', newRefreshToken);
+          }
 
           req.user = user;
           return next();
