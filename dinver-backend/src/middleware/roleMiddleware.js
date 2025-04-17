@@ -12,8 +12,8 @@ function authenticateToken(tokenName, refreshTokenName) {
     let refreshToken = req.cookies[refreshTokenName];
 
     // Ako nema u cookieju, provjeri Authorization header (mobile)
-    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
+    if (!token && req.headers.authorization) {
+      token = req.headers.authorization;
       // Za mobile, refresh token će biti poslan u posebnom headeru
       refreshToken = req.headers['x-refresh-token'];
     }

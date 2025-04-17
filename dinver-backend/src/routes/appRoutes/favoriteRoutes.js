@@ -1,19 +1,33 @@
 const express = require('express');
 const favoriteController = require('../../controllers/favoriteController');
-const { appApiKeyAuth } = require('../../middleware/roleMiddleware');
+const {
+  appApiKeyAuth,
+  appAuthenticateToken,
+} = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
 // Dohvati sve favorite za korisnika
-router.get('/favorites', appApiKeyAuth, favoriteController.getUserFavorites);
+router.get(
+  '/favorites',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  favoriteController.getUserFavorites,
+);
 
 // Dodaj u favorite
-router.post('/favorites', favoriteController.addToFavorites);
+router.post(
+  '/favorites',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  favoriteController.addToFavorites,
+);
 
 // Ukloni iz favorita
 router.delete(
   '/favorites/:restaurantId',
   appApiKeyAuth,
+  appAuthenticateToken,
   favoriteController.removeFromFavorites,
 );
 
@@ -21,6 +35,7 @@ router.delete(
 router.get(
   '/favorites/:restaurantId/check',
   appApiKeyAuth,
+  appAuthenticateToken,
   favoriteController.checkIsFavorite,
 );
 
