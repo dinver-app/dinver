@@ -1,4 +1,5 @@
 const { Achievement, UserAchievement, User } = require('../../models');
+const PointsService = require('../../utils/pointsService');
 
 // Dohvati sve achievemente korisnika
 const getUserAchievements = async (req, res) => {
@@ -123,6 +124,15 @@ const updateCategoryProgress = async (userId, category, currentValue) => {
           achieved,
           achievedAt: achieved ? new Date() : null,
         });
+
+        // If achievement was just unlocked, award points
+        if (achieved) {
+          await PointsService.addAchievementPoints(
+            userId,
+            achievement.id,
+            achievement.nameHr,
+          );
+        }
       }
     }
   } catch (error) {

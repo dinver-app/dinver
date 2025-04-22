@@ -8,6 +8,7 @@ const { generateTokens } = require('../../utils/tokenUtils');
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../../utils/emailService');
 const { sendVerificationSMS } = require('../../utils/smsService');
+const PointsService = require('../../utils/pointsService');
 
 const register = async (req, res) => {
   try {
@@ -436,6 +437,9 @@ const verifyEmail = async (req, res) => {
       email_verification_token: null,
     });
 
+    // Award points for email verification
+    await PointsService.addProfileVerificationPoints(user.id);
+
     res.send(`
       <html>
         <head>
@@ -564,6 +568,9 @@ const verifyPhone = async (req, res) => {
       phone_verification_code: null,
       phone_verification_expires_at: null,
     });
+
+    // Award points for phone verification
+    await PointsService.addProfileVerificationPoints(user.id);
 
     res.json({ message: 'Phone verified successfully' });
   } catch (error) {

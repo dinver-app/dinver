@@ -1,17 +1,16 @@
-const { Review, Restaurant, User } = require('../../models');
+const { Review, Restaurant, User, UserPointsHistory } = require('../../models');
 const { handleError } = require('../../utils/errorHandler');
-const {
-  updateAchievementProgress,
-  updateEliteReviewerProgress,
-} = require('./achievementController');
-const { Op } = require('sequelize');
+const { ValidationError, Op } = require('sequelize');
+const { uploadToS3 } = require('../../utils/s3Upload');
+const { calculateAverageRating } = require('../utils/ratingUtils');
+const PointsService = require('../../utils/pointsService');
 
 const EDIT_WINDOW_DAYS = 7;
 const MAX_EDITS = 1;
+const REVIEW_COOLDOWN_MONTHS = 6;
 
 const createReview = async (req, res) => {
   try {
-    const userId = req.user.id;
     const {
       restaurantId,
       rating,
@@ -22,9 +21,37 @@ const createReview = async (req, res) => {
       text,
       photos,
     } = req.body;
+    const userId = req.user.id;
+
+    // Validate if restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Check if user has reviewed this restaurant in the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - REVIEW_COOLDOWN_MONTHS);
+
+    const existingReview = await Review.findOne({
+      where: {
+        user_id: userId,
+        restaurant_id: restaurantId,
+        is_hidden: false,
+        created_at: {
+          [Op.gte]: sixMonthsAgo,
+        },
+      },
+    });
+
+    if (existingReview) {
+      return res.status(400).json({
+        error: `You can review this restaurant again after ${REVIEW_COOLDOWN_MONTHS} months from your last review`,
+      });
+    }
 
     // Check if user already reviewed this restaurant
-    const existingReview = await Review.findOne({
+    const existingReviewAgain = await Review.findOne({
       where: {
         user_id: userId,
         restaurant_id: restaurantId,
@@ -32,12 +59,13 @@ const createReview = async (req, res) => {
       },
     });
 
-    if (existingReview) {
-      return res.status(400).json({
-        error: 'Već ste napisali recenziju za ovaj restoran',
-      });
+    if (existingReviewAgain) {
+      return res
+        .status(400)
+        .json({ error: 'You have already reviewed this restaurant' });
     }
 
+    // Create the review
     const review = await Review.create({
       user_id: userId,
       restaurant_id: restaurantId,
@@ -47,41 +75,50 @@ const createReview = async (req, res) => {
       atmosphere,
       value_for_money,
       text,
-      photos: photos || [],
-      is_verified_reviewer: false,
-      is_hidden: false,
-      edit_count: 0,
-      edit_history: [],
+      photos: [],
     });
+
+    // Award points through PointsService
+    await PointsService.addReviewPoints(
+      userId,
+      review.id,
+      text,
+      photos && photos.length > 0,
+      restaurantId,
+    );
+
+    // Handle photo uploads
+    if (photos && photos.length > 0) {
+      const uploadedPhotos = [];
+      for (const photo of photos) {
+        const uploadResult = await uploadToS3(photo);
+        uploadedPhotos.push(uploadResult.Location);
+      }
+
+      await review.update({ photos: uploadedPhotos });
+    }
 
     // Update restaurant's average rating
-    await updateRestaurantRating(restaurantId);
+    await calculateAverageRating(restaurantId);
 
-    // Update achievement progress for reviews
-    await updateAchievementProgress(userId, 'ELITE_REVIEWER');
-
-    // Ažuriraj Elite Reviewer achievement
-    const qualityReviewCount = await Review.count({
-      where: {
-        user_id: userId,
-        text: {
-          [Op.and]: [
-            { [Op.ne]: null },
-            { [Op.regexp]: '.{120,}' }, // Recenzije duže od 120 znakova
-          ],
+    // Return the created review with user details
+    const reviewWithDetails = await Review.findByPk(review.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'first_name', 'last_name'],
         },
-      },
+      ],
     });
 
-    await updateEliteReviewerProgress(userId, qualityReviewCount);
-
-    res.status(201).json({
-      ...review.toJSON(),
-      can_edit: true,
-      is_edited: false,
-    });
+    res.status(201).json(reviewWithDetails);
   } catch (error) {
-    handleError(res, error);
+    console.error('Error creating review:', error);
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to create review' });
   }
 };
 
@@ -104,16 +141,10 @@ const getUserReviews = async (req, res) => {
       order: [['created_at', 'DESC']],
     });
 
-    // Add virtual fields to each review
-    const reviewsWithMeta = reviews.map((review) => ({
-      ...review.toJSON(),
-      is_edited: review.last_edited_at !== null,
-      can_edit: review.can_edit,
-    }));
-
-    res.json(reviewsWithMeta);
+    res.json(reviews);
   } catch (error) {
-    handleError(res, error);
+    console.error('Error fetching user reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 };
 
@@ -131,7 +162,7 @@ const getRestaurantReviews = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'first_name', 'last_name'],
         },
       ],
       order: [['created_at', 'DESC']],
@@ -153,16 +184,8 @@ const getRestaurantReviews = async (req, res) => {
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
+    const { rating, text, photos } = req.body;
     const userId = req.user.id;
-    const {
-      rating,
-      food_quality,
-      service,
-      atmosphere,
-      value_for_money,
-      text,
-      photos,
-    } = req.body;
 
     const review = await Review.findOne({
       where: {
@@ -173,57 +196,81 @@ const updateReview = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({
-        error: 'Recenzija nije pronađena ili nemate pravo pristupa',
-      });
+      return res.status(404).json({ error: 'Review not found' });
     }
 
-    // Check if review can be edited
-    if (!review.can_edit) {
+    // Check edit window
+    const editWindowEnd = new Date(review.created_at);
+    editWindowEnd.setDate(editWindowEnd.getDate() + EDIT_WINDOW_DAYS);
+
+    if (new Date() > editWindowEnd) {
       return res.status(403).json({
-        error:
-          'Recenzija se više ne može uređivati. Dozvoljeno je uređivanje unutar 7 dana od objave ili maksimalno jednom nakon toga.',
+        error: `Reviews can only be edited within ${EDIT_WINDOW_DAYS} days of creation`,
       });
     }
 
-    // Save current state to edit history
-    const currentState = {
-      rating: review.rating,
-      food_quality: review.food_quality,
-      service: review.service,
-      atmosphere: review.atmosphere,
-      value_for_money: review.value_for_money,
-      text: review.text,
-      photos: review.photos,
-      edited_at: new Date(),
-    };
+    // Check edit count
+    if (review.edit_count >= MAX_EDITS) {
+      return res.status(403).json({
+        error: `Reviews can only be edited ${MAX_EDITS} time`,
+      });
+    }
 
+    // Check if new photos are being added
+    const existingPhotos = review.photos || [];
+    const newPhotos = photos
+      ? photos.filter((photo) => !existingPhotos.includes(photo))
+      : [];
+
+    // Handle new photo uploads
+    if (newPhotos.length > 0) {
+      const uploadedPhotos = [];
+      for (const photo of newPhotos) {
+        const uploadResult = await uploadToS3(photo);
+        uploadedPhotos.push(uploadResult.Location);
+      }
+
+      // Award points for adding new photos if none existed before
+      if (existingPhotos.length === 0) {
+        await PointsService.addReviewPoints(userId, review.id, null, true);
+      }
+
+      // Combine existing and new photos
+      const updatedPhotos = [...existingPhotos, ...uploadedPhotos];
+      await review.update({ photos: updatedPhotos });
+    }
+
+    // Update review content and rating
     await review.update({
       rating: rating || review.rating,
-      food_quality: food_quality || review.food_quality,
-      service: service || review.service,
-      atmosphere: atmosphere || review.atmosphere,
-      value_for_money: value_for_money || review.value_for_money,
       text: text || review.text,
-      photos: photos || review.photos,
       last_edited_at: new Date(),
       edit_count: review.edit_count + 1,
-      edit_history: [...review.edit_history, currentState],
     });
 
-    // Update restaurant's average rating
-    await updateRestaurantRating(review.restaurant_id);
+    // Update restaurant's average rating if rating changed
+    if (rating !== review.rating) {
+      await calculateAverageRating(review.restaurant_id);
+    }
 
-    // Reload review to get updated virtual fields
-    await review.reload();
-
-    res.json({
-      ...review.toJSON(),
-      is_edited: true,
-      can_edit: review.can_edit,
+    // Return updated review with user details
+    const updatedReview = await Review.findByPk(review.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'first_name', 'last_name'],
+        },
+      ],
     });
+
+    res.json(updatedReview);
   } catch (error) {
-    handleError(res, error);
+    console.error('Error updating review:', error);
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to update review' });
   }
 };
 
@@ -241,20 +288,19 @@ const deleteReview = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({
-        error: 'Recenzija nije pronađena ili nemate pravo pristupa',
-      });
+      return res.status(404).json({ error: 'Review not found' });
     }
 
     // Soft delete - hide the review instead of deleting it
     await review.update({ is_hidden: true });
 
     // Update restaurant's average rating
-    await updateRestaurantRating(review.restaurant_id);
+    await calculateAverageRating(review.restaurant_id);
 
     res.status(204).send();
   } catch (error) {
-    handleError(res, error);
+    console.error('Error deleting review:', error);
+    res.status(500).json({ error: 'Failed to delete review' });
   }
 };
 

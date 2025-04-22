@@ -1,4 +1,5 @@
 const { User, Restaurant, UserFavorite } = require('../../models');
+const PointsService = require('../../utils/pointsService');
 
 // Dodaj restoran u favorite
 const addToFavorites = async (req, res) => {
@@ -22,6 +23,16 @@ const addToFavorites = async (req, res) => {
     }
 
     await UserFavorite.create({ userId, restaurantId });
+
+    // Check if this is the user's first favorite
+    const favoriteCount = await UserFavorite.count({
+      where: { userId },
+    });
+
+    if (favoriteCount === 1) {
+      // Award points for first favorite
+      await PointsService.addFirstFavoritePoints(userId, restaurantId);
+    }
 
     res.status(201).json({ message: 'Restaurant added to favorites' });
   } catch (error) {

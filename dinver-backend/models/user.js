@@ -10,19 +10,19 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       User.belongsToMany(models.Organization, {
         through: 'UserOrganizations',
-        foreignKey: 'userId',
+        foreignKey: 'user_id',
         as: 'organizations',
       });
 
       User.belongsToMany(models.Restaurant, {
         through: 'UserAdmins',
-        foreignKey: 'userId',
+        foreignKey: 'user_id',
         as: 'restaurants',
       });
 
       User.belongsToMany(models.Restaurant, {
         through: 'UserFavorites',
-        foreignKey: 'userId',
+        foreignKey: 'user_id',
         as: 'favoriteRestaurants',
       });
     }
@@ -34,8 +34,14 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      firstName: DataTypes.STRING,
-      lastName: DataTypes.STRING,
+      first_name: {
+        type: DataTypes.STRING,
+        field: 'first_name',
+      },
+      last_name: {
+        type: DataTypes.STRING,
+        field: 'last_name',
+      },
       email: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -45,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       password: DataTypes.STRING,
-      googleId: {
+      google_id: {
         type: DataTypes.STRING,
         unique: true,
         allowNull: true,
@@ -95,6 +101,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'User',
+      tableName: 'Users',
+      freezeTableName: true,
+      underscored: true,
     },
   );
   return User;
