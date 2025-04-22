@@ -1,5 +1,10 @@
 const { Restaurant, Review, UserFavorite } = require('../../models');
 const { recordInsight } = require('./insightController');
+const {
+  updateFoodExplorerProgress,
+  updateCityHopperProgress,
+  updateWorldCuisineProgress,
+} = require('./achievementController');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
@@ -1034,6 +1039,74 @@ const getSampleRestaurants = async (req, res) => {
     res.status(500).json({
       error: 'An error occurred while fetching sample restaurants',
     });
+  }
+};
+
+// Dodaj novu funkciju za ažuriranje achievementa nakon posjete restoranu
+const updateRestaurantAchievements = async (userId, restaurantId) => {
+  try {
+    // 1. Food Explorer - broj različitih restorana
+    const visitedRestaurantsCount = await Review.count({
+      where: { user_id: userId },
+      distinct: true,
+      col: 'restaurant_id',
+    });
+    await updateFoodExplorerProgress(userId, visitedRestaurantsCount);
+
+    // 2. City Hopper - broj različitih gradova
+    const visitedCities = await Review.findAll({
+      include: [
+        {
+          model: Restaurant,
+          attributes: ['city'],
+          required: true,
+        },
+      ],
+      where: { user_id: userId },
+      attributes: [],
+      group: ['Restaurant.city'],
+    });
+    await updateCityHopperProgress(userId, visitedCities.length);
+
+    // 3. World Cuisine - broj različitih kuhinja
+    const visitedCuisines = await Review.findAll({
+      include: [
+        {
+          model: Restaurant,
+          attributes: ['cuisine_type'],
+          required: true,
+        },
+      ],
+      where: { user_id: userId },
+      attributes: [],
+      group: ['Restaurant.cuisine_type'],
+    });
+    await updateWorldCuisineProgress(userId, visitedCuisines.length);
+  } catch (error) {
+    console.error('Error updating achievements:', error);
+  }
+};
+
+// Dodaj poziv za ažuriranje achievementa u postojeće funkcije
+const createReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { restaurantId, rating, comment } = req.body;
+
+    const review = await Review.create({
+      user_id: userId,
+      restaurant_id: restaurantId,
+      rating,
+      comment,
+    });
+
+    // Ažuriraj achievemente nakon uspješnog stvaranja recenzije
+    await updateRestaurantAchievements(userId, restaurantId);
+
+    res.status(201).json(review);
+  } catch (error) {
+    console.error('Error creating review:', error);
+    res.status(500).json({ error: 'Failed to create review' });
   }
 };
 

@@ -94,10 +94,108 @@
  *         description: Not authenticated
  *       500:
  *         description: Server error
+ *
+ * /api/app/auth/verify-email:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Request email verification
+ *     description: Send verification email to user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Verification email sent
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *
+ * /api/app/auth/verify-email/{token}:
+ *   get:
+ *     tags:
+ *       - Authentication
+ *     summary: Verify email with token
+ *     description: Verify user's email using the token sent to their email
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Server error
+ *
+ * /api/app/auth/verify-phone:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Request phone verification
+ *     description: Send verification code via SMS
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 example: "+385991234567"
+ *     responses:
+ *       200:
+ *         description: Verification code sent
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ *
+ * /api/app/auth/verify-phone/confirm:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Verify phone with code
+ *     description: Verify user's phone number using the SMS code
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Phone verified successfully
+ *       400:
+ *         description: Invalid or expired code
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
  */
 
 const express = require('express');
 const authController = require('../../controllers/authController');
+const {
+  appAuthenticateToken,
+  appApiKeyAuth,
+} = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -110,5 +208,26 @@ router.get('/auth/logout', authController.logout);
 router.get('/auth/check-auth', authController.checkAuth);
 
 router.post('/auth/social-login', authController.socialLogin);
+
+// Verifikacijske rute
+router.post(
+  '/auth/verify-email',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  authController.requestEmailVerification,
+);
+router.get('/auth/verify-email/:token', authController.verifyEmail);
+router.post(
+  '/auth/verify-phone',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  authController.requestPhoneVerification,
+);
+router.post(
+  '/auth/verify-phone/confirm',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  authController.verifyPhone,
+);
 
 module.exports = router;

@@ -101,7 +101,7 @@ router.get(
   '/restaurants/:restaurantId/reviews',
   sysadminAuthenticateToken,
   checkSysadmin,
-  reviewController.getReviews,
+  reviewController.getRestaurantReviews,
 );
 
 router.get(

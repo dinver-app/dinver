@@ -2,46 +2,48 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Reviews', {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('Reservations', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'Users',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      restaurant_id: {
+      restaurantId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
           model: 'Restaurants',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      rating: {
-        type: Sequelize.FLOAT,
+      date: {
+        type: Sequelize.DATEONLY,
         allowNull: false,
-        validate: {
-          min: 1,
-          max: 5,
-        },
       },
-      comment: {
-        type: Sequelize.TEXT,
-        allowNull: true,
+      time: {
+        type: Sequelize.TIME,
+        allowNull: false,
       },
-      photo_reference: {
-        type: Sequelize.STRING,
-        allowNull: true,
+      guests: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      status: {
+        type: Sequelize.ENUM('confirmed', 'cancelled', 'completed', 'no-show'),
+        defaultValue: 'confirmed',
       },
       createdAt: {
         allowNull: false,
@@ -54,7 +56,7 @@ module.exports = {
     });
   },
 
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Reviews');
+  async down(queryInterface, Sequelize) {
+    await queryInterface.dropTable('Reservations');
   },
 };
