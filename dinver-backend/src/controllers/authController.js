@@ -5,6 +5,9 @@ const { User } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { generateTokens } = require('../../utils/tokenUtils');
+const crypto = require('crypto');
+const { sendVerificationEmail } = require('../../utils/emailService');
+const { sendVerificationSMS } = require('../../utils/smsService');
 
 const register = async (req, res) => {
   try {
@@ -362,6 +365,213 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+const requestEmailVerification = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+
+    if (user.is_email_verified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+
+    // Generiraj token za verifikaciju
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date();
+    tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token vrijedi 24 sata
+
+    await user.update({
+      email_verification_token: verificationToken,
+    });
+
+    // Pošalji email s verifikacijskim linkom
+    // Koristi odgovarajući URL ovisno o okruženju
+    const baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://api.dinver.eu'
+        : 'http://localhost:3000';
+
+    const verificationLink = `${baseUrl}/api/app/auth/verify-email/${verificationToken}`;
+    await sendVerificationEmail(user.email, verificationLink);
+
+    res.json({ message: 'Verification email sent successfully' });
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    res.status(500).json({ error: 'Failed to send verification email' });
+  }
+};
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+      where: { email_verification_token: token },
+    });
+
+    if (!user) {
+      return res.send(`
+        <html>
+          <head>
+            <title>Verification Failed</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+              .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+              .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+              p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 class="error">Verification Failed</h1>
+              <p>Invalid or expired verification token.</p>
+              <p>Please request a new verification email.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    await user.update({
+      is_email_verified: true,
+      email_verification_token: null,
+    });
+
+    res.send(`
+      <html>
+        <head>
+          <title>Email Verified</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+            .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+            .success { color: #059669; font-size: 1.5rem; margin-bottom: 1rem; }
+            p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            .checkmark { font-size: 4rem; margin-bottom: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="checkmark">✓</div>
+            <h1 class="success">Email Verified!</h1>
+            <p>Your email has been successfully verified.</p>
+            <p>You can now close this window and return to the app.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error verifying email:', error);
+    res.send(`
+      <html>
+        <head>
+          <title>Verification Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+            .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+            .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+            p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1 class="error">Verification Error</h1>
+            <p>An error occurred while verifying your email.</p>
+            <p>Please try again or request a new verification email.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+};
+
+const requestPhoneVerification = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+
+    if (user.is_phone_verified) {
+      return res.status(400).json({ error: 'Phone is already verified' });
+    }
+
+    if (!user.phone) {
+      return res.status(400).json({
+        error:
+          'Phone number not found. Please add your phone number in settings first.',
+      });
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(user.phone)) {
+      return res.status(400).json({
+        error:
+          'Invalid phone number format. Please update your phone number in settings to use international format (e.g., +385991234567)',
+      });
+    }
+
+    // Generiraj 6-znamenkasti kod
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+    const codeExpiry = new Date();
+    codeExpiry.setMinutes(codeExpiry.getMinutes() + 10); // Kod vrijedi 10 minuta
+
+    await user.update({
+      phone_verification_code: verificationCode,
+      phone_verification_expires_at: codeExpiry,
+    });
+
+    // Pošalji SMS s kodom
+    await sendVerificationSMS(user.phone, verificationCode);
+
+    res.json({
+      message: 'Verification code sent successfully',
+      expiresIn: '10 minutes',
+    });
+  } catch (error) {
+    console.error('Error sending verification code:', error);
+    res.status(500).json({ error: 'Failed to send verification code' });
+  }
+};
+
+const verifyPhone = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.is_phone_verified) {
+      return res.status(400).json({ error: 'Phone is already verified' });
+    }
+
+    if (!user.phone_verification_code || !user.phone_verification_expires_at) {
+      return res.status(400).json({ error: 'No verification code requested' });
+    }
+
+    if (new Date() > user.phone_verification_expires_at) {
+      return res.status(400).json({ error: 'Verification code has expired' });
+    }
+
+    if (user.phone_verification_code !== code) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    await user.update({
+      is_phone_verified: true,
+      phone_verification_code: null,
+      phone_verification_expires_at: null,
+    });
+
+    res.json({ message: 'Phone verified successfully' });
+  } catch (error) {
+    console.error('Error verifying phone:', error);
+    res.status(500).json({ error: 'Failed to verify phone' });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -371,4 +581,8 @@ module.exports = {
   sysadminCheckAuth,
   adminCheckAuth,
   socialLogin,
+  requestEmailVerification,
+  verifyEmail,
+  requestPhoneVerification,
+  verifyPhone,
 };

@@ -71,7 +71,7 @@ router.get(
   '/restaurants/:restaurantId/reviews',
   adminAuthenticateToken,
   checkAdmin,
-  reviewController.getReviews,
+  reviewController.getRestaurantReviews,
 );
 
 router.get(

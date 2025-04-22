@@ -65,6 +65,32 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
+      is_email_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      is_phone_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      email_verification_token: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phone_verification_code: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phone_verification_expires_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,

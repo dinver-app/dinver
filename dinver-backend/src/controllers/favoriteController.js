@@ -73,7 +73,8 @@ const getUserFavorites = async (req, res) => {
         {
           model: Restaurant,
           as: 'favoriteRestaurants',
-          through: { attributes: [] }, // Ne uključujemo atribute vezne tablice
+          through: { attributes: [] },
+          attributes: ['id', 'name', 'rating', 'price_level', 'address'],
         },
       ],
     });
