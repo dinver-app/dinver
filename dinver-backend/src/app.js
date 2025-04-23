@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const session = require('express-session');
 const passport = require('passport');
-const Redis = require('redis');
-const RedisStore = require('connect-redis').default;
+const { createClient } = require('redis');
+const RedisStore = require('connect-redis')(session);
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
@@ -23,8 +23,8 @@ const app = express();
 // Schedule the cron job to run every day at 3:00 AM
 cron.schedule('0 3 * * *', createDailyBackups);
 
-// Initialize Redis client
-const redisClient = Redis.createClient({
+// Initialize client.
+const redisClient = createClient({
   url: process.env.REDIS_URL,
   socket: {
     tls: true,
@@ -32,6 +32,7 @@ const redisClient = Redis.createClient({
   },
 });
 
+// Initialize redis connection
 redisClient.connect().catch(console.error);
 
 // Redis error handling
@@ -45,7 +46,10 @@ app.use(express.urlencoded({ extended: true }));
 // Configure session middleware with Redis
 app.use(
   session({
-    store: new RedisStore({ client: redisClient }),
+    store: new RedisStore({
+      client: redisClient,
+      prefix: 'dinver:',
+    }),
     secret: process.env.SESSION_SECRET || 'your_secret_key',
     resave: false,
     saveUninitialized: false,
