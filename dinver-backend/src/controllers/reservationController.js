@@ -127,7 +127,7 @@ const getRestaurantReservations = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
       ],
       order: [
@@ -155,7 +155,7 @@ const confirmReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -226,7 +226,7 @@ const declineReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -315,7 +315,7 @@ const suggestAlternativeTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -452,7 +452,7 @@ const getReservationHistory = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'first_name', 'last_name'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -477,7 +477,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -538,7 +538,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
         },
         {
           model: Restaurant,

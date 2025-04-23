@@ -60,13 +60,9 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      city: {
+      place: {
         type: DataTypes.STRING,
-        allowNull: false,
-      },
-      country: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       latitude: {
         type: DataTypes.DECIMAL,
@@ -77,10 +73,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       phone: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      website: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -108,35 +100,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      delivery: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      takeout: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      dine_in: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      outdoor_seating: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      reservable: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      place: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
       working_hours_info: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -151,30 +114,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       is_open_now: {
         type: DataTypes.BOOLEAN,
-        allowNull: true,
-      },
-      rating: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-      },
-      user_ratings_total: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      price_level: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      is_open_now: {
-        type: DataTypes.BOOLEAN,
-        allowNull: true,
-      },
-      opening_hours: {
-        type: DataTypes.JSONB,
-        allowNull: true,
-      },
-      types: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
       icon_url: {
@@ -203,10 +142,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       icon_mask_base_uri: {
         type: DataTypes.STRING,
-        allowNull: true,
-      },
-      photos: {
-        type: DataTypes.JSONB,
         allowNull: true,
       },
       plus_code: {
@@ -279,7 +214,7 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Restaurant',
       tableName: 'Restaurants',
-      underscored: true,
+      underscored: false,
     },
   );
   return Restaurant;
