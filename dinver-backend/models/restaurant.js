@@ -15,15 +15,17 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       Restaurant.belongsToMany(models.User, {
-        through: 'UserAdmins',
-        foreignKey: 'restaurantId',
-        as: 'users',
+        through: 'UserFavorites',
+        foreignKey: 'restaurant_id',
+        otherKey: 'user_id',
+        as: 'favoriteUsers',
       });
 
       Restaurant.belongsToMany(models.User, {
-        through: 'UserFavorites',
-        foreignKey: 'restaurantId',
-        as: 'favoritedBy',
+        through: 'UserAdmins',
+        foreignKey: 'restaurant_id',
+        otherKey: 'user_id',
+        as: 'admins',
       });
 
       Restaurant.hasMany(models.MenuItem, {
@@ -31,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'menuItems',
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
+      });
+
+      Restaurant.hasMany(models.Review, {
+        foreignKey: 'restaurant_id',
+        as: 'reviews',
       });
     }
   }
@@ -45,9 +52,86 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
       address: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      city: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      country: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      latitude: {
+        type: DataTypes.DECIMAL,
+        allowNull: false,
+      },
+      longitude: {
+        type: DataTypes.DECIMAL,
+        allowNull: false,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      website: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      rating: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+      },
+      price_level: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      opening_hours: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      photos: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      place_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      types: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      delivery: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      takeout: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      dine_in: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      outdoor_seating: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      reservable: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
       place: {
         type: DataTypes.STRING,
@@ -61,17 +145,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      place_id: {
-        type: DataTypes.STRING,
-        unique: true,
+      user_ratings_total: {
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
-      latitude: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-      },
-      longitude: {
-        type: DataTypes.FLOAT,
+      is_open_now: {
+        type: DataTypes.BOOLEAN,
         allowNull: true,
       },
       rating: {
@@ -162,10 +241,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      phone: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
       email: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -203,6 +278,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Restaurant',
+      tableName: 'Restaurants',
+      underscored: true,
     },
   );
   return Restaurant;
