@@ -21,8 +21,8 @@ const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      firstName,
-      lastName,
+      first_name: firstName,
+      last_name: lastName,
       email,
       password: hashedPassword,
     });
@@ -45,8 +45,8 @@ const register = async (req, res) => {
 
     // Filtriraj korisničke podatke
     const userData = {
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: user.first_name,
+      lastName: user.last_name,
       email: user.email,
       role: user.role,
       language: user.language,
@@ -60,6 +60,7 @@ const register = async (req, res) => {
       refreshToken: refreshToken,
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ error: 'An error occurred during registration' });
   }
 };
@@ -98,8 +99,8 @@ const login = async (req, res) => {
 
     // Filtriraj korisničke podatke
     const userData = {
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: user.first_name,
+      lastName: user.last_name,
       email: user.email,
       role: user.role,
       language: user.language,
@@ -315,8 +316,8 @@ const socialLogin = async (req, res) => {
     if (!user) {
       user = await User.create({
         email,
-        firstName,
-        lastName,
+        first_name: firstName,
+        last_name: lastName,
         photoURL,
         provider,
       });
@@ -348,8 +349,8 @@ passport.use(
         if (!user) {
           user = await User.create({
             googleId: profile.id,
-            firstName: profile.name.givenName,
-            lastName: profile.name.familyName,
+            first_name: profile.name.givenName,
+            last_name: profile.name.familyName,
             email: profile.emails[0].value,
           });
         }

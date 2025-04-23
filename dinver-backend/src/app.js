@@ -3,6 +3,8 @@ const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const session = require('express-session');
 const passport = require('passport');
+const Redis = require('redis');
+const RedisStore = require('connect-redis').default;
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
@@ -21,8 +23,40 @@ const app = express();
 // Schedule the cron job to run every day at 3:00 AM
 cron.schedule('0 3 * * *', createDailyBackups);
 
+// Initialize Redis client
+const redisClient = Redis.createClient({
+  url: process.env.REDIS_URL,
+  socket: {
+    tls: true,
+    rejectUnauthorized: false,
+  },
+});
+
+redisClient.connect().catch(console.error);
+
+// Redis error handling
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+redisClient.on('connect', () => console.log('Connected to Redis'));
+
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+
+// Configure session middleware with Redis
+app.use(
+  session({
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET || 'your_secret_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }),
+);
+
 app.use(
   cors({
     origin: [
@@ -33,13 +67,6 @@ app.use(
       'https://sysadmin.dinver.eu',
     ],
     credentials: true,
-  }),
-);
-app.use(
-  session({
-    secret: 'your_secret_key',
-    resave: false,
-    saveUninitialized: true,
   }),
 );
 
