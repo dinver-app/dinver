@@ -5,7 +5,7 @@ function generateTokens(user) {
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
     {
-      expiresIn: '1h',
+      expiresIn: '24h',
     },
   );
 
@@ -13,7 +13,7 @@ function generateTokens(user) {
     { id: user.id },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn: '1d',
+      expiresIn: '90d',
     },
   );
 

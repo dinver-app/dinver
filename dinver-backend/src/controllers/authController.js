@@ -67,16 +67,23 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
+
     const user = await User.findOne({ where: { email } });
+    console.log('User found:', user ? 'yes' : 'no');
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+      console.log('Login failed: Invalid credentials');
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    console.log('Password verified, generating tokens');
     const { accessToken, refreshToken } = generateTokens(user);
+    console.log('Tokens generated successfully');
 
     // Za web aplikaciju
     if (req.headers['user-agent']?.includes('Mozilla')) {
+      console.log('Setting cookies for web client');
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
@@ -99,7 +106,7 @@ const login = async (req, res) => {
       banned: user.banned,
     };
 
-    // Dodaj tokene u response body za mobilnu aplikaciju
+    console.log('Login successful, sending response');
     res.status(200).json({
       message: 'Login successful',
       user: userData,
@@ -107,6 +114,7 @@ const login = async (req, res) => {
       refreshToken: refreshToken,
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: 'An error occurred during login' });
   }
 };
