@@ -15,18 +15,18 @@ const addToFavorites = async (req, res) => {
 
     // Provjeri postoji li već u favoritima
     const existingFavorite = await UserFavorite.findOne({
-      where: { userId, restaurantId },
+      where: { user_id: userId, restaurant_id: restaurantId },
     });
 
     if (existingFavorite) {
       return res.status(400).json({ error: 'Restaurant already in favorites' });
     }
 
-    await UserFavorite.create({ userId, restaurantId });
+    await UserFavorite.create({ user_id: userId, restaurant_id: restaurantId });
 
     // Check if this is the user's first favorite
     const favoriteCount = await UserFavorite.count({
-      where: { userId },
+      where: { user_id: userId },
     });
 
     if (favoriteCount === 1) {
@@ -48,7 +48,7 @@ const removeFromFavorites = async (req, res) => {
     const userId = req.user.id;
 
     const favorite = await UserFavorite.findOne({
-      where: { userId, restaurantId },
+      where: { user_id: userId, restaurant_id: restaurantId },
     });
 
     if (!favorite) {
@@ -79,7 +79,7 @@ const getUserFavorites = async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch user ID' });
     }
 
-    const favorites = await User.findByPk(userId, {
+    const user = await User.findByPk(userId, {
       include: [
         {
           model: Restaurant,
@@ -90,7 +90,11 @@ const getUserFavorites = async (req, res) => {
       ],
     });
 
-    res.status(200).json(favorites.favoriteRestaurants);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.status(200).json(user.favoriteRestaurants);
   } catch (error) {
     console.error('Error fetching favorites:', error);
     res.status(500).json({ error: 'Failed to fetch favorites' });
@@ -104,7 +108,7 @@ const checkIsFavorite = async (req, res) => {
     const userId = req.user.id;
 
     const favorite = await UserFavorite.findOne({
-      where: { userId, restaurantId },
+      where: { user_id: userId, restaurant_id: restaurantId },
     });
 
     res.status(200).json({ isFavorite: !!favorite });

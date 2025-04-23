@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       User.belongsToMany(models.Restaurant, {
         through: 'UserFavorites',
         foreignKey: 'user_id',
+        otherKey: 'restaurant_id',
         as: 'favoriteRestaurants',
       });
     }
