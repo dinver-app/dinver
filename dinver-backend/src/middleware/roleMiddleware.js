@@ -144,7 +144,12 @@ const appApiKeyAuth = (req, res, next) => {
 const restaurantOwnerAuth = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const restaurantId = req.params.id || req.body.restaurantId;
+    const { restaurantId: restaurantIdFromParams } = req.params;
+    const { restaurantId: restaurantIdFromBody } = req.body;
+    const { restaurantId: restaurantIdFromQuery } = req.query;
+
+    const restaurantId =
+      restaurantIdFromParams || restaurantIdFromBody || restaurantIdFromQuery;
 
     if (!restaurantId) {
       return res.status(400).json({ error: 'Restaurant ID is required' });
