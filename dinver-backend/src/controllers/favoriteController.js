@@ -24,16 +24,6 @@ const addToFavorites = async (req, res) => {
 
     await UserFavorite.create({ user_id: userId, restaurant_id: restaurantId });
 
-    // Check if this is the user's first favorite
-    const favoriteCount = await UserFavorite.count({
-      where: { user_id: userId },
-    });
-
-    if (favoriteCount === 1) {
-      // Award points for first favorite
-      await PointsService.addFirstFavoritePoints(userId, restaurantId);
-    }
-
     res.status(201).json({ message: 'Restaurant added to favorites' });
   } catch (error) {
     console.error('Error adding to favorites:', error);
