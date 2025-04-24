@@ -3,7 +3,12 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class UserFavorite extends Model {
-    static associate(models) {}
+    static associate(models) {
+      UserFavorite.belongsTo(models.Restaurant, {
+        foreignKey: 'restaurantId',
+        as: 'restaurant',
+      });
+    }
   }
 
   UserFavorite.init(
