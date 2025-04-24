@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  getRestaurants,
+  getAllRestaurants,
   handleClaimStatus,
   getAllClaimLogs,
   getRestaurantById,
@@ -37,7 +37,7 @@ const Claim = () => {
   const fetchRestaurants = async (page: number, search: string) => {
     const loadingToastId = toast.loading(t("loading"));
     try {
-      const data = await getRestaurants(page, search);
+      const data = await getAllRestaurants(page, search);
       setRestaurants(data.restaurants);
     } catch (error) {
       console.error("Failed to fetch restaurants", error);

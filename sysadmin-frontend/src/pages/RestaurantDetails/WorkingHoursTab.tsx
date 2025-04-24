@@ -50,8 +50,8 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       shifts: [],
     });
 
-    if (restaurant.opening_hours?.periods) {
-      JSON.parse(JSON.stringify(restaurant.opening_hours.periods)).forEach(
+    if (restaurant.openingHours?.periods) {
+      JSON.parse(JSON.stringify(restaurant.openingHours.periods)).forEach(
         (period: any) => {
           initialHours[period.open.day] = {
             ...period,
@@ -60,8 +60,8 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
         }
       );
     } else if (
-      restaurant.opening_hours &&
-      Object.keys(restaurant.opening_hours).length === 0
+      restaurant.openingHours &&
+      Object.keys(restaurant.openingHours).length === 0
     ) {
       return initialHours;
     }
@@ -98,7 +98,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
         });
         onUpdate({
           ...restaurant,
-          opening_hours: { periods: workingHours },
+          openingHours: { periods: workingHours },
         });
         setSaveStatus(t("all_changes_saved"));
       } catch (error) {
@@ -114,8 +114,8 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
 
   useEffect(() => {
     if (
-      restaurant.opening_hours &&
-      Object.keys(restaurant.opening_hours).length === 0
+      restaurant.openingHours &&
+      Object.keys(restaurant.openingHours).length === 0
     ) {
       setWorkingHours(
         Array(7).fill({
@@ -151,9 +151,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   }, [editCustomDay]);
 
   const isFormModified = () => {
-    const restaurantOpeningHours = restaurant.opening_hours?.periods
-      ? restaurant.opening_hours?.periods
-      : restaurant.opening_hours;
+    const restaurantOpeningHours = restaurant.openingHours?.periods
+      ? restaurant.openingHours?.periods
+      : restaurant.openingHours;
 
     return JSON.stringify(workingHours) !== restaurantOpeningHours;
   };

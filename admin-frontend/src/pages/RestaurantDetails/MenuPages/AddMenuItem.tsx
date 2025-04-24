@@ -342,8 +342,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                   (allergen) =>
                     !selectedAllergenIds.includes(allergen.id) &&
                     (activeTab === Language.EN
-                      ? allergen.name_en
-                      : allergen.name_hr
+                      ? allergen.nameEn
+                      : allergen.nameHr
                     )
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
@@ -357,8 +357,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                     <span className="flex items-center">
                       {allergen.icon}{" "}
                       {activeTab === Language.EN
-                        ? allergen.name_en
-                        : allergen.name_hr}
+                        ? allergen.nameEn
+                        : allergen.nameHr}
                     </span>
                   </div>
                 ))}
@@ -376,8 +376,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                 <span className="mr-2">{allergen?.icon}</span>
                 <span>
                   {activeTab === Language.EN
-                    ? allergen?.name_en
-                    : allergen?.name_hr}
+                    ? allergen?.nameEn
+                    : allergen?.nameHr}
                 </span>
                 <button
                   onClick={() => handleAllergenSelect(id)}
