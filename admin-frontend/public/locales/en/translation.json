@@ -393,5 +393,11 @@
   "edit_existing_drink_category": "Edit Existing Drink Category",
   "edit_existing_drink_category_description": "Edit an existing drink category in the system.",
   "edit_existing_category": "Edit Existing Category",
-  "edit_existing_category_description": "Edit an existing category in the system."
+  "edit_existing_category_description": "Edit an existing category in the system.",
+  "detailed_ratings": "Detailed Ratings",
+  "food_quality": "Food Quality",
+  "service": "Service",
+  "atmosphere": "Atmosphere",
+  "value_for_money": "Value for Money",
+  "restoran_nije_dogovoren": "Restaurant is not claimed yet"
 }

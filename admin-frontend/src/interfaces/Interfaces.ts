@@ -121,12 +121,14 @@ export interface AuditLog {
 export interface Review {
   id: string;
   rating: number;
-  comment: string;
+  text: string;
   images: string[];
   userId: string;
-  userFirstName: string;
-  userLastName: string;
-  userEmail: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
   createdAt?: string;
   restaurant?: string;
 }
