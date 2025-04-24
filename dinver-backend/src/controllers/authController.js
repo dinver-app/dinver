@@ -12,7 +12,7 @@ const PointsService = require('../../utils/pointsService');
 
 const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, phone } = req.body;
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -25,6 +25,8 @@ const register = async (req, res) => {
       last_name: lastName,
       email,
       password: hashedPassword,
+      phone: phone || null,
+      is_phone_verified: false,
     });
 
     const { accessToken, refreshToken } = generateTokens(user);
@@ -48,6 +50,7 @@ const register = async (req, res) => {
       firstName: user.first_name,
       lastName: user.last_name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       language: user.language,
       banned: user.banned,
