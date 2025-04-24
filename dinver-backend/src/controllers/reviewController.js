@@ -151,9 +151,30 @@ const getUserReviews = async (req, res) => {
 const getRestaurantReviews = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-    const userId = req.user?.id; // Optional: logged in user
+    const userId = req.user?.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const sortOption = req.query.sort || 'date_desc';
 
-    const reviews = await Review.findAll({
+    let order;
+    switch (sortOption) {
+      case 'date_asc':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'rating_desc':
+        order = [['rating', 'DESC']];
+        break;
+      case 'rating_asc':
+        order = [['rating', 'ASC']];
+        break;
+      case 'date_desc':
+      default:
+        order = [['createdAt', 'DESC']];
+        break;
+    }
+
+    const { count, rows: reviews } = await Review.findAndCountAll({
       where: {
         restaurantId: restaurantId,
         isHidden: false,
@@ -162,10 +183,12 @@ const getRestaurantReviews = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'email', 'firstName', 'lastName'],
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order,
+      limit,
+      offset,
     });
 
     // Add virtual fields to each review
@@ -175,7 +198,14 @@ const getRestaurantReviews = async (req, res) => {
       canEdit: userId === review.userId ? review.canEdit : false,
     }));
 
-    res.json(reviewsWithMeta);
+    const totalPages = Math.ceil(count / limit);
+
+    res.json({
+      totalReviews: count,
+      totalPages,
+      currentPage: page,
+      reviews: reviewsWithMeta,
+    });
   } catch (error) {
     handleError(res, error);
   }
