@@ -101,7 +101,7 @@ const Reviews = () => {
           <option value="rating_asc">{t("rating_asc")}</option>
         </select>
       </div>
-      {reviewsData.length === 0 ? (
+      {reviewsData && reviewsData.length === 0 ? (
         <div className="text-center text-gray-500">
           {t("no_reviews_available")}
         </div>
@@ -127,38 +127,39 @@ const Reviews = () => {
                 </tr>
               </thead>
               <tbody>
-                {reviewsData.map((review: Review) => (
-                  <tr
-                    key={review.id}
-                    className="hover:bg-gray-100 border-b border-gray-200"
-                  >
-                    <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                      {review.userFirstName} {review.userLastName}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-gray-600 w-64">
-                      {truncateComment(review.comment, 30)}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                      {format(
-                        new Date(review.createdAt ?? ""),
-                        "dd.MM.yyyy. HH:mm"
-                      )}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-center text-gray-600 w-32">
-                      {formatRating(review.rating, i18n.language)}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-gray-600 w-10">
-                      <button
-                        onClick={() =>
-                          handleOpenModal(review, review.restaurant ?? "")
-                        }
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        ...
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {reviewsData &&
+                  reviewsData.map((review: Review) => (
+                    <tr
+                      key={review.id}
+                      className="hover:bg-gray-100 border-b border-gray-200"
+                    >
+                      <td className="py-2 px-4 text-sm text-gray-600 w-48">
+                        {review.userFirstName} {review.userLastName}
+                      </td>
+                      <td className="py-2 px-4 text-sm text-gray-600 w-64">
+                        {truncateComment(review.comment, 30)}
+                      </td>
+                      <td className="py-2 px-4 text-sm text-gray-600 w-48">
+                        {format(
+                          new Date(review.createdAt ?? ""),
+                          "dd.MM.yyyy. HH:mm"
+                        )}
+                      </td>
+                      <td className="py-2 px-4 text-sm text-center text-gray-600 w-32">
+                        {formatRating(review.rating, i18n.language)}
+                      </td>
+                      <td className="py-2 px-4 text-sm text-gray-600 w-10">
+                        <button
+                          onClick={() =>
+                            handleOpenModal(review, review.restaurant ?? "")
+                          }
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          ...
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
