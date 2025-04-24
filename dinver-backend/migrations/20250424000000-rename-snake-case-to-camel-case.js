@@ -4,29 +4,7 @@
 // UP: Rename snake_case to camelCase for models from Allergens to Reviews
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // EstablishmentTypes
-    await queryInterface.renameColumn(
-      'EstablishmentTypes',
-      'name_en',
-      'nameEn',
-    );
-    await queryInterface.renameColumn(
-      'EstablishmentTypes',
-      'name_hr',
-      'nameHr',
-    );
-
-    // FoodTypes
-    await queryInterface.renameColumn('FoodTypes', 'name_en', 'nameEn');
-    await queryInterface.renameColumn('FoodTypes', 'name_hr', 'nameHr');
-
-    // Ingredients
-    await queryInterface.renameColumn('Ingredients', 'name_en', 'nameEn');
-    await queryInterface.renameColumn('Ingredients', 'name_hr', 'nameHr');
-
     // Insights
-    await queryInterface.renameColumn('Insights', 'name_en', 'nameEn');
-    await queryInterface.renameColumn('Insights', 'name_hr', 'nameHr');
     await queryInterface.renameColumn('Insights', 'user_id', 'userId');
     await queryInterface.renameColumn(
       'Insights',
@@ -154,26 +132,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // EstablishmentTypes
-    await queryInterface.renameColumn(
-      'EstablishmentTypes',
-      'nameEn',
-      'name_en',
-    );
-    await queryInterface.renameColumn(
-      'EstablishmentTypes',
-      'nameHr',
-      'name_hr',
-    );
-
-    // FoodTypes
-    await queryInterface.renameColumn('FoodTypes', 'nameEn', 'name_en');
-    await queryInterface.renameColumn('FoodTypes', 'nameHr', 'name_hr');
-
-    // Ingredients
-    await queryInterface.renameColumn('Ingredients', 'nameEn', 'name_en');
-    await queryInterface.renameColumn('Ingredients', 'nameHr', 'name_hr');
-
     // Insights
     await queryInterface.renameColumn('Insights', 'nameEn', 'name_en');
     await queryInterface.renameColumn('Insights', 'nameHr', 'name_hr');
