@@ -7,6 +7,7 @@ const reservationRoutes = require('./appRoutes/reservationRoutes');
 const achievementRoutes = require('./appRoutes/achievementRoutes');
 const pointsRoutes = require('./appRoutes/pointsRoutes');
 const userSettingsRoutes = require('./appRoutes/userSettingsRoutes');
+const userRoutes = require('./appRoutes/userRoutes');
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use(reservationRoutes);
 router.use(achievementRoutes);
 router.use(pointsRoutes);
 router.use(userSettingsRoutes);
+router.use(userRoutes);
 
 module.exports = router;

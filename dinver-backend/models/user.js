@@ -33,6 +33,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'pointsHistory',
       });
+      User.hasOne(models.UserSettings, {
+        foreignKey: 'userId',
+        as: 'settings',
+      });
     }
   }
 
@@ -72,26 +76,24 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         unique: true,
       },
-      isEmailVerified: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
+      bio: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
-      isPhoneVerified: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      emailVerificationToken: {
+      streetAddress: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      phoneVerificationCode: {
+      city: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      phoneVerificationExpiresAt: {
-        type: DataTypes.DATE,
+      country: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      birthDate: {
+        type: DataTypes.DATEONLY,
         allowNull: true,
       },
     },
