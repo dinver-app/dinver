@@ -180,7 +180,7 @@ const getUserStats = async (req, res) => {
         // Bodovi i level
         UserPoints.findOne({
           where: { userId },
-          attributes: ['totalPoints', 'level', 'pointsToNextLevel'],
+          attributes: ['totalPoints', 'level'],
         }),
 
         // Statistika recenzija
@@ -218,6 +218,18 @@ const getUserStats = async (req, res) => {
         }),
       ]);
 
+    // Izračunaj pointsToNextLevel
+    const calculatePointsToNextLevel = (currentLevel, totalPoints) => {
+      const levelThresholds = {
+        1: 100,
+        2: 250,
+        3: 500,
+        4: 1000,
+        5: Infinity,
+      };
+      return levelThresholds[currentLevel] - totalPoints;
+    };
+
     // Formatiramo statistiku rezervacija
     const reservationCounts = {
       completed: 0,
@@ -232,7 +244,10 @@ const getUserStats = async (req, res) => {
       points: {
         total: userPoints?.totalPoints || 0,
         level: userPoints?.level || 1,
-        pointsToNextLevel: userPoints?.pointsToNextLevel || 100,
+        pointsToNextLevel: calculatePointsToNextLevel(
+          userPoints?.level || 1,
+          userPoints?.totalPoints || 0,
+        ),
       },
       reviews: {
         total: parseInt(reviewStats[0].get('total')) || 0,
