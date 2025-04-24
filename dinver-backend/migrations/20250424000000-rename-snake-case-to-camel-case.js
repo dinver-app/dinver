@@ -7,8 +7,6 @@ module.exports = {
     // Allergens
     await queryInterface.renameColumn('Allergens', 'name_en', 'nameEn');
     await queryInterface.renameColumn('Allergens', 'name_hr', 'nameHr');
-    await queryInterface.renameColumn('Allergens', 'created_at', 'createdAt');
-    await queryInterface.renameColumn('Allergens', 'updated_at', 'updatedAt');
 
     // EstablishmentPerks
     await queryInterface.renameColumn(
@@ -139,8 +137,6 @@ module.exports = {
     // Allergens
     await queryInterface.renameColumn('Allergens', 'nameEn', 'name_en');
     await queryInterface.renameColumn('Allergens', 'nameHr', 'name_hr');
-    await queryInterface.renameColumn('Allergens', 'createdAt', 'created_at');
-    await queryInterface.renameColumn('Allergens', 'updatedAt', 'updated_at');
 
     // EstablishmentPerks
     await queryInterface.renameColumn(
