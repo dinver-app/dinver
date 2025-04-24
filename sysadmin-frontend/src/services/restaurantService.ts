@@ -9,12 +9,18 @@ export const getRestaurants = async (page: number, search?: string) => {
   return response.data;
 };
 
-export const getAllRestaurants = async () => {
-  const response = await apiClient.get("/api/sysadmin/restaurants/all");
-  return response.data.map((restaurant: any) => ({
-    id: restaurant.id,
-    name: restaurant.name,
-  }));
+export const getRestaurantsList = async () => {
+  const response = await apiClient.get("api/sysadmin/restaurants/list");
+  return response.data;
+};
+
+export const getAllRestaurants = async (page: number, search?: string) => {
+  const response = await apiClient.get(
+    `api/sysadmin/restaurants/all?page=${page}${
+      search ? `&search=${encodeURIComponent(search)}` : ""
+    }`
+  );
+  return response.data;
 };
 
 export const getRestaurantDetails = async (slug: string) => {
@@ -84,12 +90,12 @@ export const getAllEstablishmentPerks = async () => {
 
 export const addRestaurantImages = async (
   id: string,
-  restaurant_slug: string,
+  restaurantSlug: string,
   images: File[]
 ) => {
   const formData = new FormData();
   images.forEach((image) => formData.append("images", image));
-  formData.append("restaurant_slug", restaurant_slug);
+  formData.append("restaurantSlug", restaurantSlug);
 
   const response = await apiClient.post(
     `api/sysadmin/restaurants/${id}/images`,

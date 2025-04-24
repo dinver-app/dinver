@@ -390,10 +390,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
                 .filter(
                   (allergen) =>
                     !selectedAllergenIds.includes(allergen.id) &&
-                    (i18n.language === "en"
-                      ? allergen.name_en
-                      : allergen.name_hr
-                    )
+                    (i18n.language === "en" ? allergen.nameEn : allergen.nameHr)
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
                 )
@@ -406,8 +403,8 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
                     <span className="flex items-center">
                       {allergen.icon}{" "}
                       {i18n.language === "en"
-                        ? allergen.name_en
-                        : allergen.name_hr}
+                        ? allergen.nameEn
+                        : allergen.nameHr}
                     </span>
                   </div>
                 ))}
@@ -424,9 +421,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
               >
                 <span className="mr-2">{allergen?.icon}</span>
                 <span>
-                  {i18n.language === "en"
-                    ? allergen?.name_en
-                    : allergen?.name_hr}
+                  {i18n.language === "en" ? allergen?.nameEn : allergen?.nameHr}
                 </span>
                 <button
                   onClick={() => handleAllergenSelect(id)}

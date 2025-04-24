@@ -20,29 +20,29 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
-  working_hours_info?: string;
-  thumbnail_url?: string;
+  workingHoursInfo?: string;
+  thumbnailUrl?: string;
   thumbnail?: string;
   latitude?: number;
   longitude?: number;
-  place_id?: string;
+  placeId?: string;
   rating?: number;
-  user_ratings_total?: number;
-  price_level?: number;
-  is_open_now?: boolean;
-  opening_hours?: any;
-  food_types?: number[];
-  establishment_types?: number[];
-  establishment_perks?: number[];
-  icon_url?: string;
-  photo_reference?: string;
+  userRatingsTotal?: number;
+  priceLevel?: number;
+  isOpenNow?: boolean;
+  openingHours?: any;
+  foodTypes?: number[];
+  establishmentTypes?: number[];
+  establishmentPerks?: number[];
+  iconUrl?: string;
+  photoReference?: string;
   vicinity?: string;
-  business_status?: string;
+  businessStatus?: string;
   geometry?: object;
-  icon_background_color?: string;
-  icon_mask_base_uri?: string;
+  iconBackgroundColor?: string;
+  iconMaskBaseUri?: string;
   photos?: object[];
-  plus_code?: string;
+  plusCode?: string;
   createdAt?: string;
   updatedAt?: string;
   organizationId?: string;
@@ -50,10 +50,10 @@ export interface Restaurant {
   isClaimed?: boolean;
   slug?: string;
   isDirty?: boolean;
-  website_url?: string;
-  fb_url?: string;
-  ig_url?: string;
-  tt_url?: string;
+  websiteUrl?: string;
+  fbUrl?: string;
+  igUrl?: string;
+  ttUrl?: string;
   phone?: string;
   images?: string[];
   reviewRating?: number;
@@ -63,22 +63,22 @@ export interface Restaurant {
 
 export interface FoodType {
   id: number;
-  name_en: string;
-  name_hr: string;
+  nameEn: string;
+  nameHr: string;
   icon: string;
 }
 
 export interface EstablishmentType {
   id: number;
-  name_en: string;
-  name_hr: string;
+  nameEn: string;
+  nameHr: string;
   icon: string;
 }
 
 export interface EstablishmentPerk {
   id: number;
-  name_en: string;
-  name_hr: string;
+  nameEn: string;
+  nameHr: string;
   icon: string;
 }
 
@@ -134,9 +134,13 @@ export interface Backup {
 export interface Review {
   id: string;
   rating: number;
-  comment: string;
-  images: string[];
-  user_id: string;
+  foodQuality: number;
+  service: number;
+  atmosphere: number;
+  valueForMoney: number;
+  text: string;
+  photos: string[];
+  userId: string;
   userFirstName: string;
   userLastName: string;
   userEmail: string;
@@ -162,8 +166,8 @@ export interface CustomWorkingDay {
 
 export interface Allergen {
   id: number;
-  name_en: string;
-  name_hr: string;
+  nameEn: string;
+  nameHr: string;
   icon: string;
 }
 

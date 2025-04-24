@@ -193,7 +193,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                                     <span
                                       key={allergen.id}
                                       className="tooltip cursor-default"
-                                      title={allergen.name_en}
+                                      title={allergen.nameEn}
                                     >
                                       {allergen.icon}
                                     </span>
@@ -283,7 +283,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                                     <span
                                       key={allergen.id}
                                       className="tooltip cursor-default"
-                                      title={allergen.name_en}
+                                      title={allergen.nameEn}
                                     >
                                       {allergen.icon}
                                     </span>

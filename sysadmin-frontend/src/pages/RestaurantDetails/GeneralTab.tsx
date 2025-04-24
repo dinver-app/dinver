@@ -14,23 +14,23 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const [formData, setFormData] = useState({
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",
-    thumbnail_url: restaurant.thumbnail_url || "",
+    thumbnailUrl: restaurant.thumbnailUrl || "",
     address: restaurant.address || "",
     place: restaurant.place || "",
-    website_url: restaurant.website_url || "",
-    fb_url: restaurant.fb_url || "",
-    ig_url: restaurant.ig_url || "",
-    tt_url: restaurant.tt_url || "",
+    websiteUrl: restaurant.websiteUrl || "",
+    fbUrl: restaurant.fbUrl || "",
+    igUrl: restaurant.igUrl || "",
+    ttUrl: restaurant.ttUrl || "",
     phone: restaurant.phone || "",
     email: restaurant.email || "",
   });
 
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState({
-    website_url: "",
-    fb_url: "",
-    ig_url: "",
-    tt_url: "",
+    websiteUrl: "",
+    fbUrl: "",
+    igUrl: "",
+    ttUrl: "",
     phone: "",
   });
 
@@ -75,21 +75,12 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
       formDataToSend.append(
-        "website_url",
-        errors.website_url === "" ? formData.website_url : ""
+        "websiteUrl",
+        errors.websiteUrl === "" ? formData.websiteUrl : ""
       );
-      formDataToSend.append(
-        "fb_url",
-        errors.fb_url === "" ? formData.fb_url : ""
-      );
-      formDataToSend.append(
-        "ig_url",
-        errors.ig_url === "" ? formData.ig_url : ""
-      );
-      formDataToSend.append(
-        "tt_url",
-        errors.tt_url === "" ? formData.tt_url : ""
-      );
+      formDataToSend.append("fbUrl", errors.fbUrl === "" ? formData.fbUrl : "");
+      formDataToSend.append("igUrl", errors.igUrl === "" ? formData.igUrl : "");
+      formDataToSend.append("ttUrl", errors.ttUrl === "" ? formData.ttUrl : "");
       formDataToSend.append("phone", errors.phone === "" ? formData.phone : "");
       formDataToSend.append("email", formData.email);
       if (file) {
@@ -144,9 +135,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         <label className="block text-sm font-medium text-gray-700">
           {t("thumbnail")}
         </label>
-        {formData.thumbnail_url ? (
+        {formData.thumbnailUrl ? (
           <img
-            src={formData.thumbnail_url}
+            src={formData.thumbnailUrl}
             alt="Thumbnail"
             className="mb-2 w-32 h-32 object-cover cursor-pointer"
             onClick={() => document.getElementById("fileInput")?.click()}
@@ -216,13 +207,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </label>
           <input
             type="text"
-            name="website_url"
-            value={formData.website_url}
+            name="websiteUrl"
+            value={formData.websiteUrl}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
           />
-          {errors.website_url && (
-            <p className="text-sm text-red-500">{errors.website_url}</p>
+          {errors.websiteUrl && (
+            <p className="text-sm text-red-500">{errors.websiteUrl}</p>
           )}
         </div>
         <div>
@@ -258,13 +249,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </label>
           <input
             type="text"
-            name="fb_url"
-            value={formData.fb_url}
+            name="fbUrl"
+            value={formData.fbUrl}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
           />
-          {errors.fb_url && (
-            <p className="text-sm text-red-500">{errors.fb_url}</p>
+          {errors.fbUrl && (
+            <p className="text-sm text-red-500">{errors.fbUrl}</p>
           )}
         </div>
         <div>
@@ -273,13 +264,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </label>
           <input
             type="text"
-            name="ig_url"
-            value={formData.ig_url}
+            name="igUrl"
+            value={formData.igUrl}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
           />
-          {errors.ig_url && (
-            <p className="text-sm text-red-500">{errors.ig_url}</p>
+          {errors.igUrl && (
+            <p className="text-sm text-red-500">{errors.igUrl}</p>
           )}
         </div>
         <div>
@@ -288,13 +279,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </label>
           <input
             type="text"
-            name="tt_url"
-            value={formData.tt_url}
+            name="ttUrl"
+            value={formData.ttUrl}
             onChange={handleInputChange}
             className="mt-1 block w-full p-2 border border-gray-300 rounded"
           />
-          {errors.tt_url && (
-            <p className="text-sm text-red-500">{errors.tt_url}</p>
+          {errors.ttUrl && (
+            <p className="text-sm text-red-500">{errors.ttUrl}</p>
           )}
         </div>
       </div>

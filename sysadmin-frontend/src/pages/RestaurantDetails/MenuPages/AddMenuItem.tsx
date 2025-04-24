@@ -321,12 +321,12 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
       </div>
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("Alergeni")}
+          {t("allergens")}
         </label>
         <div className="relative">
           <input
             type="text"
-            placeholder={t("Pretraži alergene")}
+            placeholder={t("search_allergens")}
             value={allergenSearch}
             onChange={(e) => setAllergenSearch(e.target.value)}
             onFocus={() => setAllergenDropdownOpen(true)}
@@ -340,8 +340,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                   (allergen) =>
                     !selectedAllergenIds.includes(allergen.id) &&
                     (activeTab === Language.EN
-                      ? allergen.name_en
-                      : allergen.name_hr
+                      ? allergen.nameEn
+                      : allergen.nameHr
                     )
                       .toLowerCase()
                       .includes(allergenSearch.toLowerCase())
@@ -355,8 +355,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                     <span className="flex items-center">
                       {allergen.icon}{" "}
                       {activeTab === Language.EN
-                        ? allergen.name_en
-                        : allergen.name_hr}
+                        ? allergen.nameEn
+                        : allergen.nameHr}
                     </span>
                   </div>
                 ))}
@@ -374,8 +374,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
                 <span className="mr-2">{allergen?.icon}</span>
                 <span>
                   {activeTab === Language.EN
-                    ? allergen?.name_en
-                    : allergen?.name_hr}
+                    ? allergen?.nameEn
+                    : allergen?.nameHr}
                 </span>
                 <button
                   onClick={() => handleAllergenSelect(id)}

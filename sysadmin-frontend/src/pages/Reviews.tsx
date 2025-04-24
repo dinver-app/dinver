@@ -143,7 +143,7 @@ const Reviews = () => {
                       </td>
 
                       <td className="py-2 px-4 text-sm text-gray-600 w-64">
-                        {truncateComment(review.comment, 30)}
+                        {truncateComment(review.text, 30)}
                       </td>
                       <td className="py-2 px-4 text-sm text-gray-600 w-48">
                         {format(
@@ -231,9 +231,55 @@ const Reviews = () => {
               </p>
             </div>
             <div className="mb-4">
+              <h3 className="text-sm font-semibold mb-2">
+                {t("detailed_ratings")}
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">
+                    {t("food_quality")}
+                  </span>
+                  <span className="text-xs font-medium">
+                    {formatRating(
+                      selectedReview.review.foodQuality,
+                      i18n.language
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">{t("service")}</span>
+                  <span className="text-xs font-medium">
+                    {formatRating(selectedReview.review.service, i18n.language)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">
+                    {t("atmosphere")}
+                  </span>
+                  <span className="text-xs font-medium">
+                    {formatRating(
+                      selectedReview.review.atmosphere,
+                      i18n.language
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">
+                    {t("value_for_money")}
+                  </span>
+                  <span className="text-xs font-medium">
+                    {formatRating(
+                      selectedReview.review.valueForMoney,
+                      i18n.language
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("comment")}</h3>
               <p className="text-xs text-gray-600">
-                {selectedReview.review.comment || "-"}
+                {selectedReview.review.text || "-"}
               </p>
             </div>
             <div className="mb-4">
@@ -246,9 +292,9 @@ const Reviews = () => {
             <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("images")}</h3>
               <div className="flex gap-2">
-                {selectedReview.review.images &&
-                selectedReview.review.images.length > 0 ? (
-                  selectedReview.review.images.map(
+                {selectedReview.review.photos &&
+                selectedReview.review.photos.length > 0 ? (
+                  selectedReview.review.photos.map(
                     (image: string, index: number) => (
                       <img
                         key={index}

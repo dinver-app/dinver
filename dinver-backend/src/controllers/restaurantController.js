@@ -11,6 +11,16 @@ const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 
+const getRestaurantsList = async (req, res) => {
+  try {
+    const restaurants = await Restaurant.findAll({
+      attributes: ['id', 'name', 'slug'],
+    });
+    res.json(restaurants);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch restaurants' });
+  }
+};
 const getAllRestaurants = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -545,7 +555,7 @@ async function updateWorkingHours(req, res) {
 async function updateFilters(req, res) {
   try {
     const { id } = req.params;
-    const { food_types, establishment_types, establishment_perks } = req.body;
+    const { foodTypes, establishmentTypes, establishmentPerks } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -553,15 +563,15 @@ async function updateFilters(req, res) {
     }
 
     const oldData = {
-      food_types: restaurant.food_types || [],
-      establishment_types: restaurant.establishment_types || [],
-      establishment_perks: restaurant.establishment_perks || [],
+      foodTypes: restaurant.foodTypes || [],
+      establishmentTypes: restaurant.establishmentTypes || [],
+      establishmentPerks: restaurant.establishmentPerks || [],
     };
 
     await restaurant.update({
-      food_types: food_types,
-      establishment_types: establishment_types,
-      establishment_perks: establishment_perks,
+      foodTypes: foodTypes,
+      establishmentTypes: establishmentTypes,
+      establishmentPerks: establishmentPerks,
     });
 
     const logChange = async (oldValues, newValues, entity) => {
@@ -587,19 +597,15 @@ async function updateFilters(req, res) {
     };
 
     // Log the changes for each filter type
+    await logChange(oldData.foodTypes, foodTypes, Entities.FILTERS.FOOD_TYPES);
     await logChange(
-      oldData.food_types,
-      food_types,
-      Entities.FILTERS.FOOD_TYPES,
-    );
-    await logChange(
-      oldData.establishment_types,
-      establishment_types,
+      oldData.establishmentTypes,
+      establishmentTypes,
       Entities.FILTERS.ESTABLISHMENT_TYPES,
     );
     await logChange(
-      oldData.establishment_perks,
-      establishment_perks,
+      oldData.establishmentPerks,
+      establishmentPerks,
       Entities.FILTERS.ESTABLISHMENT_PERKS,
     );
 
@@ -613,7 +619,7 @@ async function updateFilters(req, res) {
 async function addRestaurantImages(req, res) {
   try {
     const { id } = req.params;
-    const { restaurant_slug } = req.body;
+    const { restaurantSlug } = req.body;
     const files = req.files;
 
     if (!files || files.length === 0) {
@@ -625,7 +631,7 @@ async function addRestaurantImages(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const folder = `restaurant_images/${restaurant_slug}`;
+    const folder = `restaurant_images/${restaurantSlug}`;
     const imageUrls = await Promise.all(
       files.map((file) => uploadToS3(file, folder)),
     );
@@ -1192,6 +1198,7 @@ module.exports = {
   getAllRestaurants,
   getRestaurants,
   getRestaurantDetails,
+  getRestaurantsList,
   viewRestaurant,
   updateRestaurant,
   addRestaurant,

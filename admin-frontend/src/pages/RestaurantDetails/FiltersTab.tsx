@@ -29,14 +29,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     EstablishmentPerk[]
   >([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>(
-    restaurant.food_types || []
+    restaurant.foodTypes || []
   );
   const [selectedEstablishmentTypes, setSelectedEstablishmentTypes] = useState<
     number[]
-  >(restaurant.establishment_types || []);
+  >(restaurant.establishmentTypes || []);
   const [selectedEstablishmentPerks, setSelectedEstablishmentPerks] = useState<
     number[]
-  >(restaurant.establishment_perks || []);
+  >(restaurant.establishmentPerks || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeModal, setActiveModal] = useState<
     "food" | "establishment" | "perk" | null
@@ -73,18 +73,18 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSaveStatus(t("saving"));
       try {
         const filters = {
-          food_types: selectedFoodTypes,
-          establishment_types: selectedEstablishmentTypes,
-          establishment_perks: selectedEstablishmentPerks,
+          foodTypes: selectedFoodTypes,
+          establishmentTypes: selectedEstablishmentTypes,
+          establishmentPerks: selectedEstablishmentPerks,
         };
 
         await updateFilters(restaurant.id || "", filters);
         setSaveStatus(t("all_changes_saved"));
         onUpdate({
           ...restaurant,
-          food_types: selectedFoodTypes,
-          establishment_types: selectedEstablishmentTypes,
-          establishment_perks: selectedEstablishmentPerks,
+          foodTypes: selectedFoodTypes,
+          establishmentTypes: selectedEstablishmentTypes,
+          establishmentPerks: selectedEstablishmentPerks,
         });
       } catch (error) {
         console.error("Failed to auto-save filters", error);
@@ -181,8 +181,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   <span className="mr-2">{establishmentType?.icon}</span>
                   <span>
                     {i18n.language === "en"
-                      ? establishmentType?.name_en
-                      : establishmentType?.name_hr}
+                      ? establishmentType?.nameEn
+                      : establishmentType?.nameHr}
                   </span>
                   <button
                     onClick={() => handleRemoveItem(id, "establishment")}
@@ -225,8 +225,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   <span className="mr-2">{foodType?.icon}</span>
                   <span>
                     {i18n.language === "en"
-                      ? foodType?.name_en
-                      : foodType?.name_hr}
+                      ? foodType?.nameEn
+                      : foodType?.nameHr}
                   </span>
                   <button
                     onClick={() => handleRemoveItem(id, "food")}
@@ -272,8 +272,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                   <span className="mr-2">{establishmentPerk?.icon}</span>
                   <span>
                     {i18n.language === "en"
-                      ? establishmentPerk?.name_en
-                      : establishmentPerk?.name_hr}
+                      ? establishmentPerk?.nameEn
+                      : establishmentPerk?.nameHr}
                   </span>
                   <button
                     onClick={() => handleRemoveItem(id, "perk")}
@@ -316,7 +316,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                 .filter(
                   (item) =>
                     !selectedItems.includes(item.id) &&
-                    (i18n.language === "en" ? item.name_en : item.name_hr)
+                    (i18n.language === "en" ? item.nameEn : item.nameHr)
                       .toLowerCase()
                       .includes(searchQuery.toLowerCase())
                 )
@@ -328,7 +328,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                     <span className="flex items-center">
                       {item.icon}{" "}
                       <span className="ml-2">
-                        {i18n.language === "en" ? item.name_en : item.name_hr}
+                        {i18n.language === "en" ? item.nameEn : item.nameHr}
                       </span>
                     </span>
                     <button
