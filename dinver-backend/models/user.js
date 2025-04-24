@@ -33,10 +33,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'pointsHistory',
       });
-      User.belongsTo(models.Organization, {
-        foreignKey: 'organizationId',
-        as: 'organization',
-      });
     }
   }
 
@@ -96,10 +92,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       phoneVerificationExpiresAt: {
         type: DataTypes.DATE,
-        allowNull: true,
-      },
-      organizationId: {
-        type: DataTypes.UUID,
         allowNull: true,
       },
     },

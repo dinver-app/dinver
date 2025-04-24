@@ -15,7 +15,7 @@ import { toast } from "react-hot-toast";
 import { Sysadmin, Backup, Restaurant } from "../interfaces/Interfaces";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
-import { getAllRestaurants } from "../services/restaurantService";
+import { getRestaurantsList } from "../services/restaurantService";
 
 const Settings = () => {
   const { t } = useTranslation();
@@ -39,7 +39,7 @@ const Settings = () => {
             listSysadmins(),
             getUserLanguage(),
             listBackups(searchTerm),
-            getAllRestaurants(),
+            getRestaurantsList(),
           ]);
 
         setSysadmins(sysadmins);

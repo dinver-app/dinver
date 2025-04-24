@@ -49,11 +49,10 @@ async function sysadminLogin(req, res) {
 // Create a new restaurant
 async function createRestaurant(req, res) {
   try {
-    const { name, address, organizationId } = req.body;
+    const { name, address } = req.body;
     const restaurant = await Restaurant.create({
       name,
       address,
-      organizationId,
     });
     res.status(201).json(restaurant);
   } catch (error) {

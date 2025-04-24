@@ -11,6 +11,16 @@ const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 
+const getRestaurantsList = async (req, res) => {
+  try {
+    const restaurants = await Restaurant.findAll({
+      attributes: ['id', 'name', 'slug'],
+    });
+    res.json(restaurants);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch restaurants' });
+  }
+};
 const getAllRestaurants = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -1188,6 +1198,7 @@ module.exports = {
   getAllRestaurants,
   getRestaurants,
   getRestaurantDetails,
+  getRestaurantsList,
   viewRestaurant,
   updateRestaurant,
   addRestaurant,

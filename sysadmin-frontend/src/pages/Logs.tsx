@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAuditLogs } from "../services/auditLogsService";
 import { listAllUsers } from "../services/userService";
-import { getAllRestaurants } from "../services/restaurantService"; // Pretpostavljam da postoji ovaj servis
+import { getRestaurantsList } from "../services/restaurantService";
 import { useTranslation } from "react-i18next";
 import { AuditLog, User, Restaurant } from "../interfaces/Interfaces"; // Pretpostavi da su definirani
 import { format } from "date-fns";
@@ -33,7 +33,7 @@ const Logs = () => {
           actionFilter !== "ALL" ? actionFilter : ""
         ),
         listAllUsers(),
-        getAllRestaurants(),
+        getRestaurantsList(),
       ]);
       setLogs(logsData.logs);
       setTotalPages(logsData.totalPages);

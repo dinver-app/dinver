@@ -9,6 +9,11 @@ export const getRestaurants = async (page: number, search?: string) => {
   return response.data;
 };
 
+export const getRestaurantsList = async () => {
+  const response = await apiClient.get("api/sysadmin/restaurants/list");
+  return response.data;
+};
+
 export const getAllRestaurants = async (page: number, search?: string) => {
   const response = await apiClient.get(
     `api/sysadmin/restaurants/all?page=${page}${

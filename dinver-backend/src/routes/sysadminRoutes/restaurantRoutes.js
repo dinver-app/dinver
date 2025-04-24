@@ -10,6 +10,13 @@ const upload = require('../../../utils/uploadMiddleware');
 const router = express.Router();
 
 router.get(
+  '/restaurants/list',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.getRestaurantsList,
+);
+
+router.get(
   '/restaurants',
   sysadminAuthenticateToken,
   checkSysadmin,
