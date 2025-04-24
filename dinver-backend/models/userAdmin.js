@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
   class UserAdmin extends Model {
     static associate(models) {
       UserAdmin.belongsTo(models.User, {
-        foreignKey: 'userd',
+        foreignKey: 'userId',
         as: 'user',
       });
       UserAdmin.belongsTo(models.Restaurant, {
