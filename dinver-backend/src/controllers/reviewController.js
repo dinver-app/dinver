@@ -14,10 +14,10 @@ const createReview = async (req, res) => {
     const {
       restaurantId,
       rating,
-      food_quality,
+      foodQuality,
       service,
       atmosphere,
-      value_for_money,
+      valueForMoney,
       text,
       photos,
     } = req.body;
@@ -35,10 +35,10 @@ const createReview = async (req, res) => {
 
     const existingReview = await Review.findOne({
       where: {
-        user_id: userId,
-        restaurant_id: restaurantId,
-        is_hidden: false,
-        created_at: {
+        userId: userId,
+        restaurantId: restaurantId,
+        isHidden: false,
+        createdAt: {
           [Op.gte]: sixMonthsAgo,
         },
       },
@@ -53,9 +53,9 @@ const createReview = async (req, res) => {
     // Check if user already reviewed this restaurant
     const existingReviewAgain = await Review.findOne({
       where: {
-        user_id: userId,
-        restaurant_id: restaurantId,
-        is_hidden: false,
+        userId: userId,
+        restaurantId: restaurantId,
+        isHidden: false,
       },
     });
 
@@ -67,13 +67,13 @@ const createReview = async (req, res) => {
 
     // Create the review
     const review = await Review.create({
-      user_id: userId,
-      restaurant_id: restaurantId,
+      userId: userId,
+      restaurantId: restaurantId,
       rating,
-      food_quality,
+      foodQuality,
       service,
       atmosphere,
-      value_for_money,
+      valueForMoney,
       text,
       photos: [],
     });
@@ -107,7 +107,7 @@ const createReview = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name'],
+          attributes: ['id', 'firstName', 'lastName'],
         },
       ],
     });
@@ -128,8 +128,8 @@ const getUserReviews = async (req, res) => {
 
     const reviews = await Review.findAll({
       where: {
-        user_id: userId,
-        is_hidden: false,
+        userId: userId,
+        isHidden: false,
       },
       include: [
         {
@@ -138,7 +138,7 @@ const getUserReviews = async (req, res) => {
           attributes: ['id', 'name'],
         },
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
     });
 
     res.json(reviews);
@@ -155,24 +155,24 @@ const getRestaurantReviews = async (req, res) => {
 
     const reviews = await Review.findAll({
       where: {
-        restaurant_id: restaurantId,
-        is_hidden: false,
+        restaurantId: restaurantId,
+        isHidden: false,
       },
       include: [
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name'],
+          attributes: ['id', 'firstName', 'lastName'],
         },
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
     });
 
     // Add virtual fields to each review
     const reviewsWithMeta = reviews.map((review) => ({
       ...review.toJSON(),
-      is_edited: review.last_edited_at !== null,
-      can_edit: userId === review.user_id ? review.can_edit : false,
+      isEdited: review.lastEditedAt !== null,
+      canEdit: userId === review.userId ? review.canEdit : false,
     }));
 
     res.json(reviewsWithMeta);
@@ -190,8 +190,8 @@ const updateReview = async (req, res) => {
     const review = await Review.findOne({
       where: {
         id,
-        user_id: userId,
-        is_hidden: false,
+        userId: userId,
+        isHidden: false,
       },
     });
 
@@ -200,7 +200,7 @@ const updateReview = async (req, res) => {
     }
 
     // Check edit window
-    const editWindowEnd = new Date(review.created_at);
+    const editWindowEnd = new Date(review.createdAt);
     editWindowEnd.setDate(editWindowEnd.getDate() + EDIT_WINDOW_DAYS);
 
     if (new Date() > editWindowEnd) {
@@ -210,7 +210,7 @@ const updateReview = async (req, res) => {
     }
 
     // Check edit count
-    if (review.edit_count >= MAX_EDITS) {
+    if (review.editCount >= MAX_EDITS) {
       return res.status(403).json({
         error: `Reviews can only be edited ${MAX_EDITS} time`,
       });
@@ -244,13 +244,13 @@ const updateReview = async (req, res) => {
     await review.update({
       rating: rating || review.rating,
       text: text || review.text,
-      last_edited_at: new Date(),
-      edit_count: review.edit_count + 1,
+      lastEditedAt: new Date(),
+      editCount: review.editCount + 1,
     });
 
     // Update restaurant's average rating if rating changed
     if (rating !== review.rating) {
-      await calculateAverageRating(review.restaurant_id);
+      await calculateAverageRating(review.restaurantId);
     }
 
     // Return updated review with user details
@@ -259,7 +259,7 @@ const updateReview = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name'],
+          attributes: ['id', 'firstName', 'lastName'],
         },
       ],
     });
@@ -282,8 +282,8 @@ const deleteReview = async (req, res) => {
     const review = await Review.findOne({
       where: {
         id,
-        user_id: userId,
-        is_hidden: false,
+        userId: userId,
+        isHidden: false,
       },
     });
 
@@ -292,10 +292,10 @@ const deleteReview = async (req, res) => {
     }
 
     // Soft delete - hide the review instead of deleting it
-    await review.update({ is_hidden: true });
+    await review.update({ isHidden: true });
 
     // Update restaurant's average rating
-    await calculateAverageRating(review.restaurant_id);
+    await calculateAverageRating(review.restaurantId);
 
     res.status(204).send();
   } catch (error) {
@@ -308,21 +308,21 @@ const deleteReview = async (req, res) => {
 const updateRestaurantRating = async (restaurantId) => {
   const reviews = await Review.findAll({
     where: {
-      restaurant_id: restaurantId,
-      is_hidden: false,
+      restaurantId: restaurantId,
+      isHidden: false,
     },
     attributes: [
       'rating',
-      'food_quality',
+      'foodQuality',
       'service',
       'atmosphere',
-      'value_for_money',
+      'valueForMoney',
     ],
   });
 
   const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
   const totalFoodQuality = reviews.reduce(
-    (sum, review) => sum + review.food_quality,
+    (sum, review) => sum + review.foodQuality,
     0,
   );
   const totalService = reviews.reduce((sum, review) => sum + review.service, 0);
@@ -331,7 +331,7 @@ const updateRestaurantRating = async (restaurantId) => {
     0,
   );
   const totalValueForMoney = reviews.reduce(
-    (sum, review) => sum + review.value_for_money,
+    (sum, review) => sum + review.valueForMoney,
     0,
   );
 
@@ -347,11 +347,11 @@ const updateRestaurantRating = async (restaurantId) => {
   await Restaurant.update(
     {
       rating: averageRating,
-      food_quality: averageFoodQuality,
+      foodQuality: averageFoodQuality,
       service: averageService,
       atmosphere: averageAtmosphere,
-      value_for_money: averageValueForMoney,
-      user_ratings_total: reviews.length,
+      valueForMoney: averageValueForMoney,
+      userRatingsTotal: reviews.length,
     },
     { where: { id: restaurantId } },
   );

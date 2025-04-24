@@ -16,15 +16,15 @@ module.exports = (sequelize, DataTypes) => {
 
       Restaurant.belongsToMany(models.User, {
         through: 'UserFavorites',
-        foreignKey: 'restaurant_id',
-        otherKey: 'user_id',
+        foreignKey: 'restaurantId',
+        otherKey: 'userId',
         as: 'favoriteUsers',
       });
 
       Restaurant.belongsToMany(models.User, {
         through: 'UserAdmins',
-        foreignKey: 'restaurant_id',
-        otherKey: 'user_id',
+        foreignKey: 'restaurantId',
+        otherKey: 'userId',
         as: 'admins',
       });
 
@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       Restaurant.hasMany(models.Review, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'reviews',
       });
     }
@@ -80,11 +80,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL,
         allowNull: true,
       },
-      price_level: {
+      priceLevel: {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      opening_hours: {
+      openingHours: {
         type: DataTypes.JSONB,
         allowNull: true,
       },
@@ -92,7 +92,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      place_id: {
+      placeId: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -100,27 +100,27 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      working_hours_info: {
+      workingHoursInfo: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      thumbnail_url: {
+      thumbnailUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      user_ratings_total: {
+      userRatingsTotal: {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      is_open_now: {
+      isOpenNow: {
         type: DataTypes.BOOLEAN,
         allowNull: true,
       },
-      icon_url: {
+      iconUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      photo_reference: {
+      photoReference: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -128,7 +128,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      business_status: {
+      businessStatus: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -136,27 +136,27 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
-      icon_background_color: {
+      iconBackgroundColor: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      icon_mask_base_uri: {
+      iconMaskBaseUri: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      plus_code: {
+      plusCode: {
         type: DataTypes.JSONB,
         allowNull: true,
       },
-      food_types: {
+      foodTypes: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
-      establishment_types: {
+      establishmentTypes: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
-      establishment_perks: {
+      establishmentPerks: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
@@ -164,15 +164,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      website_url: {
+      websiteUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      fb_url: {
+      fbUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      ig_url: {
+      igUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -184,7 +184,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      tt_url: {
+      ttUrl: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -197,11 +197,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
-      meal_types: {
+      mealTypes: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
-      price_category_id: {
+      priceCategoryId: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -214,7 +214,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Restaurant',
       tableName: 'Restaurants',
-      underscored: false,
     },
   );
   return Restaurant;

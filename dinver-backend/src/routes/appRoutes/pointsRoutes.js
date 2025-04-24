@@ -16,8 +16,8 @@ router.get(
   async (req, res) => {
     try {
       const pointsHistory = await UserPointsHistory.findAll({
-        where: { user_id: req.user.id },
-        order: [['created_at', 'DESC']],
+        where: { userId: req.user.id },
+        order: [['createdAt', 'DESC']],
       });
 
       res.json(pointsHistory);
@@ -32,11 +32,11 @@ router.get(
 router.get('/points', appApiKeyAuth, appAuthenticateToken, async (req, res) => {
   try {
     const userPoints = await UserPoints.findOne({
-      where: { user_id: req.user.id },
+      where: { userId: req.user.id },
     });
 
     res.json({
-      total_points: userPoints ? userPoints.total_points : 0,
+      totalPoints: userPoints ? userPoints.totalPoints : 0,
     });
   } catch (error) {
     console.error('Error fetching user points:', error);

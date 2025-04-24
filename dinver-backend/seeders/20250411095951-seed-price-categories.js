@@ -5,24 +5,24 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     return queryInterface.bulkInsert('PriceCategories', [
       {
-        name_en: 'Budget Friendly',
-        name_hr: 'Pristupačno',
+        NameEn: 'Budget Friendly',
+        NameHr: 'Pristupačno',
         icon: '€',
         level: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name_en: 'Mid-Range',
-        name_hr: 'Srednja cijena',
+        NameEn: 'Mid-Range',
+        NameHr: 'Srednja cijena',
         icon: '€€',
         level: 2,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name_en: 'Fine Dining',
-        name_hr: 'Visoka kategorija',
+        NameEn: 'Fine Dining',
+        NameHr: 'Visoka kategorija',
         icon: '€€€',
         level: 3,
         createdAt: new Date(),

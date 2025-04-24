@@ -13,12 +13,12 @@ const getUserPoints = async (req, res) => {
     const userId = req.user.id;
 
     const userPoints = await UserPoints.findOne({
-      where: { user_id: userId },
+      where: { userId: userId },
       include: [
         {
           model: User,
           as: 'user',
-          attributes: ['first_name', 'last_name'],
+          attributes: ['firstName', 'lastName'],
         },
       ],
     });
@@ -40,15 +40,15 @@ const getRestaurantPointsStats = async (req, res) => {
     const { restaurantId } = req.params;
 
     const pointsStats = await UserPointsHistory.findAll({
-      where: { restaurant_id: restaurantId },
+      where: { restaurantId: restaurantId },
       attributes: [
-        [Sequelize.fn('sum', Sequelize.col('points')), 'total_points'],
+        [Sequelize.fn('sum', Sequelize.col('points')), 'totalPoints'],
         [
           Sequelize.fn(
             'count',
-            Sequelize.fn('distinct', Sequelize.col('user_id')),
+            Sequelize.fn('distinct', Sequelize.col('userId')),
           ),
-          'unique_users',
+          'uniqueUsers',
         ],
       ],
       include: [
@@ -65,8 +65,8 @@ const getRestaurantPointsStats = async (req, res) => {
     // Ako nema rezultata, vrati praznu statistiku
     if (!pointsStats.length) {
       return res.json({
-        total_points: 0,
-        unique_users: 0,
+        totalPoints: 0,
+        uniqueUsers: 0,
         restaurant: null,
       });
     }
@@ -87,8 +87,8 @@ const getGlobalPointsStats = async (req, res) => {
     const levelStats = await UserPoints.findAll({
       attributes: [
         'level',
-        [Sequelize.fn('count', Sequelize.col('user_id')), 'user_count'],
-        [Sequelize.fn('sum', Sequelize.col('total_points')), 'total_points'],
+        [Sequelize.fn('count', Sequelize.col('userId')), 'userCount'],
+        [Sequelize.fn('sum', Sequelize.col('totalPoints')), 'totalPoints'],
       ],
       group: ['level'],
       order: [['level', 'ASC']],
@@ -100,10 +100,10 @@ const getGlobalPointsStats = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email'],
+          attributes: ['id', 'firstName', 'lastName', 'email'],
         },
       ],
-      order: [['total_points', 'DESC']],
+      order: [['totalPoints', 'DESC']],
       limit: 10,
     });
 
@@ -113,7 +113,7 @@ const getGlobalPointsStats = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name'],
+          attributes: ['id', 'firstName', 'lastName'],
         },
         {
           model: Restaurant,
@@ -121,7 +121,7 @@ const getGlobalPointsStats = async (req, res) => {
           attributes: ['id', 'name'],
         },
       ],
-      order: [['created_at', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: 20,
     });
 
@@ -129,23 +129,23 @@ const getGlobalPointsStats = async (req, res) => {
       levelDistribution: levelStats,
       topUsers: topUsers.map((up) => ({
         user: up.user,
-        totalPoints: up.total_points,
+        totalPoints: up.totalPoints,
         level: up.level,
         levelName: up.getLevelName(),
       })),
       recentActivities: recentActivities.map((activity) => ({
         id: activity.id,
-        userId: activity.user_id,
+        userId: activity.userId,
         userName: activity.user
-          ? `${activity.user.first_name} ${activity.user.last_name}`
+          ? `${activity.user.firstName} ${activity.user.lastName}`
           : 'Unknown',
-        restaurantId: activity.restaurant_id,
+        restaurantId: activity.restaurantId,
         restaurantName: activity.restaurant
           ? activity.restaurant.name
           : 'Unknown',
         points: activity.points,
         action: activity.action,
-        createdAt: activity.created_at,
+        createdAt: activity.createdAt,
       })),
     });
   } catch (error) {

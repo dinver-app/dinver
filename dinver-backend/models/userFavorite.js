@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      restaurant_id: {
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -35,7 +35,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'UserFavorite',
       tableName: 'UserFavorites',
-      underscored: true,
     },
   );
 

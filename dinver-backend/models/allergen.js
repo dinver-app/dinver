@@ -22,11 +22,11 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
         primaryKey: true,
       },
-      name_en: {
+      nameEn: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      name_hr: {
+      nameHr: {
         type: DataTypes.STRING,
         allowNull: false,
       },

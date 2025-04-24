@@ -5,29 +5,29 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     return queryInterface.bulkInsert('MealTypes', [
       {
-        name_en: 'Breakfast',
-        name_hr: 'Doručak',
+        nameEn: 'Breakfast',
+        nameHr: 'Doručak',
         icon: '🍳',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name_en: 'Brunch',
-        name_hr: 'Brunch',
+        NameEn: 'Brunch',
+        NameHr: 'Brunch',
         icon: '🥐',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name_en: 'Lunch',
-        name_hr: 'Ručak',
+        NameEn: 'Lunch',
+        NameHr: 'Ručak',
         icon: '🍝',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name_en: 'Dinner',
-        name_hr: 'Večera',
+        NameEn: 'Dinner',
+        NameHr: 'Večera',
         icon: '🍽️',
         createdAt: new Date(),
         updatedAt: new Date(),

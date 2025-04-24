@@ -5,17 +5,17 @@ module.exports = (sequelize, DataTypes) => {
   class Insight extends Model {
     static associate(models) {
       Insight.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user',
       });
 
       Insight.belongsTo(models.Restaurant, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'restaurant',
       });
 
       Insight.belongsTo(models.MenuItem, {
-        foreignKey: 'menu_item_id',
+        foreignKey: 'menuItemId',
         as: 'menuItem',
       });
     }
@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      restaurant_id: {
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      menu_item_id: {
+      menuItemId: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {

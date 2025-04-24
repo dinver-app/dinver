@@ -15,14 +15,14 @@ const addToFavorites = async (req, res) => {
 
     // Provjeri postoji li već u favoritima
     const existingFavorite = await UserFavorite.findOne({
-      where: { user_id: userId, restaurant_id: restaurantId },
+      where: { userId: userId, restaurantId: restaurantId },
     });
 
     if (existingFavorite) {
       return res.status(400).json({ error: 'Restaurant already in favorites' });
     }
 
-    await UserFavorite.create({ user_id: userId, restaurant_id: restaurantId });
+    await UserFavorite.create({ userId: userId, restaurantId: restaurantId });
 
     res.status(201).json({ message: 'Restaurant added to favorites' });
   } catch (error) {
@@ -38,7 +38,7 @@ const removeFromFavorites = async (req, res) => {
     const userId = req.user.id;
 
     const favorite = await UserFavorite.findOne({
-      where: { user_id: userId, restaurant_id: restaurantId },
+      where: { userId: userId, restaurantId: restaurantId },
     });
 
     if (!favorite) {
@@ -75,7 +75,7 @@ const getUserFavorites = async (req, res) => {
           model: Restaurant,
           as: 'favoriteRestaurants',
           through: { attributes: [] },
-          attributes: ['id', 'name', 'rating', 'price_level', 'address'],
+          attributes: ['id', 'name', 'rating', 'priceLevel', 'address'],
         },
       ],
     });
@@ -98,7 +98,7 @@ const checkIsFavorite = async (req, res) => {
     const userId = req.user.id;
 
     const favorite = await UserFavorite.findOne({
-      where: { user_id: userId, restaurant_id: restaurantId },
+      where: { userId: userId, restaurantId: restaurantId },
     });
 
     res.status(200).json({ isFavorite: !!favorite });

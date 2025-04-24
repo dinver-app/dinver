@@ -5,11 +5,11 @@ module.exports = (sequelize, DataTypes) => {
   class UserPointsHistory extends Model {
     static associate(models) {
       UserPointsHistory.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user',
       });
       UserPointsHistory.belongsTo(models.Restaurant, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'restaurant',
       });
     }
@@ -24,17 +24,17 @@ module.exports = (sequelize, DataTypes) => {
       description,
     }) {
       const history = await this.create({
-        user_id: userId,
-        action_type: actionType,
+        userId,
+        actionType,
         points,
-        reference_id: referenceId,
-        restaurant_id: restaurantId,
+        referenceId,
+        restaurantId,
         description,
       });
 
       // Ažuriraj ukupne bodove korisnika
       const userPoints = await sequelize.models.UserPoints.findOne({
-        where: { user_id: userId },
+        where: { userId },
       });
 
       if (userPoints) {
@@ -42,8 +42,8 @@ module.exports = (sequelize, DataTypes) => {
       } else {
         // Ako korisnik nema zapis o bodovima, kreiraj novi
         await sequelize.models.UserPoints.create({
-          user_id: userId,
-          total_points: points,
+          userId,
+          totalPoints: points,
         });
       }
 
@@ -58,31 +58,23 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      action_type: {
-        type: DataTypes.ENUM(
-          'review_add',
-          'review_long',
-          'review_with_photo',
-          'visit_qr',
-          'reservation_bonus',
-          'email_verification',
-          'phone_verification',
-        ),
+      restaurantId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      actionType: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
       points: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      reference_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-      },
-      restaurant_id: {
+      referenceId: {
         type: DataTypes.UUID,
         allowNull: true,
       },
@@ -96,7 +88,6 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'UserPointsHistory',
       tableName: 'UserPointsHistory',
       freezeTableName: true,
-      underscored: true,
     },
   );
 

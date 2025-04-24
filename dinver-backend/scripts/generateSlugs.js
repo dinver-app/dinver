@@ -9,7 +9,7 @@ async function generateSlugs() {
       await restaurant.update({
         slug: slug,
       });
-      console.log(`Updated restaurant with place_id: ${restaurant.place_id}`);
+      console.log(`Updated restaurant with placeId: ${restaurant.placeId}`);
     }
     console.log('Database operation completed successfully!');
   } catch (error) {
