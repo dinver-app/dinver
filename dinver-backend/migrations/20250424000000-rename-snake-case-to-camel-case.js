@@ -4,10 +4,6 @@
 // UP: Rename snake_case to camelCase for models from Allergens to Reviews
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Allergens
-    await queryInterface.renameColumn('Allergens', 'name_en', 'nameEn');
-    await queryInterface.renameColumn('Allergens', 'name_hr', 'nameHr');
-
     // EstablishmentPerks
     await queryInterface.renameColumn(
       'EstablishmentPerks',
@@ -134,10 +130,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Allergens
-    await queryInterface.renameColumn('Allergens', 'nameEn', 'name_en');
-    await queryInterface.renameColumn('Allergens', 'nameHr', 'name_hr');
-
     // EstablishmentPerks
     await queryInterface.renameColumn(
       'EstablishmentPerks',
