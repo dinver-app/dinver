@@ -6,7 +6,7 @@ const getUserSettings = async (req, res) => {
     const userId = req.user.id;
 
     const user = await User.findByPk(userId, {
-      attributes: ['first_name', 'last_name', 'email', 'phone', 'language'],
+      attributes: ['firstName', 'lastName', 'email', 'phone', 'language'],
     });
 
     if (!user) {
@@ -43,9 +43,9 @@ const updateUserSettings = async (req, res) => {
       // Ako se telefon mijenja, postavi verifikaciju na false
       if (phone !== user.phone) {
         updates.phone = phone;
-        updates.is_phone_verified = false;
-        updates.phone_verification_code = null;
-        updates.phone_verification_expires_at = null;
+        updates.isPhoneVerified = false;
+        updates.phoneVerificationCode = null;
+        updates.phoneVerificationExpiresAt = null;
       }
     }
 
@@ -59,12 +59,12 @@ const updateUserSettings = async (req, res) => {
     // Dohvati i vrati ažurirane podatke
     const updatedUser = await User.findByPk(userId, {
       attributes: [
-        'first_name',
-        'last_name',
+        'firstName',
+        'lastName',
         'email',
         'phone',
         'language',
-        'is_phone_verified',
+        'isPhoneVerified',
       ],
     });
 

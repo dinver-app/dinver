@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -8,26 +9,37 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      User.belongsToMany(models.Organization, {
-        through: 'UserOrganizations',
-        foreignKey: 'user_id',
-        as: 'organizations',
+      User.hasMany(models.Review, {
+        foreignKey: 'userId',
+        as: 'reviews',
       });
-
-      User.belongsToMany(models.Restaurant, {
-        through: 'UserAdmins',
-        foreignKey: 'user_id',
-        as: 'restaurants',
-      });
-
       User.belongsToMany(models.Restaurant, {
         through: 'UserFavorites',
-        foreignKey: 'user_id',
-        otherKey: 'restaurant_id',
+        foreignKey: 'userId',
+        otherKey: 'restaurantId',
         as: 'favoriteRestaurants',
+      });
+      User.belongsToMany(models.Restaurant, {
+        through: 'UserAdmins',
+        foreignKey: 'userId',
+        otherKey: 'restaurantId',
+        as: 'adminRestaurants',
+      });
+      User.hasOne(models.UserPoints, {
+        foreignKey: 'userId',
+        as: 'points',
+      });
+      User.hasMany(models.UserPointsHistory, {
+        foreignKey: 'userId',
+        as: 'pointsHistory',
+      });
+      User.belongsTo(models.Organization, {
+        foreignKey: 'organizationId',
+        as: 'organization',
       });
     }
   }
+
   User.init(
     {
       id: {
@@ -35,13 +47,13 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      first_name: {
+      firstName: {
         type: DataTypes.STRING,
-        field: 'first_name',
+        allowNull: false,
       },
-      last_name: {
+      lastName: {
         type: DataTypes.STRING,
-        field: 'last_name',
+        allowNull: false,
       },
       email: {
         type: DataTypes.STRING,
@@ -51,51 +63,43 @@ module.exports = (sequelize, DataTypes) => {
           isEmail: true,
         },
       },
-      password: DataTypes.STRING,
-      google_id: {
+      password: {
         type: DataTypes.STRING,
-        unique: true,
-        allowNull: true,
-      },
-      role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'user',
-      },
-      language: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'hr',
-      },
-      banned: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      is_email_verified: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      is_phone_verified: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      email_verification_token: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      phone_verification_code: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      phone_verification_expires_at: {
-        type: DataTypes.DATE,
         allowNull: true,
       },
       phone: {
         type: DataTypes.STRING,
+        allowNull: true,
+      },
+      googleId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+      },
+      isEmailVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      isPhoneVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      emailVerificationToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phoneVerificationCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      phoneVerificationExpiresAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      organizationId: {
+        type: DataTypes.UUID,
         allowNull: true,
       },
     },
@@ -103,8 +107,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'User',
       tableName: 'Users',
-      freezeTableName: true,
-      underscored: true,
     },
   );
   return User;

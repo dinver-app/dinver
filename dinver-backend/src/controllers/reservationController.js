@@ -18,7 +18,7 @@ const createReservation = async (req, res) => {
 
     // Provjeri je li korisnik verificiran
     const user = await User.findByPk(userId);
-    if (!user.is_email_verified || !user.is_phone_verified) {
+    if (!user.isEmailVerified || !user.isPhoneVerified) {
       return res.status(403).json({
         error:
           'Only verified users can make reservations. Please verify your email and phone.',
@@ -127,7 +127,7 @@ const getRestaurantReservations = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
       ],
       order: [
@@ -155,7 +155,7 @@ const confirmReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -226,7 +226,7 @@ const declineReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -315,7 +315,7 @@ const suggestAlternativeTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -452,7 +452,7 @@ const getReservationHistory = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name'],
+          attributes: ['id', 'firstName', 'lastName'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -477,7 +477,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -538,7 +538,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
         },
         {
           model: Restaurant,

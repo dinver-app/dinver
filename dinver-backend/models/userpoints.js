@@ -5,20 +5,20 @@ module.exports = (sequelize, DataTypes) => {
   class UserPoints extends Model {
     static associate(models) {
       UserPoints.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user',
       });
     }
 
     // Helper metoda za dodavanje bodova i ažuriranje levela
     async addPoints(points) {
-      this.total_points += points;
+      this.totalPoints += points;
 
       // Ažuriraj level bazirano na ukupnim bodovima
-      if (this.total_points >= 1000) this.level = 5;
-      else if (this.total_points >= 500) this.level = 4;
-      else if (this.total_points >= 250) this.level = 3;
-      else if (this.total_points >= 100) this.level = 2;
+      if (this.totalPoints >= 1000) this.level = 5;
+      else if (this.totalPoints >= 500) this.level = 4;
+      else if (this.totalPoints >= 250) this.level = 3;
+      else if (this.totalPoints >= 100) this.level = 2;
       else this.level = 1;
 
       await this.save();
@@ -44,11 +44,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
+        unique: true,
       },
-      total_points: {
+      totalPoints: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
@@ -58,7 +59,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 1,
       },
-      level_name: {
+      levelName: {
         type: DataTypes.VIRTUAL,
         get() {
           return this.getLevelName();
@@ -70,7 +71,6 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'UserPoints',
       tableName: 'UserPoints',
       freezeTableName: true,
-      underscored: true,
     },
   );
 

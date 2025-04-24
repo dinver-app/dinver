@@ -13,10 +13,88 @@ const { calculateDistance } = require('../../utils/distance');
 
 const getAllRestaurants = async (req, res) => {
   try {
-    const restaurants = await Restaurant.findAll({
-      attributes: ['id', 'name'],
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const { search } = req.query;
+
+    const generateSearchVariations = (search) => {
+      if (!search) return [];
+
+      const variations = [search];
+      const replacements = { č: 'Č', đ: 'Đ', ž: 'Ž', š: 'Š', ć: 'Ć' };
+
+      for (const [lower, upper] of Object.entries(replacements)) {
+        if (search.includes(lower)) {
+          variations.push(search.replace(new RegExp(lower, 'g'), upper));
+        }
+      }
+
+      return variations;
+    };
+
+    const searchVariations = generateSearchVariations(search);
+
+    const whereClause =
+      searchVariations.length > 0
+        ? {
+            [Op.or]: searchVariations.flatMap((variation) => [
+              { name: { [Op.iLike]: `%${variation}%` } },
+              { address: { [Op.iLike]: `%${variation}%` } },
+            ]),
+          }
+        : {};
+
+    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'name',
+        'address',
+        'latitude',
+        'longitude',
+        'rating',
+        'userRatingsTotal',
+        'priceLevel',
+        'openingHours',
+        'iconUrl',
+        'slug',
+        'isClaimed',
+        'email',
+      ],
+      limit,
+      offset,
+      order: [['name', 'ASC']],
     });
-    res.json(restaurants);
+
+    const restaurantsWithStatus = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        const reviews = await Review.findAll({
+          where: { restaurantId: restaurant.id },
+          attributes: ['rating'],
+        });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
+        return {
+          ...restaurant.get(),
+          isOpen: isRestaurantOpen(restaurant.openingHours),
+          reviewRating,
+        };
+      }),
+    );
+
+    res.json({
+      totalRestaurants: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      restaurants: restaurantsWithStatus,
+    });
   } catch (error) {
     console.error('Error fetching all restaurants:', error);
     res.status(500).json({ error: 'Failed to fetch all restaurants' });
@@ -94,10 +172,10 @@ const getRestaurants = async (req, res) => {
         'latitude',
         'longitude',
         'rating',
-        'user_ratings_total',
-        'price_level',
-        'opening_hours',
-        'icon_url',
+        'userRatingsTotal',
+        'priceLevel',
+        'openingHours',
+        'iconUrl',
         'slug',
         'isClaimed',
         'email',
@@ -111,7 +189,7 @@ const getRestaurants = async (req, res) => {
     let userFavorites = new Set();
     if (userId) {
       const favorites = await UserFavorite.findAll({
-        where: { userId },
+        where: { userId: userId },
         attributes: ['restaurantId'],
       });
       userFavorites = new Set(favorites.map((f) => f.restaurantId));
@@ -120,7 +198,7 @@ const getRestaurants = async (req, res) => {
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
-          where: { restaurant_id: restaurant.id },
+          where: { restaurantId: restaurant.id },
           attributes: ['rating'],
         });
 
@@ -143,7 +221,7 @@ const getRestaurants = async (req, res) => {
 
         return {
           ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          isOpen: isRestaurantOpen(restaurant.openingHours),
           reviewRating,
           distance,
           isFavorite: userFavorites.has(restaurant.id),
@@ -264,11 +342,11 @@ async function updateRestaurant(req, res) {
       name,
       address,
       place,
-      website_url,
-      fb_url,
-      ig_url,
+      websiteUrl,
+      fbUrl,
+      igUrl,
       phone,
-      tt_url,
+      ttUrl,
       email,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
@@ -278,28 +356,28 @@ async function updateRestaurant(req, res) {
 
     const oldData = { ...restaurant.get() };
 
-    let thumbnail_url = restaurant.thumbnail_url;
+    let thumbnailUrl = restaurant.thumbnailUrl;
 
     if (file) {
-      if (restaurant.thumbnail_url) {
-        const oldKey = restaurant.thumbnail_url.split('/').pop();
+      if (restaurant.thumbnailUrl) {
+        const oldKey = restaurant.thumbnailUrl.split('/').pop();
         await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
       }
       const folder = 'restaurant_thumbnails';
-      thumbnail_url = await uploadToS3(file, folder);
+      thumbnailUrl = await uploadToS3(file, folder);
     }
 
     await restaurant.update({
       name,
       address,
       place,
-      website_url,
-      fb_url,
-      ig_url,
+      websiteUrl,
+      fbUrl,
+      igUrl,
       phone,
-      tt_url,
+      ttUrl,
       email,
-      thumbnail_url,
+      thumbnailUrl,
     });
 
     await logAudit({
@@ -432,26 +510,26 @@ const generateSlug = async (name) => {
 async function updateWorkingHours(req, res) {
   try {
     const { id } = req.params;
-    const { opening_hours } = req.body;
+    const { openingHours } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const oldOpeningHours = restaurant.get('opening_hours');
+    const oldOpeningHours = restaurant.get('openingHours');
 
-    await restaurant.update({ opening_hours });
+    await restaurant.update({ openingHours });
 
     // Log the update action
-    if (oldOpeningHours !== opening_hours) {
+    if (oldOpeningHours !== openingHours) {
       await logAudit({
         userId: req.user ? req.user.id : null,
         action: ActionTypes.UPDATE,
         entity: Entities.WORKING_HOURS,
         entityId: restaurant.id,
         restaurantId: restaurant.id,
-        changes: { old: oldOpeningHours, new: opening_hours },
+        changes: { old: oldOpeningHours, new: openingHours },
       });
     }
 
@@ -864,10 +942,10 @@ const getAllRestaurantsWithDetails = async (req, res) => {
         'latitude',
         'longitude',
         'rating',
-        'user_ratings_total',
-        'price_level',
-        'opening_hours',
-        'icon_url',
+        'userRatingsTotal',
+        'priceLevel',
+        'openingHours',
+        'iconUrl',
         'slug',
         'isClaimed',
         'email',
@@ -878,7 +956,7 @@ const getAllRestaurantsWithDetails = async (req, res) => {
     const restaurantsWithStatus = await Promise.all(
       restaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
-          where: { restaurant_id: restaurant.id },
+          where: { restaurantId: restaurant.id },
           attributes: ['rating'],
         });
 
@@ -891,7 +969,7 @@ const getAllRestaurantsWithDetails = async (req, res) => {
 
         return {
           ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          isOpen: isRestaurantOpen(restaurant.openingHours),
           reviewRating,
         };
       }),
@@ -928,10 +1006,10 @@ const getSampleRestaurants = async (req, res) => {
         'latitude',
         'longitude',
         'rating',
-        'user_ratings_total',
-        'price_level',
-        'opening_hours',
-        'icon_url',
+        'userRatingsTotal',
+        'priceLevel',
+        'openingHours',
+        'iconUrl',
         'slug',
         'isClaimed',
         'email',
@@ -965,7 +1043,7 @@ const getSampleRestaurants = async (req, res) => {
     const restaurantsWithStatus = await Promise.all(
       filteredRestaurants.map(async (restaurant) => {
         const reviews = await Review.findAll({
-          where: { restaurant_id: restaurant.id },
+          where: { restaurantId: restaurant.id },
           attributes: ['rating'],
         });
 
@@ -988,8 +1066,8 @@ const getSampleRestaurants = async (req, res) => {
 
         return {
           ...restaurant.get(),
-          icon_url: RESTAURANT_IMAGE,
-          isOpen: isRestaurantOpen(restaurant.opening_hours),
+          iconUrl: RESTAURANT_IMAGE,
+          isOpen: isRestaurantOpen(restaurant.openingHours),
           reviewRating,
           distance,
           isFavorite: userFavorites.has(restaurant.id),
@@ -1047,9 +1125,9 @@ const updateRestaurantAchievements = async (userId, restaurantId) => {
   try {
     // 1. Food Explorer - broj različitih restorana
     const visitedRestaurantsCount = await Review.count({
-      where: { user_id: userId },
+      where: { userId: userId },
       distinct: true,
-      col: 'restaurant_id',
+      col: 'restaurantId',
     });
     await updateFoodExplorerProgress(userId, visitedRestaurantsCount);
 
@@ -1062,7 +1140,7 @@ const updateRestaurantAchievements = async (userId, restaurantId) => {
           required: true,
         },
       ],
-      where: { user_id: userId },
+      where: { userId: userId },
       attributes: [],
       group: ['Restaurant.city'],
     });
@@ -1073,13 +1151,13 @@ const updateRestaurantAchievements = async (userId, restaurantId) => {
       include: [
         {
           model: Restaurant,
-          attributes: ['cuisine_type'],
+          attributes: ['cuisineType'],
           required: true,
         },
       ],
-      where: { user_id: userId },
+      where: { userId: userId },
       attributes: [],
-      group: ['Restaurant.cuisine_type'],
+      group: ['Restaurant.cuisineType'],
     });
     await updateWorldCuisineProgress(userId, visitedCuisines.length);
   } catch (error) {
@@ -1094,8 +1172,8 @@ const createReview = async (req, res) => {
     const { restaurantId, rating, comment } = req.body;
 
     const review = await Review.create({
-      user_id: userId,
-      restaurant_id: restaurantId,
+      userId: userId,
+      restaurantId: restaurantId,
       rating,
       comment,
     });

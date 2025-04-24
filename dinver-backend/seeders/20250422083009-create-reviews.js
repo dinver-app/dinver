@@ -25,28 +25,28 @@ module.exports = {
     const reviews = [
       {
         id: uuidv4(),
-        user_id: userId,
-        restaurant_id: restaurant1Id,
+        userId: userId,
+        restaurantId: restaurant1Id,
         rating: 5,
-        comment: 'Odlična hrana i usluga! Preporučujem.',
+        text: 'Odlična hrana i usluga! Preporučujem.',
         photos: ['{}'],
-        is_verified_reviewer: true,
-        created_at: new Date(),
-        updated_at: new Date(),
+        isVerifiedReviewer: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     ];
 
     if (restaurant2Id) {
       reviews.push({
         id: uuidv4(),
-        user_id: userId,
-        restaurant_id: restaurant2Id,
+        userId: userId,
+        restaurantId: restaurant2Id,
         rating: 4,
-        comment: 'Dobra lokacija, hrana je bila ukusna.',
+        text: 'Dobra lokacija, hrana je bila ukusna.',
         photos: ['{}'],
-        is_verified_reviewer: false,
-        created_at: new Date(),
-        updated_at: new Date(),
+        isVerifiedReviewer: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
     }
 

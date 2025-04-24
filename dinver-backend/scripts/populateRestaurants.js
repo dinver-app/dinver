@@ -25,25 +25,25 @@ async function populateDatabase(updateIfExists = false) {
             latitude: entry.geometry.location.lat,
             longitude: entry.geometry.location.lng,
             rating: entry.rating,
-            user_ratings_total: entry.user_ratings_total,
-            price_level: entry.price_level,
-            is_open_now: entry.opening_hours
+            userRatingsTotal: entry.user_ratings_total,
+            priceLevel: entry.price_level,
+            isOpenNow: entry.opening_hours
               ? entry.opening_hours.open_now
               : null,
-            opening_hours: entry.opening_hours || null,
+            openingHours: entry.opening_hours || null,
             types: entry.types || null,
-            icon_url: entry.icon,
-            photo_reference:
+            iconUrl: entry.icon,
+            photoReference:
               entry.photos && entry.photos.length > 0
                 ? entry.photos[0].photo_reference
                 : null,
             vicinity: entry.vicinity,
-            business_status: entry.business_status,
+            businessStatus: entry.business_status,
             geometry: entry.geometry,
-            icon_background_color: entry.icon_background_color,
-            icon_mask_base_uri: entry.icon_mask_base_uri,
+            iconBackgroundColor: entry.icon_background_color,
+            iconMaskBaseUri: entry.icon_mask_base_uri,
             photos: entry.photos || null,
-            plus_code: entry.plus_code || null,
+            plusCode: entry.plus_code || null,
           });
           console.log(`Updated restaurant with place_id: ${entry.place_id}`);
         } else {
@@ -54,30 +54,28 @@ async function populateDatabase(updateIfExists = false) {
       } else {
         await Restaurant.create({
           name: entry.name,
-          place_id: entry.place_id,
+          placeId: entry.place_id,
           address: entry.vicinity,
           latitude: entry.geometry.location.lat,
           longitude: entry.geometry.location.lng,
           rating: entry.rating,
-          user_ratings_total: entry.user_ratings_total,
-          price_level: entry.price_level,
-          is_open_now: entry.opening_hours
-            ? entry.opening_hours.open_now
-            : null,
-          opening_hours: entry.opening_hours || null,
+          userRatingsTotal: entry.user_ratings_total,
+          priceLevel: entry.price_level,
+          isOpenNow: entry.opening_hours ? entry.opening_hours.open_now : null,
+          openingHours: entry.opening_hours || null,
           types: entry.types || null,
-          icon_url: entry.icon,
-          photo_reference:
+          iconUrl: entry.icon,
+          photoReference:
             entry.photos && entry.photos.length > 0
               ? entry.photos[0].photo_reference
               : null,
           vicinity: entry.vicinity,
-          business_status: entry.business_status,
+          businessStatus: entry.business_status,
           geometry: entry.geometry,
-          icon_background_color: entry.icon_background_color,
-          icon_mask_base_uri: entry.icon_mask_base_uri,
+          iconBackgroundColor: entry.icon_background_color,
+          iconMaskBaseUri: entry.icon_mask_base_uri,
           photos: entry.photos || null,
-          plus_code: entry.plus_code || null,
+          plusCode: entry.plus_code || null,
         });
         console.log(`Added new restaurant with place_id: ${entry.place_id}`);
       }

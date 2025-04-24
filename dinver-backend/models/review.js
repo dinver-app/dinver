@@ -5,11 +5,11 @@ module.exports = (sequelize, DataTypes) => {
   class Review extends Model {
     static associate(models) {
       Review.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'userId',
         as: 'user',
       });
       Review.belongsTo(models.Restaurant, {
-        foreignKey: 'restaurant_id',
+        foreignKey: 'restaurantId',
         as: 'restaurant',
       });
     }
@@ -22,11 +22,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      restaurant_id: {
+      restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
       },
@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
           max: 5,
         },
       },
-      food_quality: {
+      foodQuality: {
         type: DataTypes.FLOAT,
         allowNull: false,
         validate: {
@@ -62,7 +62,7 @@ module.exports = (sequelize, DataTypes) => {
           max: 5,
         },
       },
-      value_for_money: {
+      valueForMoney: {
         type: DataTypes.FLOAT,
         allowNull: false,
         validate: {
@@ -78,45 +78,45 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],
       },
-      is_verified_reviewer: {
+      isVerifiedReviewer: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
-      is_hidden: {
+      isHidden: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
       },
-      last_edited_at: {
+      lastEditedAt: {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      edit_count: {
+      editCount: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
       },
-      edit_history: {
+      editHistory: {
         type: DataTypes.JSONB,
         allowNull: false,
         defaultValue: [],
       },
-      is_edited: {
+      isEdited: {
         type: DataTypes.VIRTUAL,
         get() {
-          return this.last_edited_at !== null;
+          return this.lastEditedAt !== null;
         },
       },
-      can_edit: {
+      canEdit: {
         type: DataTypes.VIRTUAL,
         get() {
-          if (!this.created_at) return true; // New review
+          if (!this.createdAt) return true; // New review
 
           const daysSinceCreation =
-            (Date.now() - this.created_at) / (1000 * 60 * 60 * 24);
+            (Date.now() - this.createdAt) / (1000 * 60 * 60 * 24);
           const isWithinEditWindow = daysSinceCreation <= 7;
 
-          return isWithinEditWindow || this.edit_count < 1;
+          return isWithinEditWindow || this.editCount < 1;
         },
       },
     },
@@ -124,7 +124,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'Review',
       tableName: 'Reviews',
-      underscored: true,
     },
   );
   return Review;

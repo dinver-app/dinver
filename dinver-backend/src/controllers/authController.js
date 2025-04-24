@@ -21,12 +21,12 @@ const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      first_name: firstName,
-      last_name: lastName,
+      firstName: firstName,
+      lastName: lastName,
       email,
       password: hashedPassword,
       phone: phone || null,
-      is_phone_verified: false,
+      isPhoneVerified: false,
     });
 
     const { accessToken, refreshToken } = generateTokens(user);
@@ -47,8 +47,8 @@ const register = async (req, res) => {
 
     // Filtriraj korisničke podatke
     const userData = {
-      firstName: user.first_name,
-      lastName: user.last_name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       phone: user.phone,
       role: user.role,
@@ -102,8 +102,8 @@ const login = async (req, res) => {
 
     // Filtriraj korisničke podatke
     const userData = {
-      firstName: user.first_name,
-      lastName: user.last_name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
       language: user.language,
@@ -319,8 +319,8 @@ const socialLogin = async (req, res) => {
     if (!user) {
       user = await User.create({
         email,
-        first_name: firstName,
-        last_name: lastName,
+        firstName: firstName,
+        lastName: lastName,
         photoURL,
         provider,
       });
@@ -352,8 +352,8 @@ passport.use(
         if (!user) {
           user = await User.create({
             googleId: profile.id,
-            first_name: profile.name.givenName,
-            last_name: profile.name.familyName,
+            firstName: profile.name.givenName,
+            lastName: profile.name.familyName,
             email: profile.emails[0].value,
           });
         }
@@ -382,7 +382,7 @@ const requestEmailVerification = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
 
-    if (user.is_email_verified) {
+    if (user.isEmailVerified) {
       return res.status(400).json({ error: 'Email is already verified' });
     }
 
@@ -392,7 +392,7 @@ const requestEmailVerification = async (req, res) => {
     tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token vrijedi 24 sata
 
     await user.update({
-      email_verification_token: verificationToken,
+      emailVerificationToken: verificationToken,
     });
 
     // Pošalji email s verifikacijskim linkom
@@ -417,7 +417,7 @@ const verifyEmail = async (req, res) => {
     const { token } = req.params;
 
     const user = await User.findOne({
-      where: { email_verification_token: token },
+      where: { emailVerificationToken: token },
     });
 
     if (!user) {
@@ -445,8 +445,8 @@ const verifyEmail = async (req, res) => {
     }
 
     await user.update({
-      is_email_verified: true,
-      email_verification_token: null,
+      isEmailVerified: true,
+      emailVerificationToken: null,
     });
 
     // Award points for email verification
@@ -505,7 +505,7 @@ const requestPhoneVerification = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
 
-    if (user.is_phone_verified) {
+    if (user.isPhoneVerified) {
       return res.status(400).json({ error: 'Phone is already verified' });
     }
 
@@ -533,8 +533,8 @@ const requestPhoneVerification = async (req, res) => {
     codeExpiry.setMinutes(codeExpiry.getMinutes() + 10); // Kod vrijedi 10 minuta
 
     await user.update({
-      phone_verification_code: verificationCode,
-      phone_verification_expires_at: codeExpiry,
+      phoneVerificationCode: verificationCode,
+      phoneVerificationExpiresAt: codeExpiry,
     });
 
     // Pošalji SMS s kodom
@@ -559,26 +559,26 @@ const verifyPhone = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.is_phone_verified) {
+    if (user.isPhoneVerified) {
       return res.status(400).json({ error: 'Phone is already verified' });
     }
 
-    if (!user.phone_verification_code || !user.phone_verification_expires_at) {
+    if (!user.phoneVerificationCode || !user.phoneVerificationExpiresAt) {
       return res.status(400).json({ error: 'No verification code requested' });
     }
 
-    if (new Date() > user.phone_verification_expires_at) {
+    if (new Date() > user.phoneVerificationExpiresAt) {
       return res.status(400).json({ error: 'Verification code has expired' });
     }
 
-    if (user.phone_verification_code !== code) {
+    if (user.phoneVerificationCode !== code) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
     await user.update({
-      is_phone_verified: true,
-      phone_verification_code: null,
-      phone_verification_expires_at: null,
+      isPhoneVerified: true,
+      phoneVerificationCode: null,
+      phoneVerificationExpiresAt: null,
     });
 
     // Award points for phone verification
@@ -597,7 +597,7 @@ const getVerificationStatus = async (req, res) => {
     const userId = req.user.id;
 
     const user = await User.findByPk(userId, {
-      attributes: ['is_email_verified', 'is_phone_verified'],
+      attributes: ['isEmailVerified', 'isPhoneVerified'],
     });
 
     if (!user) {
@@ -605,8 +605,8 @@ const getVerificationStatus = async (req, res) => {
     }
 
     res.json({
-      is_email_verified: user.is_email_verified,
-      is_phone_verified: user.is_phone_verified,
+      isEmailVerified: user.isEmailVerified,
+      isPhoneVerified: user.isPhoneVerified,
     });
   } catch (error) {
     console.error('Error fetching verification status:', error);

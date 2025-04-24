@@ -2,7 +2,6 @@ const {
   Organization,
   Restaurant,
   User,
-  UserOrganization,
   UserSysadmin,
   UserAdmin,
   Review,
@@ -305,7 +304,7 @@ async function getRestaurantAdmins(req, res) {
   try {
     const { restaurantId } = req.params;
     const admins = await UserAdmin.findAll({
-      where: { restaurantId },
+      where: { restaurantId: restaurantId },
       include: [
         {
           model: User,
@@ -486,14 +485,18 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
       claimedRestaurants.map(async (restaurant) => {
         const { count, rows: reviews } = await Review.findAndCountAll({
           where: {
-            restaurant_id: restaurant.id,
+            restaurantId: restaurant.id,
           },
           attributes: [
             'id',
             'rating',
-            'comment',
-            'images',
-            'user_id',
+            'text',
+            'photos',
+            'userId',
+            'foodQuality',
+            'service',
+            'atmosphere',
+            'valueForMoney',
             'createdAt',
           ],
           limit,
@@ -502,7 +505,7 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
         });
 
         const reviewsWithUserDetails = reviews.map((review) => {
-          const user = userMap[review.user_id] || {};
+          const user = userMap[review.userId] || {};
           return {
             ...review.toJSON(),
             userFirstName: user.firstName || 'Unknown',

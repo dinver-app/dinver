@@ -9,9 +9,9 @@ async function recordInsight(
 ) {
   try {
     await Insight.create({
-      user_id: userId,
-      restaurant_id: restaurantId,
-      menu_item_id: menuItemId,
+      userId: userId,
+      restaurantId: restaurantId,
+      menuItemId: menuItemId,
       action,
       duration,
     });
