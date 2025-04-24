@@ -1175,13 +1175,13 @@ const updateRestaurantAchievements = async (userId, restaurantId) => {
 const createReview = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { restaurantId, rating, comment } = req.body;
+    const { restaurantId, rating, text } = req.body;
 
     const review = await Review.create({
       userId: userId,
       restaurantId: restaurantId,
       rating,
-      comment,
+      text,
     });
 
     // Ažuriraj achievemente nakon uspješnog stvaranja recenzije
