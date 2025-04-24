@@ -1,4 +1,10 @@
 const { User } = require('../../models');
+const {
+  UserPoints,
+  Review,
+  UserFavorite,
+  Reservation,
+} = require('../../models');
 
 const updateUserLanguage = async (req, res) => {
   const { language } = req.body;
@@ -29,8 +35,50 @@ const getUserById = async (req, res) => {
   }
 };
 
+const getStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user points
+    const userPoints = await UserPoints.findOne({
+      where: { userId },
+      attributes: ['totalPoints', 'level'],
+    });
+
+    // Get review count
+    const reviewCount = await Review.count({
+      where: { userId },
+    });
+
+    // Get favorite restaurants count
+    const favoriteCount = await UserFavorite.count({
+      where: { userId },
+    });
+
+    // Get completed reservations count
+    const completedReservationsCount = await Reservation.count({
+      where: {
+        userId,
+        status: 'completed',
+      },
+    });
+
+    res.status(200).json({
+      points: userPoints ? userPoints.totalPoints : 0,
+      level: userPoints ? userPoints.level : 1,
+      reviewCount,
+      favoriteCount,
+      completedReservationsCount,
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ error: 'Failed to fetch user statistics' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
   getUserById,
+  getStats,
 };
