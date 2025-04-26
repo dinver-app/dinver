@@ -4,7 +4,7 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
-const upload = require('../../middleware/upload');
+const upload = require('../../../utils/uploadMiddleware');
 
 const router = express.Router();
 
