@@ -4,6 +4,7 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
+const upload = require('../../middleware/upload');
 
 const router = express.Router();
 
@@ -29,6 +30,23 @@ router.get(
   appApiKeyAuth,
   appAuthenticateToken,
   userController.getUserStats,
+);
+
+// Ažuriranje profilne slike
+router.post(
+  '/user/profile/image',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  upload.single('image'),
+  userController.updateProfileImage,
+);
+
+// Brisanje profilne slike
+router.delete(
+  '/user/profile/image',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userController.deleteProfileImage,
 );
 
 module.exports = router;

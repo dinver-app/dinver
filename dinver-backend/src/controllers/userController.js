@@ -7,6 +7,8 @@ const {
   Restaurant,
 } = require('../../models');
 const { sequelize } = require('../../models');
+const { uploadToS3 } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 
 const updateUserLanguage = async (req, res) => {
   const { language } = req.body;
@@ -45,6 +47,7 @@ const getUserProfile = async (req, res) => {
         'id',
         'firstName',
         'lastName',
+        'profileImage',
         'bio',
         'streetAddress',
         'city',
@@ -77,6 +80,7 @@ const getUserProfile = async (req, res) => {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      profileImage: user.profileImage,
       bio: user.bio,
       location: {
         street: user.streetAddress,
@@ -274,6 +278,67 @@ const getUserStats = async (req, res) => {
   }
 };
 
+const updateProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // If user already has a profile image, delete it from S3
+    if (user.profileImage) {
+      const oldKey = user.profileImage.split('/').pop();
+      await deleteFromS3(`user_profile_images/${oldKey}`);
+    }
+
+    // Upload new image to S3
+    const folder = 'user_profile_images';
+    const imageUrl = await uploadToS3(file, folder);
+
+    // Update user's profile image
+    await user.update({ profileImage: imageUrl });
+
+    res.json({ message: 'Profile image updated successfully', imageUrl });
+  } catch (error) {
+    console.error('Error updating profile image:', error);
+    res.status(500).json({ error: 'Failed to update profile image' });
+  }
+};
+
+const deleteProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.profileImage) {
+      return res.status(400).json({ error: 'No profile image to delete' });
+    }
+
+    // Delete image from S3
+    const key = user.profileImage.split('/').pop();
+    await deleteFromS3(`user_profile_images/${key}`);
+
+    // Update user's profile image to null
+    await user.update({ profileImage: null });
+
+    res.json({ message: 'Profile image deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting profile image:', error);
+    res.status(500).json({ error: 'Failed to delete profile image' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
@@ -281,4 +346,6 @@ module.exports = {
   getUserProfile,
   updateUserProfile,
   getUserStats,
+  updateProfileImage,
+  deleteProfileImage,
 };
