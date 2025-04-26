@@ -9,6 +9,7 @@ const {
 const { sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
+const { Op } = require('sequelize');
 
 const updateUserLanguage = async (req, res) => {
   const { language } = req.body;
@@ -130,8 +131,31 @@ const updateUserProfile = async (req, res) => {
     if (streetAddress !== undefined) updates.streetAddress = streetAddress;
     if (city !== undefined) updates.city = city;
     if (country !== undefined) updates.country = country;
-    if (phone !== undefined) updates.phone = phone;
     if (birthDate !== undefined) updates.birthDate = birthDate;
+
+    // Posebno rukovanje telefonskim brojem
+    if (phone !== undefined) {
+      // Ako je broj isti kao trenutni, preskočimo ažuriranje
+      if (phone === user.phone) {
+        // Ne radimo ništa, korisnik je poslao isti broj
+      } else {
+        // Provjeri postoji li već taj broj kod drugog korisnika
+        const existingUser = await User.findOne({
+          where: {
+            phone: phone,
+            id: { [Op.ne]: userId }, // isključi trenutnog korisnika
+          },
+        });
+
+        if (existingUser) {
+          return res.status(400).json({
+            error: 'This phone number is already in use by another user',
+          });
+        }
+
+        updates.phone = phone;
+      }
+    }
 
     await user.update(updates);
 
