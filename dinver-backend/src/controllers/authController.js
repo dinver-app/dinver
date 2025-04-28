@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User } = require('../../models');
+const { User, UserSettings } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { generateTokens } = require('../../utils/tokenUtils');
@@ -596,7 +596,8 @@ const getVerificationStatus = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await User.findByPk(userId, {
+    const user = await UserSettings.findOne({
+      where: { userId },
       attributes: ['isEmailVerified', 'isPhoneVerified'],
     });
 
