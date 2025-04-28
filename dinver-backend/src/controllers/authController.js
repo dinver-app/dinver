@@ -29,6 +29,18 @@ const register = async (req, res) => {
       isPhoneVerified: false,
     });
 
+    // Create UserSettings for the new user
+    await UserSettings.create({
+      userId: user.id,
+      language: 'en',
+      pushNotifications: true,
+      emailNotifications: true,
+      smsNotifications: false,
+      searchHistory: [],
+      isEmailVerified: false,
+      isPhoneVerified: false,
+    });
+
     const { accessToken, refreshToken } = generateTokens(user);
 
     // Za web aplikaciju
@@ -64,6 +76,15 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+
+    // Provjera za unique constraint error na telefonu
+    if (
+      error.name === 'SequelizeUniqueConstraintError' &&
+      error.errors[0]?.path === 'phone'
+    ) {
+      return res.status(400).json({ error: 'Phone number already exists' });
+    }
+
     res.status(500).json({ error: 'An error occurred during registration' });
   }
 };
