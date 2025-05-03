@@ -402,8 +402,15 @@ passport.deserializeUser(async (id, done) => {
 const requestEmailVerification = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
+    const userSettings = await UserSettings.findOne({
+      where: { userId: req.user.id },
+    });
 
-    if (user.isEmailVerified) {
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+
+    if (userSettings.isEmailVerified) {
       return res.status(400).json({ error: 'Email is already verified' });
     }
 
@@ -465,9 +472,44 @@ const verifyEmail = async (req, res) => {
       `);
     }
 
+    // Get user settings
+    const userSettings = await UserSettings.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!userSettings) {
+      console.error('User settings not found for user ID:', user.id);
+      return res.status(404).send(`
+        <html>
+          <head>
+            <title>Verification Error</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+              .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+              .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+              p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 class="error">Verification Error</h1>
+              <p>An error occurred while verifying your email.</p>
+              <p>Please try again or request a new verification email.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    // Update user to clear the verification token
     await user.update({
-      isEmailVerified: true,
       emailVerificationToken: null,
+    });
+
+    // Update user settings to mark email as verified
+    await userSettings.update({
+      isEmailVerified: true,
     });
 
     // Award points for email verification
@@ -525,8 +567,15 @@ const verifyEmail = async (req, res) => {
 const requestPhoneVerification = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
+    const userSettings = await UserSettings.findOne({
+      where: { userId: req.user.id },
+    });
 
-    if (user.isPhoneVerified) {
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+
+    if (userSettings.isPhoneVerified) {
       return res.status(400).json({ error: 'Phone is already verified' });
     }
 
@@ -553,7 +602,7 @@ const requestPhoneVerification = async (req, res) => {
     const codeExpiry = new Date();
     codeExpiry.setMinutes(codeExpiry.getMinutes() + 10); // Kod vrijedi 10 minuta
 
-    await user.update({
+    await userSettings.update({
       phoneVerificationCode: verificationCode,
       phoneVerificationExpiresAt: codeExpiry,
     });
@@ -575,35 +624,47 @@ const verifyPhone = async (req, res) => {
   try {
     const { code } = req.body;
     const user = await User.findByPk(req.user.id);
+    const userSettings = await UserSettings.findOne({
+      where: { userId: req.user.id },
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.isPhoneVerified) {
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+
+    if (userSettings.isPhoneVerified) {
       return res.status(400).json({ error: 'Phone is already verified' });
     }
 
-    if (!user.phoneVerificationCode || !user.phoneVerificationExpiresAt) {
+    if (
+      !userSettings.phoneVerificationCode ||
+      !userSettings.phoneVerificationExpiresAt
+    ) {
       return res.status(400).json({ error: 'No verification code requested' });
     }
 
-    if (new Date() > user.phoneVerificationExpiresAt) {
+    if (new Date() > userSettings.phoneVerificationExpiresAt) {
       return res.status(400).json({ error: 'Verification code has expired' });
     }
 
-    if (user.phoneVerificationCode !== code) {
+    if (userSettings.phoneVerificationCode !== code) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
-    await user.update({
-      isPhoneVerified: true,
+    // Update User record
+    await userSettings.update({
       phoneVerificationCode: null,
       phoneVerificationExpiresAt: null,
     });
 
-    // Award points for phone verification
-    await PointsService.addProfileVerificationPoints(user.id);
+    // Update UserSettings record
+    await userSettings.update({
+      isPhoneVerified: true,
+    });
 
     res.json({ message: 'Phone verified successfully' });
   } catch (error) {
