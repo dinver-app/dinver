@@ -5,6 +5,7 @@ const {
   Restaurant,
   UserSysadmin,
   UserAdmin,
+  UserSettings,
 } = require('../../models');
 const { Op } = require('sequelize');
 const { sendReservationEmail } = require('../../utils/emailService');
@@ -18,7 +19,8 @@ const createReservation = async (req, res) => {
 
     // Provjeri je li korisnik verificiran
     const user = await User.findByPk(userId);
-    if (!user.isEmailVerified || !user.isPhoneVerified) {
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    if (!userSettings.isEmailVerified || !userSettings.isPhoneVerified) {
       return res.status(403).json({
         error:
           'Only verified users can make reservations. Please verify your email and phone.',
