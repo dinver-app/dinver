@@ -8,7 +8,6 @@ const { generateTokens } = require('../../utils/tokenUtils');
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../../utils/emailService');
 const { sendVerificationSMS } = require('../../utils/smsService');
-const PointsService = require('../../utils/pointsService');
 
 const register = async (req, res) => {
   try {
