@@ -830,6 +830,14 @@ const resetPassword = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Provjeri je li nova lozinka ista kao stara
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        error: 'New password must be different from your current password',
+      });
+    }
+
     // Kriptiraj novu lozinku
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
