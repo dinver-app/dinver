@@ -25,6 +25,20 @@ router.post(
   authController.requestEmailVerification,
 );
 router.get('/auth/verify-email/:token', authController.verifyEmail);
+
+// Rute za resetiranje lozinke
+router.post(
+  '/auth/forgot-password',
+  appApiKeyAuth,
+  authController.requestPasswordReset,
+);
+router.get('/auth/reset-password/:token', authController.resetPasswordForm);
+router.post(
+  '/auth/reset-password/:token',
+  appApiKeyAuth,
+  authController.resetPassword,
+);
+
 router.post(
   '/auth/verify-phone',
   appApiKeyAuth,

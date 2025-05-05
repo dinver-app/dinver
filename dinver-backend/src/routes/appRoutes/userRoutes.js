@@ -49,4 +49,12 @@ router.delete(
   userController.deleteProfileImage,
 );
 
+// Promjena lozinke
+router.post(
+  '/user/change-password',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userController.changePassword,
+);
+
 module.exports = router;
