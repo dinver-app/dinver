@@ -139,6 +139,7 @@ const updateUserProfile = async (req, res) => {
     if (birthDate !== undefined) updates.birthDate = birthDate;
 
     let emailChanged = false;
+    let phoneChanged = false;
 
     // Posebno rukovanje email adresom ako je poslana
     if (email !== undefined && email !== user.email) {
@@ -181,6 +182,7 @@ const updateUserProfile = async (req, res) => {
         }
 
         updates.phone = phone;
+        phoneChanged = true;
       }
     }
 
