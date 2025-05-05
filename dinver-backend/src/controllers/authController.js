@@ -419,8 +419,9 @@ const requestEmailVerification = async (req, res) => {
     const tokenExpiry = new Date();
     tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token vrijedi 24 sata
 
-    await user.update({
+    await userSettings.update({
       emailVerificationToken: verificationToken,
+      emailVerificationExpiresAt: tokenExpiry,
     });
 
     // Pošalji email s verifikacijskim linkom
@@ -444,11 +445,11 @@ const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
 
-    const user = await User.findOne({
+    const userSettings = await UserSettings.findOne({
       where: { emailVerificationToken: token },
     });
 
-    if (!user) {
+    if (!userSettings) {
       return res.send(`
         <html>
           <head>
@@ -472,13 +473,38 @@ const verifyEmail = async (req, res) => {
       `);
     }
 
-    // Get user settings
-    const userSettings = await UserSettings.findOne({
-      where: { userId: user.id },
-    });
+    // Check if token is expired
+    if (
+      userSettings.emailVerificationExpiresAt &&
+      new Date() > userSettings.emailVerificationExpiresAt
+    ) {
+      return res.send(`
+        <html>
+          <head>
+            <title>Verification Failed</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+              .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+              .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+              p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 class="error">Verification Failed</h1>
+              <p>Verification token has expired.</p>
+              <p>Please request a new verification email.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
 
-    if (!userSettings) {
-      console.error('User settings not found for user ID:', user.id);
+    // Get user data
+    const user = await User.findByPk(userSettings.userId);
+    if (!user) {
+      console.error('User not found for userId:', userSettings.userId);
       return res.status(404).send(`
         <html>
           <head>
@@ -502,18 +528,12 @@ const verifyEmail = async (req, res) => {
       `);
     }
 
-    // Update user to clear the verification token
-    await user.update({
-      emailVerificationToken: null,
-    });
-
-    // Update user settings to mark email as verified
+    // Update user settings
     await userSettings.update({
+      emailVerificationToken: null,
+      emailVerificationExpiresAt: null,
       isEmailVerified: true,
     });
-
-    // Award points for email verification
-    await PointsService.addProfileVerificationPoints(user.id);
 
     res.send(`
       <html>
