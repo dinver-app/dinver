@@ -194,6 +194,14 @@ const updateUserProfile = async (req, res) => {
       }
     }
 
+    if (phoneChanged) {
+      const { UserSettings } = require('../../models');
+      const userSettings = await UserSettings.findOne({ where: { userId } });
+      if (userSettings) {
+        await userSettings.update({ isPhoneVerified: false });
+      }
+    }
+
     // Vraćamo ažurirane podatke
     const updatedUser = await User.findByPk(userId, {
       attributes: [
