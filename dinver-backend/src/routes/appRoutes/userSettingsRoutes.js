@@ -21,4 +21,11 @@ router.patch(
   userSettingsController.updateUserSettings,
 );
 
+router.post(
+  '/user/search-history',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userSettingsController.addSearchHistory,
+);
+
 module.exports = router;
