@@ -33,11 +33,7 @@ router.post(
   authController.requestPasswordReset,
 );
 router.get('/auth/reset-password/:token', authController.resetPasswordForm);
-router.post(
-  '/auth/reset-password/:token',
-  appApiKeyAuth,
-  authController.resetPassword,
-);
+router.post('/auth/reset-password/:token', authController.resetPassword);
 
 router.post(
   '/auth/verify-phone',
