@@ -10,6 +10,7 @@ const { sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { Op } = require('sequelize');
+const bcrypt = require('bcrypt');
 
 const updateUserLanguage = async (req, res) => {
   const { language } = req.body;
@@ -412,6 +413,62 @@ const deleteProfileImage = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    // Provjeri jesu li poslani svi potrebni podaci
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: 'Both current password and new password are required' });
+    }
+
+    // Provjeri ako nove lozinke odgovaraju minimalnim zahtjevima (npr. duljina)
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ error: 'New password must be at least 8 characters long' });
+    }
+
+    // Dohvati korisnika
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Provjeri trenutnu lozinku
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Provjeri da nova lozinka nije ista kao trenutna
+    const isSameAsOld = await bcrypt.compare(newPassword, user.password);
+    if (isSameAsOld) {
+      return res.status(400).json({
+        error: 'New password must be different from the current password',
+      });
+    }
+
+    // Kriptiraj novu lozinku
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Ažuriraj lozinku
+    await user.update({ password: hashedPassword });
+
+    // Vrati uspješan odgovor
+    res.status(200).json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
@@ -421,4 +478,5 @@ module.exports = {
   getUserStats,
   updateProfileImage,
   deleteProfileImage,
+  changePassword,
 };
