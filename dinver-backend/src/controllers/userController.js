@@ -119,6 +119,7 @@ const updateUserProfile = async (req, res) => {
       country,
       phone,
       birthDate,
+      email,
     } = req.body;
 
     const user = await User.findByPk(userId);
@@ -126,7 +127,7 @@ const updateUserProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Ažuriramo samo poslane podatke (email se ignorira)
+    // Ažuriramo samo poslane podatke
     const updates = {};
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
@@ -135,6 +136,28 @@ const updateUserProfile = async (req, res) => {
     if (city !== undefined) updates.city = city;
     if (country !== undefined) updates.country = country;
     if (birthDate !== undefined) updates.birthDate = birthDate;
+
+    let emailChanged = false;
+
+    // Posebno rukovanje email adresom ako je poslana
+    if (email !== undefined && email !== user.email) {
+      // Provjeri postoji li već taj email kod drugog korisnika
+      const existingUser = await User.findOne({
+        where: {
+          email: email,
+          id: { [Op.ne]: userId }, // isključi trenutnog korisnika
+        },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          error: 'This email address is already in use by another user',
+        });
+      }
+
+      updates.email = email;
+      emailChanged = true;
+    }
 
     // Posebno rukovanje telefonskim brojem
     if (phone !== undefined) {
@@ -161,6 +184,15 @@ const updateUserProfile = async (req, res) => {
     }
 
     await user.update(updates);
+
+    // Ako je email promijenjen, postavimo isEmailVerified na false u UserSettings
+    if (emailChanged) {
+      const { UserSettings } = require('../../models');
+      const userSettings = await UserSettings.findOne({ where: { userId } });
+      if (userSettings) {
+        await userSettings.update({ isEmailVerified: false });
+      }
+    }
 
     // Vraćamo ažurirane podatke
     const updatedUser = await User.findByPk(userId, {
@@ -194,6 +226,12 @@ const updateUserProfile = async (req, res) => {
       },
       birthDate: updatedUser.birthDate,
     };
+
+    // Dodajemo poruku o verifikaciji ako je email promijenjen
+    if (emailChanged) {
+      response.message =
+        'Profile updated successfully. Please verify your new email address.';
+    }
 
     res.status(200).json(response);
   } catch (error) {
