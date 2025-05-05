@@ -130,7 +130,41 @@ const updateUserSettings = async (req, res) => {
   }
 };
 
+// Dodaj novi search term u povijest pretraživanja
+const addSearchHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { searchTerm } = req.body;
+
+    if (!searchTerm || searchTerm.trim() === '') {
+      return res.status(400).json({ error: 'Search term is required' });
+    }
+
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    } else {
+      let searchHistory = userSettings.searchHistory || [];
+
+      // Dodamo novi term na početak liste (najnoviji na vrhu)
+      searchHistory.unshift({
+        term: searchTerm.trim(),
+        timestamp: new Date(),
+      });
+
+      await userSettings.update({ searchHistory });
+    }
+
+    res.status(200).json({ success: true, message: 'Search history updated' });
+  } catch (error) {
+    console.error('Error updating search history:', error);
+    res.status(500).json({ error: 'Failed to update search history' });
+  }
+};
+
 module.exports = {
   getUserSettings,
   updateUserSettings,
+  addSearchHistory,
 };
