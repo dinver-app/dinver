@@ -103,8 +103,8 @@ class PointsService {
 
   // Dodavanje bodova za verifikaciju profila
   static async addProfileVerificationPoints(userId, type) {
-    const actionType =
-      type === 'email' ? 'email_verification' : 'phone_verification';
+    // Using 'reservation_bonus' as this is a valid enum value
+    const actionType = 'reservation_bonus';
     const description =
       type === 'email'
         ? 'Verifikacija email adrese'
@@ -113,7 +113,10 @@ class PointsService {
     await UserPointsHistory.logPoints({
       userId,
       actionType,
-      points: POINTS_CONFIG[actionType],
+      points:
+        type === 'email'
+          ? POINTS_CONFIG.email_verification
+          : POINTS_CONFIG.phone_verification,
       description,
     });
   }
