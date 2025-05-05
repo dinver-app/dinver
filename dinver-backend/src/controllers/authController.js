@@ -8,6 +8,7 @@ const { generateTokens } = require('../../utils/tokenUtils');
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../../utils/emailService');
 const { sendVerificationSMS } = require('../../utils/smsService');
+const { sendPasswordResetEmail } = require('../../utils/emailService');
 
 const register = async (req, res) => {
   try {
@@ -716,6 +717,306 @@ const getVerificationStatus = async (req, res) => {
   }
 };
 
+// Zahtjev za reset lozinke
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Pronađi korisnika po email adresi
+    const user = await User.findOne({ where: { email } });
+
+    // Čak i ako korisnik ne postoji, vratimo isti odgovor iz sigurnosnih razloga
+    // Tako napadač ne može doznati postoji li email ili ne
+    if (!user) {
+      return res.status(200).json({
+        message:
+          'If a user with that email exists, a password reset link has been sent to their email',
+      });
+    }
+
+    // Dohvati ili kreiraj korisničke postavke
+    let userSettings = await UserSettings.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!userSettings) {
+      userSettings = await UserSettings.create({
+        userId: user.id,
+        language: 'en',
+        pushNotifications: true,
+        emailNotifications: true,
+        smsNotifications: false,
+        searchHistory: [],
+        isEmailVerified: false,
+        isPhoneVerified: false,
+      });
+    }
+
+    // Generiraj token za reset lozinke
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date();
+    tokenExpiry.setHours(tokenExpiry.getHours() + 1); // Token vrijedi 1 sat
+
+    // Spremi token i vrijeme isteka u bazu
+    await userSettings.update({
+      passwordResetToken: resetToken,
+      passwordResetExpiresAt: tokenExpiry,
+    });
+
+    // Pošalji email s linkom za reset lozinke
+    const baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://api.dinver.eu'
+        : 'http://localhost:3000';
+
+    const resetLink = `${baseUrl}/api/app/auth/reset-password/${resetToken}`;
+    await sendPasswordResetEmail(user.email, resetLink);
+
+    res.status(200).json({
+      message:
+        'If a user with that email exists, a password reset link has been sent to their email',
+    });
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while processing your request' });
+  }
+};
+
+// Reset lozinke s tokenom
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    // Provjeri je li poslan novi password
+    if (!newPassword) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    // Provjeri minimalnu duljinu lozinke
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Pronađi korisničke postavke s tim tokenom
+    const userSettings = await UserSettings.findOne({
+      where: { passwordResetToken: token },
+    });
+
+    if (!userSettings) {
+      return res
+        .status(400)
+        .json({ error: 'Invalid or expired password reset token' });
+    }
+
+    // Provjeri je li token istekao
+    if (new Date() > userSettings.passwordResetExpiresAt) {
+      return res
+        .status(400)
+        .json({ error: 'Password reset token has expired' });
+    }
+
+    // Pronađi korisnika
+    const user = await User.findByPk(userSettings.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Kriptiraj novu lozinku
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Ažuriraj lozinku korisnika
+    await user.update({ password: hashedPassword });
+
+    // Poništi token za reset
+    await userSettings.update({
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+    });
+
+    // Vrati uspješan odgovor
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res
+      .status(500)
+      .json({ error: 'An error occurred while resetting your password' });
+  }
+};
+
+// HTML stranica za reset lozinke
+const resetPasswordForm = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    // Provjeri je li token valjan
+    const userSettings = await UserSettings.findOne({
+      where: { passwordResetToken: token },
+    });
+
+    if (!userSettings) {
+      return res.send(`
+        <html>
+          <head>
+            <title>Password Reset Failed</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+              .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; max-width: 500px; width: 100%; }
+              .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+              p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 class="error">Password Reset Failed</h1>
+              <p>Invalid or expired password reset token.</p>
+              <p>Please request a new password reset link.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    // Provjeri je li token istekao
+    if (new Date() > userSettings.passwordResetExpiresAt) {
+      return res.send(`
+        <html>
+          <head>
+            <title>Password Reset Failed</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+              .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; max-width: 500px; width: 100%; }
+              .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+              p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1 class="error">Password Reset Failed</h1>
+              <p>Password reset token has expired.</p>
+              <p>Please request a new password reset link.</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    // Prikaži formu za reset lozinke
+    res.send(`
+      <html>
+        <head>
+          <title>Reset Your Password</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+            .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; max-width: 500px; width: 100%; }
+            .heading { color: #111827; font-size: 1.5rem; margin-bottom: 1.5rem; }
+            p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; margin-bottom: 1.5rem; }
+            form { display: flex; flex-direction: column; }
+            input { padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; }
+            button { background-color: #4CAF50; color: white; border: none; padding: 0.75rem; border-radius: 0.375rem; font-size: 1rem; cursor: pointer; }
+            button:hover { background-color: #43a047; }
+            .error-message { color: #dc2626; margin-top: 1rem; display: none; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1 class="heading">Reset Your Password</h1>
+            <p>Please enter your new password below:</p>
+            <form id="resetForm">
+              <input type="password" id="password" placeholder="New password" minlength="8" required>
+              <input type="password" id="confirmPassword" placeholder="Confirm new password" minlength="8" required>
+              <button type="submit">Reset Password</button>
+              <p id="errorMessage" class="error-message"></p>
+            </form>
+          </div>
+
+          <script>
+            document.getElementById('resetForm').addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              const password = document.getElementById('password').value;
+              const confirmPassword = document.getElementById('confirmPassword').value;
+              const errorMessage = document.getElementById('errorMessage');
+              
+              // Reset error message
+              errorMessage.style.display = 'none';
+              
+              // Check if passwords match
+              if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match';
+                errorMessage.style.display = 'block';
+                return;
+              }
+              
+              try {
+                const response = await fetch('/api/app/auth/reset-password/${token}', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ newPassword: password }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                  // Show success message
+                  document.querySelector('.container').innerHTML = \`
+                    <h1 style="color: #059669; font-size: 1.5rem; margin-bottom: 1rem;">Success!</h1>
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">✓</div>
+                    <p>Your password has been reset successfully.</p>
+                    <p>You can now log in with your new password.</p>
+                  \`;
+                } else {
+                  errorMessage.textContent = data.error || 'An error occurred';
+                  errorMessage.style.display = 'block';
+                }
+              } catch (error) {
+                errorMessage.textContent = 'An error occurred while resetting your password';
+                errorMessage.style.display = 'block';
+              }
+            });
+          </script>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error displaying reset form:', error);
+    res.status(500).send(`
+      <html>
+        <head>
+          <title>Password Reset Error</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+            .container { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 1rem; }
+            .error { color: #dc2626; font-size: 1.5rem; margin-bottom: 1rem; }
+            p { color: #4b5563; font-size: 1.1rem; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1 class="error">Password Reset Error</h1>
+            <p>An error occurred while processing your request.</p>
+            <p>Please try again or request a new password reset link.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -730,4 +1031,7 @@ module.exports = {
   requestPhoneVerification,
   verifyPhone,
   getVerificationStatus,
+  requestPasswordReset,
+  resetPassword,
+  resetPasswordForm,
 };

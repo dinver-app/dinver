@@ -19,7 +19,7 @@ const formatTime = (timeStr) => {
 
 const sendVerificationEmail = async (email, verificationLink) => {
   const data = {
-    from: 'Dinver <noreply@dinverapp.com>',
+    from: 'Dinver <noreply@dinver.eu>',
     to: email,
     subject: 'Verify your email address',
     text: `Please verify your email address by clicking on the following link: ${verificationLink}`,
@@ -168,7 +168,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
   }
 
   const data = {
-    from: 'Dinver <noreply@dinverapp.com>',
+    from: 'Dinver <noreply@dinver.eu>',
     to,
     subject,
     text,
@@ -192,7 +192,46 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
   }
 };
 
+const sendPasswordResetEmail = async (email, resetLink) => {
+  const data = {
+    from: 'Dinver <noreply@dinver.eu>',
+    to: email,
+    subject: 'Reset your password',
+    text: `You requested to reset your password. Click on the following link to reset your password: ${resetLink}. This link will expire in 1 hour. If you did not request this, please ignore this email.`,
+    html: `
+      <h2>Password Reset Request</h2>
+      <p>You requested to reset your password. Click on the button below to set a new password:</p>
+      <p>
+        <a href="${resetLink}" 
+           style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; border-radius: 4px;">
+          Reset Password
+        </a>
+      </p>
+      <p>Or copy and paste this link in your browser:</p>
+      <p>${resetLink}</p>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you did not request this password reset, please ignore this email.</p>
+    `,
+  };
+
+  if (process.env.NODE_ENV === 'development' || !mg) {
+    console.log('Development mode: Password reset email would be sent');
+    console.log('To:', email);
+    console.log('Reset Link:', resetLink);
+    return;
+  }
+
+  try {
+    await mg.messages().send(data);
+    console.log('Password reset email sent successfully');
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendReservationEmail,
+  sendPasswordResetEmail,
 };
