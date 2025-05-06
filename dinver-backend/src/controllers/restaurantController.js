@@ -555,7 +555,8 @@ async function updateWorkingHours(req, res) {
 async function updateFilters(req, res) {
   try {
     const { id } = req.params;
-    const { foodTypes, establishmentTypes, establishmentPerks } = req.body;
+    const { foodTypes, establishmentTypes, establishmentPerks, mealTypes } =
+      req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -566,12 +567,14 @@ async function updateFilters(req, res) {
       foodTypes: restaurant.foodTypes || [],
       establishmentTypes: restaurant.establishmentTypes || [],
       establishmentPerks: restaurant.establishmentPerks || [],
+      mealTypes: restaurant.mealTypes || [],
     };
 
     await restaurant.update({
       foodTypes: foodTypes,
       establishmentTypes: establishmentTypes,
       establishmentPerks: establishmentPerks,
+      mealTypes: mealTypes,
     });
 
     const logChange = async (oldValues, newValues, entity) => {
@@ -608,6 +611,7 @@ async function updateFilters(req, res) {
       establishmentPerks,
       Entities.FILTERS.ESTABLISHMENT_PERKS,
     );
+    await logChange(oldData.mealTypes, mealTypes, Entities.FILTERS.MEAL_TYPES);
 
     res.json({ message: 'Filters updated successfully', restaurant });
   } catch (error) {

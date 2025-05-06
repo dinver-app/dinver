@@ -21,6 +21,7 @@ const Entities = {
     FOOD_TYPES: 'food_types',
     ESTABLISHMENT_TYPES: 'establishment_types',
     ESTABLISHMENT_PERKS: 'establishment_perks',
+    MEAL_TYPES: 'meal_types',
   },
 };
 
