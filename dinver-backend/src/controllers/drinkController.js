@@ -335,6 +335,7 @@ const createDrinkCategory = async (req, res) => {
         drinkCategoryId: category.id,
         language: translation.language,
         name: translation.name,
+        description: translation.description || null,
       }),
     );
 
@@ -358,6 +359,7 @@ const createDrinkCategory = async (req, res) => {
     const result = {
       ...createdCategory.get(),
       name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
     };
 
     res.status(201).json(result);
@@ -398,6 +400,7 @@ const updateDrinkCategory = async (req, res) => {
         drinkCategoryId: category.id,
         language: translation.language,
         name: translation.name,
+        description: translation.description || null,
       });
     }
 
@@ -414,6 +417,7 @@ const updateDrinkCategory = async (req, res) => {
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
       translations: updated.translations,
     };
 

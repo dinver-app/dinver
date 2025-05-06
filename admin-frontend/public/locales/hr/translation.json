@@ -438,5 +438,7 @@
   "past": "Prošli",
   "select_date": "Odaberite datum",
   "custom_day_name_placeholder": "Unesite naziv posebnog dana",
-  "split_shift_description": "Dodajte više vremenskih razdoblja za ovaj dan"
+  "split_shift_description": "Dodajte više vremenskih razdoblja za ovaj dan",
+  "category_description": "Opis kategorije",
+  "enter_category_description": "Unesite opcionalni opis kategorije"
 }

@@ -460,5 +460,7 @@
   "cannot_add_date_in_the_past": "Cannot add a date in the past",
   "custom_working_day_for_this_date_already_exists": "Custom working day for this date already exists",
   "failed_to_update_custom_working_day": "Failed to update custom working day",
-  "failed_to_delete_custom_working_day": "Failed to delete custom working day"
+  "failed_to_delete_custom_working_day": "Failed to delete custom working day",
+  "category_description": "Category Description",
+  "enter_category_description": "Enter optional category description"
 }

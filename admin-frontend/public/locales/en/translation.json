@@ -438,5 +438,7 @@
   "past": "Past",
   "select_date": "Select date",
   "custom_day_name_placeholder": "Enter custom day name",
-  "split_shift_description": "Add multiple time periods for this day"
+  "split_shift_description": "Add multiple time periods for this day",
+  "category_description": "Category Description",
+  "enter_category_description": "Enter optional category description"
 }

@@ -456,5 +456,7 @@
   "cannot_add_date_in_the_past": "Datum ne može biti u prošlosti",
   "custom_working_day_for_this_date_already_exists": "Podatak za ovaj datum već postoji",
   "failed_to_update_custom_working_day": "Greška pri ažuriranju dana radnog vremena",
-  "failed_to_delete_custom_working_day": "Greška pri uklanjanju dana radnog vremena"
+  "failed_to_delete_custom_working_day": "Greška pri uklanjanju dana radnog vremena",
+  "category_description": "Opis kategorije",
+  "enter_category_description": "Unesite opcionalni opis kategorije"
 }
