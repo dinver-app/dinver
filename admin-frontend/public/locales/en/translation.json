@@ -426,5 +426,17 @@
   "contact_information": "Contact Information",
   "social_media": "Social Media",
   "location": "Location",
-  "click_to_change": "Click to change"
+  "click_to_change": "Click to change",
+  "days_without_hours_added_will_display_as_closed": "Days without hours added will display as closed.",
+  "regular_hours": "Regular Hours",
+  "custom_days": "Custom Days",
+  "add_hours": "Add Hours",
+  "mark_closed": "Mark Closed",
+  "remove_split": "Remove Split",
+  "no_custom_days": "No Custom Days",
+  "hours": "Hours",
+  "past": "Past",
+  "select_date": "Select date",
+  "custom_day_name_placeholder": "Enter custom day name",
+  "split_shift_description": "Add multiple time periods for this day"
 }

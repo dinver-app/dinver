@@ -424,5 +424,19 @@
   "contact_information": "Kontakt Informacije",
   "social_media": "Društvene Mreže",
   "location": "Lokacija",
-  "click_to_change": "Kliknite za promjenu"
+  "click_to_change": "Kliknite za promjenu",
+  "days_without_hours_added_will_display_as_closed": "Dani bez unesenih sati će biti prikazani kao zatvoreni.",
+  "regular_hours": "Redovno radno vrijeme",
+  "custom_days": "Posebni dani",
+  "add_hours": "Dodaj sate",
+  "mark_closed": "Označi zatvoreno",
+  "split_shift": "Podijeljeno radno vrijeme",
+  "remove_split": "Ukloni podjelu",
+  "no_custom_days": "Nema posebnih dana",
+  "no_custom_working_days": "Trenutno nema posebnih radnih dana",
+  "hours": "Sati",
+  "past": "Prošli",
+  "select_date": "Odaberite datum",
+  "custom_day_name_placeholder": "Unesite naziv posebnog dana",
+  "split_shift_description": "Dodajte više vremenskih razdoblja za ovaj dan"
 }
