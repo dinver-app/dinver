@@ -407,5 +407,8 @@
   "select_establishment_types": "Odaberite tipove objekta za ovaj restoran",
   "select_meal_types": "Odaberite tipove obroka koje restoran nudi",
   "select_food_types": "Odaberite tipove hrane koja se služi u ovom restoranu",
-  "select_establishment_perks": "Odaberite dodatne pogodnosti koje ovaj objekt nudi"
+  "select_establishment_perks": "Odaberite dodatne pogodnosti koje ovaj objekt nudi",
+  "restaurant_description": "Opis restorana",
+  "restaurant_description_placeholder": "Unesite kratki opis restorana (maksimalno 150 znakova)",
+  "description_too_long": "Opis je predugačak, dozvoljeno je maksimalno 150 znakova"
 }

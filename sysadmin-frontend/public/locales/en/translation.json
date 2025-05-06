@@ -409,5 +409,8 @@
   "select_establishment_types": "Select establishment types for this restaurant",
   "select_meal_types": "Select meal types that restaurant offers",
   "select_food_types": "Select food types served in this restaurant",
-  "select_establishment_perks": "Select additional perks offered by this establishment"
+  "select_establishment_perks": "Select additional perks offered by this establishment",
+  "restaurant_description": "Restaurant Description",
+  "restaurant_description_placeholder": "Enter a brief description of your restaurant (max 150 characters)",
+  "description_too_long": "Description is too long, maximum 150 characters allowed"
 }

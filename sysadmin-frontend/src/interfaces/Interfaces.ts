@@ -20,6 +20,7 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
+  description?: string;
   workingHoursInfo?: string;
   thumbnailUrl?: string;
   thumbnail?: string;

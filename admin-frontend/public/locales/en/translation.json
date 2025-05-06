@@ -414,5 +414,8 @@
   "service": "Service",
   "atmosphere": "Atmosphere",
   "value_for_money": "Value for Money",
-  "restoran_nije_dogovoren": "Restaurant is not claimed yet"
+  "restoran_nije_dogovoren": "Restaurant is not claimed yet",
+  "restaurant_description": "Restaurant Description",
+  "restaurant_description_placeholder": "Enter a brief description of your restaurant (max 150 characters)",
+  "description_too_long": "Description is too long, maximum 150 characters allowed"
 }

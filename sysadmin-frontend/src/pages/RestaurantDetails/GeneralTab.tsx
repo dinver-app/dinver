@@ -23,6 +23,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     ttUrl: restaurant.ttUrl || "",
     phone: restaurant.phone || "",
     email: restaurant.email || "",
+    description: restaurant.description || "",
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -32,6 +33,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     igUrl: "",
     ttUrl: "",
     phone: "",
+    description: "",
   });
 
   const validateInput = (name: string, value: string) => {
@@ -63,6 +65,16 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    // Check description length
+    if (name === "description" && value.length > 150) {
+      setErrors((prev) => ({
+        ...prev,
+        description: t("description_too_long"),
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
     validateInput(name, value);
   };
@@ -74,6 +86,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
+      formDataToSend.append("description", formData.description);
       formDataToSend.append(
         "websiteUrl",
         errors.websiteUrl === "" ? formData.websiteUrl : ""
@@ -130,6 +143,25 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           onChange={handleInputChange}
           className="mt-1 block w-full p-2 border border-gray-300 rounded"
         />
+      </div>
+      <div className="my-4">
+        <label className="block text-sm font-medium text-gray-700">
+          {t("restaurant_description")}
+        </label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          placeholder={t("restaurant_description_placeholder")}
+          className="mt-1 block w-full p-2 border border-gray-300 rounded h-24 resize-none"
+          maxLength={150}
+        />
+        {errors.description && (
+          <p className="text-sm text-red-500">{errors.description}</p>
+        )}
+        <div className="text-xs text-gray-500 mt-1 text-right">
+          {formData.description.length}/150
+        </div>
       </div>
       <div className="my-4">
         <label className="block text-sm font-medium text-gray-700">

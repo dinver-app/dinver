@@ -399,23 +399,31 @@ async function updateRestaurant(req, res) {
       ttUrl,
       email,
       priceCategoryId,
+      description,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    // Validate description length
+    if (description && description.length > 150) {
+      return res.status(400).json({
+        error: 'Description is too long, maximum 150 characters allowed',
+      });
+    }
+
     const oldData = { ...restaurant.get() };
 
     let thumbnailUrl = restaurant.thumbnailUrl;
 
-    if (file) {
+    if (req.file) {
       if (restaurant.thumbnailUrl) {
         const oldKey = restaurant.thumbnailUrl.split('/').pop();
         await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
       }
       const folder = 'restaurant_thumbnails';
-      thumbnailUrl = await uploadToS3(file, folder);
+      thumbnailUrl = await uploadToS3(req.file, folder);
     }
 
     await restaurant.update({
@@ -428,6 +436,7 @@ async function updateRestaurant(req, res) {
       phone,
       ttUrl,
       email,
+      description,
       thumbnailUrl,
       priceCategoryId,
     });
@@ -443,6 +452,7 @@ async function updateRestaurant(req, res) {
 
     res.json(restaurant);
   } catch (error) {
+    console.error('Error updating restaurant:', error);
     res.status(500).json({ error: 'Failed to update restaurant' });
   }
 }
