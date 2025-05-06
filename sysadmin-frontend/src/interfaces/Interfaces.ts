@@ -34,6 +34,8 @@ export interface Restaurant {
   foodTypes?: number[];
   establishmentTypes?: number[];
   establishmentPerks?: number[];
+  mealTypes?: number[];
+  priceCategoryId?: number;
   iconUrl?: string;
   photoReference?: string;
   vicinity?: string;
@@ -80,6 +82,21 @@ export interface EstablishmentPerk {
   nameEn: string;
   nameHr: string;
   icon: string;
+}
+
+export interface MealType {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+}
+
+export interface PriceCategory {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+  level: number;
 }
 
 export enum Language {

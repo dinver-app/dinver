@@ -69,9 +69,15 @@
   "establishment_types": "Establishment Type",
   "food_types": "Food Types",
   "establishment_perks": "Establishment Perks",
+  "meal_types": "Meal Types",
   "no_establishment_perks_selected": "No establishment perks selected",
   "no_establishment_types_selected": "No establishment types selected",
   "no_food_types_selected": "No food types selected",
+  "no_meal_types_selected": "No meal types selected",
+  "price_category": "Price Category",
+  "no_price_category_selected": "No price category selected",
+  "select_price_category": "Select Price Category",
+  "add_meal_types": "Add Meal Types",
   "all_changes_saved": "All changes saved",
   "failed_to_save_changes": "Failed to save changes",
   "saving": "Saving",
@@ -395,5 +401,6 @@
   "service": "Service",
   "atmosphere": "Atmosphere",
   "value_for_money": "Value for Money",
-  "restoran_nije_dogovoren": "Restaurant is not claimed yet"
+  "restoran_nije_dogovoren": "Restaurant is not claimed yet",
+  "no_results_found": "No results found"
 }

@@ -3,6 +3,8 @@ import {
   getAllFoodTypes,
   getAllEstablishmentTypes,
   getAllEstablishmentPerks,
+  getAllMealTypes,
+  getAllPriceCategories,
   updateFilters,
 } from "../../services/restaurantService";
 import {
@@ -10,6 +12,8 @@ import {
   Restaurant,
   EstablishmentType,
   EstablishmentPerk,
+  MealType,
+  PriceCategory,
 } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
@@ -28,6 +32,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [establishmentPerks, setEstablishmentPerks] = useState<
     EstablishmentPerk[]
   >([]);
+  const [mealTypes, setMealTypes] = useState<MealType[]>([]);
+  const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>(
     restaurant.foodTypes || []
   );
@@ -37,9 +43,15 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [selectedEstablishmentPerks, setSelectedEstablishmentPerks] = useState<
     number[]
   >(restaurant.establishmentPerks || []);
+  const [selectedMealTypes, setSelectedMealTypes] = useState<number[]>(
+    restaurant.mealTypes || []
+  );
+  const [selectedPriceCategory, setSelectedPriceCategory] = useState<
+    number | undefined
+  >(restaurant.priceCategoryId);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeModal, setActiveModal] = useState<
-    "food" | "establishment" | "perk" | null
+    "food" | "establishment" | "perk" | "meal" | "price" | null
   >(null);
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
@@ -48,16 +60,25 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       const loadingToastId = toast.loading(t("loading"));
 
       try {
-        const [foodTypes, establishmentTypes, establishmentPerks] =
-          await Promise.all([
-            getAllFoodTypes(),
-            getAllEstablishmentTypes(),
-            getAllEstablishmentPerks(),
-          ]);
+        const [
+          foodTypes,
+          establishmentTypes,
+          establishmentPerks,
+          mealTypes,
+          priceCategories,
+        ] = await Promise.all([
+          getAllFoodTypes(),
+          getAllEstablishmentTypes(),
+          getAllEstablishmentPerks(),
+          getAllMealTypes(),
+          getAllPriceCategories(),
+        ]);
 
         setFoodTypes(foodTypes);
         setEstablishmentTypes(establishmentTypes);
         setEstablishmentPerks(establishmentPerks);
+        setMealTypes(mealTypes);
+        setPriceCategories(priceCategories);
       } catch (error) {
         console.error("Failed to fetch filters", error);
       } finally {
@@ -76,6 +97,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           foodTypes: selectedFoodTypes,
           establishmentTypes: selectedEstablishmentTypes,
           establishmentPerks: selectedEstablishmentPerks,
+          mealTypes: selectedMealTypes,
+          priceCategoryId: selectedPriceCategory,
         };
 
         await updateFilters(restaurant.id || "", filters);
@@ -85,6 +108,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           foodTypes: selectedFoodTypes,
           establishmentTypes: selectedEstablishmentTypes,
           establishmentPerks: selectedEstablishmentPerks,
+          mealTypes: selectedMealTypes,
+          priceCategoryId: selectedPriceCategory,
         });
       } catch (error) {
         console.error("Failed to auto-save filters", error);
@@ -97,11 +122,13 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     selectedFoodTypes,
     selectedEstablishmentTypes,
     selectedEstablishmentPerks,
+    selectedMealTypes,
+    selectedPriceCategory,
   ]);
 
   const handleRemoveItem = (
     id: number,
-    type: "food" | "establishment" | "perk"
+    type: "food" | "establishment" | "perk" | "meal"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => prev.filter((t) => t !== id));
@@ -109,12 +136,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentTypes((prev) => prev.filter((t) => t !== id));
     } else if (type === "perk") {
       setSelectedEstablishmentPerks((prev) => prev.filter((t) => t !== id));
+    } else if (type === "meal") {
+      setSelectedMealTypes((prev) => prev.filter((t) => t !== id));
     }
   };
 
   const handleAddItem = (
     id: number,
-    type: "food" | "establishment" | "perk"
+    type: "food" | "establishment" | "perk" | "meal" | "price"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => [...prev, id]);
@@ -122,11 +151,22 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentTypes((prev) => [...prev, id]);
     } else if (type === "perk") {
       setSelectedEstablishmentPerks((prev) => [...prev, id]);
+    } else if (type === "meal") {
+      setSelectedMealTypes((prev) => [...prev, id]);
+    } else if (type === "price") {
+      setSelectedPriceCategory(id);
+      setActiveModal(null);
     }
   };
 
   const getModalContent = () => {
-    let items: (FoodType | EstablishmentType | EstablishmentPerk)[] = [];
+    let items: (
+      | FoodType
+      | EstablishmentType
+      | EstablishmentPerk
+      | MealType
+      | PriceCategory
+    )[] = [];
     let selectedItems: number[] = [];
     let title = "";
 
@@ -142,6 +182,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       items = establishmentPerks;
       selectedItems = selectedEstablishmentPerks;
       title = t("add_establishment_perks");
+    } else if (activeModal === "meal") {
+      items = mealTypes;
+      selectedItems = selectedMealTypes;
+      title = t("add_meal_types");
+    } else if (activeModal === "price") {
+      items = priceCategories;
+      selectedItems = selectedPriceCategory ? [selectedPriceCategory] : [];
+      title = t("select_price_category");
     }
 
     return { items, selectedItems, title };
@@ -160,6 +208,52 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         </div>
         <span className="text-sm text-gray-500">{saveStatus}</span>
       </div>
+      <div className="h-line"></div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          {t("price_category")}
+        </label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {priceCategories.length > 0 && selectedPriceCategory ? (
+            (() => {
+              const priceCategory = priceCategories.find(
+                (pc) => pc.id === selectedPriceCategory
+              );
+              return (
+                <div
+                  key={priceCategory?.id}
+                  className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                >
+                  <span>{priceCategory?.icon}</span>
+                  <span>
+                    {i18n.language === "en"
+                      ? priceCategory?.nameEn
+                      : priceCategory?.nameHr}
+                  </span>
+                  <button
+                    onClick={() => setSelectedPriceCategory(undefined)}
+                    className="ml-2 text-md text-gray-500 hover:text-gray-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })()
+          ) : (
+            <span className="text-sm text-gray-500">
+              {t("no_price_category_selected")}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setActiveModal("price")}
+          className="mt-4 primary-button text-xs"
+        >
+          {t("select")}
+        </button>
+      </div>
+
       <div className="h-line"></div>
 
       <div>
@@ -205,6 +299,54 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         </div>
         <button
           onClick={() => setActiveModal("establishment")}
+          className="mt-4 primary-button text-xs"
+        >
+          {t("add")}
+        </button>
+      </div>
+
+      <div className="h-line"></div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          {t("meal_types")}
+        </label>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {mealTypes.length > 0 && selectedMealTypes.length > 0 ? (
+            selectedMealTypes.map((id) => {
+              const mealType = mealTypes.find((mt) => mt.id === id);
+              return (
+                <div
+                  key={id}
+                  onClick={() => handleRemoveItem(id, "meal")}
+                  className="flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-200 transition cursor-pointer"
+                >
+                  <span>{mealType?.icon}</span>
+                  <span>
+                    {i18n.language === "en"
+                      ? mealType?.nameEn
+                      : mealType?.nameHr}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveItem(id, "meal");
+                    }}
+                    className="ml-2 text-md text-gray-500 hover:text-gray-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-sm text-gray-500">
+              {t("no_meal_types_selected")}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setActiveModal("meal")}
           className="mt-4 primary-button text-xs"
         >
           {t("add")}
@@ -327,7 +469,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {items
                 .filter(
                   (item) =>
-                    !selectedItems.includes(item.id) &&
+                    (activeModal === "price" ||
+                      !selectedItems.includes(item.id)) &&
                     (i18n.language === "en" ? item.nameEn : item.nameHr)
                       .toLowerCase()
                       .includes(searchQuery.toLowerCase())

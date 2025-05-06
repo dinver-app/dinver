@@ -69,9 +69,15 @@
   "establishment_types": "Tip objekta",
   "food_types": "Tipovi hrane",
   "establishment_perks": "Pogodnosti objekta",
+  "meal_types": "Tipovi obroka",
   "no_establishment_perks_selected": "Nema odabranih pogodnosti objekta",
   "no_establishment_types_selected": "Nema odabranog tipa objekta",
   "no_food_types_selected": "Nema odabranih tipova hrane",
+  "no_meal_types_selected": "Nema odabranih tipova obroka",
+  "price_category": "Cjenovna kategorija",
+  "no_price_category_selected": "Nema odabrane cjenovne kategorije",
+  "select_price_category": "Odaberi cjenovnu kategoriju",
+  "add_meal_types": "Dodaj tipove obroka",
   "all_changes_saved": "Sve su promjene spremljene",
   "failed_to_save_changes": "Greška pri spremanju promjena",
   "saving": "Spremanje",
@@ -393,5 +399,6 @@
   "service": "Posluga",
   "atmosphere": "Atmosfera",
   "value_for_money": "Vrijednost za novac",
-  "restoran_nije_dogovoren": "Restoran nije dogovoren"
+  "restoran_nije_dogovoren": "Restoran nije dogovoren",
+  "no_results_found": "Nema rezultata"
 }
