@@ -71,6 +71,7 @@ const getAllRestaurants = async (req, res) => {
         'slug',
         'isClaimed',
         'email',
+        'priceCategoryId',
       ],
       limit,
       offset,
@@ -189,6 +190,7 @@ const getRestaurants = async (req, res) => {
         'slug',
         'isClaimed',
         'email',
+        'priceCategoryId',
       ],
       limit,
       offset,
@@ -268,7 +270,44 @@ const getRestaurants = async (req, res) => {
 const getRestaurantDetails = async (req, res) => {
   try {
     const { slug } = req.params;
-    const restaurant = await Restaurant.findOne({ where: { slug } });
+    const restaurant = await Restaurant.findOne({
+      where: { slug },
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'openingHours',
+        'photos',
+        'placeId',
+        'types',
+        'workingHoursInfo',
+        'thumbnailUrl',
+        'userRatingsTotal',
+        'isOpenNow',
+        'iconUrl',
+        'slug',
+        'websiteUrl',
+        'fbUrl',
+        'igUrl',
+        'ttUrl',
+        'email',
+        'images',
+        'isClaimed',
+        'customWorkingDays',
+        'foodTypes',
+        'establishmentTypes',
+        'establishmentPerks',
+        'mealTypes',
+        'priceCategoryId',
+      ],
+    });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
@@ -308,7 +347,7 @@ async function viewRestaurant(req, res) {
 
 const addRestaurant = async (req, res) => {
   try {
-    const { name, address } = req.body;
+    const { name, address, priceCategoryId } = req.body;
 
     if (!name || !address) {
       return res.status(400).json({ error: 'Name and address are required' });
@@ -320,6 +359,7 @@ const addRestaurant = async (req, res) => {
       name,
       address,
       slug,
+      priceCategoryId,
     });
 
     // Log the create action
@@ -358,6 +398,7 @@ async function updateRestaurant(req, res) {
       phone,
       ttUrl,
       email,
+      priceCategoryId,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -388,6 +429,7 @@ async function updateRestaurant(req, res) {
       ttUrl,
       email,
       thumbnailUrl,
+      priceCategoryId,
     });
 
     await logAudit({
@@ -555,8 +597,13 @@ async function updateWorkingHours(req, res) {
 async function updateFilters(req, res) {
   try {
     const { id } = req.params;
-    const { foodTypes, establishmentTypes, establishmentPerks, mealTypes } =
-      req.body;
+    const {
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      priceCategoryId,
+    } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -568,6 +615,7 @@ async function updateFilters(req, res) {
       establishmentTypes: restaurant.establishmentTypes || [],
       establishmentPerks: restaurant.establishmentPerks || [],
       mealTypes: restaurant.mealTypes || [],
+      priceCategoryId: restaurant.priceCategoryId,
     };
 
     await restaurant.update({
@@ -575,6 +623,7 @@ async function updateFilters(req, res) {
       establishmentTypes: establishmentTypes,
       establishmentPerks: establishmentPerks,
       mealTypes: mealTypes,
+      priceCategoryId: priceCategoryId,
     });
 
     const logChange = async (oldValues, newValues, entity) => {
@@ -612,6 +661,21 @@ async function updateFilters(req, res) {
       Entities.FILTERS.ESTABLISHMENT_PERKS,
     );
     await logChange(oldData.mealTypes, mealTypes, Entities.FILTERS.MEAL_TYPES);
+
+    // Log price category change separately since it's a single value, not an array
+    if (oldData.priceCategoryId !== priceCategoryId) {
+      await logAudit({
+        userId: req.user ? req.user.id : null,
+        action: ActionTypes.UPDATE,
+        entity: Entities.FILTERS.PRICE_CATEGORY,
+        entityId: restaurant.id,
+        restaurantId: restaurant.id,
+        changes: {
+          old: oldData.priceCategoryId,
+          new: priceCategoryId,
+        },
+      });
+    }
 
     res.json({ message: 'Filters updated successfully', restaurant });
   } catch (error) {
@@ -723,7 +787,43 @@ const updateImageOrder = async (req, res) => {
 const getRestaurantById = async (req, res) => {
   try {
     const { id } = req.params;
-    const restaurant = await Restaurant.findByPk(id);
+    const restaurant = await Restaurant.findByPk(id, {
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'openingHours',
+        'photos',
+        'placeId',
+        'types',
+        'workingHoursInfo',
+        'thumbnailUrl',
+        'userRatingsTotal',
+        'isOpenNow',
+        'iconUrl',
+        'slug',
+        'websiteUrl',
+        'fbUrl',
+        'igUrl',
+        'ttUrl',
+        'email',
+        'images',
+        'isClaimed',
+        'customWorkingDays',
+        'foodTypes',
+        'establishmentTypes',
+        'establishmentPerks',
+        'mealTypes',
+        'priceCategoryId',
+      ],
+    });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
@@ -959,6 +1059,7 @@ const getAllRestaurantsWithDetails = async (req, res) => {
         'slug',
         'isClaimed',
         'email',
+        'priceCategoryId',
       ],
       order: [['name', 'ASC']],
     });
@@ -1023,6 +1124,7 @@ const getSampleRestaurants = async (req, res) => {
         'slug',
         'isClaimed',
         'email',
+        'priceCategoryId',
       ],
       order: [['name', 'ASC']], // Sortiramo po imenu da uvijek dobijemo iste
       limit: 50,
