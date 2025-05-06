@@ -417,5 +417,9 @@
   "restoran_nije_dogovoren": "Restaurant is not claimed yet",
   "restaurant_description": "Restaurant Description",
   "restaurant_description_placeholder": "Enter a brief description of your restaurant (max 150 characters)",
-  "description_too_long": "Description is too long, maximum 150 characters allowed"
+  "description_too_long": "Description is too long, maximum 150 characters allowed",
+  "recommendation": "Recommended",
+  "landscape": "landscape",
+  "horizontal": "horizontal",
+  "image": "image"
 }

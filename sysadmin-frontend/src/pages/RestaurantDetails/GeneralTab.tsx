@@ -167,16 +167,20 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         <label className="block text-sm font-medium text-gray-700">
           {t("thumbnail")}
         </label>
+        <p className="text-xs text-gray-500 mb-2">
+          {t("recommendation")}: 16:9 {t("landscape")} ({t("horizontal")}){" "}
+          {t("image")} (1280×720 px)
+        </p>
         {formData.thumbnailUrl ? (
           <img
             src={formData.thumbnailUrl}
             alt="Thumbnail"
-            className="mb-2 w-32 h-32 object-cover cursor-pointer"
+            className="mb-2 w-64 h-36 object-cover cursor-pointer rounded-md"
             onClick={() => document.getElementById("fileInput")?.click()}
           />
         ) : (
           <div
-            className="mb-2 w-32 h-32 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer"
+            className="mb-2 w-64 h-36 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer rounded-md"
             onClick={() => document.getElementById("fileInput")?.click()}
           >
             <span className="text-sm text-gray-500 p-2 text-center">
@@ -187,6 +191,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         <input
           id="fileInput"
           type="file"
+          accept="image/*"
           style={{ display: "none" }}
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
@@ -195,7 +200,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               reader.onload = (event) => {
                 setFormData((prev) => ({
                   ...prev,
-                  thumbnail_url: event.target?.result as string,
+                  thumbnailUrl: event.target?.result as string,
                 }));
               };
               reader.readAsDataURL(e.target.files[0]);

@@ -415,5 +415,9 @@
   "restoran_nije_dogovoren": "Restoran nije dogovoren",
   "restaurant_description": "Opis restorana",
   "restaurant_description_placeholder": "Unesite kratki opis restorana (maksimalno 150 znakova)",
-  "description_too_long": "Opis je predugačak, dozvoljeno je maksimalno 150 znakova"
+  "description_too_long": "Opis je predugačak, dozvoljeno je maksimalno 150 znakova",
+  "recommendation": "Preporučeno",
+  "landscape": "pejzažna",
+  "horizontal": "vodoravna",
+  "image": "slika"
 }
