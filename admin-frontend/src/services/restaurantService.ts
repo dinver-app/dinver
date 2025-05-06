@@ -51,6 +51,16 @@ export const getAllEstablishmentPerks = async () => {
   return response.data;
 };
 
+export const getAllMealTypes = async () => {
+  const response = await apiClient.get("/api/admin/types/meal-types");
+  return response.data;
+};
+
+export const getAllPriceCategories = async () => {
+  const response = await apiClient.get("/api/admin/types/price-categories");
+  return response.data;
+};
+
 export const addRestaurantImages = async (
   id: string,
   restaurant_slug: string,

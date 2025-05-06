@@ -197,42 +197,6 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
   const { items, selectedItems, title } = getModalContent();
 
-  // Get names of selected items for each category
-  const getSelectedItemNames = (itemsList: any[], selectedIds: number[]) => {
-    return selectedIds.map((id) => {
-      const item = itemsList.find((item) => item.id === id);
-      return i18n.language === "en" ? item?.nameEn : item?.nameHr;
-    });
-  };
-
-  const selectedFoodTypeNames = getSelectedItemNames(
-    foodTypes,
-    selectedFoodTypes
-  );
-  const selectedEstablishmentTypeNames = getSelectedItemNames(
-    establishmentTypes,
-    selectedEstablishmentTypes
-  );
-  const selectedEstablishmentPerkNames = getSelectedItemNames(
-    establishmentPerks,
-    selectedEstablishmentPerks
-  );
-  const selectedMealTypeNames = getSelectedItemNames(
-    mealTypes,
-    selectedMealTypes
-  );
-
-  const selectedPriceCategoryName = priceCategories.find(
-    (pc) => pc.id === selectedPriceCategory
-  )
-    ? i18n.language === "en"
-      ? priceCategories.find((pc) => pc.id === selectedPriceCategory)?.nameEn
-      : priceCategories.find((pc) => pc.id === selectedPriceCategory)?.nameHr
-    : "";
-
-  const selectedPriceCategoryIcon =
-    priceCategories.find((pc) => pc.id === selectedPriceCategory)?.icon || "";
-
   return (
     <div className="flex flex-col">
       {/* Header with title and save status */}
