@@ -400,5 +400,12 @@
   "atmosphere": "Atmosfera",
   "value_for_money": "Vrijednost za novac",
   "restoran_nije_dogovoren": "Restoran nije dogovoren",
-  "no_results_found": "Nema rezultata"
+  "no_results_found": "Nema rezultata",
+  "how_expensive_is_this_restaurant": "Koliko je skup ovaj restoran",
+  "optional": "Opcionalno",
+  "clear": "Očisti",
+  "select_establishment_types": "Odaberite tipove objekta za ovaj restoran",
+  "select_meal_types": "Odaberite tipove obroka koje restoran nudi",
+  "select_food_types": "Odaberite tipove hrane koja se služi u ovom restoranu",
+  "select_establishment_perks": "Odaberite dodatne pogodnosti koje ovaj objekt nudi"
 }
