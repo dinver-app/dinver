@@ -414,5 +414,10 @@
   "recommendation": "Preporučeno",
   "landscape": "pejzažna",
   "horizontal": "vodoravna",
-  "image": "slika"
+  "image": "slika",
+  "basic_information": "Osnovne Informacije",
+  "contact_information": "Kontakt Informacije",
+  "social_media": "Društvene Mreže",
+  "location": "Lokacija",
+  "click_to_change": "Kliknite za promjenu"
 }

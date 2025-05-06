@@ -416,5 +416,10 @@
   "recommendation": "Recommended",
   "landscape": "landscape",
   "horizontal": "horizontal",
-  "image": "image"
+  "image": "image",
+  "basic_information": "Basic Information",
+  "contact_information": "Contact Information",
+  "social_media": "Social Media",
+  "location": "Location",
+  "click_to_change": "Click to change"
 }
