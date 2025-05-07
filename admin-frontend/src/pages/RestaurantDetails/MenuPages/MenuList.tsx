@@ -117,19 +117,19 @@ const MenuList: React.FC<MenuListProps> = memo(
           <div className="flex space-x-3">
             <button
               onClick={onAddCategory}
-              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="primary-button px-3 py-1.5"
             >
               {t("add_category")}
             </button>
             <button
               onClick={() => onAddMenuItem(undefined)}
-              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="primary-button px-3 py-1.5"
             >
               {t("add_menu_item")}
             </button>
             <button
               onClick={() => setIsOrderCategoriesModalOpen(true)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="secondary-button px-3 py-1.5"
             >
               {t("order_categories")}
             </button>

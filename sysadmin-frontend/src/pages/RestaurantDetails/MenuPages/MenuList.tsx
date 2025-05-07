@@ -117,19 +117,19 @@ const MenuList: React.FC<MenuListProps> = memo(
           <div className="flex space-x-3">
             <button
               onClick={onAddCategory}
-              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="primary-button px-3 py-1.5"
             >
               {t("add_category")}
             </button>
             <button
               onClick={() => onAddMenuItem(undefined)}
-              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="primary-button px-3 py-1.5"
             >
               {t("add_menu_item")}
             </button>
             <button
               onClick={() => setIsOrderCategoriesModalOpen(true)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="secondary-button px-3 py-1.5"
             >
               {t("order_categories")}
             </button>
@@ -293,7 +293,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                     </p>
                     <button
                       onClick={() => onAddMenuItem(category.id)}
-                      className="mt-3 inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      className="mt-3 primary-button text-xs"
                     >
                       {t("add_menu_item")}
                     </button>
@@ -437,7 +437,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                     </p>
                     <button
                       onClick={() => onAddMenuItem(undefined)}
-                      className="mt-3 inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      className="mt-3 primary-button text-xs"
                     >
                       {t("add_menu_item")}
                     </button>
@@ -470,15 +470,12 @@ const MenuList: React.FC<MenuListProps> = memo(
                 {t("get_started_by_adding_categories_or_items")}
               </p>
               <div className="mt-6 flex justify-center space-x-4">
-                <button
-                  onClick={onAddCategory}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
+                <button onClick={onAddCategory} className="primary-button">
                   {t("add_category")}
                 </button>
                 <button
                   onClick={() => onAddMenuItem(undefined)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  className="primary-button ml-2"
                 >
                   {t("add_menu_item")}
                 </button>

@@ -144,12 +144,15 @@ const Images = ({
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
-          <button onClick={handleUploadClick} className="primary-button">
+          <button
+            onClick={handleUploadClick}
+            className="primary-button px-3 py-1.5"
+          >
             {t("upload_images")}
           </button>
           <button
             onClick={() => setIsOrderModalOpen(true)}
-            className="secondary-button ml-2"
+            className="secondary-button ml-4 px-3 py-1.5"
           >
             {t("reorder_images")}
           </button>

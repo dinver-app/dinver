@@ -187,7 +187,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           )}
           <button
             onClick={handleSave}
-            className="ml-4 px-4 py-2 bg-gray-800 text-white font-medium rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="primary-button px-3 py-1.5 ml-4"
           >
             {t("save")}
           </button>
