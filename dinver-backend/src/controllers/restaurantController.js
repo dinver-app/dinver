@@ -307,6 +307,12 @@ const getRestaurantDetails = async (req, res) => {
         'mealTypes',
         'priceCategoryId',
       ],
+      include: [
+        {
+          model: require('../../models').RestaurantTranslation,
+          as: 'translations',
+        },
+      ],
     });
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
@@ -345,9 +351,23 @@ async function viewRestaurant(req, res) {
   }
 }
 
+// Helper for upserting translations
+async function upsertRestaurantTranslations(restaurantId, translations) {
+  const { RestaurantTranslation } = require('../../models');
+  for (const t of translations) {
+    const [translation, created] = await RestaurantTranslation.findOrCreate({
+      where: { restaurantId, language: t.language },
+      defaults: { name: t.name, description: t.description },
+    });
+    if (!created) {
+      await translation.update({ name: t.name, description: t.description });
+    }
+  }
+}
+
 const addRestaurant = async (req, res) => {
   try {
-    const { name, address, priceCategoryId } = req.body;
+    const { name, address, priceCategoryId, translations = [] } = req.body;
 
     if (!name || !address) {
       return res.status(400).json({ error: 'Name and address are required' });
@@ -361,6 +381,11 @@ const addRestaurant = async (req, res) => {
       slug,
       priceCategoryId,
     });
+
+    // Add translations if provided
+    if (translations && Array.isArray(translations)) {
+      await upsertRestaurantTranslations(newRestaurant.id, translations);
+    }
 
     // Log the create action
     await logAudit({
@@ -400,6 +425,7 @@ async function updateRestaurant(req, res) {
       email,
       priceCategoryId,
       description,
+      translations = [],
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -440,6 +466,11 @@ async function updateRestaurant(req, res) {
       thumbnailUrl,
       priceCategoryId,
     });
+
+    // Upsert translations if provided
+    if (translations && Array.isArray(translations)) {
+      await upsertRestaurantTranslations(restaurant.id, translations);
+    }
 
     await logAudit({
       userId: req.user ? req.user.id : null,
