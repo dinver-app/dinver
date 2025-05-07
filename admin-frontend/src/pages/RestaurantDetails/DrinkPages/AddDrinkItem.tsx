@@ -19,12 +19,14 @@ interface AddDrinkItemProps {
     imageFile?: File;
   }) => Promise<void>;
   categories: Category[];
+  initialCategoryId?: string;
 }
 
 const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
   onCancel,
   onSave,
   categories,
+  initialCategoryId,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
@@ -36,7 +38,9 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
   });
   const [itemPrice, setItemPrice] = useState("");
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    initialCategoryId || ""
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {

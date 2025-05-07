@@ -346,6 +346,7 @@ const createCategory = async (req, res) => {
         menuCategoryId: category.id,
         language: translation.language,
         name: translation.name,
+        description: translation.description || null,
       }),
     );
 
@@ -370,6 +371,7 @@ const createCategory = async (req, res) => {
     const result = {
       ...createdCategory.get(),
       name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
     };
 
     await logAudit({
@@ -418,6 +420,7 @@ const updateCategory = async (req, res) => {
         menuCategoryId: category.id,
         language: translation.language,
         name: translation.name,
+        description: translation.description || null,
       });
     }
 
@@ -434,6 +437,7 @@ const updateCategory = async (req, res) => {
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
+      description: (userTranslation || anyTranslation)?.description || '',
       translations: updated.translations,
     };
 

@@ -8,7 +8,7 @@ export const getRestaurantDetails = async (slug: string) => {
 export const updateRestaurant = async (id: string, updatedData: any) => {
   try {
     const response = await apiClient.put(
-      `/api/admin/restaurants/${id}`,
+      `api/admin/restaurants/details/${id}`,
       updatedData
     );
     return response.data;
@@ -48,6 +48,16 @@ export const getAllEstablishmentTypes = async () => {
 
 export const getAllEstablishmentPerks = async () => {
   const response = await apiClient.get("/api/admin/types/establishment-perks");
+  return response.data;
+};
+
+export const getAllMealTypes = async () => {
+  const response = await apiClient.get("/api/admin/types/meal-types");
+  return response.data;
+};
+
+export const getAllPriceCategories = async () => {
+  const response = await apiClient.get("/api/admin/types/price-categories");
   return response.data;
 };
 

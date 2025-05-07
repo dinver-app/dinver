@@ -22,17 +22,31 @@ const EditCategory: React.FC<EditCategoryProps> = ({
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
-  const [translations, setTranslations] = useState<Record<Language, string>>({
-    [Language.HR]:
-      category.translations.find((t) => t.language === Language.HR)?.name || "",
-    [Language.EN]:
-      category.translations.find((t) => t.language === Language.EN)?.name || "",
+  const [translations, setTranslations] = useState<
+    Record<Language, { name: string; description: string }>
+  >({
+    [Language.HR]: {
+      name:
+        category.translations.find((t) => t.language === Language.HR)?.name ||
+        "",
+      description:
+        category.translations.find((t) => t.language === Language.HR)
+          ?.description || "",
+    },
+    [Language.EN]: {
+      name:
+        category.translations.find((t) => t.language === Language.EN)?.name ||
+        "",
+      description:
+        category.translations.find((t) => t.language === Language.EN)
+          ?.description || "",
+    },
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const hasAnyName = Object.values(translations).some(
-      (value) => value.trim() !== ""
+      (value) => value.name.trim() !== ""
     );
 
     if (!hasAnyName) {
@@ -41,9 +55,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     }
 
     const translationsArray = Object.entries(translations)
-      .filter(([_, value]) => value.trim() !== "")
-      .map(([language, name]) => ({
-        name: name.trim(),
+      .filter(([_, value]) => value.name.trim() !== "")
+      .map(([language, value]) => ({
+        name: value.name.trim(),
+        description: value.description.trim(),
         language: language as Language,
       }));
 
@@ -52,17 +67,19 @@ const EditCategory: React.FC<EditCategoryProps> = ({
 
     try {
       await onSave(category.id, { translations: translationsArray });
-      toast.dismiss(loadingToast);
-    } catch (error) {
-      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
+      toast.dismiss(loadingToast);
     }
   };
 
-  const handleTranslate = async () => {
+  const handleTranslate = async (field: "name" | "description") => {
     try {
-      const sourceText = translations[activeTab];
+      const sourceText =
+        field === "name"
+          ? translations[activeTab].name
+          : translations[activeTab].description;
+
       if (!sourceText.trim()) {
         toast.error(t("nothing_to_translate"));
         return;
@@ -76,7 +93,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
 
       setTranslations((prev) => ({
         ...prev,
-        [targetLang]: translatedText,
+        [targetLang]: {
+          ...prev[targetLang],
+          [field]: translatedText,
+        },
       }));
 
       toast.success(t("translation_success"));
@@ -96,10 +116,10 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       <div className="flex items-start">
         <div>
           <h2 className="text-xl font-bold text-gray-800">
-            {t("edit_existing_category")}
+            {t("Uredi kategoriju")}
           </h2>
           <p className="text-gray-600 text-sm mb-4">
-            {t("edit_existing_category_description")}
+            {t("Uredi postojeću kategoriju u jelovniku.")}
           </p>
         </div>
       </div>
@@ -132,7 +152,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translations.hr ? "bg-green-500" : "bg-gray-300"
+              translations.hr.name ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("croatian")}</span>
@@ -140,7 +160,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translations.en ? "bg-green-500" : "bg-gray-300"
+              translations.en.name ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("english")}</span>
@@ -153,15 +173,21 @@ const EditCategory: React.FC<EditCategoryProps> = ({
             {t("category_name")} (
             {activeTab === Language.HR ? t("croatian") : t("english")})
           </label>
-          <TranslateButton onClick={handleTranslate} className="ml-2" />
+          <TranslateButton
+            onClick={() => handleTranslate("name")}
+            className="ml-2"
+          />
         </div>
         <input
           type="text"
-          value={translations[activeTab]}
+          value={translations[activeTab].name}
           onChange={(e) =>
             setTranslations((prev) => ({
               ...prev,
-              [activeTab]: e.target.value,
+              [activeTab]: {
+                ...prev[activeTab],
+                name: e.target.value,
+              },
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
@@ -171,6 +197,35 @@ const EditCategory: React.FC<EditCategoryProps> = ({
               : t("enter_category_name")
           }
         />
+      </div>
+
+      <div className="mb-6 max-w-xl">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {t("category_description")} (
+            {activeTab === Language.HR ? t("croatian") : t("english")})
+          </label>
+          <TranslateButton
+            onClick={() => handleTranslate("description")}
+            className="ml-2"
+          />
+        </div>
+        <textarea
+          value={translations[activeTab].description}
+          onChange={(e) =>
+            setTranslations((prev) => ({
+              ...prev,
+              [activeTab]: {
+                ...prev[activeTab],
+                description: e.target.value,
+              },
+            }))
+          }
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={t("enter_category_description")}
+          rows={4}
+        />
+        <p className="text-xs text-gray-500 mt-1">{t("optional")}</p>
       </div>
 
       <div className="flex justify-start space-x-3">

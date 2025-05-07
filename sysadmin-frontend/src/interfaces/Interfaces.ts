@@ -20,6 +20,7 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
+  description?: string;
   workingHoursInfo?: string;
   thumbnailUrl?: string;
   thumbnail?: string;
@@ -34,6 +35,8 @@ export interface Restaurant {
   foodTypes?: number[];
   establishmentTypes?: number[];
   establishmentPerks?: number[];
+  mealTypes?: number[];
+  priceCategoryId?: number;
   iconUrl?: string;
   photoReference?: string;
   vicinity?: string;
@@ -59,6 +62,11 @@ export interface Restaurant {
   reviewRating?: number;
   email?: string;
   place?: string;
+  translations?: {
+    language: string;
+    name: string;
+    description: string;
+  }[];
 }
 
 export interface FoodType {
@@ -80,6 +88,21 @@ export interface EstablishmentPerk {
   nameEn: string;
   nameHr: string;
   icon: string;
+}
+
+export interface MealType {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+}
+
+export interface PriceCategory {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+  level: number;
 }
 
 export enum Language {
@@ -109,6 +132,7 @@ export interface MenuItem {
 export interface Category {
   id: string;
   name: string;
+  description?: string;
   restaurantId: string;
   translations: Translation[];
   position: number;

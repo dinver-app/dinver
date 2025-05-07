@@ -8,22 +8,24 @@ import TranslateButton from "../../../components/TranslateButton";
 interface AddCategoryProps {
   onCancel: () => void;
   onSave: (translates: {
-    translates: { name: string; language: string }[];
+    translates: { name: string; description?: string; language: string }[];
   }) => Promise<void>;
 }
 
 const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
-  const [translates, setTranslates] = useState<Record<Language, string>>({
-    [Language.HR]: "",
-    [Language.EN]: "",
+  const [translates, setTranslates] = useState<
+    Record<Language, { name: string; description: string }>
+  >({
+    [Language.HR]: { name: "", description: "" },
+    [Language.EN]: { name: "", description: "" },
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     const hasAnyName = Object.values(translates).some(
-      (value) => value.trim() !== ""
+      (value) => value.name.trim() !== ""
     );
 
     if (!hasAnyName) {
@@ -32,9 +34,10 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
     }
 
     const translatesArray = Object.entries(translates)
-      .filter(([_, value]) => value.trim() !== "")
-      .map(([language, name]) => ({
-        name: name.trim(),
+      .filter(([_, value]) => value.name.trim() !== "")
+      .map(([language, value]) => ({
+        name: value.name.trim(),
+        description: value.description.trim() || undefined,
         language: language as string,
       }));
 
@@ -43,17 +46,19 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
 
     try {
       await onSave({ translates: translatesArray });
-      toast.dismiss(loadingToast);
-    } catch (error) {
-      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
+      toast.dismiss(loadingToast);
     }
   };
 
-  const handleTranslate = async () => {
+  const handleTranslate = async (field: "name" | "description") => {
     try {
-      const sourceText = translates[activeTab];
+      const sourceText =
+        field === "name"
+          ? translates[activeTab].name
+          : translates[activeTab].description;
+
       if (!sourceText.trim()) {
         toast.error(t("nothing_to_translate"));
         return;
@@ -67,7 +72,10 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
 
       setTranslates((prev) => ({
         ...prev,
-        [targetLang]: translatedText,
+        [targetLang]: {
+          ...prev[targetLang],
+          [field]: translatedText,
+        },
       }));
 
       toast.success(t("translation_success"));
@@ -123,7 +131,7 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translates.hr ? "bg-green-500" : "bg-gray-300"
+              translates.hr.name ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("croatian")}</span>
@@ -131,7 +139,7 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
-              translates.en ? "bg-green-500" : "bg-gray-300"
+              translates.en.name ? "bg-green-500" : "bg-gray-300"
             }`}
           />
           <span className="text-sm text-gray-600">{t("english")}</span>
@@ -144,15 +152,21 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
             {t("category_name")} (
             {activeTab === Language.HR ? t("croatian") : t("english")})
           </label>
-          <TranslateButton onClick={handleTranslate} className="ml-2" />
+          <TranslateButton
+            onClick={() => handleTranslate("name")}
+            className="ml-2"
+          />
         </div>
         <input
           type="text"
-          value={translates[activeTab]}
+          value={translates[activeTab].name}
           onChange={(e) =>
             setTranslates((prev) => ({
               ...prev,
-              [activeTab]: e.target.value,
+              [activeTab]: {
+                ...prev[activeTab],
+                name: e.target.value,
+              },
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
@@ -162,6 +176,35 @@ const AddCategory: React.FC<AddCategoryProps> = ({ onCancel, onSave }) => {
               : t("enter_category_name")
           }
         />
+      </div>
+
+      <div className="mb-6 max-w-xl">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {t("category_description")} (
+            {activeTab === Language.HR ? t("croatian") : t("english")})
+          </label>
+          <TranslateButton
+            onClick={() => handleTranslate("description")}
+            className="ml-2"
+          />
+        </div>
+        <textarea
+          value={translates[activeTab].description}
+          onChange={(e) =>
+            setTranslates((prev) => ({
+              ...prev,
+              [activeTab]: {
+                ...prev[activeTab],
+                description: e.target.value,
+              },
+            }))
+          }
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={t("enter_category_description")}
+          rows={4}
+        />
+        <p className="text-xs text-gray-500 mt-1">{t("optional")}</p>
       </div>
 
       <div className="flex justify-start space-x-3">

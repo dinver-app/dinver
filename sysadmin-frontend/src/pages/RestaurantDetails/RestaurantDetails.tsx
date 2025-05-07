@@ -89,7 +89,7 @@ const RestaurantDetails = () => {
       <div className="flex justify-between items-center mb-4 gap-4">
         <button
           onClick={() => navigate("/restaurants")}
-          className="secondary-button"
+          className="secondary-button px-3 py-1.5"
         >
           &larr; {t("back_to_restaurants")}
         </button>

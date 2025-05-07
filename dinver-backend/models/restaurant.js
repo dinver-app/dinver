@@ -34,6 +34,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'reviews',
       });
+
+      Restaurant.hasMany(models.RestaurantTranslation, {
+        foreignKey: 'restaurantId',
+        as: 'translations',
+      });
     }
   }
   Restaurant.init(

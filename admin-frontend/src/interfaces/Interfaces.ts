@@ -12,6 +12,7 @@ export interface Restaurant {
   id?: string;
   name: string;
   address: string;
+  description?: string;
   workingHoursInfo?: string;
   thumbnailUrl?: string;
   thumbnail?: string;
@@ -26,6 +27,8 @@ export interface Restaurant {
   foodTypes?: number[];
   establishmentTypes?: number[];
   establishmentPerks?: number[];
+  mealTypes?: number[];
+  priceCategoryId?: number;
   iconUrl?: string;
   photoReference?: string;
   vicinity?: string;
@@ -50,6 +53,11 @@ export interface Restaurant {
   images?: string[];
   place?: string;
   email?: string;
+  translations?: {
+    language: string;
+    name: string;
+    description: string;
+  }[];
 }
 
 export interface FoodType {
@@ -67,6 +75,20 @@ export interface EstablishmentType {
 }
 
 export interface EstablishmentPerk {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+}
+
+export interface MealType {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
+}
+
+export interface PriceCategory {
   id: number;
   nameEn: string;
   nameHr: string;

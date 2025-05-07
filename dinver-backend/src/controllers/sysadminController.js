@@ -66,14 +66,23 @@ async function createRestaurant(req, res) {
 async function updateRestaurant(req, res) {
   try {
     const { id } = req.params;
-    const { name, address } = req.body;
+    const { name, address, description } = req.body;
     const restaurant = await Restaurant.findByPk(id);
 
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    await restaurant.update({ name, address });
+    // Validate description length
+    if (description && description.length > 150) {
+      return res
+        .status(400)
+        .json({
+          error: 'Description is too long, maximum 150 characters allowed',
+        });
+    }
+
+    await restaurant.update({ name, address, description });
     res.json(restaurant);
   } catch (error) {
     res

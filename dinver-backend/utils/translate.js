@@ -20,7 +20,11 @@ const autoTranslate = async (translations) => {
   }
 
   // Provjeri i prevedi opise
-  if (hrTranslation.description && !enTranslation.description) {
+  if (
+    hrTranslation.description !== undefined &&
+    hrTranslation.description !== '' &&
+    enTranslation.description === undefined
+  ) {
     const [descriptionTranslation] = await translate.translate(
       hrTranslation.description,
       {
@@ -29,7 +33,11 @@ const autoTranslate = async (translations) => {
       },
     );
     enTranslation.description = descriptionTranslation;
-  } else if (enTranslation.description && !hrTranslation.description) {
+  } else if (
+    enTranslation.description !== undefined &&
+    enTranslation.description !== '' &&
+    hrTranslation.description === undefined
+  ) {
     const [descriptionTranslation] = await translate.translate(
       enTranslation.description,
       {
@@ -41,13 +49,21 @@ const autoTranslate = async (translations) => {
   }
 
   // Provjeri i prevedi imena
-  if (hrTranslation.name && !enTranslation.name) {
+  if (
+    hrTranslation.name !== undefined &&
+    hrTranslation.name !== '' &&
+    enTranslation.name === undefined
+  ) {
     const [nameTranslation] = await translate.translate(hrTranslation.name, {
       from: 'hr',
       to: 'en',
     });
     enTranslation.name = nameTranslation;
-  } else if (enTranslation.name && !hrTranslation.name) {
+  } else if (
+    enTranslation.name !== undefined &&
+    enTranslation.name !== '' &&
+    hrTranslation.name === undefined
+  ) {
     const [nameTranslation] = await translate.translate(enTranslation.name, {
       from: 'en',
       to: 'hr',

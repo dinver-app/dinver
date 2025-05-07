@@ -28,4 +28,18 @@ router.get(
   typeController.getAllEstablishmentPerks,
 );
 
+router.get(
+  '/types/meal-types',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.getAllMealTypes,
+);
+
+router.get(
+  '/types/price-categories',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.getAllPriceCategories,
+);
+
 module.exports = router;
