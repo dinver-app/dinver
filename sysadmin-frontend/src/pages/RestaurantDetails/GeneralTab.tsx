@@ -3,10 +3,18 @@ import { updateRestaurant } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { translateText } from "../../services/translateService";
+import TranslateButton from "../../components/TranslateButton";
 
 interface GeneralTabProps {
   restaurant: Restaurant;
   onUpdate: (updatedRestaurant: Restaurant) => void;
+}
+
+interface Translation {
+  language: string;
+  name: string;
+  description: string;
 }
 
 const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
@@ -23,8 +31,26 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     ttUrl: restaurant.ttUrl || "",
     phone: restaurant.phone || "",
     email: restaurant.email || "",
-    description: restaurant.description || "",
   });
+
+  const [translations, setTranslations] = useState<Translation[]>([
+    {
+      language: "hr",
+      name: restaurant.name || "",
+      description:
+        restaurant.translations?.find((t) => t.language === "hr")
+          ?.description ||
+        restaurant.description ||
+        "",
+    },
+    {
+      language: "en",
+      name: restaurant.name || "",
+      description:
+        restaurant.translations?.find((t) => t.language === "en")
+          ?.description || "",
+    },
+  ]);
 
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState({
@@ -68,8 +94,17 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   ) => {
     const { name, value } = e.target;
 
-    // Check description length
-    if (name === "description" && value.length > 150) {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    validateInput(name, value);
+    setIsDirty(true);
+  };
+
+  const handleTranslationChange = (
+    language: string,
+    field: string,
+    value: string
+  ) => {
+    if (field === "description" && value.length > 150) {
       setErrors((prev) => ({
         ...prev,
         description: t("description_too_long"),
@@ -77,9 +112,41 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       return;
     }
 
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    validateInput(name, value);
+    setTranslations((prev) =>
+      prev.map((translation) =>
+        translation.language === language
+          ? { ...translation, [field]: value }
+          : translation
+      )
+    );
     setIsDirty(true);
+  };
+
+  const handleTranslate = async (language: string, field: "description") => {
+    try {
+      const sourceText =
+        translations.find((t) => t.language === language)?.[field] || "";
+
+      if (!sourceText.trim()) {
+        toast.error(t("nothing_to_translate"));
+        return;
+      }
+
+      const targetLang = language === "hr" ? "en" : "hr";
+      const translatedText = await translateText(sourceText, targetLang);
+
+      setTranslations((prev) =>
+        prev.map((translation) =>
+          translation.language === targetLang
+            ? { ...translation, [field]: translatedText }
+            : translation
+        )
+      );
+
+      toast.success(t("translation_success"));
+    } catch (error) {
+      toast.error(t("translation_failed"));
+    }
   };
 
   const handleSave = async () => {
@@ -90,7 +157,6 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
-      formDataToSend.append("description", formData.description);
       formDataToSend.append(
         "websiteUrl",
         errors.websiteUrl === "" ? formData.websiteUrl : ""
@@ -104,8 +170,16 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         formDataToSend.append("thumbnail", file);
       }
 
+      // Add translations as a JSON string
+      const translationsToSend = translations.map((t) => ({
+        language: t.language,
+        name: formData.name, // Use the main name for both languages
+        description: t.description,
+      }));
+      formDataToSend.append("translations", JSON.stringify(translationsToSend));
+
       await updateRestaurant(restaurant.id || "", formDataToSend);
-      onUpdate({ ...restaurant, ...formData });
+      onUpdate({ ...restaurant, ...formData, translations });
 
       // Show success toast
       toast.success(t("changes_saved_successfully"), { id: toastId });
@@ -220,26 +294,47 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("restaurant_description")}
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder={t("restaurant_description_placeholder")}
-                className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-24 resize-none"
-                maxLength={150}
-              />
-              <div className="flex justify-between mt-1">
-                {errors.description && (
-                  <p className="text-sm text-red-500">{errors.description}</p>
-                )}
-                <div className="text-xs text-gray-500 ml-auto">
-                  {formData.description.length}/150
+            {/* Translations */}
+            <div className="space-y-4">
+              {translations.map((translation) => (
+                <div key={translation.language}>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      {t("restaurant_description")} (
+                      {translation.language.toUpperCase()})
+                    </label>
+                    <TranslateButton
+                      onClick={() =>
+                        handleTranslate(translation.language, "description")
+                      }
+                      className="ml-2"
+                    />
+                  </div>
+                  <textarea
+                    value={translation.description}
+                    onChange={(e) =>
+                      handleTranslationChange(
+                        translation.language,
+                        "description",
+                        e.target.value
+                      )
+                    }
+                    placeholder={t("restaurant_description_placeholder")}
+                    className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-24 resize-none"
+                    maxLength={150}
+                  />
+                  <div className="flex justify-between mt-1">
+                    {errors.description && (
+                      <p className="text-sm text-red-500">
+                        {errors.description}
+                      </p>
+                    )}
+                    <div className="text-xs text-gray-500 ml-auto">
+                      {translation.description.length}/150
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

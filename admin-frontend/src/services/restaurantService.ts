@@ -8,7 +8,7 @@ export const getRestaurantDetails = async (slug: string) => {
 export const updateRestaurant = async (id: string, updatedData: any) => {
   try {
     const response = await apiClient.put(
-      `/api/admin/restaurants/${id}`,
+      `api/admin/restaurants/details/${id}`,
       updatedData
     );
     return response.data;

@@ -62,6 +62,11 @@ export interface Restaurant {
   reviewRating?: number;
   email?: string;
   place?: string;
+  translations?: {
+    language: string;
+    name: string;
+    description: string;
+  }[];
 }
 
 export interface FoodType {

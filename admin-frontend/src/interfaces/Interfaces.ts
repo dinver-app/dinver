@@ -53,6 +53,11 @@ export interface Restaurant {
   images?: string[];
   place?: string;
   email?: string;
+  translations?: {
+    language: string;
+    name: string;
+    description: string;
+  }[];
 }
 
 export interface FoodType {

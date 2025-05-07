@@ -367,10 +367,19 @@ async function upsertRestaurantTranslations(restaurantId, translations) {
 
 const addRestaurant = async (req, res) => {
   try {
-    const { name, address, priceCategoryId, translations = [] } = req.body;
+    let { name, address, priceCategoryId, translations = [] } = req.body;
 
     if (!name || !address) {
       return res.status(400).json({ error: 'Name and address are required' });
+    }
+
+    // Parse translations if sent as a string (e.g. via multipart/form-data)
+    if (typeof translations === 'string') {
+      try {
+        translations = JSON.parse(translations);
+      } catch (e) {
+        translations = [];
+      }
     }
 
     const slug = await generateSlug(name);
@@ -413,7 +422,7 @@ const addRestaurant = async (req, res) => {
 async function updateRestaurant(req, res) {
   try {
     const { id } = req.params;
-    const {
+    let {
       name,
       address,
       place,
@@ -430,6 +439,15 @@ async function updateRestaurant(req, res) {
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Parse translations if sent as a string (e.g. via multipart/form-data)
+    if (typeof translations === 'string') {
+      try {
+        translations = JSON.parse(translations);
+      } catch (e) {
+        translations = [];
+      }
     }
 
     // Validate description length

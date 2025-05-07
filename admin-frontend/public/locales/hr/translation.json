@@ -438,5 +438,6 @@
   "split_shift_description": "Dodajte više vremenskih razdoblja za ovaj dan",
   "category_description": "Opis kategorije",
   "enter_category_description": "Unesite opcionalni opis kategorije",
-  "no_items_in_category": "Nema stavki u ovoj kategoriji."
+  "no_items_in_category": "Nema stavki u ovoj kategoriji.",
+  "unsaved_changes": "Nespremljene promjene"
 }
