@@ -345,8 +345,6 @@
   "edit_custom_day": "Uredi prilagođeni dan",
   "edit_custom_day_description": "Uredi prilagođeni dan u sustavu.",
   "custom_day_deleted_successfully": "Prilagođeni dan je uspješno uklonjen",
-  "split_shift": "Dvokratno radno vrijeme",
-  "no_custom_working_days": "Trenutno nema prilagođenih radnih dana",
   "cannot_update_to_past_date": "Ne možeš ažurirati na prošli datum",
   "time_cannot_be_empty": "Vrijeme ne može biti prazno",
   "custom_day_added_successfully": "Prilagođeni dan je uspješno dodan",
@@ -419,7 +417,6 @@
   "recommendation": "Preporučeno",
   "landscape": "pejzažna",
   "horizontal": "vodoravna",
-  "image": "slika",
   "basic_information": "Osnovne Informacije",
   "contact_information": "Kontakt Informacije",
   "social_media": "Društvene Mreže",
@@ -440,5 +437,6 @@
   "custom_day_name_placeholder": "Unesite naziv posebnog dana",
   "split_shift_description": "Dodajte više vremenskih razdoblja za ovaj dan",
   "category_description": "Opis kategorije",
-  "enter_category_description": "Unesite opcionalni opis kategorije"
+  "enter_category_description": "Unesite opcionalni opis kategorije",
+  "no_items_in_category": "Nema stavki u ovoj kategoriji."
 }
