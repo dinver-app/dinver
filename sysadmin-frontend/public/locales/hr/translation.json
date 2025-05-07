@@ -413,7 +413,6 @@
   "recommendation": "Preporučeno",
   "landscape": "pejzažna",
   "horizontal": "vodoravna",
-  "image": "slika",
   "basic_information": "Osnovne Informacije",
   "contact_information": "Kontakt Informacije",
   "social_media": "Društvene Mreže",
@@ -458,5 +457,6 @@
   "failed_to_update_custom_working_day": "Greška pri ažuriranju dana radnog vremena",
   "failed_to_delete_custom_working_day": "Greška pri uklanjanju dana radnog vremena",
   "category_description": "Opis kategorije",
-  "enter_category_description": "Unesite opcionalni opis kategorije"
+  "enter_category_description": "Unesite opcionalni opis kategorije",
+  "no_items_in_category": "Nema stavki u ovoj kategoriji."
 }

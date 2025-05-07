@@ -59,7 +59,10 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setSelectedCategory(category);
     setView(VIEWS.EDIT_CATEGORY);
   };
-  const handleAddDrinkItem = () => setView(VIEWS.ADD_MENU_ITEM);
+  const handleAddDrinkItem = (categoryId?: string) => {
+    setView(VIEWS.ADD_MENU_ITEM);
+    setSelectedCategory(categoryId ? ({ id: categoryId } as Category) : null);
+  };
   const handleEditDrinkItem = (drinkItem: DrinkItem) => {
     setSelectedDrinkItem(drinkItem);
     setView(VIEWS.EDIT_MENU_ITEM);
@@ -249,6 +252,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             onCancel={handleCancel}
             onSave={handleSaveDrinkItem}
             categories={categories}
+            initialCategoryId={selectedCategory?.id}
           />
         );
       case VIEWS.EDIT_MENU_ITEM:

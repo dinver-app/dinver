@@ -127,6 +127,7 @@ export interface MenuItem {
 export interface Category {
   id: string;
   name: string;
+  description?: string;
   restaurantId: string;
   translations: Translation[];
   position: number;

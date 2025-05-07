@@ -9,7 +9,7 @@ interface MenuListProps {
   menuItems: MenuItem[];
   allergens: Allergen[];
   onAddCategory: () => void;
-  onAddMenuItem: () => void;
+  onAddMenuItem: (categoryId?: string) => void;
   onEditCategory: (
     category: Category,
     onSuccess?: (updatedCategory: Category) => void
@@ -78,7 +78,15 @@ const MenuList: React.FC<MenuListProps> = memo(
     };
 
     const handleEditCategory = (category: Category) => {
-      onEditCategory(category, (updatedCategory) => {
+      const categoryWithExplicitDescription = {
+        ...category,
+        translations: category.translations.map((t) => ({
+          ...t,
+          description: t.description || "",
+        })),
+      };
+
+      onEditCategory(categoryWithExplicitDescription, (updatedCategory) => {
         const updatedCategories = categories.map((cat) =>
           cat.id === updatedCategory.id ? updatedCategory : cat
         );
@@ -97,225 +105,389 @@ const MenuList: React.FC<MenuListProps> = memo(
     };
 
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-start">
+      <div className="flex flex-col">
+        {/* Header with title and actions */}
+        <div className="border-b border-gray-200 pb-5 mb-6 flex justify-between items-center">
           <div>
-            <h2 className="section-title">{t("menu")}</h2>
-            <h3 className="section-subtitle">
+            <h2 className="text-2xl font-bold text-gray-800">{t("menu")}</h2>
+            <p className="text-sm text-gray-500 mt-1">
               {t("manage_your_menu_items_and_categories")}
-            </h3>
+            </p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={onAddCategory} className="primary-button">
+          <div className="flex space-x-3">
+            <button
+              onClick={onAddCategory}
+              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
               {t("add_category")}
             </button>
-            <button onClick={onAddMenuItem} className="primary-button">
+            <button
+              onClick={() => onAddMenuItem(undefined)}
+              className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
               {t("add_menu_item")}
             </button>
             <button
               onClick={() => setIsOrderCategoriesModalOpen(true)}
-              className="secondary-button"
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               {t("order_categories")}
             </button>
           </div>
         </div>
 
-        <div className="h-line"></div>
-
-        <div>
+        {/* Categories and menu items */}
+        <div className="space-y-8">
           {categories.map((category) => (
-            <div key={category.id} className="my-4">
-              <h4 className="text-lg font-semibold flex justify-between">
-                {category.name}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openSortItemsModal(category.id)}
-                    className="text-gray-500 hover:text-gray-700 text-sm"
-                  >
-                    {t("sort")}
-                  </button>
-                  <button
-                    onClick={() => handleEditCategory(category)}
-                    className="text-gray-500 hover:text-gray-700 text-sm"
-                  >
-                    {t("edit")}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategoryModal(category)}
-                    className="text-red-500 hover:text-red-700 text-sm"
-                  >
-                    {t("delete")}
-                  </button>
+            <div key={category.id} className="border-b border-gray-200 pb-6">
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium text-gray-800 flex items-center">
+                    {category.name}
+                    {category.translations.find((t) => t.description)
+                      ?.description && (
+                      <span className="ml-2 text-sm text-gray-500 font-normal">
+                        —{" "}
+                        {
+                          category.translations.find((t) => t.description)
+                            ?.description
+                        }
+                      </span>
+                    )}
+                  </h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => openSortItemsModal(category.id)}
+                      className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
+                    >
+                      {t("sort")}
+                    </button>
+                    <button
+                      onClick={() => handleEditCategory(category)}
+                      className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
+                    >
+                      {t("edit")}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategoryModal(category)}
+                      className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded-md hover:bg-red-50"
+                    >
+                      {t("delete")}
+                    </button>
+                  </div>
                 </div>
-              </h4>
-              <ul className="bg-white flex flex-col mt-2">
+              </div>
+
+              {/* Menu items in this category */}
+              <div className="grid grid-cols-1 gap-4">
                 {menuItems
                   .filter((item) => item.categoryId === category.id)
                   .map((item) => (
-                    <li
+                    <div
                       key={item.id}
-                      className="flex flex-col md:flex-row justify-between items-center p-6 mb-6 border border-gray-200 rounded-lg shadow-lg bg-white hover:shadow-xl transition-shadow duration-300"
+                      className="flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group"
                     >
-                      <div className="flex items-center space-x-6">
-                        <div className="w-36 h-24 flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
-                          {item.imageUrl && (
+                      <div className="flex items-start space-x-4">
+                        {item.imageUrl ? (
+                          <div className="w-32 h-20 rounded-md overflow-hidden flex-shrink-0">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-800">
+                          </div>
+                        ) : (
+                          <div className="w-32 h-20 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <svg
+                              className="h-10 w-10 text-gray-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+
+                        <div className="flex-1 flex flex-col justify-center h-full">
+                          <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
                             {item.name}
-                          </h3>
-                          <p className="text-gray-600 text-lg">
-                            {item.price.toString().replace(".", ",")} €
-                          </p>
-                          <p className="text-sm text-gray-700 mt-2">
-                            {item.description}
-                          </p>
-                          <div className="flex space-x-4 mt-3">
-                            <div className="flex items-center space-x-2">
-                              {item.allergens && item.allergens.length > 0 && (
-                                <span className="font-semibold text-gray-800">
+                          </h4>
+                          {item.description && (
+                            <p className="text-sm text-gray-600 mb-2">
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center space-x-6 mt-0.5">
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
+                              {item.price.toString().replace(".", ",")} €
+                            </span>
+                            {item.allergens && item.allergens.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-xs text-gray-500 font-medium">
                                   {t("allergens")}:
                                 </span>
-                              )}
-                              {item.allergens?.map((allergenId) => {
-                                const allergen = allergens.find(
-                                  (a) => a.id === Number(allergenId)
-                                );
-                                return (
-                                  allergen && (
-                                    <span
-                                      key={allergen.id}
-                                      className="tooltip cursor-default"
-                                      title={allergen.nameEn}
-                                    >
-                                      {allergen.icon}
-                                    </span>
-                                  )
-                                );
-                              })}
-                            </div>
+                                {item.allergens.map((allergenId) => {
+                                  const allergen = allergens.find(
+                                    (a) => a.id === Number(allergenId)
+                                  );
+                                  return (
+                                    allergen && (
+                                      <span
+                                        key={allergen.id}
+                                        className="tooltip cursor-default text-lg"
+                                        title={allergen.nameEn}
+                                      >
+                                        {allergen.icon}
+                                      </span>
+                                    )
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
+
+                      <div className="flex space-x-2 ml-4 items-center self-center h-full">
                         <button
                           onClick={() => onEditMenuItem(item)}
-                          className="secondary-button text-xs"
+                          className="px-3 py-1 text-xs border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50"
                         >
                           {t("edit")}
                         </button>
                         <button
                           onClick={() => handleDeleteItemModal(item)}
-                          className="delete-button text-xs"
+                          className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded-md font-medium hover:bg-red-50"
                         >
                           {t("delete")}
                         </button>
                       </div>
-                    </li>
+                    </div>
                   ))}
-              </ul>
-              <div className="h-line"></div>
+
+                {menuItems.filter((item) => item.categoryId === category.id)
+                  .length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.5"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                      />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {t("no_items_in_category") || "No items in category"}
+                    </p>
+                    <button
+                      onClick={() => onAddMenuItem(category.id)}
+                      className="mt-3 inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      {t("add_menu_item")}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
 
+          {/* Uncategorized items section */}
           {(menuItems.filter((item) => !item.categoryId).length > 0 ||
             categories.length === 0) && (
-            <div className="my-4">
-              <h4 className="text-lg font-semibold flex justify-between">
-                {t("uncategorized_items")}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openSortItemsModal(null)}
-                    className="text-gray-500 hover:text-gray-700 text-sm"
-                  >
-                    {t("sort")}
-                  </button>
+            <div className="border-b border-gray-200 pb-6">
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    {t("uncategorized_items")}
+                  </h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => openSortItemsModal(null)}
+                      className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1 rounded-md hover:bg-gray-100"
+                    >
+                      {t("sort")}
+                    </button>
+                  </div>
                 </div>
-              </h4>
-              <ul className="bg-white flex flex-col mt-2">
+              </div>
+
+              {/* Uncategorized menu items */}
+              <div className="grid grid-cols-1 gap-4">
                 {menuItems
                   .filter((item) => !item.categoryId)
                   .map((item) => (
-                    <li
+                    <div
                       key={item.id}
-                      className="flex flex-col md:flex-row justify-between items-center p-6 mb-6 border border-gray-200 rounded-lg shadow-lg bg-white hover:shadow-xl transition-shadow duration-300"
+                      className="flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group"
                     >
-                      <div className="flex items-center space-x-6">
-                        <div className="w-36 h-24 flex items-center justify-center bg-gray-100 rounded-md overflow-hidden">
-                          {item.imageUrl && (
+                      <div className="flex items-start space-x-4">
+                        {item.imageUrl ? (
+                          <div className="w-32 h-20 rounded-md overflow-hidden flex-shrink-0">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-800">
+                          </div>
+                        ) : (
+                          <div className="w-32 h-20 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <svg
+                              className="h-10 w-10 text-gray-400"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+
+                        <div className="flex-1 flex flex-col justify-center h-full">
+                          <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
                             {item.name}
-                          </h3>
-                          <p className="text-gray-600 text-lg">
-                            {item.price.toString().replace(".", ",")} €
-                          </p>
-                          <p className="text-sm text-gray-700 mt-2">
-                            {item.description}
-                          </p>
-                          <div className="flex space-x-4 mt-3">
-                            <div className="flex items-center space-x-2">
-                              {item.allergens && item.allergens.length > 0 && (
-                                <span className="font-semibold text-gray-800">
+                          </h4>
+                          {item.description && (
+                            <p className="text-sm text-gray-600 mb-2">
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center space-x-6 mt-0.5">
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
+                              {item.price.toString().replace(".", ",")} €
+                            </span>
+                            {item.allergens && item.allergens.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-xs text-gray-500 font-medium">
                                   {t("allergens")}:
                                 </span>
-                              )}
-                              {item.allergens?.map((allergenId) => {
-                                const allergen = allergens.find(
-                                  (a) => a.id === Number(allergenId)
-                                );
-                                return (
-                                  allergen && (
-                                    <span
-                                      key={allergen.id}
-                                      className="tooltip cursor-default"
-                                      title={allergen.nameEn}
-                                    >
-                                      {allergen.icon}
-                                    </span>
-                                  )
-                                );
-                              })}
-                            </div>
+                                {item.allergens.map((allergenId) => {
+                                  const allergen = allergens.find(
+                                    (a) => a.id === Number(allergenId)
+                                  );
+                                  return (
+                                    allergen && (
+                                      <span
+                                        key={allergen.id}
+                                        className="tooltip cursor-default text-lg"
+                                        title={allergen.nameEn}
+                                      >
+                                        {allergen.icon}
+                                      </span>
+                                    )
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="ml-2 mt-4 md:mt-0 flex space-x-4">
+
+                      <div className="flex space-x-2 ml-4 items-center self-center h-full">
                         <button
                           onClick={() => onEditMenuItem(item)}
-                          className="secondary-button text-xs"
+                          className="px-3 py-1 text-xs border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50"
                         >
                           {t("edit")}
                         </button>
                         <button
                           onClick={() => handleDeleteItemModal(item)}
-                          className="delete-button text-xs"
+                          className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded-md font-medium hover:bg-red-50"
                         >
                           {t("delete")}
                         </button>
                       </div>
-                    </li>
+                    </div>
                   ))}
-              </ul>
-              <div className="h-line"></div>
+
+                {menuItems.filter((item) => !item.categoryId).length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.5"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                      />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {t("no_uncategorized_items")}
+                    </p>
+                    <button
+                      onClick={() => onAddMenuItem(undefined)}
+                      className="mt-3 inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      {t("add_menu_item")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state - no categories */}
+          {categories.length === 0 && menuItems.length === 0 && (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+              <svg
+                className="mx-auto h-16 w-16 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                {t("no_menu_items")}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t("get_started_by_adding_categories_or_items")}
+              </p>
+              <div className="mt-6 flex justify-center space-x-4">
+                <button
+                  onClick={onAddCategory}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  {t("add_category")}
+                </button>
+                <button
+                  onClick={() => onAddMenuItem(undefined)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  {t("add_menu_item")}
+                </button>
+              </div>
             </div>
           )}
         </div>
 
+        {/* Modals */}
         <OrderCategoriesModal
           isOpen={isOrderCategoriesModalOpen}
           onClose={() => setIsOrderCategoriesModalOpen(false)}
@@ -375,13 +547,13 @@ const MenuList: React.FC<MenuListProps> = memo(
               <div className="flex justify-end space-x-3 mt-4">
                 <button
                   onClick={() => setIsOrderItemsModalOpen(false)}
-                  className="secondary-button"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
                 >
                   {t("cancel")}
                 </button>
                 <button
                   onClick={handleSaveItemOrder}
-                  className="primary-button"
+                  className="px-4 py-2 bg-green-700 text-white rounded-md text-sm font-medium hover:bg-green-800"
                 >
                   {t("save_order")}
                 </button>
@@ -427,7 +599,7 @@ const MenuList: React.FC<MenuListProps> = memo(
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteCategoryModalOpen(false)}
-                  className="secondary-button"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
                 >
                   {t("cancel")}
                 </button>
@@ -436,7 +608,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                     onDeleteCategory(categoryToDelete.id);
                     setDeleteCategoryModalOpen(false);
                   }}
-                  className="delete-button"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
                 >
                   {t("delete_category")}
                 </button>
@@ -478,7 +650,7 @@ const MenuList: React.FC<MenuListProps> = memo(
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteItemModalOpen(false)}
-                  className="secondary-button"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50"
                 >
                   {t("cancel")}
                 </button>
@@ -487,7 +659,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                     onDeleteMenuItem(itemToDelete.id);
                     setDeleteItemModalOpen(false);
                   }}
-                  className="delete-button"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
                 >
                   {t("delete_item")}
                 </button>

@@ -72,7 +72,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     setSelectedCategory(category);
     setView(VIEWS.EDIT_CATEGORY);
   };
-  const handleAddMenuItem = () => setView(VIEWS.ADD_MENU_ITEM);
+  const handleAddMenuItem = (categoryId?: string) => {
+    setView(VIEWS.ADD_MENU_ITEM);
+    setSelectedCategory(categoryId ? ({ id: categoryId } as Category) : null);
+  };
   const handleEditMenuItem = (menuItem: MenuItem) => {
     setSelectedMenuItem(menuItem);
     setView(VIEWS.EDIT_MENU_ITEM);
@@ -275,6 +278,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
             onSave={handleSaveMenuItem}
             allergens={allergens}
             categories={categories}
+            initialCategoryId={selectedCategory?.id}
           />
         );
       case VIEWS.EDIT_MENU_ITEM:

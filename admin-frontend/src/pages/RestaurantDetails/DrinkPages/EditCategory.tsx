@@ -58,7 +58,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
       .filter(([_, value]) => value.name.trim() !== "")
       .map(([language, value]) => ({
         name: value.name.trim(),
-        description: value.description.trim() || undefined,
+        description: value.description.trim(),
         language: language as Language,
       }));
 

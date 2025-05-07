@@ -21,6 +21,7 @@ interface AddMenuItemProps {
   }) => Promise<void>;
   allergens: Allergen[];
   categories: Category[];
+  initialCategoryId?: string;
 }
 
 const AddMenuItem: React.FC<AddMenuItemProps> = ({
@@ -28,6 +29,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   onSave,
   allergens,
   categories,
+  initialCategoryId,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
@@ -42,7 +44,9 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>([]);
   const [allergenSearch, setAllergenSearch] = useState("");
   const [isAllergenDropdownOpen, setAllergenDropdownOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    initialCategoryId || ""
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
