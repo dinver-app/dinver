@@ -39,6 +39,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     description: "",
   });
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
+  const [isDirty, setIsDirty] = useState(false);
 
   const validateInput = (name: string, value: string) => {
     let error = "";
@@ -81,6 +82,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
 
     setFormData((prev) => ({ ...prev, [name]: value }));
     validateInput(name, value);
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
@@ -111,6 +113,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       // Show success toast
       toast.success(t("changes_saved_successfully"), { id: toastId });
       setSaveStatus(t("all_changes_saved"));
+      setIsDirty(false);
     } catch (error) {
       console.error("Failed to save restaurant details", error);
       // Show error toast
@@ -172,7 +175,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </svg>
               {saveStatus}
             </span>
-          ) : (
+          ) : !isDirty ? (
             <span className="text-sm text-green-600 flex items-center">
               <svg
                 className="h-4 w-4 mr-2"
@@ -187,9 +190,13 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </svg>
               {saveStatus}
             </span>
+          ) : (
+            <span className="text-sm text-amber-600 flex items-center">
+              {t("unsaved_changes")}
+            </span>
           )}
           {role !== "helper" && (
-            <button onClick={handleSave} className="primary-button px-3 py-1.5">
+            <button onClick={handleSave} className="secondary-button">
               {t("save")}
             </button>
           )}

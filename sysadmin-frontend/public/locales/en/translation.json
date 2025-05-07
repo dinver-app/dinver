@@ -435,5 +435,6 @@
   "failed_to_delete_custom_working_day": "Failed to delete custom working day",
   "category_description": "Category Description",
   "enter_category_description": "Enter optional category description",
-  "no_items_in_category": "No items in this category."
+  "no_items_in_category": "No items in this category.",
+  "unsaved_changes": "Unsaved Changes"
 }
