@@ -113,7 +113,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <button
                     onClick={() => navigate(item.path)}
                     className={`flex items-center p-3 pl-4 w-full text-left text-sm font-light border-l-4 ${
-                      location.pathname === item.path
+                      location.pathname.startsWith(item.path) &&
+                      item.path !== "/"
+                        ? "bg-green-100 text-green-700 border-green-700"
+                        : location.pathname === item.path
                         ? "bg-green-100 text-green-700 border-green-700"
                         : "border-transparent hover:bg-gray-100"
                     }`}
