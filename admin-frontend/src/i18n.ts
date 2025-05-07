@@ -2,7 +2,20 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import Backend from "i18next-http-backend";
 
-const savedLanguage = localStorage.getItem("language") || "en";
+const getValidLanguage = () => {
+  const lang = localStorage.getItem("language");
+  if (
+    !lang ||
+    typeof lang !== "string" ||
+    lang.trim() === "" ||
+    !["en", "hr"].includes(lang)
+  ) {
+    return "en";
+  }
+  return lang;
+};
+
+const savedLanguage = getValidLanguage();
 
 i18n
   .use(Backend)
