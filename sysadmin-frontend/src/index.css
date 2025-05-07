@@ -4,15 +4,15 @@
 
 @layer components {
   .primary-button {
-    @apply border-green-600 border text-green-600 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-green-700 hover:bg-opacity-10;
+    @apply border-green-600 border text-green-600 text-sm py-1.5 px-3 rounded-md bg-transparent hover:bg-green-700 hover:bg-opacity-10;
   }
 
   .secondary-button {
-    @apply border-gray-500 border text-gray-500 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-gray-600 hover:bg-opacity-10;
+    @apply border-gray-500 border text-gray-500 text-sm py-1.5 px-3 rounded-md bg-transparent hover:bg-gray-600 hover:bg-opacity-10;
   }
 
   .delete-button {
-    @apply border-red-600 border text-red-600 text-sm py-2 px-3 rounded-md bg-transparent hover:bg-red-700 hover:bg-opacity-10;
+    @apply border-red-600 border text-red-600 text-sm py-1.5 px-3 rounded-md bg-transparent hover:bg-red-700 hover:bg-opacity-10;
   }
 
   .page-title {
