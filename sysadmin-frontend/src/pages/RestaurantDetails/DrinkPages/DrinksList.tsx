@@ -35,7 +35,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
     onSortItems,
     onCategoriesUpdate,
   }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isOrderCategoriesModalOpen, setIsOrderCategoriesModalOpen] =
       useState(false);
     const [isOrderItemsModalOpen, setIsOrderItemsModalOpen] = useState(false);
@@ -141,14 +141,18 @@ const DrinksList: React.FC<DrinksListProps> = memo(
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-medium text-gray-800 flex items-center">
-                    {category.name}
-                    {category.translations.find((t) => t.description)
-                      ?.description && (
+                    {category.translations?.find(
+                      (t) => t.language === i18n.language
+                    )?.name || category.name}
+                    {category.translations?.find(
+                      (t) => t.language === i18n.language
+                    )?.description && (
                       <span className="ml-2 text-sm text-gray-500 font-normal">
                         —{" "}
                         {
-                          category.translations.find((t) => t.description)
-                            ?.description
+                          category.translations.find(
+                            (t) => t.language === i18n.language
+                          )?.description
                         }
                       </span>
                     )}
@@ -214,11 +218,19 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                         )}
                         <div className="flex-1 flex flex-col justify-center h-full">
                           <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
-                            {item.name}
+                            {item.translations?.find(
+                              (t) => t.language === i18n.language
+                            )?.name || item.name}
                           </h4>
-                          {item.description && (
+                          {item.translations?.find(
+                            (t) => t.language === i18n.language
+                          )?.description && (
                             <p className="text-sm text-gray-600 mb-2">
-                              {item.description}
+                              {
+                                item.translations.find(
+                                  (t) => t.language === i18n.language
+                                )?.description
+                              }
                             </p>
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
@@ -334,11 +346,19 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                         )}
                         <div className="flex-1 flex flex-col justify-center h-full">
                           <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
-                            {item.name}
+                            {item.translations?.find(
+                              (t) => t.language === i18n.language
+                            )?.name || item.name}
                           </h4>
-                          {item.description && (
+                          {item.translations?.find(
+                            (t) => t.language === i18n.language
+                          )?.description && (
                             <p className="text-sm text-gray-600 mb-2">
-                              {item.description}
+                              {
+                                item.translations.find(
+                                  (t) => t.language === i18n.language
+                                )?.description
+                              }
                             </p>
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
@@ -481,7 +501,9 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                                   className="w-4 h-4"
                                 />
                               </span>
-                              {item.name}
+                              {item.translations?.find(
+                                (t) => t.language === i18n.language
+                              )?.name || item.name}
                             </li>
                           )}
                         </Draggable>
