@@ -1,32 +1,37 @@
 import { authRequest } from "@/services/api";
-import { 
-  favoriteCheckResponseSchema, 
-  favoriteMessageResponseSchema, 
+import {
+  favoriteCheckResponseSchema,
+  favoriteMessageResponseSchema,
   favoriteRestaurantSchema,
   FavoriteRestaurant,
   FavoriteCheckResponse,
-  FavoriteMessageResponse
+  FavoriteMessageResponse,
 } from "@/utils/validation";
-import { showError, showSuccess } from "@/utils/toast";
 
 export const getFavorites = async (): Promise<FavoriteRestaurant[]> => {
   try {
-    const data = await authRequest<any[]>('get', "/favorites");
-    const favorites = data.map(favorite => ({
+    const data = await authRequest<any[]>("get", "/favorites");
+    const favorites = data.map((favorite) => ({
       ...favorite,
-      iconUrl: favorite.iconUrl || favorite.imageUrl || null
+      iconUrl: favorite.iconUrl || favorite.imageUrl || null,
     }));
-    return favorites.map(favorite => favoriteRestaurantSchema.parse(favorite));
+    return favorites.map((favorite) =>
+      favoriteRestaurantSchema.parse(favorite)
+    );
   } catch (error) {
     console.error("Error getting favorites:", error);
-    showError("Error", "Unable to retrieve your favorites");
     throw error;
   }
 };
 
-export const checkIsFavorite = async (restaurantId: string): Promise<boolean> => {
+export const checkIsFavorite = async (
+  restaurantId: string
+): Promise<boolean> => {
   try {
-    const response = await authRequest<FavoriteCheckResponse>('get', `/favorites/${restaurantId}/check`);
+    const response = await authRequest<FavoriteCheckResponse>(
+      "get",
+      `/favorites/${restaurantId}/check`
+    );
     return favoriteCheckResponseSchema.parse(response).isFavorite;
   } catch (error) {
     console.error(`Error checking favorite status for ${restaurantId}:`, error);
@@ -36,26 +41,31 @@ export const checkIsFavorite = async (restaurantId: string): Promise<boolean> =>
 
 export const addToFavorites = async (restaurantId: string): Promise<string> => {
   try {
-    const response = await authRequest<FavoriteMessageResponse>('post', "/favorites", { restaurantId });
-    const result = favoriteMessageResponseSchema.parse(response);
-    showSuccess("Added to favorites", "Restaurant added to your favorites");
-    return result.message;
+    const response = await authRequest<FavoriteMessageResponse>(
+      "post",
+      "/favorites",
+      { restaurantId }
+    );
+    return favoriteMessageResponseSchema.parse(response).message;
   } catch (error: any) {
-    const message = error.response?.data?.message || "Couldn't add to favorites";
-    showError("Error", message);
-    throw error;
+    const message =
+      error.response?.data?.message || "Couldn't add to favorites";
+    throw new Error(message);
   }
 };
 
-export const removeFromFavorites = async (restaurantId: string): Promise<string> => {
+export const removeFromFavorites = async (
+  restaurantId: string
+): Promise<string> => {
   try {
-    const response = await authRequest<FavoriteMessageResponse>('delete', `/favorites/${restaurantId}`);
-    const result = favoriteMessageResponseSchema.parse(response);
-    showSuccess("Removed from favorites", "Restaurant removed from your favorites");
-    return result.message;
+    const response = await authRequest<FavoriteMessageResponse>(
+      "delete",
+      `/favorites/${restaurantId}`
+    );
+    return favoriteMessageResponseSchema.parse(response).message;
   } catch (error: any) {
-    const message = error.response?.data?.message || "Couldn't remove from favorites";
-    showError("Error", message);
-    throw error;
+    const message =
+      error.response?.data?.message || "Couldn't remove from favorites";
+    throw new Error(message);
   }
 };
