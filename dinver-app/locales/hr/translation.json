@@ -23,7 +23,8 @@
     "permissionRequired": "Potrebna dozvola",
     "remove": "Ukloni",
     "save": "Spremi",
-    "confirm": "Potvrdi"
+    "confirm": "Potvrdi",
+    "removeFavorite": "Ukloni iz favorita"
   },
   "home": {
     "fastFood": "Brza hrana",
@@ -293,5 +294,11 @@
     "authError": "Greška autentifikacije",
     "loginRequiredForPasswordChange": "Morate biti prijavljeni za promjenu lozinke.",
     "statsRetrievalError": "Neuspješno dohvaćanje vaše statistike. Molimo pokušajte ponovno."
+  },
+  "favorites": {
+    "searchSavedRestaurants": "Pretraži spremljene restorane",
+    "noFavorites": "Nemaš spremljenih restorana.",
+    "loginToView": "Prijavite se kako biste vidjeli svoje favorite",
+    "goToLogin": "Prijavi se"
   }
 }

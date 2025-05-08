@@ -101,9 +101,9 @@ const LocationModal: React.FC<LocationModalProps> = ({
             backgroundColor: colors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
+            flex: 1,
             transform: [{ translateY: 0 }],
           }}
-          className="h-[100%]"
         >
           <View
             style={{ borderBottomColor: colors.border }}
