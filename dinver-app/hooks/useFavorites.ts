@@ -21,9 +21,9 @@ export const useFavorites = () => {
     favorites: [],
     loading: false,
     isLoading: false,
-    error: null,
+    error: null
   });
-
+  
   // Use a ref to cache favorite status for quick lookups
   const favoriteStatusCache = useRef<Record<string, boolean>>({});
 
@@ -31,7 +31,7 @@ export const useFavorites = () => {
   useEffect(() => {
     if (user) loadFavorites();
     else {
-      setState((prev) => ({ ...prev, favorites: [] }));
+      setState(prev => ({ ...prev, favorites: [] }));
       favoriteStatusCache.current = {};
     }
   }, [user]);
@@ -39,25 +39,20 @@ export const useFavorites = () => {
   // Load all favorites from the API
   const loadFavorites = useCallback(async () => {
     if (!user) return;
-
-    setState((prev) => ({
-      ...prev,
-      loading: true,
-      isLoading: true,
-      error: null,
-    }));
-
+    
+    setState(prev => ({ ...prev, loading: true, isLoading: true, error: null }));
+    
     try {
       const userFavorites = await getFavorites();
-
+      
       // Update favorites in state
-      setState((prev) => ({
-        ...prev,
+      setState(prev => ({ 
+        ...prev, 
         favorites: userFavorites,
         loading: false,
-        isLoading: false,
+        isLoading: false
       }));
-
+      
       // Update the cache
       const newCache: Record<string, boolean> = {};
       userFavorites.forEach((fav) => {
@@ -66,100 +61,84 @@ export const useFavorites = () => {
       favoriteStatusCache.current = newCache;
     } catch (err) {
       console.error("Failed to load favorites:", err);
-      setState((prev) => ({
-        ...prev,
-        loading: false,
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
         isLoading: false,
-        error: "Failed to load favorites",
+        error: "Failed to load favorites" 
       }));
     }
   }, [user]);
 
   // Check if a restaurant is a favorite (from cache)
-  const isFavorite = useCallback(
-    (restaurantId: string): boolean => {
-      return (
-        favoriteStatusCache.current[restaurantId] ||
-        state.favorites.some((fav) => fav.id === restaurantId) ||
-        false
-      );
-    },
-    [state.favorites]
-  );
+  const isFavorite = useCallback((restaurantId: string): boolean => {
+    return favoriteStatusCache.current[restaurantId] || 
+      state.favorites.some(fav => fav.id === restaurantId) || 
+      false;
+  }, [state.favorites]);
 
   // Check favorite status from the API
-  const checkFavoriteStatus = useCallback(
-    async (restaurantId: string): Promise<boolean> => {
-      if (!user) return false;
-
-      try {
-        // First check local cache/state
-        if (state.favorites.some((fav) => fav.id === restaurantId)) {
-          favoriteStatusCache.current[restaurantId] = true;
-          return true;
-        }
-
-        // Fall back to API check
-        const status = await checkIsFavorite(restaurantId);
-        favoriteStatusCache.current[restaurantId] = status;
-        return status;
-      } catch (err) {
-        return false;
+  const checkFavoriteStatus = useCallback(async (restaurantId: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    try {
+      // First check local cache/state
+      if (state.favorites.some(fav => fav.id === restaurantId)) {
+        favoriteStatusCache.current[restaurantId] = true;
+        return true;
       }
-    },
-    [user, state.favorites]
-  );
+      
+      // Fall back to API check
+      const status = await checkIsFavorite(restaurantId);
+      favoriteStatusCache.current[restaurantId] = status;
+      return status;
+    } catch (err) {
+      return false;
+    }
+  }, [user, state.favorites]);
 
   // Toggle favorite status
-  const toggleFavorite = useCallback(
-    async (restaurant: Restaurant): Promise<void> => {
-      if (!user) {
-        setState((prev) => ({
+  const toggleFavorite = useCallback(async (restaurant: Restaurant): Promise<void> => {
+    if (!user) {
+      setState(prev => ({ ...prev, error: "You must be logged in to manage favorites" }));
+      return;
+    }
+    
+    const isCurrentlyFavorite = isFavorite(restaurant.id);
+    
+    try {
+      if (isCurrentlyFavorite) {
+        await removeFromFavorites(restaurant.id);
+        setState(prev => ({
           ...prev,
-          error: "You must be logged in to manage favorites",
+          favorites: prev.favorites.filter(fav => fav.id !== restaurant.id)
         }));
-        return;
+        favoriteStatusCache.current[restaurant.id] = false;
+      } else {
+        await addToFavorites(restaurant.id);
+        const newFavorite: FavoriteRestaurant = {
+          id: restaurant.id,
+          name: restaurant.name,
+          rating: restaurant.rating || 0,
+          priceLevel: restaurant.priceLevel || undefined,
+          address: restaurant.address || "",
+          iconUrl: restaurant.iconUrl,
+        };
+        setState(prev => ({
+          ...prev,
+          favorites: [...prev.favorites, newFavorite]
+        }));
+        favoriteStatusCache.current[restaurant.id] = true;
       }
-
-      const isCurrentlyFavorite = isFavorite(restaurant.id);
-
-      try {
-        if (isCurrentlyFavorite) {
-          await removeFromFavorites(restaurant.id);
-          setState((prev) => ({
-            ...prev,
-            favorites: prev.favorites.filter((fav) => fav.id !== restaurant.id),
-          }));
-          favoriteStatusCache.current[restaurant.id] = false;
-        } else {
-          await addToFavorites(restaurant.id);
-          const newFavorite: FavoriteRestaurant = {
-            id: restaurant.id,
-            name: restaurant.name,
-            rating: restaurant.rating || 0,
-            priceLevel: restaurant.priceLevel || undefined,
-            address: restaurant.address || "",
-            iconUrl: restaurant.iconUrl || undefined,
-            isClaimed: restaurant.isClaimed,
-            thumbnailUrl: restaurant.thumbnailUrl,
-          };
-          setState((prev) => ({
-            ...prev,
-            favorites: [...prev.favorites, newFavorite],
-          }));
-          favoriteStatusCache.current[restaurant.id] = true;
-        }
-      } catch (err) {
-        console.error("Error toggling favorite:", err);
-        setState((prev) => ({ ...prev, error: "Failed to update favorites" }));
-      }
-    },
-    [user, isFavorite]
-  );
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+      setState(prev => ({ ...prev, error: "Failed to update favorites" }));
+    }
+  }, [user, isFavorite]);
 
   // Reset error state
   const resetError = useCallback(() => {
-    setState((prev) => ({ ...prev, error: null }));
+    setState(prev => ({ ...prev, error: null }));
   }, []);
 
   return {

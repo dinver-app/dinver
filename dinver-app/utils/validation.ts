@@ -139,7 +139,6 @@ export const restaurantSchema = z.object({
   reviewRating: z.number().nullable().optional(),
   distance: z.number().optional(),
   isFavorite: z.boolean().optional(),
-  thumbnailUrl: z.string().nullable().optional(),
 });
 
 export const restaurantsResponseSchema = z.object({
@@ -175,9 +174,7 @@ export const favoriteRestaurantSchema = z.object({
   rating: z.number(),
   priceLevel: z.number().nullable().optional(),
   address: z.string(),
-  iconUrl: z.string().nullable().optional(),
-  isClaimed: z.boolean().optional(),
-  thumbnailUrl: z.string().nullable().optional(),
+  iconUrl: z.string().optional(),
 });
 
 export const favoriteMessageResponseSchema = z.object({

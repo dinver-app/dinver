@@ -23,8 +23,7 @@
     "permissionRequired": "Permission Required",
     "remove": "Remove",
     "save": "Save",
-    "confirm": "Confirm",
-    "removeFavorite": "Remove from favorites"
+    "confirm": "Confirm"
   },
   "home": {
     "fastFood": "Fast Food",
@@ -335,10 +334,5 @@
     "authError": "Authentication Error",
     "loginRequiredForPasswordChange": "You need to be logged in to change your password.",
     "statsRetrievalError": "Failed to retrieve your statistics. Please try again."
-  },
-  "favorites": {
-    "loginToView": "Log in to view your favorites",
-    "goToLogin": "Log in",
-    "searchSavedRestaurants": "Search saved restaurants"
   }
 }

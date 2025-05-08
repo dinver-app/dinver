@@ -106,15 +106,17 @@ const BottomBar: React.FC = () => {
         inactiveColor={colors.textSecondary}
       />
 
-      <BottomBarItem
-        label={t("common.favorites", "Favorites")}
-        icon={(color) => <FavoritesIcon color={color} />}
-        route="/(screens)/favorites"
-        isActive={isActive("/(screens)/favorites")}
-        onPress={() => navigateTo("/(screens)/favorites")}
-        color={colors.appPrimary}
-        inactiveColor={colors.textSecondary}
-      />
+      {user && (
+        <BottomBarItem
+          label={t("common.favorites", "Favorites")}
+          icon={(color) => <FavoritesIcon color={color} />}
+          route="/(screens)/favorites"
+          isActive={isActive("/(screens)/favorites")}
+          onPress={() => navigateTo("/(screens)/favorites")}
+          color={colors.appPrimary}
+          inactiveColor={colors.textSecondary}
+        />
+      )}
 
       <BottomBarItem
         label={t("common.profile", "Profile")}
