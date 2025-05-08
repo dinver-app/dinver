@@ -81,6 +81,7 @@ const getUserFavorites = async (req, res) => {
             'rating',
             'priceLevel',
             'address',
+            'place',
             'isClaimed',
             'thumbnailUrl',
             'userRatingsTotal',

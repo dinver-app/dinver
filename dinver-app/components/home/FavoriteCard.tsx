@@ -7,11 +7,16 @@ import {
   Image,
 } from "react-native";
 import { FavoriteRestaurant } from "@/utils/validation";
-import { useTheme } from "@/context/ThemeContext";
-import { HeartIcon, StarIcon, VerifiedBadge } from "@/assets/icons/icons";
+import { VerifiedBadge } from "@/assets/icons/icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface FavoriteCardProps {
-  item: FavoriteRestaurant;
+  item: FavoriteRestaurant & {
+    isFavorite?: boolean;
+    isClaimed?: boolean;
+    thumbnailUrl?: string;
+    userRatingsTotal?: number;
+  };
   colors: any;
   t: (key: string, defaultValue: string) => string;
   handleRemoveFavorite: (restaurantId: string) => void;
@@ -31,11 +36,9 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({
     ? { uri: item.iconUrl }
     : fallbackImage;
 
-  console.log(item);
-
   return (
     <View
-      className="mb-6 rounded-[16px] overflow-hidden relative"
+      className="mb-6 rounded-[12px] overflow-hidden relative"
       style={{ backgroundColor: colors.cardBackground }}
     >
       <ImageBackground
@@ -43,26 +46,22 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({
         className="h-[180px] w-full"
         resizeMode="cover"
         style={{ backgroundColor: colors.cardBackground }}
-        imageStyle={{ borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
+        imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
       >
         {/* Heart icon */}
         <TouchableOpacity
           className="absolute top-4 right-4 z-10"
-          style={{
-            backgroundColor: "#18181b99",
-            borderRadius: 999,
-            padding: 6,
-          }}
+          style={{ borderRadius: 999, padding: 6 }}
           onPress={() => handleRemoveFavorite(item.id)}
         >
-          <HeartIcon color={colors.appPrimary} size={24} />
+          <MaterialCommunityIcons name={"heart"} size={28} color="#FF4343" />
         </TouchableOpacity>
         {/* Rating badge */}
         <View
           className="absolute bottom-4 right-4 flex-row items-center px-2 py-1 rounded-md"
           style={{ backgroundColor: "#18181b" }}
         >
-          <StarIcon color="#FFD600" size={16} />
+          <MaterialCommunityIcons name="star" size={18} color="#F3B200" />
           <Text className="ml-1 text-white font-bold text-base">
             {item.rating?.toFixed(1) || "-"}
           </Text>
@@ -76,8 +75,8 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({
       {/* Name and verified badge */}
       <View className="flex-row items-center px-4 py-3 bg-transparent">
         <Text
-          className="text-lg font-degular-bold mr-2"
-          style={{ color: colors.textPrimary }}
+          className="font-degular mr-2"
+          style={{ color: colors.textPrimary, fontSize: 18 }}
         >
           {item.name}
         </Text>
