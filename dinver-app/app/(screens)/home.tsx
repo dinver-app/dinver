@@ -108,7 +108,7 @@ export default function HomeScreen() {
     }
 
     const offers = restaurants
-      .filter((r) => r.iconUrl)
+      .filter((r) => r.thumbnailUrl)
       .slice(0, Math.min(5, restaurants.length));
     setSpecialOffers(offers);
   }, [restaurants]);

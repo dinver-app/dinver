@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import useFavorites from "@/hooks/useFavorites";
 import { Restaurant } from "@/services/restaurantService";
-import { Octicons } from "@expo/vector-icons";
+import { Octicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
+
+const FALLBACK_IMAGE_URL =
+  "https://dinver-restaurant-thumbnails.s3.eu-north-1.amazonaws.com/restaurant_thumbnails/stock.jpg";
 
 export const formatDistance = (distance?: number): string => {
   if (distance == null) return "-";
@@ -42,41 +46,12 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
 
+    const { t } = useTranslation();
+
     useEffect(() => {
       if (user) setLiked(isFavorite(restaurant.id));
       else setLiked(false);
     }, [user, restaurant.id, isFavorite]);
-
-    useEffect(() => {
-      if (restaurant.iconUrl) {
-        setImageLoading(true);
-        setImageError(false);
-
-        let isMounted = true;
-        
-        const prefetchTimeout = setTimeout(() => {
-          if (restaurant.iconUrl) {
-            Image.prefetch(restaurant.iconUrl)
-              .then(() => {
-                if (isMounted) {
-                  setImageLoading(false);
-                }
-              })
-              .catch(() => {
-                if (isMounted) {
-                  setImageError(true);
-                  setImageLoading(false);
-                }
-              });
-          }
-        }, 50);
-
-        return () => {
-          isMounted = false;
-          clearTimeout(prefetchTimeout);
-        };
-      }
-    }, [restaurant.iconUrl]);
 
     const handleToggleLike = useCallback(async () => {
       if (!user || isToggling) return;
@@ -101,7 +76,11 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
         onPress={onPress}
         disabled={!onPress}
         accessible={!!onPress}
-        accessibilityLabel={`View ${restaurant.name} details`}
+        accessibilityLabel={t(
+          "restaurant.accessibility",
+          "Restaurant: {{name}}",
+          { name: restaurant.name }
+        )}
         accessibilityRole="button"
       >
         <View>
@@ -123,8 +102,20 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
             ) : (
               <ImageBackground
                 className="h-[170px] w-full"
-                source={{ uri: restaurant.iconUrl }}
+                source={{
+                  uri:
+                    restaurant.thumbnailUrl &&
+                    restaurant.thumbnailUrl.trim() !== ""
+                      ? restaurant.thumbnailUrl
+                      : FALLBACK_IMAGE_URL,
+                }}
                 resizeMode="cover"
+                onLoadStart={() => setImageLoading(true)}
+                onLoadEnd={() => setImageLoading(false)}
+                onError={() => {
+                  setImageLoading(false);
+                  setImageError(true);
+                }}
               >
                 {showPromo && (
                   <View
@@ -132,7 +123,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
                     className="absolute top-[10px] left-[10px] rounded-[4px] px-[8px] py-[6px]"
                   >
                     <Text
-                      style={{ color:"white" }}
+                      style={{ color: "white" }}
                       className="font-degular text-[14px]"
                     >
                       Promo
@@ -143,15 +134,14 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
                   <TouchableOpacity
                     onPress={handleToggleLike}
                     className="absolute top-[10px] right-[10px] rounded-lg p-1"
-                    style={{ backgroundColor: BG_OVERLAY }}
                     disabled={isToggling}
                     accessibilityLabel={
                       liked ? "Remove from favorites" : "Add to favorites"
                     }
                     accessibilityRole="button"
                   >
-                    <Octicons
-                      name={liked ? "heart-fill" : "heart"}
+                    <MaterialCommunityIcons
+                      name={liked ? "heart" : "heart-outline"}
                       size={24}
                       color={liked ? colors.like : "white"}
                     />
@@ -163,10 +153,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = memo(
                     className="absolute bottom-[10px] right-[10px] flex-row items-center rounded-[4px] px-2 py-[8px] gap-[4px]"
                   >
                     <Octicons name="star-fill" color={colors.star} size={16} />
-                    <Text
-                      style={{ color:"white" }}
-                      className="text-[12px]"
-                    >
+                    <Text style={{ color: "white" }} className="text-[12px]">
                       {restaurant.rating?.toFixed(1)}
                       {restaurant.userRatingsTotal
                         ? ` (${restaurant.userRatingsTotal})`

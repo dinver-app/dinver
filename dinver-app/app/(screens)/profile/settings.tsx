@@ -273,7 +273,7 @@ const SettingsScreen = () => {
         )
       );
 
-      const success = await verifyPhone();
+      const success = await verifyPhone(userPhone);
 
       if (success) {
         showSuccess(
@@ -372,7 +372,7 @@ const SettingsScreen = () => {
           className="flex-row items-center"
           onPress={() => router.back()}
         >
-          <ArrowBack color={colors.textPrimary}/>
+          <ArrowBack color={colors.textPrimary} />
           <Text
             style={{ color: colors.textPrimary }}
             className="text-[18px] font-degular-semibold ml-[18px]"

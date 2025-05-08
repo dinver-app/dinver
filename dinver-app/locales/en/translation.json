@@ -286,7 +286,8 @@
     "information": "Information",
     "location": "Location",
     "workingHours": "Working Hours",
-    "specialOfferAccessibility": "Special offer: {{discount}} at {{restaurantName}}"
+    "specialOfferAccessibility": "Special offer: {{discount}} at {{restaurantName}}",
+    "accessibility": "Restaurant: {{name}}"
   },
   "errors": {
     "phoneInUse": "This phone number is already in use by another user"

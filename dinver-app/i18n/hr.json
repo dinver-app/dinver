@@ -1,0 +1,6 @@
+{
+  "restaurant": {
+    "accessibility": "Restoran: {{name}}",
+    "specialOfferAccessibility": "Posebna ponuda: {{discount}} u {{restaurantName}}"
+  }
+}

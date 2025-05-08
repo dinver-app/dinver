@@ -1164,9 +1164,6 @@ const getSampleRestaurants = async (req, res) => {
     const { search } = req.query;
     const userId = req.user?.id;
 
-    const RESTAURANT_IMAGE =
-      'https://plus.unsplash.com/premium_photo-1661883237884-263e8de8869b?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bHV4dXJ5JTIwcmVzdGF1cmFudHxlbnwwfHwwfHx8MA%3D%3D';
-
     // Uvijek dohvaćamo istih 50 restorana (prvih 50 po imenu)
     const sampleRestaurants = await Restaurant.findAll({
       attributes: [
@@ -1184,6 +1181,7 @@ const getSampleRestaurants = async (req, res) => {
         'isClaimed',
         'email',
         'priceCategoryId',
+        'thumbnailUrl',
       ],
       order: [['name', 'ASC']], // Sortiramo po imenu da uvijek dobijemo iste
       limit: 50,
@@ -1237,7 +1235,6 @@ const getSampleRestaurants = async (req, res) => {
 
         return {
           ...restaurant.get(),
-          iconUrl: RESTAURANT_IMAGE,
           isOpen: isRestaurantOpen(restaurant.openingHours),
           reviewRating,
           distance,

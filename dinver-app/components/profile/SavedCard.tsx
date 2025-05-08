@@ -14,6 +14,9 @@ interface RestaurantItemProps {
   onPress?: () => void;
 }
 
+const FALLBACK_IMAGE_URL =
+  "https://dinver-restaurant-thumbnails.s3.eu-north-1.amazonaws.com/restaurant_thumbnails/stock.jpg";
+
 const RestaurantItem = ({ restaurant, onPress }: RestaurantItemProps) => {
   const { colors } = useTheme();
 
@@ -21,7 +24,7 @@ const RestaurantItem = ({ restaurant, onPress }: RestaurantItemProps) => {
     <TouchableOpacity onPress={onPress} disabled={!onPress}>
       <View className="flex-row">
         <Image
-          source={{ uri: restaurant.iconUrl }}
+          source={{ uri: restaurant.thumbnailUrl || FALLBACK_IMAGE_URL }}
           className="w-[64px] h-[64px] rounded-[16px] mr-[16px]"
         />
         <View className="flex-1 justify-center">

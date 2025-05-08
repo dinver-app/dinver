@@ -245,7 +245,8 @@
     "information": "Informacije",
     "location": "Lokacija",
     "workingHours": "Radno vrijeme",
-    "specialOfferAccessibility": "Posebna ponuda: {{discount}} u {{restaurantName}}"
+    "specialOfferAccessibility": "Posebna ponuda: {{discount}} u {{restaurantName}}",
+    "accessibility": "Restoran: {{name}}"
   },
   "errors": {
     "phoneInUse": "Ovaj telefonski broj već koristi drugi korisnik"
