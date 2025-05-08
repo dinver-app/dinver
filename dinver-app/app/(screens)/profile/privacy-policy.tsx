@@ -17,7 +17,7 @@ Last updated: May 5, 2025
 
 1. Introduction
 
-Welcome to Croativa. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our app and tell you about your privacy rights and how the law protects you.
+Welcome to Dinver. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our app and tell you about your privacy rights and how the law protects you.
 
 2. The Data We Collect About You
 
@@ -58,7 +58,7 @@ Under certain circumstances, you have rights under data protection laws in relat
 6. Contact Us
 
 If you have any questions about this privacy policy or our privacy practices, please contact us at:
-Email: privacy@croativa.com
+Email: privacy@dinver.com
 
 Thank you for taking the time to understand our Privacy Policy.
 
@@ -71,7 +71,7 @@ Zadnje ažuriranje: 5. svibnja 2025.
 
 1. Uvod
 
-Dobrodošli u Croativa. Poštujemo vašu privatnost i predani smo zaštiti vaših osobnih podataka. Ova politika privatnosti će vas informirati o tome kako se brinemo o vašim osobnim podacima kada posjećujete našu aplikaciju i obavijestiti vas o vašim pravima na privatnost i kako vas zakon štiti.
+Dobrodošli u Dinver. Poštujemo vašu privatnost i predani smo zaštiti vaših osobnih podataka. Ova politika privatnosti će vas informirati o tome kako se brinemo o vašim osobnim podacima kada posjećujete našu aplikaciju i obavijestiti vas o vašim pravima na privatnost i kako vas zakon štiti.
 
 2. Podaci koje prikupljamo o vama
 
@@ -112,7 +112,7 @@ Pod određenim okolnostima, imate prava prema zakonima o zaštiti podataka u vez
 6. Kontaktirajte nas
 
 Ako imate bilo kakvih pitanja o ovoj politici privatnosti ili našim praksama privatnosti, molimo kontaktirajte nas na:
-E-mail: privacy@croativa.com
+E-mail: privacy@dinver.com
 
 Hvala što ste odvojili vrijeme za razumijevanje naše Politike privatnosti.
 
@@ -130,7 +130,7 @@ Hvala što ste odvojili vrijeme za razumijevanje naše Politike privatnosti.
           className="flex-row items-center"
           onPress={() => router.back()}
         >
-          <ArrowBack color={colors.textPrimary}/>
+          <ArrowBack color={colors.textPrimary} />
           <Text
             style={{ color: colors.textPrimary }}
             className="text-[18px] font-degular-semibold ml-[18px]"

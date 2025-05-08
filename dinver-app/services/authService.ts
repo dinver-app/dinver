@@ -50,7 +50,7 @@ export const register = async (data: RegisterInput): Promise<User> => {
       AUTH_ENDPOINTS.REGISTER,
       data
     );
-    showSuccess("Registration successful", "Welcome to Croativa!");
+    showSuccess("Registration successful", "Welcome to Dinver!");
     return storeAuthData(response.data);
   } catch (error: any) {
     if (error.response?.data?.error === "Phone number already exists") {

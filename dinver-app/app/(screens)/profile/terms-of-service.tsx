@@ -17,7 +17,7 @@ Last updated: May 5, 2025
 
 1. AGREEMENT TO TERMS
 
-These Terms of Service constitute a legally binding agreement made between you and Croativa, concerning your access to and use of the Croativa application.
+These Terms of Service constitute a legally binding agreement made between you and Dinver, concerning your access to and use of the Dinver application.
 
 By accessing or using the application, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the application.
 
@@ -104,8 +104,8 @@ We will maintain certain data that you transmit to the application for the purpo
 
 In order to resolve a complaint regarding the application or to receive further information regarding use of the application, please contact us at:
 
-Croativa
-Email: terms@croativa.com
+Dinver
+Email: terms@dinver.com
 Phone: +385 1 234 5678
 
 
@@ -116,7 +116,7 @@ Zadnje ažuriranje: 5. svibnja 2025.
 
 1. PRIHVAĆANJE UVJETA
 
-Ovi Uvjeti korištenja predstavljaju pravno obvezujući ugovor između vas i Croativa-e, koji se odnosi na vaš pristup i korištenje aplikacije Croativa.
+Ovi Uvjeti korištenja predstavljaju pravno obvezujući ugovor između vas i Dinver, koji se odnosi na vaš pristup i korištenje aplikacije Dinver.
 
 Pristupanjem ili korištenjem aplikacije, pristajete biti vezani ovim Uvjetima korištenja. Ako se ne slažete s bilo kojim dijelom uvjeta, ne smijete pristupiti aplikaciji.
 
@@ -203,8 +203,8 @@ Održavat ćemo određene podatke koje prenosite na aplikaciju u svrhu upravljan
 
 Kako biste riješili pritužbu u vezi s aplikacijom ili dobili dodatne informacije o korištenju aplikacije, molimo kontaktirajte nas na:
 
-Croativa
-Email: terms@croativa.com
+Dinver
+Email: terms@dinver.com
 Telefon: +385 1 234 5678
 
 
@@ -220,7 +220,7 @@ Telefon: +385 1 234 5678
           className="flex-row items-center"
           onPress={() => router.back()}
         >
-          <ArrowBack color={colors.textPrimary}/>
+          <ArrowBack color={colors.textPrimary} />
           <Text
             style={{ color: colors.textPrimary }}
             className="text-[18px] font-degular-semibold ml-[18px]"
