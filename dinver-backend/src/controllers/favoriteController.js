@@ -94,17 +94,7 @@ const getUserFavorites = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Konstantna slika za sve restorane
-    const RESTAURANT_IMAGE =
-      'https://plus.unsplash.com/premium_photo-1661883237884-263e8de8869b?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bHV4dXJ5JTIwcmVzdGF1cmFudHxlbnwwfHwwfHx8MA%3D%3D';
-
-    // Dodaj testnu sliku svakom restoranu
-    const restaurantsWithImage = user.favoriteRestaurants.map((restaurant) => ({
-      ...restaurant.get(),
-      iconUrl: RESTAURANT_IMAGE,
-    }));
-
-    res.status(200).json(restaurantsWithImage);
+    res.status(200).json(user.favoriteRestaurants);
   } catch (error) {
     console.error('Error fetching favorites:', error);
     res.status(500).json({ error: 'Failed to fetch favorites' });

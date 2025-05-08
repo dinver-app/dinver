@@ -9,6 +9,7 @@ import {
 import { FavoriteRestaurant } from "@/utils/validation";
 import { VerifiedBadge } from "@/assets/icons/icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Octicons } from "@expo/vector-icons";
 
 interface FavoriteCardProps {
   item: FavoriteRestaurant & {
@@ -22,7 +23,8 @@ interface FavoriteCardProps {
   handleRemoveFavorite: (restaurantId: string) => void;
 }
 
-const fallbackImage = require("@/assets/images/avatar.jpg");
+const FALLBACK_IMAGE_URL =
+  "https://dinver-restaurant-thumbnails.s3.eu-north-1.amazonaws.com/restaurant_thumbnails/stock.jpg";
 
 const FavoriteCard: React.FC<FavoriteCardProps> = ({
   item,
@@ -30,69 +32,64 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({
   t,
   handleRemoveFavorite,
 }) => {
-  const imageSource = item.thumbnailUrl
-    ? { uri: item.thumbnailUrl }
-    : item.iconUrl
-    ? { uri: item.iconUrl }
-    : fallbackImage;
+  const imageSource = { uri: item.thumbnailUrl || FALLBACK_IMAGE_URL };
+
+  const hasRating = item.rating != null;
 
   return (
-    <View
-      className="mb-6 rounded-[12px] overflow-hidden relative"
-      style={{ backgroundColor: colors.cardBackground }}
-    >
-      <ImageBackground
-        source={imageSource}
-        className="h-[180px] w-full"
-        resizeMode="cover"
-        style={{ backgroundColor: colors.cardBackground }}
-        imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
-      >
-        {/* Heart icon */}
-        <TouchableOpacity
-          className="absolute top-4 right-4 z-10"
-          style={{ borderRadius: 999, padding: 6 }}
-          onPress={() => handleRemoveFavorite(item.id)}
+    <View style={{ marginBottom: 18 }}>
+      <View className="rounded-[10px] overflow-hidden">
+        <ImageBackground
+          className="h-[170px] w-full"
+          source={imageSource}
+          resizeMode="cover"
         >
-          <MaterialCommunityIcons name={"heart"} size={28} color="#FF4343" />
-        </TouchableOpacity>
-        {/* Rating badge */}
-        <View
-          className="absolute bottom-4 right-4 flex-row items-center px-2 py-1 rounded-md"
-          style={{ backgroundColor: "#18181b" }}
-        >
-          <MaterialCommunityIcons name="star" size={18} color="#F3B200" />
-          <Text className="ml-1 text-white font-bold text-base">
-            {item.rating?.toFixed(1) || "-"}
-          </Text>
-          {item.userRatingsTotal !== undefined && (
-            <Text className="ml-1 text-white text-xs">
-              ({item.userRatingsTotal})
-            </Text>
+          {/* Heart icon (always filled) */}
+          <TouchableOpacity
+            onPress={() => handleRemoveFavorite(item.id)}
+            className="absolute top-[10px] right-[10px] rounded-lg p-1"
+            accessibilityLabel={t("favorites.remove", "Remove from favorites")}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="heart" size={24} color="#FF4343" />
+          </TouchableOpacity>
+          {/* Rating badge */}
+          {hasRating && (
+            <View
+              style={{ backgroundColor: "#0D0D0D" }}
+              className="absolute bottom-[10px] right-[10px] flex-row items-center rounded-[4px] px-2 py-[8px] gap-[4px]"
+            >
+              <MaterialCommunityIcons name="star" color="#F3B200" size={16} />
+              <Text style={{ color: "white" }} className="text-[12px]">
+                {item.rating?.toFixed(1)}
+                {item.userRatingsTotal ? ` (${item.userRatingsTotal})` : ""}
+              </Text>
+            </View>
           )}
-        </View>
-      </ImageBackground>
-      {/* Name and verified badge */}
-      <View className="flex-row items-center px-4 py-3 bg-transparent">
-        <Text
-          className="font-degular mr-2"
-          style={{ color: colors.textPrimary, fontSize: 18 }}
-        >
-          {item.name}
-        </Text>
-        {item.isClaimed && <VerifiedBadge />}
+        </ImageBackground>
       </View>
-      {/* Address below name */}
-      <View className="px-4 pb-3">
-        <Text
-          className="font-degular"
-          style={{ color: colors.textSecondary, fontSize: 14 }}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {item.address}
-          {item.place ? `, ${item.place}` : ""}
-        </Text>
+      <View className="pt-[6px] pl-[10px]">
+        <View className="flex-row items-center gap-[6px] flex-1">
+          <Text
+            numberOfLines={1}
+            style={{ color: colors.textPrimary }}
+            className="text-[20px] font-degular-bold"
+          >
+            {item.name}
+          </Text>
+          {item.isClaimed && <VerifiedBadge />}
+        </View>
+        <View className="flex-row items-center gap-[4px]">
+          <Text
+            style={{ color: colors.textSecondary }}
+            className="font-degular text-[16px]"
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.address}
+            {item.place ? `, ${item.place}` : ""}
+          </Text>
+        </View>
       </View>
     </View>
   );

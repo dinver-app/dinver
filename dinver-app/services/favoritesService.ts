@@ -13,7 +13,6 @@ export const getFavorites = async (): Promise<FavoriteRestaurant[]> => {
     const data = await authRequest<any[]>("get", "/favorites");
     const favorites = data.map((favorite) => ({
       ...favorite,
-      iconUrl: favorite.iconUrl || favorite.imageUrl || null,
     }));
     return favorites.map((favorite) =>
       favoriteRestaurantSchema.parse(favorite)

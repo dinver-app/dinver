@@ -1,35 +1,35 @@
 import api from "@/services/api";
-import { 
+import {
   Restaurant,
-  RestaurantsResponse, 
+  RestaurantsResponse,
   restaurantsResponseSchema,
-  LocationParams
+  LocationParams,
 } from "@/utils/validation";
 import { showError } from "@/utils/toast";
 
 export type { Restaurant, LocationParams };
 
-const CACHE_TTL = 5 * 60 * 1000; 
+const CACHE_TTL = 5 * 60 * 1000;
 const CACHE_TTL_SHORT = 2 * 60 * 1000;
 
 // Cache implementation with TypeScript generic
 class Cache<T> {
-  private cache: Record<string, { data: T, timestamp: number }> = {};
-  
+  private cache: Record<string, { data: T; timestamp: number }> = {};
+
   get(key: string, hasShortTTL = false): T | null {
     const entry = this.cache[key];
     if (!entry) return null;
-    
+
     const elapsed = Date.now() - entry.timestamp;
     const ttl = hasShortTTL ? CACHE_TTL_SHORT : CACHE_TTL;
-    
+
     return elapsed < ttl ? entry.data : null;
   }
-  
+
   set(key: string, data: T): void {
     this.cache[key] = { data, timestamp: Date.now() };
   }
-  
+
   clear(): void {
     this.cache = {};
   }
@@ -41,14 +41,17 @@ const restaurantDetailsCache = new Cache<Restaurant>();
 
 const normalizeRestaurant = (restaurant: any): Restaurant => ({
   ...restaurant,
-  isOpen: typeof restaurant.isOpen === "string" 
-    ? restaurant.isOpen === "true" ? true 
-    : restaurant.isOpen === "false" ? false 
-    : undefined
-    : restaurant.isOpen,
+  isOpen:
+    typeof restaurant.isOpen === "string"
+      ? restaurant.isOpen === "true"
+        ? true
+        : restaurant.isOpen === "false"
+        ? false
+        : undefined
+      : restaurant.isOpen,
   userRatingsTotal: restaurant.userRatingsTotal || null,
   priceLevel: restaurant.priceLevel || null,
-  iconUrl: restaurant.iconUrl || null,
+  thumbnailUrl: restaurant.thumbnailUrl || null,
 });
 
 export const fetchRestaurants = async (
@@ -61,9 +64,11 @@ export const fetchRestaurants = async (
       throw new Error("Location data is required to find restaurants");
     }
 
-    const searchTerm = search?.trim() || '';
-    const cacheKey = `${page}_${searchTerm}_${locationParams.latitude.toFixed(5)}_${locationParams.longitude.toFixed(5)}`;
-    
+    const searchTerm = search?.trim() || "";
+    const cacheKey = `${page}_${searchTerm}_${locationParams.latitude.toFixed(
+      5
+    )}_${locationParams.longitude.toFixed(5)}`;
+
     // Try to get from cache
     const cachedData = restaurantsCache.get(cacheKey, !!searchTerm);
     if (cachedData) return cachedData;
@@ -72,19 +77,21 @@ export const fetchRestaurants = async (
       page,
       latitude: locationParams.latitude,
       longitude: locationParams.longitude,
-      ...(searchTerm && { search: searchTerm })
+      ...(searchTerm && { search: searchTerm }),
     };
 
-    const { data: responseData } = await api.get("/restaurants/sample", { params });
+    const { data: responseData } = await api.get("/restaurants/sample", {
+      params,
+    });
 
     const normalizedData = {
       ...responseData,
       hasSampleLimit: responseData.hasSampleLimit ?? true,
       fixedSampleSize: responseData.fixedSampleSize ?? 10,
       maxRecords: responseData.maxRecords ?? 50,
-      restaurants: Array.isArray(responseData.restaurants) 
+      restaurants: Array.isArray(responseData.restaurants)
         ? responseData.restaurants.map(normalizeRestaurant)
-        : []
+        : [],
     };
 
     // Validate and save to cache
@@ -108,10 +115,10 @@ export const fetchRestaurantById = async (id: string): Promise<Restaurant> => {
     // Try to get from cache
     const cachedData = restaurantDetailsCache.get(id);
     if (cachedData) return cachedData;
-    
+
     const { data } = await api.get(`/restaurants/${id}`);
     const normalized = normalizeRestaurant(data);
-    
+
     restaurantDetailsCache.set(id, normalized);
     return normalized;
   } catch (error) {
@@ -125,4 +132,3 @@ export const clearRestaurantCache = (): void => {
   restaurantsCache.clear();
   restaurantDetailsCache.clear();
 };
-
