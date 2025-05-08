@@ -83,6 +83,7 @@ const getUserFavorites = async (req, res) => {
             'address',
             'isClaimed',
             'thumbnailUrl',
+            'userRatingsTotal',
           ],
         },
       ],

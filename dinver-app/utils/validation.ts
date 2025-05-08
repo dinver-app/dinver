@@ -175,6 +175,9 @@ export const favoriteRestaurantSchema = z.object({
   priceLevel: z.number().nullable().optional(),
   address: z.string(),
   iconUrl: z.string().optional(),
+  isClaimed: z.boolean().optional(),
+  thumbnailUrl: z.string().nullable().optional(),
+  userRatingsTotal: z.number().nullable().optional(),
 });
 
 export const favoriteMessageResponseSchema = z.object({

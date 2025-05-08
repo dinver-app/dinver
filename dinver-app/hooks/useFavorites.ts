@@ -139,7 +139,7 @@ export const useFavorites = () => {
             rating: restaurant.rating || 0,
             priceLevel: restaurant.priceLevel || undefined,
             address: restaurant.address || "",
-            iconUrl: restaurant.iconUrl,
+            iconUrl: restaurant.iconUrl || undefined,
           };
           setState((prev) => ({
             ...prev,
