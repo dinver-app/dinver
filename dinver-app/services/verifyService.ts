@@ -1,49 +1,88 @@
 import { authRequest } from "@/services/api";
-import { showError, showSuccess } from "@/utils/toast";
+import {
+  verificationStatusSchema,
+  VerificationStatus,
+} from "@/utils/validation";
 
 const VERIFY_ENDPOINTS = {
   EMAIL: "/auth/verify-email",
   PHONE: "/auth/verify-phone",
-  CONFIRM_PHONE: "/auth/verify-phone/confirm"
+  CONFIRM_PHONE: "/auth/verify-phone/confirm",
 };
 
 export const verifyEmail = async (): Promise<boolean> => {
   try {
-    await authRequest<{ message: string }>('post', VERIFY_ENDPOINTS.EMAIL);
-    showSuccess("Verification email sent", "Please check your inbox for the verification link");
+    await authRequest<{ message: string }>("post", VERIFY_ENDPOINTS.EMAIL);
     return true;
   } catch (error: any) {
-    const message = error?.response?.data?.message || "Could not send verification email";
-    showError("Verification error", message);
-    throw error;
+    const message =
+      error?.response?.data?.message || "Could not send verification email";
+    throw new Error(message);
   }
 };
 
-export const verifyPhone = async (): Promise<boolean> => {
+export const verifyPhone = async (
+  code: string
+): Promise<VerificationStatus> => {
+  if (!code) {
+    throw new Error("Please enter the verification code");
+  }
+
   try {
-    await authRequest<{ message: string }>('post', VERIFY_ENDPOINTS.PHONE);
-    showSuccess("Verification SMS sent", "Please check your phone for the verification code");
-    return true;
+    const response = await authRequest("post", VERIFY_ENDPOINTS.CONFIRM_PHONE, {
+      code,
+    });
+    return verificationStatusSchema.parse(response);
   } catch (error: any) {
-    const message = error?.response?.data?.message || "Could not send verification SMS";
-    showError("Verification error", message);
-    throw error;
+    const message =
+      error.response?.data?.message || "Failed to verify phone number";
+    throw new Error(message);
   }
 };
 
-export const confirmPhoneVerification = async (code: string): Promise<boolean> => {
+export const confirmPhoneVerification = async (
+  code: string
+): Promise<boolean> => {
   try {
     if (!code || code.trim() === "") {
-      showError("Verification error", "Please enter the verification code");
       throw new Error("Verification code cannot be empty");
     }
-    
-    await authRequest<{ message: string }>('post', VERIFY_ENDPOINTS.CONFIRM_PHONE, { code });
-    showSuccess("Phone verified", "Your phone number has been successfully verified");
+
+    await authRequest<{ message: string }>(
+      "post",
+      VERIFY_ENDPOINTS.CONFIRM_PHONE,
+      { code }
+    );
     return true;
   } catch (error: any) {
-    const message = error?.response?.data?.message || "Invalid or expired verification code";
-    showError("Verification error", message);
-    throw error;
+    const message =
+      error?.response?.data?.message || "Invalid or expired verification code";
+    throw new Error(message);
+  }
+};
+
+export const sendVerificationEmail = async (): Promise<VerificationStatus> => {
+  try {
+    const response = await authRequest("post", "/verify/email");
+    return verificationStatusSchema.parse(response);
+  } catch (error: any) {
+    const message =
+      error.response?.data?.message || "Failed to send verification email";
+    throw new Error(message);
+  }
+};
+
+export const sendVerificationSMS = async (
+  phoneNumber: string
+): Promise<VerificationStatus> => {
+  try {
+    const response = await authRequest("post", "/verify/phone", {
+      phoneNumber,
+    });
+    return verificationStatusSchema.parse(response);
+  } catch (error: any) {
+    const message =
+      error.response?.data?.message || "Failed to send verification SMS";
+    throw new Error(message);
   }
 };

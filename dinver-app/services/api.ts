@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import axios, { AxiosError, AxiosInstance } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { showError } from "@/utils/toast";
+import { router } from "expo-router";
 
 declare module "axios" {
   export interface InternalAxiosRequestConfig {
@@ -16,16 +16,24 @@ export const STORAGE_KEYS = {
 };
 
 const API_KEY = process.env.EXPO_PUBLIC_MOBILE_APP_API_KEY || "";
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "https://api.dinver.eu/api/app";
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || "https://api.dinver.eu/api/app";
 
-export const isAuthenticated = async (): Promise<boolean> => 
-  !!(await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN));
+export const isAuthenticated = async (): Promise<boolean> => {
+  try {
+    const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    return !!token;
+  } catch (error) {
+    console.error("Error checking authentication:", error);
+    return false;
+  }
+};
 
 export const clearAuth = async (): Promise<void> => {
   await AsyncStorage.multiRemove([
     STORAGE_KEYS.ACCESS_TOKEN,
     STORAGE_KEYS.REFRESH_TOKEN,
-    STORAGE_KEYS.USER
+    STORAGE_KEYS.USER,
   ]);
 };
 
@@ -38,7 +46,7 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
       "x-api-key": API_KEY,
     },
   });
-  
+
   instance.interceptors.request.use(
     async (config) => {
       try {
@@ -51,7 +59,7 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
     },
     (error) => Promise.reject(error)
   );
-  
+
   instance.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
@@ -61,14 +69,14 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
 
       if (error.response) {
         const { status, config } = error.response;
-        const isAuthEndpoint = config?.url?.includes('/auth');
-        
+        const isAuthEndpoint = config?.url?.includes("/auth");
+
         // Handle auth errors (except for auth endpoints themselves)
         if (status === 401 && config && !config._retry && !isAuthEndpoint) {
           config._retry = true;
           try {
             await clearAuth();
-            showError("Session expired", "Please sign in again");
+            router.replace("/(screens)/profile");
           } catch (refreshError) {
             console.error("Error handling auth failure:", refreshError);
           }
@@ -77,7 +85,7 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
       return Promise.reject(error);
     }
   );
-  
+
   return instance;
 };
 
@@ -87,37 +95,102 @@ export default api;
 
 // Helper for authenticated API calls with strong typing
 export const authRequest = async <T>(
-  method: 'get' | 'post' | 'put' | 'patch' | 'delete',
+  method: "get" | "post" | "put" | "patch" | "delete",
   url: string,
   data?: any,
   options?: any
 ): Promise<T> => {
   const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   if (!token) throw new Error("Authentication required");
-  
+
   const config = {
     headers: {
-      "Authorization": token,
+      Authorization: token,
       "x-api-key": API_KEY,
-      ...options?.headers
+      ...options?.headers,
     },
-    ...options
+    ...options,
   };
-  
+
   try {
     let response;
     switch (method) {
-      case 'get': response = await api.get(url, config); break;
-      case 'post': response = await api.post(url, data, config); break;
-      case 'put': response = await api.put(url, data, config); break;
-      case 'patch': response = await api.patch(url, data, config); break;
-      case 'delete': response = await api.delete(url, config); break;
+      case "get":
+        response = await api.get(url, config);
+        break;
+      case "post":
+        response = await api.post(url, data, config);
+        break;
+      case "put":
+        response = await api.put(url, data, config);
+        break;
+      case "patch":
+        response = await api.patch(url, data, config);
+        break;
+      case "delete":
+        response = await api.delete(url, config);
+        break;
     }
     return response.data;
   } catch (error) {
     if ((error as AxiosError).response?.status === 401) {
-      showError("Authentication error", "Your session has expired");
+      router.replace("/(screens)/profile");
     }
+    throw error;
+  }
+};
+
+export const login = async (email: string, password: string) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/auth/login`,
+      { email, password },
+      {
+        headers: {
+          "x-api-key": API_KEY,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { token } = response.data;
+    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Login failed");
+  }
+};
+
+export const register = async (
+  email: string,
+  password: string,
+  name: string
+) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/auth/register`,
+      { email, password, name },
+      {
+        headers: {
+          "x-api-key": API_KEY,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { token } = response.data;
+    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Registration failed");
+  }
+};
+
+export const logout = async () => {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  } catch (error) {
+    console.error("Error during logout:", error);
     throw error;
   }
 };

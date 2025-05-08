@@ -28,6 +28,7 @@ import {
 } from "@/utils/validation";
 import { isAuthenticated, authRequest } from "./api";
 import i18next from "i18next";
+import { useTranslation } from "react-i18next";
 
 const API_KEY = process.env.EXPO_PUBLIC_MOBILE_APP_API_KEY || "";
 const BASE_URL =
@@ -55,8 +56,7 @@ export const getUserSettings = async (): Promise<UserSettings> => {
     );
     return userSettingsResponseSchema.parse(response).settings;
   } catch (error) {
-    console.log("Error fetching user settings:", error);
-    showError(t("common.error"), t("user.settingsRetrievalError"));
+    console.error("Error getting user settings:", error);
     throw error;
   }
 };
@@ -71,11 +71,9 @@ export const updateUserSettings = async (
       updateData
     );
     const result = userSettingsResponseSchema.parse(response).settings;
-    showSuccess(t("user.settingsUpdated"), t("user.settingsSaved"));
     return result;
   } catch (error) {
-    console.log("Error updating user settings:", error);
-    showError(t("common.error"), t("user.settingsUpdateError"));
+    console.error("Error updating user settings:", error);
     throw error;
   }
 };
@@ -103,8 +101,7 @@ export const getUserProfile = async (): Promise<UserProfile> => {
     const response = await authRequest<UserProfile>("get", ENDPOINTS.PROFILE);
     return userProfileSchema.parse(response);
   } catch (error) {
-    console.log("Error fetching user profile:", error);
-    showError(t("common.error"), t("user.profileRetrievalError"));
+    console.error("Error getting user profile:", error);
     throw error;
   }
 };
@@ -119,40 +116,20 @@ export const updateUserProfile = async (
       profileData
     );
     const result = userProfileSchema.parse(response);
-    showSuccess(t("user.profileUpdated"), t("user.profileSaved"));
     return result;
   } catch (error: any) {
     if (
       error.response?.data?.error ===
       "This phone number is already in use by another user"
     ) {
-      showError(
-        t("user.profileUpdateError"),
-        t("errors.phoneInUse")
-      );
-      error.isHandled = true;
-      return Promise.reject({
-        isHandled: true,
-        field: "phone",
-        message: t("errors.phoneInUse"),
-      });
+      throw new Error(t("errors.phoneInUse"));
     } else if (
       error.response?.data?.error ===
       "This email address is already in use by another user"
     ) {
-      showError(
-        t("user.profileUpdateError"),
-        t("user.emailInUse")
-      );
-      error.isHandled = true;
-      return Promise.reject({
-        isHandled: true,
-        field: "email",
-        message: t("user.emailInUse"),
-      });
+      throw new Error(t("user.emailInUse"));
     } else {
-      console.log("Error updating user profile:", error);
-      showError(t("common.error"), t("user.profileUpdateError"));
+      console.error("Error updating user profile:", error);
       throw error;
     }
   }
@@ -196,11 +173,9 @@ export const uploadProfileImage = async (
     );
 
     const result = profileImageResponseSchema.parse(response.data);
-    showSuccess(t("user.imageUploaded"), t("user.profileImageUpdated"));
     return result;
   } catch (error) {
-    console.log("Error uploading profile image:", error);
-    showError(t("common.error"), t("user.imageUploadError"));
+    console.error("Error uploading profile image:", error);
     throw error;
   }
 };
@@ -213,11 +188,9 @@ export const deleteProfileImage =
         ENDPOINTS.PROFILE_IMAGE
       );
       const result = deleteProfileImageResponseSchema.parse(response);
-      showSuccess(t("user.imageRemoved"), t("user.profileImageRemoved"));
       return result;
     } catch (error) {
-      console.log("Error deleting profile image:", error);
-      showError(t("common.error"), t("user.imageRemoveError"));
+      console.error("Error deleting profile image:", error);
       throw error;
     }
   };
@@ -231,7 +204,7 @@ export const getVerificationStatus = async (): Promise<VerificationStatus> => {
     );
     return verificationStatusSchema.parse(response);
   } catch (error) {
-    console.log("Error fetching verification status:", error);
+    console.error("Error fetching verification status:", error);
     throw error;
   }
 };
@@ -241,97 +214,21 @@ export const changePassword = async (
   currentPassword: string,
   newPassword: string
 ): Promise<ChangePasswordResponse> => {
-  // Validate inputs first
   try {
-    if (!currentPassword) {
-      throw createError(t("user.currentPasswordRequired"), "REQUIRED_FIELD");
-    }
-
-    if (!newPassword) {
-      throw createError(t("user.newPasswordRequired"), "REQUIRED_FIELD");
-    }
-
-    if (newPassword.length < 6) {
-      throw createError(t("user.passwordMinLength"), "PASSWORD_REQUIREMENTS");
-    }
-
-    if (currentPassword === newPassword) {
-      throw createError(t("user.passwordMustBeDifferent"), "SAME_PASSWORD");
-    }
-
-    // Check authentication status
-    if (!(await isAuthenticated())) {
-      throw createError(t("user.authRequired"), "AUTH_REQUIRED");
-    }
-
-    // Schema validation is now redundant as we've done validation above
-    const data: ChangePasswordRequest = {
-      currentPassword,
-      newPassword,
-    };
-
-    // Use direct axios call instead of authRequest to prevent token clearing on 401
-    const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!token) {
-      throw createError(t("user.authRequired"), "AUTH_REQUIRED");
-    }
-    
-    const url = `${BASE_URL}${ENDPOINTS.CHANGE_PASSWORD}`;
-    const response = await axios.post(url, data, {
-      headers: {
-        Authorization: token,
-        "x-api-key": API_KEY,
-        "Content-Type": "application/json"
+    const response = await authRequest<{ message: string }>(
+      "put",
+      "/user/password",
+      {
+        currentPassword,
+        newPassword,
       }
-    });
-    
-    const result = changePasswordResponseSchema.parse(response.data);
-    showSuccess(
-      t("user.passwordChanged"),
-      t("user.passwordUpdatedSuccess")
     );
-    return result;
+    return response;
   } catch (error: any) {
-    // Handle client-side validation errors
-    if (error.code === "REQUIRED_FIELD") {
-      showError(t("user.passwordChangeFailed"), error.message);
-      throw error;
-    }
-    
-    if (error.code === "PASSWORD_REQUIREMENTS") {
-      showError(t("user.passwordChangeFailed"), error.message);
-      throw error;
-    }
-    
-    if (error.code === "SAME_PASSWORD") {
-      showError(t("user.passwordChangeFailed"), error.message);
-      throw error;
-    }
-    
-    if (error.code === "AUTH_REQUIRED") {
-      showError(t("user.authError"), t("user.loginRequiredForPasswordChange"));
-      throw error;
-    }
-
-    // Handle API error responses
-    if (error.response?.data) {
-      const errorMsg = error.response.data.message || error.response.data.error;
-      const appError = error as AppError;
-      
-      if (error.response.status === 401 || 
-          errorMsg?.toLowerCase().includes("current password") || 
-          errorMsg?.toLowerCase().includes("incorrect password")) {
-        showError(t("user.passwordChangeFailed"), t("user.currentPasswordIncorrect"));
-        appError.code = "INCORRECT_PASSWORD";
-        appError.isHandled = true; // Mark as handled so interceptor doesn't clear auth
-      } else {
-        showError(t("user.passwordChangeFailed"), errorMsg || t("user.unableToChangePassword"));
-      }
-    } else {
-      showError(t("user.passwordChangeFailed"), t("user.unableToChangePassword"));
-    }
-    
-    throw error;
+    console.error("Error changing password:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to change password"
+    );
   }
 };
 
@@ -455,14 +352,9 @@ export const deleteSearchTerm = async (searchTerm: string): Promise<void> => {
 
 export const clearSearchHistory = async (): Promise<void> => {
   try {
-    await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
-    showSuccess(
-      t("settings.clearSearchHistory"),
-      t("settings.searchHistoryCleared")
-    );
+    await authRequest("delete", "/user/search-history");
   } catch (error) {
-    console.log("Failed to clear search history:", error);
-    showError(t("common.error"), t("settings.searchHistoryClearError"));
+    console.error("Error clearing search history:", error);
     throw error;
   }
 };
@@ -473,8 +365,7 @@ export const getUserStats = async (): Promise<UserStatsDetails> => {
     const response = await authRequest<UserStatsDetails>("get", "/user/stats");
     return userStatsDetailsSchema.parse(response);
   } catch (error) {
-    console.log("Error fetching user detailed stats:", error);
-    showError(t("common.error"), t("user.statsRetrievalError"));
+    console.error("Error getting user stats:", error);
     throw error;
   }
 };
