@@ -101,7 +101,7 @@ export default function Favorites() {
             style={{
               flex: 1,
               color: colors.textPrimary,
-              fontSize: 16,
+              fontSize: 14,
               marginLeft: 10,
             }}
             placeholder={t(

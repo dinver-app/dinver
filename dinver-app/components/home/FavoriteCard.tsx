@@ -82,6 +82,18 @@ const FavoriteCard: React.FC<FavoriteCardProps> = ({
         </Text>
         {item.isClaimed && <VerifiedBadge />}
       </View>
+      {/* Address below name */}
+      <View className="px-4 pb-3">
+        <Text
+          className="font-degular"
+          style={{ color: colors.textSecondary, fontSize: 14 }}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {item.address}
+          {item.place ? `, ${item.place}` : ""}
+        </Text>
+      </View>
     </View>
   );
 };

@@ -174,6 +174,7 @@ export const favoriteRestaurantSchema = z.object({
   rating: z.number(),
   priceLevel: z.number().nullable().optional(),
   address: z.string(),
+  place: z.string().nullable().optional(),
   iconUrl: z.string().optional(),
   isClaimed: z.boolean().optional(),
   thumbnailUrl: z.string().nullable().optional(),
