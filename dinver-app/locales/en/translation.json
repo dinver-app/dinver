@@ -334,5 +334,12 @@
     "authError": "Authentication Error",
     "loginRequiredForPasswordChange": "You need to be logged in to change your password.",
     "statsRetrievalError": "Failed to retrieve your statistics. Please try again."
+  },
+  "favorites": {
+    "searchPlaceholder": "Search saved restaurants",
+    "title": "My Favorites",
+    "noFavorites": "You have no saved restaurants.",
+    "loginRequired": "Sign in to view your favorites",
+    "loginDescription": "Create an account or sign in to save your favorite restaurants and access them anytime."
   }
 }

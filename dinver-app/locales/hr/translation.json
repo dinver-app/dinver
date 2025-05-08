@@ -293,5 +293,12 @@
     "authError": "Greška autentifikacije",
     "loginRequiredForPasswordChange": "Morate biti prijavljeni za promjenu lozinke.",
     "statsRetrievalError": "Neuspješno dohvaćanje vaše statistike. Molimo pokušajte ponovno."
+  },
+  "favorites": {
+    "searchPlaceholder": "Pretraži spremljene restorane",
+    "title": "Moji favoriti",
+    "noFavorites": "Nemaš spremljenih restorana.",
+    "loginRequired": "Prijavi se za pregled favorita",
+    "loginDescription": "Kreiraj račun ili se prijavi kako bi spremio/restorane i pristupio im bilo kada."
   }
 }
