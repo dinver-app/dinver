@@ -1,5 +1,4 @@
 const { User, Restaurant, UserFavorite } = require('../../models');
-const PointsService = require('../../utils/pointsService');
 
 // Dodaj restoran u favorite
 const addToFavorites = async (req, res) => {
