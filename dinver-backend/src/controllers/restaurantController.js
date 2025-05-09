@@ -1183,7 +1183,7 @@ const getSampleRestaurants = async (req, res) => {
         'priceCategoryId',
         'thumbnailUrl',
       ],
-      order: [['name', 'ASC']], // Sortiramo po imenu da uvijek dobijemo iste
+      order: [['name', 'ASC']],
       limit: 50,
     });
 
