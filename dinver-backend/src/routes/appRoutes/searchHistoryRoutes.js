@@ -1,5 +1,5 @@
 const express = require('express');
-const userSettingsController = require('../../controllers/userSettingsController');
+const searchHistoryController = require('../../controllers/searchHistoryController');
 const {
   appApiKeyAuth,
   appAuthenticateToken,
@@ -7,18 +7,18 @@ const {
 
 const router = express.Router();
 
-router.get(
-  '/user/settings',
+router.post(
+  '/search-history',
   appApiKeyAuth,
   appAuthenticateToken,
-  userSettingsController.getUserSettings,
+  searchHistoryController.addSearchHistory,
 );
 
-router.patch(
-  '/user/settings',
+router.get(
+  '/search-history',
   appApiKeyAuth,
   appAuthenticateToken,
-  userSettingsController.updateUserSettings,
+  searchHistoryController.getSearchHistory,
 );
 
 module.exports = router;

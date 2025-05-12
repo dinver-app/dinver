@@ -43,11 +43,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
-      searchHistory: {
-        type: DataTypes.JSONB,
-        allowNull: false,
-        defaultValue: [],
-      },
       isEmailVerified: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

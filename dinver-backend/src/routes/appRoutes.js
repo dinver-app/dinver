@@ -8,6 +8,8 @@ const achievementRoutes = require('./appRoutes/achievementRoutes');
 const pointsRoutes = require('./appRoutes/pointsRoutes');
 const userSettingsRoutes = require('./appRoutes/userSettingsRoutes');
 const userRoutes = require('./appRoutes/userRoutes');
+const searchHistoryRoutes = require('./appRoutes/searchHistoryRoutes');
+const trendingSearchesRoutes = require('./appRoutes/trendingSearchesRoutes');
 
 const router = express.Router();
 
@@ -20,5 +22,7 @@ router.use(achievementRoutes);
 router.use(pointsRoutes);
 router.use(userSettingsRoutes);
 router.use(userRoutes);
+router.use(searchHistoryRoutes);
+router.use(trendingSearchesRoutes);
 
 module.exports = router;
