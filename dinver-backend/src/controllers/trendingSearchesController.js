@@ -54,7 +54,15 @@ const getTrendingSearches = async (req, res) => {
         },
       },
       group: ['searchTerm'],
-      order: [[Sequelize.literal('userCount'), 'DESC']],
+      order: [
+        [
+          Sequelize.fn(
+            'COUNT',
+            Sequelize.fn('DISTINCT', Sequelize.col('userId')),
+          ),
+          'DESC',
+        ],
+      ],
       limit: 5,
     });
 
