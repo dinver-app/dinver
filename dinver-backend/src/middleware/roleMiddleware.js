@@ -188,6 +188,43 @@ const restaurantOwnerAuth = async (req, res, next) => {
   }
 };
 
+const isRestaurantOwner = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Prvo provjeri je li korisnik sysadmin ili admin
+    const sysadmin = await UserSysadmin.findOne({ where: { userId } });
+    if (sysadmin) {
+      return next();
+    }
+
+    const admin = await UserAdmin.findOne({ where: { userId } });
+    if (admin) {
+      return next();
+    }
+
+    // Ako nije admin, provjeri je li vlasnik nekog restorana
+    const restaurant = await Restaurant.findOne({
+      where: { ownerId: userId },
+    });
+
+    if (!restaurant) {
+      return res
+        .status(403)
+        .json({ error: 'Access denied. Restaurant owner only.' });
+    }
+
+    // Dodaj restaurantId u request za kasniju upotrebu
+    req.user.restaurantId = restaurant.id;
+    next();
+  } catch (error) {
+    console.error('Error checking restaurant owner:', error);
+    res.status(500).json({
+      error: 'An error occurred while checking restaurant owner privileges.',
+    });
+  }
+};
+
 module.exports = {
   appAuthenticateToken,
   adminAuthenticateToken,
@@ -196,4 +233,5 @@ module.exports = {
   checkAdmin,
   appApiKeyAuth,
   restaurantOwnerAuth,
+  isRestaurantOwner,
 };

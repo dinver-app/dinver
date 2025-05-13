@@ -10,6 +10,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
 const appRoutes = require('./routes/appRoutes');
 const translateRoutes = require('./routes/translateRoutes');
+const restaurantPostRoutes = require('./routes/appRoutes/restaurantPostRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -111,6 +112,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/translate', translateRoutes);
 app.use('/api/app', appRoutes);
+app.use('/api/app', restaurantPostRoutes);
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');
 });
