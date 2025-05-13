@@ -57,4 +57,12 @@ router.post(
   userController.changePassword,
 );
 
+// Dohvati restorane kojima je korisnik vlasnik
+router.get(
+  '/user/owned-restaurants',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userController.getOwnedRestaurants,
+);
+
 module.exports = router;
