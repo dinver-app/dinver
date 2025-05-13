@@ -1413,26 +1413,36 @@ const getNewRestaurants = async (req, res) => {
           createdAt: log.createdAt,
         };
       });
-    // Funkcija za dohvat do 3 najnovija unutar zadanog radijusa
+    // Kombinacija: 1 najnoviji + 2 random iz ostatka (unutar 10, 25, 50 km)
     function getWithinRadius(radius) {
-      return withDistance
-        .filter((r) => r.distance <= radius)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 3);
+      return withDistance.filter((r) => r.distance <= radius);
     }
-    let newRestaurants = getWithinRadius(10);
-    if (newRestaurants.length < 3) {
+    let candidates = getWithinRadius(10);
+    if (candidates.length < 3) {
       const extra = getWithinRadius(25).filter(
-        (r) => !newRestaurants.some((nr) => nr.id === r.id),
+        (r) => !candidates.some((nr) => nr.id === r.id),
       );
-      newRestaurants = [...newRestaurants, ...extra].slice(0, 3);
+      candidates = [...candidates, ...extra];
     }
-    if (newRestaurants.length < 3) {
+    if (candidates.length < 3) {
       const extra = getWithinRadius(50).filter(
-        (r) => !newRestaurants.some((nr) => nr.id === r.id),
+        (r) => !candidates.some((nr) => nr.id === r.id),
       );
-      newRestaurants = [...newRestaurants, ...extra].slice(0, 3);
+      candidates = [...candidates, ...extra];
     }
+    // Najnoviji
+    const [mostRecent, ...rest] = candidates.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    );
+    // Random iz ostatka
+    function getRandom(arr, n) {
+      const shuffled = arr.slice().sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, n);
+    }
+    const randomRest = getRandom(rest, 2);
+    const newRestaurants = [mostRecent, ...randomRest]
+      .filter(Boolean)
+      .slice(0, 3);
     res.json({ latitude: userLat, longitude: userLon, newRestaurants });
   } catch (error) {
     console.error('Error fetching new restaurants:', error);
