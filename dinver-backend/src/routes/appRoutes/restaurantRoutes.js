@@ -26,7 +26,7 @@ router.get(
 
 router.get(
   '/restaurants/new',
-  appApiKeyAuth,
+  // appApiKeyAuth,
   restaurantController.getNewRestaurants,
 );
 
