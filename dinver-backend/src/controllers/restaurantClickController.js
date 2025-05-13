@@ -101,14 +101,18 @@ const addRestaurantPromoClick = async (req, res) => {
 // Dohvat popularnih restorana po gradu za zadnjih 7 dana
 const getPopularRestaurants = async (req, res) => {
   try {
-    const { city, latitude, longitude } = req.query;
-    if (!city) {
-      return res.status(400).json({ error: 'city is required' });
+    const { latitude, longitude } = req.query;
+    if (!latitude || !longitude) {
+      return res
+        .status(400)
+        .json({ error: 'latitude and longitude are required' });
     }
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
     const limit = 20;
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    // Grupiraj po restaurantId, broji jedinstvene korisnike
+    // Dohvati sve klikove u zadnjih 7 dana
     const clicks = await RestaurantClick.findAll({
       attributes: [
         'restaurantId',
@@ -121,10 +125,7 @@ const getPopularRestaurants = async (req, res) => {
         ],
       ],
       where: {
-        city,
-        timestamp: {
-          [Op.gte]: weekAgo,
-        },
+        timestamp: { [Op.gte]: weekAgo },
       },
       group: ['restaurantId'],
       order: [
@@ -136,55 +137,68 @@ const getPopularRestaurants = async (req, res) => {
           'DESC',
         ],
       ],
-      limit: parseInt(limit),
     });
     // Dohvati podatke o restoranima
     const restaurantIds = clicks.map((c) => c.restaurantId);
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
     });
-    // Izračunaj distance ako su poslani latitude i longitude
-    const userLat = latitude ? parseFloat(latitude) : null;
-    const userLon = longitude ? parseFloat(longitude) : null;
-    // Mapiraj rezultate
-    const popular = clicks.map((c) => {
-      const r = restaurants.find((rest) => rest.id === c.restaurantId);
-      let distance = null;
-      if (
-        r &&
-        userLat !== null &&
-        userLon !== null &&
-        r.latitude &&
-        r.longitude
-      ) {
-        distance = calculateDistance(
-          userLat,
-          userLon,
-          parseFloat(r.latitude),
-          parseFloat(r.longitude),
-        );
-      }
-      return {
-        restaurant: r
-          ? {
-              id: r.id,
-              name: r.name,
-              description: r.description,
-              address: r.address,
-              place: r.place,
-              latitude: r.latitude,
-              longitude: r.longitude,
-              phone: r.phone,
-              rating: r.rating,
-              priceLevel: r.priceLevel,
-              thumbnailUrl: r.thumbnailUrl,
-              distance,
-            }
-          : null,
-        userCount: parseInt(c.get('userCount'), 10),
-      };
-    });
-    res.json({ city, popular });
+    // Mapiraj klikove s restoranima i distance
+    const withDistance = clicks
+      .map((c) => {
+        const r = restaurants.find((rest) => rest.id === c.restaurantId);
+        let distance = null;
+        if (r && r.latitude && r.longitude) {
+          distance = calculateDistance(
+            userLat,
+            userLon,
+            parseFloat(r.latitude),
+            parseFloat(r.longitude),
+          );
+        }
+        return {
+          restaurant: r
+            ? {
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                address: r.address,
+                place: r.place,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                phone: r.phone,
+                rating: r.rating,
+                priceLevel: r.priceLevel,
+                thumbnailUrl: r.thumbnailUrl,
+                distance,
+              }
+            : null,
+          userCount: parseInt(c.get('userCount'), 10),
+          distance,
+        };
+      })
+      .filter((item) => item.restaurant && item.distance !== null);
+    // Funkcija za dohvat do 20 najpopularnijih unutar zadanog radijusa
+    function getWithinRadius(radius) {
+      return withDistance
+        .filter((r) => r.distance <= radius)
+        .sort((a, b) => b.userCount - a.userCount)
+        .slice(0, limit);
+    }
+    let popular = getWithinRadius(10);
+    if (popular.length < limit) {
+      const extra = getWithinRadius(25).filter(
+        (r) => !popular.some((p) => p.restaurant.id === r.restaurant.id),
+      );
+      popular = [...popular, ...extra].slice(0, limit);
+    }
+    if (popular.length < limit) {
+      const extra = getWithinRadius(50).filter(
+        (r) => !popular.some((p) => p.restaurant.id === r.restaurant.id),
+      );
+      popular = [...popular, ...extra].slice(0, limit);
+    }
+    res.json({ latitude: userLat, longitude: userLon, popular });
   } catch (error) {
     console.error('Error fetching popular restaurants:', error);
     res.status(500).json({ error: 'Failed to fetch popular restaurants' });

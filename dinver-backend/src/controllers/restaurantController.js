@@ -1,4 +1,4 @@
-const { Restaurant, Review, UserFavorite } = require('../../models');
+const { Restaurant, Review, UserFavorite, ClaimLog } = require('../../models');
 const { recordInsight } = require('./insightController');
 const {
   updateFoodExplorerProgress,
@@ -1356,6 +1356,90 @@ const createReview = async (req, res) => {
   }
 };
 
+const getNewRestaurants = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+    if (!latitude || !longitude) {
+      return res
+        .status(400)
+        .json({ error: 'latitude and longitude are required' });
+    }
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    // Dohvati claim logove za zadnjih mjesec dana
+    const claimLogs = await ClaimLog.findAll({
+      where: {
+        createdAt: { [Op.gte]: monthAgo },
+      },
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'description',
+            'address',
+            'place',
+            'latitude',
+            'longitude',
+            'phone',
+            'rating',
+            'priceLevel',
+            'thumbnailUrl',
+          ],
+        },
+      ],
+    });
+    // Izračunaj distance i filtriraj samo one s koordinatama
+    const withDistance = claimLogs
+      .filter(
+        (log) =>
+          log.restaurant && log.restaurant.latitude && log.restaurant.longitude,
+      )
+      .map((log) => {
+        const distance = calculateDistance(
+          userLat,
+          userLon,
+          parseFloat(log.restaurant.latitude),
+          parseFloat(log.restaurant.longitude),
+        );
+        return {
+          ...log.restaurant.get(),
+          distance,
+          createdAt: log.createdAt,
+        };
+      });
+    // Funkcija za dohvat do 3 najnovija unutar zadanog radijusa
+    function getWithinRadius(radius) {
+      return withDistance
+        .filter((r) => r.distance <= radius)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 3);
+    }
+    let newRestaurants = getWithinRadius(10);
+    if (newRestaurants.length < 3) {
+      const extra = getWithinRadius(25).filter(
+        (r) => !newRestaurants.some((nr) => nr.id === r.id),
+      );
+      newRestaurants = [...newRestaurants, ...extra].slice(0, 3);
+    }
+    if (newRestaurants.length < 3) {
+      const extra = getWithinRadius(50).filter(
+        (r) => !newRestaurants.some((nr) => nr.id === r.id),
+      );
+      newRestaurants = [...newRestaurants, ...extra].slice(0, 3);
+    }
+    res.json({ latitude: userLat, longitude: userLon, newRestaurants });
+  } catch (error) {
+    console.error('Error fetching new restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch new restaurants' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1378,4 +1462,5 @@ module.exports = {
   deleteCustomWorkingDay,
   getAllRestaurantsWithDetails,
   getSampleRestaurants,
+  getNewRestaurants,
 };
