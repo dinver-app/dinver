@@ -5,6 +5,7 @@ const {
   UserFavorite,
   Reservation,
   Restaurant,
+  UserAdmin,
 } = require('../../models');
 const { sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -71,6 +72,20 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Dohvati sve restorane gdje je user owner preko UserAdmin
+    const adminLinks = await UserAdmin.findAll({
+      where: { userId, role: 'owner' },
+      attributes: ['restaurantId'],
+    });
+    const restaurantIds = adminLinks.map((link) => link.restaurantId);
+    const ownedRestaurants =
+      restaurantIds.length > 0
+        ? await Restaurant.findAll({
+            where: { id: restaurantIds },
+            attributes: ['id', 'name', 'city'],
+          })
+        : [];
+
     const [reviewCount, favoriteCount, completedReservationsCount] =
       await Promise.all([
         Review.count({ where: { userId } }),
@@ -99,6 +114,12 @@ const getUserProfile = async (req, res) => {
         favoriteCount,
         completedReservationsCount,
       },
+      isRestaurantOwner: ownedRestaurants.length > 0,
+      ownedRestaurants: ownedRestaurants.map((r) => ({
+        id: r.id,
+        name: r.name,
+        city: r.city,
+      })),
     };
 
     res.status(200).json(response);
@@ -471,6 +492,28 @@ const changePassword = async (req, res) => {
   }
 };
 
+const getOwnedRestaurants = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const adminLinks = await UserAdmin.findAll({
+      where: { userId, role: 'owner' },
+      attributes: ['restaurantId'],
+    });
+    const restaurantIds = adminLinks.map((link) => link.restaurantId);
+    const restaurants =
+      restaurantIds.length > 0
+        ? await Restaurant.findAll({
+            where: { id: restaurantIds },
+            attributes: ['id', 'name', 'city'],
+          })
+        : [];
+    res.json({ restaurants });
+  } catch (error) {
+    console.error('Error fetching owned restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch owned restaurants' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
@@ -481,4 +524,5 @@ module.exports = {
   updateProfileImage,
   deleteProfileImage,
   changePassword,
+  getOwnedRestaurants,
 };
