@@ -11,6 +11,7 @@ const Entities = {
     RESTAURANT: 'restaurant',
     RESTAURANT_DETAILS: 'restaurant_details',
   },
+  RESTAURANT_POST: 'restaurant_post',
   MENU_ITEM: 'menu_item',
   MENU_CATEGORY: 'menu_category',
   DRINK_ITEM: 'drink_item',
