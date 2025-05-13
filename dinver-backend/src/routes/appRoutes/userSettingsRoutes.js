@@ -21,4 +21,18 @@ router.patch(
   userSettingsController.updateUserSettings,
 );
 
+router.post(
+  '/user/recent-address',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userSettingsController.addRecentAddress,
+);
+
+router.get(
+  '/user/recent-addresses',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userSettingsController.getRecentAddresses,
+);
+
 module.exports = router;

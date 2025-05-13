@@ -130,7 +130,58 @@ const updateUserSettings = async (req, res) => {
   }
 };
 
+// Dodaj novu adresu u recentAddresses
+const addRecentAddress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { address, latitude, longitude } = req.body;
+    if (!address || latitude === undefined || longitude === undefined) {
+      return res
+        .status(400)
+        .json({ error: 'address, latitude, and longitude are required' });
+    }
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+    let recentAddresses = userSettings.recentAddresses || [];
+    // Makni duplikate po adresi
+    recentAddresses = recentAddresses.filter((a) => a.address !== address);
+    // Dodaj novu adresu na početak
+    recentAddresses.unshift({
+      address,
+      latitude,
+      longitude,
+      timestamp: new Date(),
+    });
+    // Ograniči na 2
+    recentAddresses = recentAddresses.slice(0, 2);
+    await userSettings.update({ recentAddresses });
+    res.status(200).json({ success: true, recentAddresses });
+  } catch (error) {
+    console.error('Error updating recent addresses:', error);
+    res.status(500).json({ error: 'Failed to update recent addresses' });
+  }
+};
+
+// Dohvati recentAddresses
+const getRecentAddresses = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    if (!userSettings) {
+      return res.status(404).json({ error: 'User settings not found' });
+    }
+    res.json({ recentAddresses: userSettings.recentAddresses || [] });
+  } catch (error) {
+    console.error('Error fetching recent addresses:', error);
+    res.status(500).json({ error: 'Failed to fetch recent addresses' });
+  }
+};
+
 module.exports = {
   getUserSettings,
   updateUserSettings,
+  addRecentAddress,
+  getRecentAddresses,
 };
