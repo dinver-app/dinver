@@ -10,6 +10,7 @@ const userSettingsRoutes = require('./appRoutes/userSettingsRoutes');
 const userRoutes = require('./appRoutes/userRoutes');
 const searchHistoryRoutes = require('./appRoutes/searchHistoryRoutes');
 const trendingSearchesRoutes = require('./appRoutes/trendingSearchesRoutes');
+const restaurantClickRoutes = require('./appRoutes/restaurantClickRoutes');
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use(userSettingsRoutes);
 router.use(userRoutes);
 router.use(searchHistoryRoutes);
 router.use(trendingSearchesRoutes);
+router.use(restaurantClickRoutes);
 
 module.exports = router;
