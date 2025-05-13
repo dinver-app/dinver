@@ -1,48 +1,76 @@
 const { RestaurantClick, Restaurant } = require('../../models');
 const { Op, Sequelize } = require('sequelize');
 const { calculateDistance } = require('../../utils/distance');
+const { v4: uuidv4 } = require('uuid');
 
-// Upis klika na restoran (jedan klik po useru po restoranu po danu)
+// Helper za guest sessionId
+function getOrSetSessionId(req, res) {
+  let sessionId = req.cookies?.dinverGuestSessionId;
+  if (!sessionId) {
+    sessionId = uuidv4();
+    res.cookie('dinverGuestSessionId', sessionId, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 90, // 90 dana
+      sameSite: 'lax',
+    });
+  }
+  return sessionId;
+}
+
+// Upis klika na restoran (jedan klik po useru po restoranu po danu, guest klikovi za analitiku)
 const addRestaurantClick = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || null;
     const { restaurantId } = req.body;
     if (!restaurantId) {
       return res.status(400).json({ error: 'restaurantId is required' });
     }
-    // Dohvati restoran i city
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
     const city = restaurant.place;
-    // Provjeri postoji li već klik danas
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
-    const alreadyClicked = await RestaurantClick.findOne({
-      where: {
+    if (userId) {
+      // Prijavljeni korisnik: spriječi dupli klik
+      const alreadyClicked = await RestaurantClick.findOne({
+        where: {
+          userId,
+          restaurantId,
+          timestamp: {
+            [Op.gte]: todayStart,
+            [Op.lte]: todayEnd,
+          },
+        },
+      });
+      if (alreadyClicked) {
+        return res
+          .status(200)
+          .json({ success: true, message: 'Already clicked today' });
+      }
+      await RestaurantClick.create({
         userId,
         restaurantId,
-        timestamp: {
-          [Op.gte]: todayStart,
-          [Op.lte]: todayEnd,
-        },
-      },
-    });
-    if (alreadyClicked) {
-      return res
-        .status(200)
-        .json({ success: true, message: 'Already clicked today' });
+        city,
+        timestamp: new Date(),
+      });
+      return res.status(201).json({ success: true });
+    } else {
+      // Guest klik: spremi za analitiku, ali ne koristi za popularnost
+      const sessionId = getOrSetSessionId(req, res);
+      await RestaurantClick.create({
+        userId: null,
+        restaurantId,
+        city,
+        timestamp: new Date(),
+        isPromo: false,
+        sessionId,
+      });
+      return res.status(201).json({ success: true, guest: true });
     }
-    await RestaurantClick.create({
-      userId,
-      restaurantId,
-      city,
-      timestamp: new Date(),
-    });
-    res.status(201).json({ success: true });
   } catch (error) {
     console.error('Error adding restaurant click:', error);
     res.status(500).json({ error: 'Failed to add restaurant click' });
@@ -52,53 +80,66 @@ const addRestaurantClick = async (req, res) => {
 // Upis promo klika na restoran (isPromo: true)
 const addRestaurantPromoClick = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || null;
     const { restaurantId } = req.body;
     if (!restaurantId) {
       return res.status(400).json({ error: 'restaurantId is required' });
     }
-    // Dohvati restoran i city
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
     const city = restaurant.place;
-    // Provjeri postoji li već promo klik danas
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
-    const alreadyClicked = await RestaurantClick.findOne({
-      where: {
+    if (userId) {
+      // Prijavljeni korisnik: spriječi dupli promo klik
+      const alreadyClicked = await RestaurantClick.findOne({
+        where: {
+          userId,
+          restaurantId,
+          isPromo: true,
+          timestamp: {
+            [Op.gte]: todayStart,
+            [Op.lte]: todayEnd,
+          },
+        },
+      });
+      if (alreadyClicked) {
+        return res
+          .status(200)
+          .json({ success: true, message: 'Already promo clicked today' });
+      }
+      await RestaurantClick.create({
         userId,
         restaurantId,
+        city,
+        timestamp: new Date(),
         isPromo: true,
-        timestamp: {
-          [Op.gte]: todayStart,
-          [Op.lte]: todayEnd,
-        },
-      },
-    });
-    if (alreadyClicked) {
-      return res
-        .status(200)
-        .json({ success: true, message: 'Already promo clicked today' });
+      });
+      return res.status(201).json({ success: true });
+    } else {
+      // Guest klik: spremi za analitiku, ali ne koristi za popularnost
+      const sessionId = getOrSetSessionId(req, res);
+      await RestaurantClick.create({
+        userId: null,
+        restaurantId,
+        city,
+        timestamp: new Date(),
+        isPromo: true,
+        sessionId,
+      });
+      return res.status(201).json({ success: true, guest: true });
     }
-    await RestaurantClick.create({
-      userId,
-      restaurantId,
-      city,
-      timestamp: new Date(),
-      isPromo: true,
-    });
-    res.status(201).json({ success: true });
   } catch (error) {
     console.error('Error adding restaurant promo click:', error);
     res.status(500).json({ error: 'Failed to add restaurant promo click' });
   }
 };
 
-// Dohvat popularnih restorana po gradu za zadnjih 7 dana
+// Dohvat popularnih restorana: broji samo klikove s userId (prijavljeni korisnici)
 const getPopularRestaurants = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
@@ -112,7 +153,7 @@ const getPopularRestaurants = async (req, res) => {
     const limit = 20;
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    // Dohvati sve klikove u zadnjih 7 dana
+    // Dohvati samo klikove s userId (prijavljeni)
     const clicks = await RestaurantClick.findAll({
       attributes: [
         'restaurantId',
@@ -125,6 +166,7 @@ const getPopularRestaurants = async (req, res) => {
         ],
       ],
       where: {
+        userId: { [Op.ne]: null },
         timestamp: { [Op.gte]: weekAgo },
       },
       group: ['restaurantId'],
@@ -138,12 +180,10 @@ const getPopularRestaurants = async (req, res) => {
         ],
       ],
     });
-    // Dohvati podatke o restoranima
     const restaurantIds = clicks.map((c) => c.restaurantId);
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
     });
-    // Mapiraj klikove s restoranima i distance
     const withDistance = clicks
       .map((c) => {
         const r = restaurants.find((rest) => rest.id === c.restaurantId);
@@ -178,7 +218,6 @@ const getPopularRestaurants = async (req, res) => {
         };
       })
       .filter((item) => item.restaurant && item.distance !== null);
-    // Funkcija za dohvat do 20 najpopularnijih unutar zadanog radijusa
     function getWithinRadius(radius) {
       return withDistance
         .filter((r) => r.distance <= radius)

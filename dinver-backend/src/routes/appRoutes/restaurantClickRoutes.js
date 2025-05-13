@@ -14,18 +14,17 @@ router.post(
   restaurantClickController.addRestaurantClick,
 );
 
-router.get(
-  '/popular-restaurants',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  restaurantClickController.getPopularRestaurants,
-);
-
 router.post(
   '/restaurant-promo-click',
   appApiKeyAuth,
   appAuthenticateToken,
   restaurantClickController.addRestaurantPromoClick,
+);
+
+router.get(
+  '/popular-restaurants',
+  // appApiKeyAuth,
+  restaurantClickController.getPopularRestaurants,
 );
 
 module.exports = router;
