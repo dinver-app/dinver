@@ -82,7 +82,7 @@ const getUserProfile = async (req, res) => {
       restaurantIds.length > 0
         ? await Restaurant.findAll({
             where: { id: restaurantIds },
-            attributes: ['id', 'name', 'city'],
+            attributes: ['id', 'name', 'place'],
           })
         : [];
 
@@ -118,7 +118,7 @@ const getUserProfile = async (req, res) => {
       ownedRestaurants: ownedRestaurants.map((r) => ({
         id: r.id,
         name: r.name,
-        city: r.city,
+        city: r.place,
       })),
     };
 
@@ -504,10 +504,16 @@ const getOwnedRestaurants = async (req, res) => {
       restaurantIds.length > 0
         ? await Restaurant.findAll({
             where: { id: restaurantIds },
-            attributes: ['id', 'name', 'city'],
+            attributes: ['id', 'name', 'place'],
           })
         : [];
-    res.json({ restaurants });
+    res.json({
+      restaurants: restaurants.map((r) => ({
+        id: r.id,
+        name: r.name,
+        city: r.place,
+      })),
+    });
   } catch (error) {
     console.error('Error fetching owned restaurants:', error);
     res.status(500).json({ error: 'Failed to fetch owned restaurants' });
