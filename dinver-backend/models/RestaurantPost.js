@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       mediaUrls: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.JSONB,
         allowNull: false,
         defaultValue: [],
       },
