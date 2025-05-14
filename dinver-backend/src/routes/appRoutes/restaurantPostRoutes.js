@@ -15,7 +15,6 @@ router.post(
   '/posts',
   appApiKeyAuth,
   appAuthenticateToken,
-  isRestaurantOwner,
   upload.array('media', 10), // Max 10 files (1 video or multiple images)
   restaurantPostController.createPost,
 );
