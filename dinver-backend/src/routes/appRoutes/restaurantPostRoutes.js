@@ -40,4 +40,12 @@ router.delete(
   restaurantPostController.deletePost,
 );
 
+// Get all posts for a specific restaurant
+router.get(
+  '/posts',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  restaurantPostController.getPostsByRestaurant,
+);
+
 module.exports = router;
