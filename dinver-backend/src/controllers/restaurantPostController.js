@@ -350,9 +350,36 @@ const deletePost = async (req, res) => {
   }
 };
 
+// Get all posts for a specific restaurant
+const getPostsByRestaurant = async (req, res) => {
+  try {
+    const { restaurantId, page = 1, limit = 10 } = req.query;
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurantId is required' });
+    }
+    const offset = (page - 1) * limit;
+    const posts = await RestaurantPost.findAndCountAll({
+      where: { restaurantId },
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+    res.json({
+      totalPosts: posts.count,
+      totalPages: Math.ceil(posts.count / limit),
+      currentPage: parseInt(page),
+      posts: posts.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching posts by restaurant:', error);
+    res.status(500).json({ error: 'Failed to fetch posts' });
+  }
+};
+
 module.exports = {
   createPost,
   getFeed,
   toggleLike,
   deletePost,
+  getPostsByRestaurant,
 };
