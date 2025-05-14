@@ -3,6 +3,7 @@ const {
   RestaurantPostLike,
   Restaurant,
   User,
+  UserAdmin,
 } = require('../../models');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -118,15 +119,29 @@ const generateThumbnail = async (inputBuffer, key) => {
 // Create a new post
 const createPost = async (req, res) => {
   try {
-    const { title, description, tags, city } = req.body;
-    const restaurantId = req.user.restaurantId;
+    const { title, description, tags, city, restaurantId } = req.body;
     const files = req.files;
+    const userId = req.user.id;
+
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurantId is required' });
+    }
+
+    // Check if user is owner/admin/helper of the restaurant
+    const isOwner = await UserAdmin.findOne({
+      where: { userId, restaurantId },
+    });
+    if (!isOwner) {
+      return res
+        .status(403)
+        .json({ error: 'You are not the owner/admin of this restaurant' });
+    }
 
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No media files provided' });
     }
 
-    // Validate restaurant ownership
+    // Validate restaurant exists
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
