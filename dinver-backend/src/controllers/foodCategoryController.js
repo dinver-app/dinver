@@ -35,7 +35,8 @@ module.exports = {
   },
 
   async recordCategoryClick(req, res) {
-    const { userId, foodTypeId } = req.body;
+    const userId = req.user?.id || null;
+    const { foodTypeId } = req.body;
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
