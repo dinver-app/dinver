@@ -15,7 +15,7 @@ router.get(
 
 // Route to record a click on a food category
 router.post(
-  '/record-click',
+  '/record-category-click',
   appApiKeyAuth,
   appAuthenticateToken,
   foodCategoryController.recordCategoryClick,
