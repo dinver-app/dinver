@@ -35,8 +35,14 @@ module.exports = {
   },
 
   async recordCategoryClick(req, res) {
-    const userId = req.user?.id || null;
+    const userId = parseInt(req.user?.id) || null;
     const { foodTypeId } = req.body;
+    const parsedFoodTypeId = parseInt(foodTypeId);
+
+    if (isNaN(parsedFoodTypeId)) {
+      return res.status(400).json({ error: 'Invalid foodTypeId format.' });
+    }
+
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -44,7 +50,7 @@ module.exports = {
       const existingClick = await FoodCategoryClick.findOne({
         where: {
           userId,
-          foodTypeId,
+          foodTypeId: parsedFoodTypeId,
           clickedAt: {
             [Op.gte]: today,
           },
@@ -52,13 +58,17 @@ module.exports = {
       });
 
       if (existingClick) {
-        return res
-          .status(400)
-          .json({ error: 'User has already clicked this category today.' });
+        return res.status(200).json({
+          message: 'Category was already clicked today.',
+          alreadyClicked: true,
+        });
       }
 
-      await FoodCategoryClick.create({ userId, foodTypeId });
-      return res.status(201).json({ message: 'Click recorded successfully.' });
+      await FoodCategoryClick.create({ userId, foodTypeId: parsedFoodTypeId });
+      return res.status(201).json({
+        message: 'Click recorded successfully.',
+        alreadyClicked: false,
+      });
     } catch (error) {
       return res
         .status(500)
