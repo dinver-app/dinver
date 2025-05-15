@@ -12,6 +12,7 @@ const searchHistoryRoutes = require('./appRoutes/searchHistoryRoutes');
 const trendingSearchesRoutes = require('./appRoutes/trendingSearchesRoutes');
 const restaurantClickRoutes = require('./appRoutes/restaurantClickRoutes');
 const foodCategoryRoutes = require('./appRoutes/foodCategoryRoutes');
+const searchRoutes = require('./appRoutes/searchRoutes');
 
 const router = express.Router();
 
@@ -28,5 +29,6 @@ router.use(searchHistoryRoutes);
 router.use(trendingSearchesRoutes);
 router.use(restaurantClickRoutes);
 router.use(foodCategoryRoutes);
+router.use(searchRoutes);
 
 module.exports = router;
