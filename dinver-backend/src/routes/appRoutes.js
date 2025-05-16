@@ -13,6 +13,7 @@ const trendingSearchesRoutes = require('./appRoutes/trendingSearchesRoutes');
 const restaurantClickRoutes = require('./appRoutes/restaurantClickRoutes');
 const foodCategoryRoutes = require('./appRoutes/foodCategoryRoutes');
 const searchRoutes = require('./appRoutes/searchRoutes');
+const typeRoutes = require('./appRoutes/typeRoutes');
 
 const router = express.Router();
 
@@ -30,5 +31,6 @@ router.use(trendingSearchesRoutes);
 router.use(restaurantClickRoutes);
 router.use(foodCategoryRoutes);
 router.use(searchRoutes);
+router.use(typeRoutes);
 
 module.exports = router;
