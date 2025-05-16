@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'translations',
       });
+
+      Restaurant.belongsTo(models.PriceCategory, {
+        foreignKey: 'priceCategoryId',
+        as: 'priceCategory',
+      });
     }
   }
   Restaurant.init(
