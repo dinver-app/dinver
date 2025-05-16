@@ -443,5 +443,8 @@
   "no_items_in_category": "No items in this category.",
   "unsaved_changes": "Unsaved Changes",
   "dietary_types": "Dietary Types",
-  "select_dietary_types": "Select dietary preferences and restrictions for this restaurant"
+  "select_dietary_types": "Select dietary preferences and restrictions for this restaurant",
+  "no_uncategorized_items": "No uncategorized items",
+  "no_menu_items": "No menu items",
+  "get_started_by_adding_categories_or_items": "Get started by adding categories or items to your menu."
 }

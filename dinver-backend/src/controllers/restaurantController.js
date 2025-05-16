@@ -304,6 +304,7 @@ const getRestaurantDetails = async (req, res) => {
         'foodTypes',
         'establishmentTypes',
         'establishmentPerks',
+        'dietaryTypes',
         'mealTypes',
         'priceCategoryId',
       ],
@@ -661,6 +662,7 @@ async function updateFilters(req, res) {
       establishmentTypes,
       establishmentPerks,
       mealTypes,
+      dietaryTypes,
       priceCategoryId,
     } = req.body;
 
@@ -674,6 +676,7 @@ async function updateFilters(req, res) {
       establishmentTypes: restaurant.establishmentTypes || [],
       establishmentPerks: restaurant.establishmentPerks || [],
       mealTypes: restaurant.mealTypes || [],
+      dietaryTypes: restaurant.dietaryTypes || [],
       priceCategoryId: restaurant.priceCategoryId,
     };
 
@@ -682,6 +685,7 @@ async function updateFilters(req, res) {
       establishmentTypes: establishmentTypes,
       establishmentPerks: establishmentPerks,
       mealTypes: mealTypes,
+      dietaryTypes: dietaryTypes,
       priceCategoryId: priceCategoryId,
     });
 
@@ -720,6 +724,11 @@ async function updateFilters(req, res) {
       Entities.FILTERS.ESTABLISHMENT_PERKS,
     );
     await logChange(oldData.mealTypes, mealTypes, Entities.FILTERS.MEAL_TYPES);
+    await logChange(
+      oldData.dietaryTypes,
+      dietaryTypes,
+      Entities.FILTERS.DIETARY_TYPES,
+    );
 
     // Log price category change separately since it's a single value, not an array
     if (oldData.priceCategoryId !== priceCategoryId) {
@@ -880,6 +889,7 @@ const getRestaurantById = async (req, res) => {
         'establishmentTypes',
         'establishmentPerks',
         'mealTypes',
+        'dietaryTypes',
         'priceCategoryId',
       ],
     });

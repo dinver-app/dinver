@@ -29,11 +29,17 @@ export const updateWorkingHours = async (id: string, workingHours: any) => {
 };
 
 export const updateFilters = async (id: string, filters: any) => {
+  if (!id) {
+    throw new Error("Restaurant ID is required");
+  }
+
   const response = await apiClient.put(
     `/api/admin/restaurants/${id}/filters`,
     filters
   );
-  return response.data;
+
+  // Ensure we return just the restaurant data
+  return response.data.restaurant || response.data;
 };
 
 export const getAllFoodTypes = async () => {

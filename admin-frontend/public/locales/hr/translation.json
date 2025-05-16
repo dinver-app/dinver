@@ -441,5 +441,8 @@
   "no_items_in_category": "Nema stavki u ovoj kategoriji.",
   "unsaved_changes": "Nespremljene promjene",
   "dietary_types": "Prehrambene Preferencije",
-  "select_dietary_types": "Odaberite prehrambene preferencije i ograničenja za ovaj restoran"
+  "select_dietary_types": "Odaberite prehrambene preferencije i ograničenja za ovaj restoran",
+  "no_uncategorized_items": "Nema nekategoriziranih stavki.",
+  "no_menu_items": "Nema stavki u jelovniku.",
+  "get_started_by_adding_categories_or_items": "Započni dodavanjem kategorija ili stavki u jelovnik."
 }
