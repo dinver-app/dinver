@@ -36,7 +36,7 @@ module.exports = {
       : [];
 
     try {
-      // Base restaurant query with all possible filters
+      // Base restaurant query - maknuti sve include-ove osim PriceCategory
       let restaurantQuery = {
         attributes: [
           'id',
@@ -65,43 +65,42 @@ module.exports = {
         ],
       };
 
+      // Filtriranje po establishment types - koristiti where uvjet umjesto include
+      if (establishmentTypes) {
+        const typeIds = establishmentTypes.split(',').map(Number);
+        restaurantQuery.where.establishmentTypes = {
+          [Op.overlap]: typeIds,
+        };
+      }
+
+      // Filtriranje po meal types - koristiti where uvjet umjesto include
+      if (mealTypes) {
+        const mealTypeIds = mealTypes.split(',').map(Number);
+        restaurantQuery.where.mealTypes = {
+          [Op.overlap]: mealTypeIds,
+        };
+      }
+
+      // Filtriranje po food types - koristiti where uvjet umjesto include
+      if (foodTypes) {
+        const foodTypeIds = foodTypes.split(',').map(Number);
+        restaurantQuery.where.foodTypes = {
+          [Op.overlap]: foodTypeIds,
+        };
+      }
+
+      // Filtriranje po dietary types - koristiti where uvjet umjesto include
+      if (dietaryTypes) {
+        const dietaryTypeIds = dietaryTypes.split(',').map(Number);
+        restaurantQuery.where.dietaryTypes = {
+          [Op.overlap]: dietaryTypeIds,
+        };
+      }
+
       // Add price category filter
       if (priceCategories) {
         const priceIds = priceCategories.split(',').map(Number);
         restaurantQuery.where.priceCategoryId = { [Op.in]: priceIds };
-      }
-
-      // Add establishment types filter
-      if (establishmentTypes) {
-        restaurantQuery.include.push({
-          model: EstablishmentType,
-          where: {
-            id: { [Op.in]: establishmentTypes.split(',').map(Number) },
-          },
-          required: true,
-        });
-      }
-
-      // Add meal types filter
-      if (mealTypes) {
-        restaurantQuery.include.push({
-          model: MealType,
-          where: {
-            id: { [Op.in]: mealTypes.split(',').map(Number) },
-          },
-          required: true,
-        });
-      }
-
-      // Add food types filter
-      if (foodTypes) {
-        restaurantQuery.include.push({
-          model: FoodType,
-          where: {
-            id: { [Op.in]: foodTypes.split(',').map(Number) },
-          },
-          required: true,
-        });
       }
 
       // Add establishment perks filter
@@ -110,17 +109,6 @@ module.exports = {
           model: EstablishmentPerk,
           where: {
             id: { [Op.in]: establishmentPerks.split(',').map(Number) },
-          },
-          required: true,
-        });
-      }
-
-      // Add dietary types filter
-      if (dietaryTypes) {
-        restaurantQuery.include.push({
-          model: DietaryType,
-          where: {
-            id: { [Op.in]: dietaryTypes.split(',').map(Number) },
           },
           required: true,
         });
