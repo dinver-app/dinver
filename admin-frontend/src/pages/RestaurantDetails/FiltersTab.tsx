@@ -49,15 +49,15 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [selectedMealTypes, setSelectedMealTypes] = useState<number[]>(
     restaurant.mealTypes || []
   );
-  const [selectedPriceCategory, setSelectedPriceCategory] = useState<
-    number | null
-  >(restaurant.priceCategoryId || null);
   const [selectedDietaryTypes, setSelectedDietaryTypes] = useState<number[]>(
     restaurant.dietaryTypes || []
   );
+  const [selectedPriceCategory, setSelectedPriceCategory] = useState<
+    number | undefined
+  >(restaurant.priceCategoryId);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeModal, setActiveModal] = useState<
-    "food" | "establishment" | "perk" | "meal" | "price" | null
+    "food" | "establishment" | "perk" | "meal" | "price" | "dietary" | null
   >(null);
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
@@ -67,12 +67,12 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
       try {
         const [
-          foodTypesData,
-          establishmentTypesData,
-          establishmentPerksData,
-          mealTypesData,
-          priceCategoriesData,
-          dietaryTypesData,
+          foodTypes,
+          establishmentTypes,
+          establishmentPerks,
+          mealTypes,
+          priceCategories,
+          dietaryTypes,
         ] = await Promise.all([
           getAllFoodTypes(),
           getAllEstablishmentTypes(),
@@ -82,21 +82,12 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           getAllDietaryTypes(),
         ]);
 
-        setFoodTypes(foodTypesData);
-        setEstablishmentTypes(establishmentTypesData);
-        setEstablishmentPerks(establishmentPerksData);
-        setMealTypes(mealTypesData);
-        setPriceCategories(priceCategoriesData);
-        setDietaryTypes(dietaryTypesData);
-
-        if (restaurant) {
-          setSelectedFoodTypes(restaurant.foodTypes || []);
-          setSelectedEstablishmentTypes(restaurant.establishmentTypes || []);
-          setSelectedEstablishmentPerks(restaurant.establishmentPerks || []);
-          setSelectedMealTypes(restaurant.mealTypes || []);
-          setSelectedPriceCategory(restaurant.priceCategoryId || null);
-          setSelectedDietaryTypes(restaurant.dietaryTypes || []);
-        }
+        setFoodTypes(foodTypes);
+        setEstablishmentTypes(establishmentTypes);
+        setEstablishmentPerks(establishmentPerks);
+        setMealTypes(mealTypes);
+        setPriceCategories(priceCategories);
+        setDietaryTypes(dietaryTypes);
       } catch (error) {
         console.error("Failed to fetch filters", error);
       } finally {
@@ -105,7 +96,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     };
 
     fetchAllFilters();
-  }, [restaurant]);
+  }, []);
 
   useEffect(() => {
     const handleAutoSave = async () => {
@@ -116,16 +107,21 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           establishmentTypes: selectedEstablishmentTypes,
           establishmentPerks: selectedEstablishmentPerks,
           mealTypes: selectedMealTypes,
-          priceCategoryId: selectedPriceCategory,
           dietaryTypes: selectedDietaryTypes,
+          priceCategoryId: selectedPriceCategory,
         };
 
-        const updatedRestaurant = await updateFilters(
-          restaurant.id || "",
-          filters
-        );
+        await updateFilters(restaurant.id || "", filters);
         setSaveStatus(t("all_changes_saved"));
-        onUpdate(updatedRestaurant);
+        onUpdate({
+          ...restaurant,
+          foodTypes: selectedFoodTypes,
+          establishmentTypes: selectedEstablishmentTypes,
+          establishmentPerks: selectedEstablishmentPerks,
+          mealTypes: selectedMealTypes,
+          dietaryTypes: selectedDietaryTypes,
+          priceCategoryId: selectedPriceCategory,
+        });
       } catch (error) {
         console.error("Failed to auto-save filters", error);
         setSaveStatus(t("failed_to_save_changes"));
@@ -138,13 +134,13 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     selectedEstablishmentTypes,
     selectedEstablishmentPerks,
     selectedMealTypes,
-    selectedPriceCategory,
     selectedDietaryTypes,
+    selectedPriceCategory,
   ]);
 
   const handleRemoveItem = (
     id: number,
-    type: "food" | "establishment" | "perk" | "meal"
+    type: "food" | "establishment" | "perk" | "meal" | "dietary"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => prev.filter((t) => t !== id));
@@ -154,12 +150,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentPerks((prev) => prev.filter((t) => t !== id));
     } else if (type === "meal") {
       setSelectedMealTypes((prev) => prev.filter((t) => t !== id));
+    } else if (type === "dietary") {
+      setSelectedDietaryTypes((prev) => prev.filter((t) => t !== id));
     }
   };
 
   const handleAddItem = (
     id: number,
-    type: "food" | "establishment" | "perk" | "meal" | "price"
+    type: "food" | "establishment" | "perk" | "meal" | "dietary" | "price"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => [...prev, id]);
@@ -169,6 +167,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentPerks((prev) => [...prev, id]);
     } else if (type === "meal") {
       setSelectedMealTypes((prev) => [...prev, id]);
+    } else if (type === "dietary") {
+      setSelectedDietaryTypes((prev) => [...prev, id]);
     } else if (type === "price") {
       setSelectedPriceCategory(id);
       setActiveModal(null);
@@ -182,6 +182,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       | EstablishmentPerk
       | MealType
       | PriceCategory
+      | DietaryType
     )[] = [];
     let selectedItems: number[] = [];
     let title = "";
@@ -206,6 +207,10 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       items = priceCategories;
       selectedItems = selectedPriceCategory ? [selectedPriceCategory] : [];
       title = t("select_price_category");
+    } else if (activeModal === "dietary") {
+      items = dietaryTypes;
+      selectedItems = selectedDietaryTypes;
+      title = t("select_dietary_types");
     }
 
     return { items, selectedItems, title };
@@ -296,7 +301,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
 
               {selectedPriceCategory && (
                 <button
-                  onClick={() => setSelectedPriceCategory(null)}
+                  onClick={() => setSelectedPriceCategory(undefined)}
                   className="text-gray-500 hover:text-gray-700 text-xs underline ml-2 self-center"
                 >
                   {t("clear")}
@@ -547,32 +552,62 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         </div>
 
         {/* Dietary Types */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">{t("dietary_types")}</h3>
-          <p className="text-sm text-gray-500">{t("select_dietary_types")}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {dietaryTypes.map((type) => (
-              <div
-                key={type.id}
-                className={`p-2 rounded cursor-pointer flex items-center gap-2 ${
-                  selectedDietaryTypes.includes(type.id)
-                    ? "bg-primary text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
-                }`}
-                onClick={() => {
-                  setSelectedDietaryTypes((prev) =>
-                    prev.includes(type.id)
-                      ? prev.filter((id) => id !== type.id)
-                      : [...prev, type.id]
-                  );
-                }}
-              >
-                <span>{type.icon}</span>
-                <span>
-                  {i18n.language === "hr" ? type.nameHr : type.nameEn}
-                </span>
-              </div>
-            ))}
+        <div className="border-b border-gray-200 pb-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              {t("dietary_types")}
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              {t("select_dietary_types")}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4">
+              {dietaryTypes.map((type) => (
+                <div key={type.id} className="flex items-center">
+                  <div
+                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                      ${
+                        selectedDietaryTypes.includes(type.id)
+                          ? "bg-gray-900 border-gray-900"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    onClick={() => {
+                      if (selectedDietaryTypes.includes(type.id)) {
+                        handleRemoveItem(type.id, "dietary");
+                      } else {
+                        handleAddItem(type.id, "dietary");
+                      }
+                    }}
+                  >
+                    {selectedDietaryTypes.includes(type.id) && (
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <label
+                    className="text-sm cursor-pointer"
+                    onClick={() => {
+                      if (selectedDietaryTypes.includes(type.id)) {
+                        handleRemoveItem(type.id, "dietary");
+                      } else {
+                        handleAddItem(type.id, "dietary");
+                      }
+                    }}
+                  >
+                    {i18n.language === "en" ? type.nameEn : type.nameHr}
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -715,7 +750,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
             <div className="p-4 border-t border-gray-200 flex justify-end">
               <button
                 onClick={() => setActiveModal(null)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-green-700 text-green-700 bg-white rounded-md text-sm font-medium hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               >
                 {t("close")}
               </button>
