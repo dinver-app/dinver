@@ -42,4 +42,11 @@ router.get(
   typeController.getAllPriceCategories,
 );
 
+router.get(
+  '/types/dietary-types',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.getAllDietaryTypes,
+);
+
 module.exports = router;

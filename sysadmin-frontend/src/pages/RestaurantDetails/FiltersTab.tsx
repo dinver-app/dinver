@@ -5,6 +5,7 @@ import {
   getAllEstablishmentPerks,
   getAllMealTypes,
   getAllPriceCategories,
+  getAllDietaryTypes,
   updateFilters,
 } from "../../services/restaurantService";
 import {
@@ -14,6 +15,7 @@ import {
   EstablishmentPerk,
   MealType,
   PriceCategory,
+  DietaryType,
 } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
@@ -34,6 +36,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   >([]);
   const [mealTypes, setMealTypes] = useState<MealType[]>([]);
   const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
+  const [dietaryTypes, setDietaryTypes] = useState<DietaryType[]>([]);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<number[]>(
     restaurant.foodTypes || []
   );
@@ -46,12 +49,15 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
   const [selectedMealTypes, setSelectedMealTypes] = useState<number[]>(
     restaurant.mealTypes || []
   );
+  const [selectedDietaryTypes, setSelectedDietaryTypes] = useState<number[]>(
+    restaurant.dietaryTypes || []
+  );
   const [selectedPriceCategory, setSelectedPriceCategory] = useState<
     number | undefined
   >(restaurant.priceCategoryId);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeModal, setActiveModal] = useState<
-    "food" | "establishment" | "perk" | "meal" | "price" | null
+    "food" | "establishment" | "perk" | "meal" | "price" | "dietary" | null
   >(null);
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
 
@@ -66,12 +72,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           establishmentPerks,
           mealTypes,
           priceCategories,
+          dietaryTypes,
         ] = await Promise.all([
           getAllFoodTypes(),
           getAllEstablishmentTypes(),
           getAllEstablishmentPerks(),
           getAllMealTypes(),
           getAllPriceCategories(),
+          getAllDietaryTypes(),
         ]);
 
         setFoodTypes(foodTypes);
@@ -79,6 +87,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
         setEstablishmentPerks(establishmentPerks);
         setMealTypes(mealTypes);
         setPriceCategories(priceCategories);
+        setDietaryTypes(dietaryTypes);
       } catch (error) {
         console.error("Failed to fetch filters", error);
       } finally {
@@ -98,6 +107,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           establishmentTypes: selectedEstablishmentTypes,
           establishmentPerks: selectedEstablishmentPerks,
           mealTypes: selectedMealTypes,
+          dietaryTypes: selectedDietaryTypes,
           priceCategoryId: selectedPriceCategory,
         };
 
@@ -109,6 +119,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
           establishmentTypes: selectedEstablishmentTypes,
           establishmentPerks: selectedEstablishmentPerks,
           mealTypes: selectedMealTypes,
+          dietaryTypes: selectedDietaryTypes,
           priceCategoryId: selectedPriceCategory,
         });
       } catch (error) {
@@ -123,12 +134,13 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
     selectedEstablishmentTypes,
     selectedEstablishmentPerks,
     selectedMealTypes,
+    selectedDietaryTypes,
     selectedPriceCategory,
   ]);
 
   const handleRemoveItem = (
     id: number,
-    type: "food" | "establishment" | "perk" | "meal"
+    type: "food" | "establishment" | "perk" | "meal" | "dietary"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => prev.filter((t) => t !== id));
@@ -138,12 +150,14 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentPerks((prev) => prev.filter((t) => t !== id));
     } else if (type === "meal") {
       setSelectedMealTypes((prev) => prev.filter((t) => t !== id));
+    } else if (type === "dietary") {
+      setSelectedDietaryTypes((prev) => prev.filter((t) => t !== id));
     }
   };
 
   const handleAddItem = (
     id: number,
-    type: "food" | "establishment" | "perk" | "meal" | "price"
+    type: "food" | "establishment" | "perk" | "meal" | "dietary" | "price"
   ) => {
     if (type === "food") {
       setSelectedFoodTypes((prev) => [...prev, id]);
@@ -153,6 +167,8 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       setSelectedEstablishmentPerks((prev) => [...prev, id]);
     } else if (type === "meal") {
       setSelectedMealTypes((prev) => [...prev, id]);
+    } else if (type === "dietary") {
+      setSelectedDietaryTypes((prev) => [...prev, id]);
     } else if (type === "price") {
       setSelectedPriceCategory(id);
       setActiveModal(null);
@@ -166,6 +182,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       | EstablishmentPerk
       | MealType
       | PriceCategory
+      | DietaryType
     )[] = [];
     let selectedItems: number[] = [];
     let title = "";
@@ -190,6 +207,10 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
       items = priceCategories;
       selectedItems = selectedPriceCategory ? [selectedPriceCategory] : [];
       title = t("select_price_category");
+    } else if (activeModal === "dietary") {
+      items = dietaryTypes;
+      selectedItems = selectedDietaryTypes;
+      title = t("select_dietary_types");
     }
 
     return { items, selectedItems, title };
@@ -523,6 +544,66 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
                     }}
                   >
                     {i18n.language === "en" ? perk.nameEn : perk.nameHr}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Dietary Types */}
+        <div className="border-b border-gray-200 pb-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              {t("dietary_types")}
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              {t("select_dietary_types")}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4">
+              {dietaryTypes.map((type) => (
+                <div key={type.id} className="flex items-center">
+                  <div
+                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                      ${
+                        selectedDietaryTypes.includes(type.id)
+                          ? "bg-gray-900 border-gray-900"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    onClick={() => {
+                      if (selectedDietaryTypes.includes(type.id)) {
+                        handleRemoveItem(type.id, "dietary");
+                      } else {
+                        handleAddItem(type.id, "dietary");
+                      }
+                    }}
+                  >
+                    {selectedDietaryTypes.includes(type.id) && (
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <label
+                    className="text-sm cursor-pointer"
+                    onClick={() => {
+                      if (selectedDietaryTypes.includes(type.id)) {
+                        handleRemoveItem(type.id, "dietary");
+                      } else {
+                        handleAddItem(type.id, "dietary");
+                      }
+                    }}
+                  >
+                    {i18n.language === "en" ? type.nameEn : type.nameHr}
                   </label>
                 </div>
               ))}

@@ -98,6 +98,11 @@ export const getAllPriceCategories = async () => {
   return response.data;
 };
 
+export const getAllDietaryTypes = async () => {
+  const response = await apiClient.get("api/sysadmin/types/dietary-types");
+  return response.data;
+};
+
 export const addRestaurantImages = async (
   id: string,
   restaurantSlug: string,
