@@ -201,6 +201,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull: true,
       },
+      dietaryTypes: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: true,
+      },
       priceCategoryId: {
         type: DataTypes.INTEGER,
         allowNull: true,
