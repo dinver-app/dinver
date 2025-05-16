@@ -441,5 +441,7 @@
   "category_description": "Category Description",
   "enter_category_description": "Enter optional category description",
   "no_items_in_category": "No items in this category.",
-  "unsaved_changes": "Unsaved Changes"
+  "unsaved_changes": "Unsaved Changes",
+  "dietary_types": "Dietary Types",
+  "select_dietary_types": "Select dietary preferences and restrictions for this restaurant"
 }

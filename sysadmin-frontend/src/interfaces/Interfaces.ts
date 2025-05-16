@@ -67,6 +67,7 @@ export interface Restaurant {
     name: string;
     description: string;
   }[];
+  dietaryTypes?: number[];
 }
 
 export interface FoodType {
@@ -214,4 +215,11 @@ export interface DrinkCategoryData {
 export interface CategoryData {
   restaurantId: string;
   translations: Translation[];
+}
+
+export interface DietaryType {
+  id: number;
+  nameEn: string;
+  nameHr: string;
+  icon: string;
 }

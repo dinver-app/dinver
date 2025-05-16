@@ -4,6 +4,7 @@ const {
   EstablishmentPerk,
   MealType,
   PriceCategory,
+  DietaryType,
 } = require('../../models');
 
 // Get all food types
@@ -81,10 +82,26 @@ async function getAllPriceCategories(req, res) {
   }
 }
 
+// Get all dietary types
+async function getAllDietaryTypes(req, res) {
+  try {
+    const dietaryTypes = await DietaryType.findAll({
+      attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+    });
+    res.json(dietaryTypes);
+  } catch (error) {
+    console.error('Error fetching dietary types:', error);
+    res.status(500).json({
+      error: 'An error occurred while fetching dietary types',
+    });
+  }
+}
+
 module.exports = {
   getAllFoodTypes,
   getAllEstablishmentTypes,
   getAllEstablishmentPerks,
   getAllMealTypes,
   getAllPriceCategories,
+  getAllDietaryTypes,
 };
