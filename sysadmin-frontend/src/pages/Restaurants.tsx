@@ -69,6 +69,7 @@ const Restaurants = () => {
   const fetchRestaurants = async (page: number, search: string) => {
     try {
       const data = await getRestaurants(page, search);
+      console.log(data);
       setRestaurants(data.restaurants);
       setTotalPages(data.totalPages);
       setTotalRestaurants(data.totalRestaurants);
@@ -253,6 +254,9 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-left font-normal w-48">
                 {t("address")}
               </th>
+              <th className="py-2 px-4 text-left font-normal w-32">
+                {t("place")}
+              </th>
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("claimed")}
               </th>
@@ -261,9 +265,6 @@ const Restaurants = () => {
               </th>
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("rating")}
-              </th>
-              <th className="py-2 px-4 text-left font-normal w-32">
-                {t("place")}
               </th>
               <th className="py-2 px-4 text-left w-10"></th>
             </tr>
@@ -277,6 +278,8 @@ const Restaurants = () => {
               >
                 <td className="py-3 px-4 text-sm w-32">{restaurant.name}</td>
                 <td className="py-3 px-4 text-sm w-48">{restaurant.address}</td>
+                <td className="py-3 px-4 text-sm w-32">{restaurant.place}</td>
+
                 <td className="py-3 px-4 text-sm w-20 text-center">
                   {restaurant.isClaimed ? t("yes") : t("no")}
                 </td>
@@ -296,7 +299,6 @@ const Restaurants = () => {
                     ? formatRating(restaurant.reviewRating, i18n.language)
                     : "-"}
                 </td>
-                <td className="py-3 px-4 text-sm w-32">{restaurant.place}</td>
                 <td className="py-2 px-4 w-10">
                   <div className="relative" ref={menuRef}>
                     <button
