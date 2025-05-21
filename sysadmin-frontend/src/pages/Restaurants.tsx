@@ -262,6 +262,9 @@ const Restaurants = () => {
               <th className="py-2 px-4 text-center font-normal w-20">
                 {t("rating")}
               </th>
+              <th className="py-2 px-4 text-left font-normal w-32">
+                {t("place")}
+              </th>
               <th className="py-2 px-4 text-left w-10"></th>
             </tr>
           </thead>
@@ -293,6 +296,7 @@ const Restaurants = () => {
                     ? formatRating(restaurant.reviewRating, i18n.language)
                     : "-"}
                 </td>
+                <td className="py-3 px-4 text-sm w-32">{restaurant.place}</td>
                 <td className="py-2 px-4 w-10">
                   <div className="relative" ref={menuRef}>
                     <button
