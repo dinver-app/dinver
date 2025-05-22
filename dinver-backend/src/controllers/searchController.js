@@ -68,27 +68,41 @@ module.exports = {
 
       // Dodaj filter za ocjene
       if (minRating) {
-        let minRating;
-        switch (minRating) {
+        let ratingThreshold;
+        const cleanRating = minRating.trim();
+        console.log(
+          'Received minRating:',
+          minRating,
+          'Length:',
+          minRating.length,
+        );
+        console.log(
+          'Cleaned minRating:',
+          cleanRating,
+          'Length:',
+          cleanRating.length,
+        );
+
+        switch (cleanRating) {
           case '3':
-            minRating = 3.0;
+            ratingThreshold = 3.0;
             break;
           case '4':
-            minRating = 4.0;
+            ratingThreshold = 4.0;
             break;
           case '4.5':
-            minRating = 4.5;
+            ratingThreshold = 4.5;
             break;
           case '4.8':
-            minRating = 4.8;
+            ratingThreshold = 4.8;
             break;
           default:
-            minRating = null;
+            ratingThreshold = null;
         }
 
-        if (minRating !== null) {
+        if (ratingThreshold !== null) {
           restaurantQuery.where.rating = {
-            [Op.gte]: minRating,
+            [Op.gte]: ratingThreshold,
           };
         }
       }
