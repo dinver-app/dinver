@@ -26,6 +26,7 @@ module.exports = {
       foodTypes,
       establishmentPerks,
       dietaryTypes,
+      minRating,
     } = req.query;
 
     const searchTerms = query
@@ -64,6 +65,33 @@ module.exports = {
           },
         ],
       };
+
+      // Dodaj filter za ocjene
+      if (minRating) {
+        let minRating;
+        switch (minRating) {
+          case '3':
+            minRating = 3.0;
+            break;
+          case '4':
+            minRating = 4.0;
+            break;
+          case '4.5':
+            minRating = 4.5;
+            break;
+          case '4.8':
+            minRating = 4.8;
+            break;
+          default:
+            minRating = null;
+        }
+
+        if (minRating !== null) {
+          restaurantQuery.where.rating = {
+            [Op.gte]: minRating,
+          };
+        }
+      }
 
       // Filtriranje po establishment types - koristiti where uvjet umjesto include
       if (establishmentTypes) {
