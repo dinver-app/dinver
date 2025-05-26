@@ -1,5 +1,4 @@
 import { apiClient } from "./authService";
-import { Blog, BlogUser } from "../interfaces/Interfaces";
 
 // Blog Posts
 export const getBlogs = async () => {

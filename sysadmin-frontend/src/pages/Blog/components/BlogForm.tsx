@@ -158,13 +158,10 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
                         branding: false,
                         promotion: false,
                         language: "hr",
-                        images_upload_handler: async function (
-                          blobInfo: {
-                            blob: () => Blob;
-                            filename: () => string;
-                          },
-                          progress: (percent: number) => void
-                        ) {
+                        images_upload_handler: async function (blobInfo: {
+                          blob: () => Blob;
+                          filename: () => string;
+                        }) {
                           const formData = new FormData();
                           formData.append(
                             "image",
