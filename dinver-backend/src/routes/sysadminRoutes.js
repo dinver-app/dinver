@@ -9,7 +9,8 @@ const userRoutes = require('./sysadminRoutes/userRoutes');
 const claimLogRoutes = require('./sysadminRoutes/claimLogRoutes');
 const backupRoutes = require('./sysadminRoutes/backupRoutes');
 const drinkRoutes = require('./sysadminRoutes/drinkRoutes');
-
+const blogRoutes = require('./sysadminRoutes/blogRoutes');
+const blogUserRoutes = require('./sysadminRoutes/blogUserRoutes');
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -22,4 +23,7 @@ router.use(userRoutes);
 router.use(claimLogRoutes);
 router.use(backupRoutes);
 router.use(drinkRoutes);
+router.use(auditLogRoutes);
+router.use(blogRoutes);
+router.use(blogUserRoutes);
 module.exports = router;

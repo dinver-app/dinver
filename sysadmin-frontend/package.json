@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
+    "@tinymce/tinymce-react": "^6.1.0",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "formik": "^2.4.6",

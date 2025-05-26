@@ -223,3 +223,35 @@ export interface DietaryType {
   nameHr: string;
   icon: string;
 }
+
+export interface BlogUser {
+  id: string;
+  name: string;
+  profileImage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Blog {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt?: string;
+  authorId: string;
+  author?: BlogUser;
+  featuredImage?: string;
+  status: "draft" | "published" | "archived";
+  publishedAt?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords: string[];
+  category?: string;
+  tags: string[];
+  readingTimeMinutes?: number;
+  shareCount: number;
+  viewCount: number;
+  language: string;
+  createdAt: string;
+  updatedAt: string;
+}

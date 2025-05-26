@@ -1,28 +1,85 @@
-import React from "react";
+import { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
-interface ModalProps {
+export interface ModalProps {
+  children: React.ReactNode;
   isOpen: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  title?: string;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
-  if (!isOpen) return null;
+const Modal = ({
+  children,
+  isOpen,
+  onClose,
+  title,
+  size = "md",
+}: ModalProps) => {
+  const maxWidthClass = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    full: "max-w-full",
+  }[size];
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            &times;
-          </button>
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel
+                className={`w-full ${maxWidthClass} transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}
+              >
+                {title && (
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 mb-4 pr-8"
+                  >
+                    {title}
+                  </Dialog.Title>
+                )}
+
+                <button
+                  type="button"
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
+                  onClick={onClose}
+                >
+                  <span className="sr-only">Close</span>
+                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                </button>
+
+                {children}
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
         </div>
-        {children}
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 };
 
