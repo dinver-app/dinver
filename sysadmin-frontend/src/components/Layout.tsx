@@ -9,6 +9,7 @@ import {
   FaShieldAlt,
   FaComments,
 } from "react-icons/fa";
+import { TfiWrite } from "react-icons/tfi";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 import LogoutModal from "./LogoutModal";
@@ -50,6 +51,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("users"),
       path: "/users",
       icon: <FaUser className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("blog"),
+      path: "/blog",
+      icon: <TfiWrite className="h-4 w-4 mr-3" />,
     },
     {
       name: t("analytics"),
