@@ -147,15 +147,12 @@ module.exports = {
         };
       }
 
-      // Add establishment perks filter
+      // Filtriranje po establishment perks
       if (establishmentPerkIds) {
-        restaurantQuery.include.push({
-          model: EstablishmentPerk,
-          where: {
-            id: { [Op.in]: establishmentPerkIds.split(',').map(Number) },
-          },
-          required: true,
-        });
+        const perkIds = establishmentPerkIds.split(',').map(Number);
+        restaurantQuery.where.establishmentPerks = {
+          [Op.overlap]: perkIds,
+        };
       }
 
       // Search by terms if provided
