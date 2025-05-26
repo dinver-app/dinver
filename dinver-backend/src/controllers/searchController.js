@@ -20,12 +20,12 @@ module.exports = {
       latitude,
       longitude,
       sortBy = 'distance', // Default sort
-      priceCategories,
-      establishmentTypes,
-      mealTypes,
-      foodTypes,
-      establishmentPerks,
-      dietaryTypes,
+      priceCategoryIds,
+      establishmentTypeIds,
+      mealTypeIds,
+      foodTypeIds,
+      establishmentPerkIds,
+      dietaryTypeIds,
       minRating,
     } = req.query;
 
@@ -107,50 +107,52 @@ module.exports = {
         }
       }
 
-      // Filtriranje po establishment types - koristiti where uvjet umjesto include
-      if (establishmentTypes) {
-        const typeIds = establishmentTypes.split(',').map(Number);
+      // Filtriranje po establishment types
+      if (establishmentTypeIds) {
+        const typeIds = establishmentTypeIds.split(',').map(Number);
         restaurantQuery.where.establishmentTypes = {
           [Op.overlap]: typeIds,
         };
       }
 
-      // Filtriranje po meal types - koristiti where uvjet umjesto include
-      if (mealTypes) {
-        const mealTypeIds = mealTypes.split(',').map(Number);
+      // Filtriranje po meal types
+      if (mealTypeIds) {
+        const mealIds = mealTypeIds.split(',').map(Number);
         restaurantQuery.where.mealTypes = {
-          [Op.overlap]: mealTypeIds,
+          [Op.overlap]: mealIds,
         };
       }
 
-      // Filtriranje po food types - koristiti where uvjet umjesto include
-      if (foodTypes) {
-        const foodTypeIds = foodTypes.split(',').map(Number);
+      // Filtriranje po food types
+      if (foodTypeIds) {
+        const foodIds = foodTypeIds.split(',').map(Number);
         restaurantQuery.where.foodTypes = {
-          [Op.overlap]: foodTypeIds,
+          [Op.overlap]: foodIds,
         };
       }
 
-      // Filtriranje po dietary types - koristiti where uvjet umjesto include
-      if (dietaryTypes) {
-        const dietaryTypeIds = dietaryTypes.split(',').map(Number);
+      // Filtriranje po dietary types
+      if (dietaryTypeIds) {
+        const dietaryIds = dietaryTypeIds.split(',').map(Number);
         restaurantQuery.where.dietaryTypes = {
-          [Op.overlap]: dietaryTypeIds,
+          [Op.overlap]: dietaryIds,
         };
       }
 
       // Add price category filter
-      if (priceCategories) {
-        const priceIds = priceCategories.split(',').map(Number);
-        restaurantQuery.where.priceCategoryId = { [Op.in]: priceIds };
+      if (priceCategoryIds) {
+        const priceIds = priceCategoryIds.split(',').map(Number);
+        restaurantQuery.where.priceCategoryId = {
+          [Op.and]: [{ [Op.in]: priceIds }, { [Op.not]: null }],
+        };
       }
 
       // Add establishment perks filter
-      if (establishmentPerks) {
+      if (establishmentPerkIds) {
         restaurantQuery.include.push({
           model: EstablishmentPerk,
           where: {
-            id: { [Op.in]: establishmentPerks.split(',').map(Number) },
+            id: { [Op.in]: establishmentPerkIds.split(',').map(Number) },
           },
           required: true,
         });
