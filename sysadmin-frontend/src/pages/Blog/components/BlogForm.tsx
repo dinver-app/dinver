@@ -13,7 +13,7 @@ interface BlogFormProps {
 }
 
 const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [title, setTitle] = useState(blog?.title || "");
   const [content, setContent] = useState(blog?.content || "");
   const [excerpt, setExcerpt] = useState(blog?.excerpt || "");
@@ -157,7 +157,7 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
                           'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                         branding: false,
                         promotion: false,
-                        language: "hr",
+                        language: i18n.language,
                         images_upload_handler: async function (blobInfo: {
                           blob: () => Blob;
                           filename: () => string;

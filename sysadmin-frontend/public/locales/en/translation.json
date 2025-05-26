@@ -490,5 +490,8 @@
   "blog_created": "Blog created successfully",
   "preview": "Preview",
   "blog_preview": "Blog Preview",
-  "preview_the_blog_post": "Preview the blog post before publishing."
+  "preview_the_blog_post": "Preview the blog post before publishing.",
+  "blog_user_created": "Blog user created successfully",
+  "blog_user_updated": "Blog user updated successfully",
+  "blog_user_deleted": "Blog user deleted successfully"
 }
