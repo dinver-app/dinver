@@ -15,6 +15,7 @@ const foodCategoryRoutes = require('./appRoutes/foodCategoryRoutes');
 const searchRoutes = require('./appRoutes/searchRoutes');
 const typeRoutes = require('./appRoutes/typeRoutes');
 const blogRoutes = require('./appRoutes/blogRoutes');
+const newsletterRoutes = require('./appRoutes/newsletterRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -33,5 +34,5 @@ router.use(foodCategoryRoutes);
 router.use(searchRoutes);
 router.use(typeRoutes);
 router.use(blogRoutes);
-
+router.use(newsletterRoutes);
 module.exports = router;
