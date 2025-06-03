@@ -13,7 +13,7 @@ const LOGO_URL =
 
 const BASE_URL =
   process.env.NODE_ENV === 'production'
-    ? 'https://dinverapp.com'
+    ? 'https://dinver.eu'
     : 'http://localhost:3000';
 
 const API_URL =
@@ -52,7 +52,7 @@ const sendNewsletterEmail = async (to, template) => {
             </p>
             
             <div style="text-align: center; margin-bottom: 30px;">
-              <a href="https://dinverapp.com/blog" 
+              <a href="https://dinver.eu/blog" 
                  style="background-color: #10B981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 Posjetite Naš Blog
               </a>
@@ -91,7 +91,7 @@ const sendNewsletterEmail = async (to, template) => {
             </p>
             
             <div style="text-align: center; margin-bottom: 30px;">
-              <a href="https://dinverapp.com/restaurants" 
+              <a href="https://dinver.eu/restaurants" 
                  style="background-color: #10B981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 Istražite Restorane
               </a>
@@ -130,7 +130,7 @@ const sendNewsletterEmail = async (to, template) => {
             </p>
             
             <div style="text-align: center; margin-bottom: 30px;">
-              <a href="https://dinverapp.com/newsletter/subscribe" 
+              <a href="https://dinver.eu/" 
                  style="background-color: #10B981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                 Pretplatite se Ponovno
               </a>
@@ -146,7 +146,7 @@ const sendNewsletterEmail = async (to, template) => {
   };
 
   const emailData = {
-    from: 'Dinver <newsletter@dinverapp.com>',
+    from: 'Dinver <newsletter@dinver.eu>',
     to: to,
     subject: templates[template].subject,
     html: templates[template].html,
