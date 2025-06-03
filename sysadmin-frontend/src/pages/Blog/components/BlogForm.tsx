@@ -6,6 +6,17 @@ import { Editor } from "@tinymce/tinymce-react";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { getBlogUsers } from "../../../services/blogService";
 
+// Add TinyMCE types
+type UploadHandler = (
+  blobInfo: {
+    blob: () => Blob;
+    filename: () => string;
+  },
+  success: (url: string) => void,
+  failure: (err: string) => void,
+  progress?: (percent: number) => void
+) => void;
+
 interface BlogFormProps {
   blog?: Blog | null;
   onSubmit: (data: Partial<Blog>) => void;
@@ -14,6 +25,7 @@ interface BlogFormProps {
 
 const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
   const { t, i18n } = useTranslation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState(blog?.title || "");
   const [content, setContent] = useState(blog?.content || "");
   const [excerpt, setExcerpt] = useState(blog?.excerpt || "");
@@ -46,26 +58,41 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
     fetchAuthors();
   }, [t]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("content", content);
-    formData.append("excerpt", excerpt);
-    formData.append("status", status);
-    formData.append("category", category);
-    formData.append("tags", JSON.stringify(tags));
-    formData.append("language", language);
-    formData.append("metaTitle", metaTitle);
-    formData.append("metaDescription", metaDescription);
-    formData.append("keywords", JSON.stringify(keywords));
-    formData.append("authorId", selectedAuthorId);
-    if (featuredImage) {
-      formData.append("featuredImage", featuredImage);
+    const toastId = toast.loading(
+      blog ? t("updating_blog") : t("creating_blog")
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("content", content);
+      formData.append("excerpt", excerpt);
+      formData.append("status", status);
+      formData.append("category", category);
+      formData.append("tags", JSON.stringify(tags));
+      formData.append("language", language);
+      formData.append("metaTitle", metaTitle);
+      formData.append("metaDescription", metaDescription);
+      formData.append("keywords", JSON.stringify(keywords));
+      formData.append("authorId", selectedAuthorId);
+      if (featuredImage) {
+        formData.append("featuredImage", featuredImage);
+      }
+
+      await onSubmit(Object.fromEntries(formData));
+      toast.success(blog ? t("blog_updated") : t("blog_created"), {
+        id: toastId,
+      });
+    } catch (error) {
+      console.error("Failed to submit blog:", error);
+      toast.error(t("failed_to_save_blog"), { id: toastId });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onSubmit(Object.fromEntries(formData));
   };
 
   const handleTagsChange = (value: string) => {
@@ -120,12 +147,12 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
                     </label>
                     <Editor
                       apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
-                      scriptLoading={{ async: true }}
+                      scriptLoading={{ async: true, delay: 500 }}
                       value={content}
                       onEditorChange={(content: string) => setContent(content)}
                       init={{
                         height: 500,
-                        menubar: true,
+                        menubar: false,
                         plugins: [
                           "advlist",
                           "autolink",
@@ -142,49 +169,62 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
                           "insertdatetime",
                           "media",
                           "table",
-                          "code",
                           "help",
                           "wordcount",
-                          "emoticons",
-                          "paste",
                         ],
                         toolbar:
-                          "undo redo | formatselect | " +
-                          "bold italic backcolor | alignleft aligncenter " +
-                          "alignright alignjustify | bullist numlist outdent indent | " +
-                          "removeformat | image media table | help",
+                          "undo redo | blocks | " +
+                          "bold italic | alignleft aligncenter " +
+                          "alignright alignjustify | bullist numlist | " +
+                          "removeformat | image media | help",
                         content_style:
                           'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                         branding: false,
                         promotion: false,
                         language: i18n.language,
-                        images_upload_handler: async function (blobInfo: {
-                          blob: () => Blob;
-                          filename: () => string;
-                        }) {
+                        image_title: true,
+                        automatic_uploads: true,
+                        file_picker_types: "image",
+                        paste_data_images: true,
+                        images_upload_handler: (async (
+                          blobInfo,
+                          success,
+                          failure
+                        ) => {
                           const formData = new FormData();
                           formData.append(
-                            "image",
+                            "featuredImage",
                             blobInfo.blob(),
                             blobInfo.filename()
                           );
 
                           try {
-                            // Ovdje trebaš implementirati endpoint za upload slika
-                            const response = await fetch("/api/upload-image", {
-                              method: "POST",
-                              body: formData,
-                            });
+                            const response = await fetch(
+                              "/api/sysadmin/blogs/upload-image",
+                              {
+                                method: "POST",
+                                headers: {
+                                  Authorization: `Bearer ${localStorage.getItem(
+                                    "token"
+                                  )}`,
+                                },
+                                body: formData,
+                              }
+                            );
 
-                            if (!response.ok) throw new Error("Upload failed");
+                            if (!response.ok) {
+                              const errorData = await response.json();
+                              failure(errorData.error || "Image upload failed");
+                              return;
+                            }
 
                             const data = await response.json();
-                            return data.location; // URL uploaded slike
+                            success(data.url);
                           } catch (e) {
                             console.error("Failed to upload image:", e);
-                            throw e;
+                            failure("Image upload failed. Please try again.");
                           }
-                        },
+                        }) as UploadHandler,
                       }}
                     />
                   </div>
@@ -355,10 +395,15 @@ const BlogForm = ({ blog, onSubmit, onCancel }: BlogFormProps) => {
                 type="button"
                 onClick={onCancel}
                 className="secondary-button"
+                disabled={isSubmitting}
               >
                 {t("cancel")}
               </button>
-              <button type="submit" className="primary-button">
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={isSubmitting}
+              >
                 {blog ? t("update") : t("create")}
               </button>
             </div>
