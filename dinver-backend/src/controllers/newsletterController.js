@@ -223,57 +223,10 @@ const unsubscribe = async (req, res) => {
     try {
       email = Buffer.from(token, 'base64').toString('utf-8');
     } catch (error) {
-      return res.send(`
-        <html>
-          <head>
-            <title>Odjava Neuspješna</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 100vh; 
-                margin: 0; 
-                background-color: #f5f5f5; 
-              }
-              .container { 
-                text-align: center; 
-                padding: 2rem; 
-                background: white; 
-                border-radius: 12px; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-                margin: 1rem;
-                max-width: 500px;
-                width: 100%;
-              }
-              .logo {
-                max-width: 200px;
-                margin-bottom: 2rem;
-              }
-              .error { 
-                color: #dc2626; 
-                font-size: 1.5rem; 
-                margin-bottom: 1rem; 
-              }
-              p { 
-                color: #4b5563; 
-                font-size: 1.1rem; 
-                line-height: 1.5; 
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <img src="${LOGO_URL}" alt="Dinver Logo" class="logo">
-              <h1 class="error">Odjava Neuspješna</h1>
-              <p>Neispravan link za odjavu.</p>
-              <p>Molimo vas da pokušate ponovno ili nas kontaktirajte ako problem i dalje postoji.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      return res.status(400).json({
+        error: 'nevazeci_token',
+        message: 'Neispravan link za odjavu',
+      });
     }
 
     const subscriber = await NewsletterSubscriber.findOne({
@@ -281,57 +234,10 @@ const unsubscribe = async (req, res) => {
     });
 
     if (!subscriber) {
-      return res.send(`
-        <html>
-          <head>
-            <title>Odjava Neuspješna</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 100vh; 
-                margin: 0; 
-                background-color: #f5f5f5; 
-              }
-              .container { 
-                text-align: center; 
-                padding: 2rem; 
-                background: white; 
-                border-radius: 12px; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-                margin: 1rem;
-                max-width: 500px;
-                width: 100%;
-              }
-              .logo {
-                max-width: 200px;
-                margin-bottom: 2rem;
-              }
-              .error { 
-                color: #dc2626; 
-                font-size: 1.5rem; 
-                margin-bottom: 1rem; 
-              }
-              p { 
-                color: #4b5563; 
-                font-size: 1.1rem; 
-                line-height: 1.5; 
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <img src="${LOGO_URL}" alt="Dinver Logo" class="logo">
-              <h1 class="error">Pretplata Nije Pronađena</h1>
-              <p>Nismo pronašli aktivnu pretplatu za ovu email adresu.</p>
-              <p>Moguće je da ste se već odjavili ili da je došlo do greške.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      return res.status(404).json({
+        error: 'pretplata_nije_pronadena',
+        message: 'Nismo pronašli aktivnu pretplatu za ovu email adresu',
+      });
     }
 
     await subscriber.update({
@@ -342,133 +248,17 @@ const unsubscribe = async (req, res) => {
     // Send unsubscribe confirmation email
     await sendNewsletterEmail(email, 'unsubscribe');
 
-    res.send(`
-      <html>
-        <head>
-          <title>Uspješna Odjava</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-              display: flex; 
-              justify-content: center; 
-              align-items: center; 
-              height: 100vh; 
-              margin: 0; 
-              background-color: #f5f5f5; 
-            }
-            .container { 
-              text-align: center; 
-              padding: 2rem; 
-              background: white; 
-              border-radius: 12px; 
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-              margin: 1rem;
-              max-width: 500px;
-              width: 100%;
-            }
-            .logo {
-              max-width: 200px;
-              margin-bottom: 2rem;
-            }
-            .success { 
-              color: #059669; 
-              font-size: 1.5rem; 
-              margin-bottom: 1rem; 
-            }
-            .checkmark { 
-              font-size: 4rem; 
-              margin-bottom: 1rem; 
-              color: #059669;
-            }
-            p { 
-              color: #4b5563; 
-              font-size: 1.1rem; 
-              line-height: 1.5; 
-            }
-            .button {
-              display: inline-block;
-              background-color: #10B981;
-              color: white;
-              padding: 12px 24px;
-              text-decoration: none;
-              border-radius: 6px;
-              margin-top: 1rem;
-              font-weight: 500;
-              transition: background-color 0.2s;
-            }
-            .button:hover {
-              background-color: #059669;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <img src="${LOGO_URL}" alt="Dinver Logo" class="logo">
-            <div class="checkmark">✓</div>
-            <h1 class="success">Uspješno ste se odjavili</h1>
-            <p>Više nećete primati naše newsletter obavijesti.</p>
-            <p>Ako se predomislite, uvijek se možete ponovno pretplatiti.</p>
-            <a href="https://dinverapp.com/newsletter/subscribe" class="button">
-              Pretplatite se Ponovno
-            </a>
-          </div>
-        </body>
-      </html>
-    `);
+    res.json({
+      message: 'Uspješno ste se odjavili s newslettera',
+      email: email,
+      unsubscribedAt: new Date(),
+    });
   } catch (error) {
     console.error('Newsletter unsubscribe error:', error);
-    res.send(`
-      <html>
-        <head>
-          <title>Greška Prilikom Odjave</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-              display: flex; 
-              justify-content: center; 
-              align-items: center; 
-              height: 100vh; 
-              margin: 0; 
-              background-color: #f5f5f5; 
-            }
-            .container { 
-              text-align: center; 
-              padding: 2rem; 
-              background: white; 
-              border-radius: 12px; 
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-              margin: 1rem;
-              max-width: 500px;
-              width: 100%;
-            }
-            .logo {
-              max-width: 200px;
-              margin-bottom: 2rem;
-            }
-            .error { 
-              color: #dc2626; 
-              font-size: 1.5rem; 
-              margin-bottom: 1rem; 
-            }
-            p { 
-              color: #4b5563; 
-              font-size: 1.1rem; 
-              line-height: 1.5; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <img src="${LOGO_URL}" alt="Dinver Logo" class="logo">
-            <h1 class="error">Greška Prilikom Odjave</h1>
-            <p>Došlo je do greške prilikom obrade vašeg zahtjeva.</p>
-            <p>Molimo vas da pokušate ponovno ili nas kontaktirajte ako problem i dalje postoji.</p>
-          </div>
-        </body>
-      </html>
-    `);
+    res.status(500).json({
+      error: 'greska',
+      message: 'Došlo je do greške prilikom obrade vašeg zahtjeva',
+    });
   }
 };
 
