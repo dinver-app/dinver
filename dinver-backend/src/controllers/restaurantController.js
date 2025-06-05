@@ -46,7 +46,7 @@ const getRestaurantsList = async (req, res) => {
 const getAllRestaurants = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const limit = 20;
     const offset = (page - 1) * limit;
     const { search } = req.query;
 
@@ -166,7 +166,7 @@ const getRestaurants = async (req, res) => {
     }
 
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const limit = 20;
     const offset = (page - 1) * limit;
     const { search } = req.query;
 
@@ -1614,7 +1614,7 @@ const nearYou = async (req, res) => {
 
     // Implement pagination
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const limit = 20;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
 
