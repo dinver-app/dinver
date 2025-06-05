@@ -141,6 +141,16 @@ const appApiKeyAuth = (req, res, next) => {
   next();
 };
 
+const landingApiKeyAuth = (req, res, next) => {
+  const apiKey = req.headers['y-api-key'];
+
+  if (!apiKey || apiKey !== process.env.LANDING_API_KEY) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  next();
+};
+
 const restaurantOwnerAuth = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -232,6 +242,7 @@ module.exports = {
   checkSysadmin,
   checkAdmin,
   appApiKeyAuth,
+  landingApiKeyAuth,
   restaurantOwnerAuth,
   isRestaurantOwner,
 };

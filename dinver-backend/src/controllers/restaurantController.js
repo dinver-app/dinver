@@ -1618,6 +1618,36 @@ const nearYou = async (req, res) => {
   }
 };
 
+const getPartners = async (req, res) => {
+  try {
+    const partners = await Restaurant.findAll({
+      where: {
+        isClaimed: true,
+      },
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'phone',
+        'thumbnailUrl',
+        'slug',
+        'rating',
+      ],
+      order: [['name', 'ASC']],
+    });
+
+    res.json({
+      partners,
+      total: partners.length,
+    });
+  } catch (error) {
+    console.error('Error fetching partners:', error);
+    res.status(500).json({ error: 'Failed to fetch partners' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1643,4 +1673,5 @@ module.exports = {
   getNewRestaurants,
   getAllNewRestaurants,
   nearYou,
+  getPartners,
 };
