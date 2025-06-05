@@ -10,5 +10,10 @@ router.get(
   landingApiKeyAuth,
   restaurantController.getFullRestaurantDetails,
 );
+router.get(
+  '/menu/:id',
+  landingApiKeyAuth,
+  restaurantController.getRestaurantMenu,
+);
 
 module.exports = router;

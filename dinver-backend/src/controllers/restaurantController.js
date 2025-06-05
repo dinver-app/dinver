@@ -4,6 +4,14 @@ const {
   UserFavorite,
   ClaimLog,
   User,
+  MenuItem,
+  MenuItemTranslation,
+  MenuCategory,
+  MenuCategoryTranslation,
+  DrinkItem,
+  DrinkItemTranslation,
+  DrinkCategory,
+  DrinkCategoryTranslation,
 } = require('../../models');
 const { recordInsight } = require('./insightController');
 const {
@@ -1787,6 +1795,196 @@ const getFullRestaurantDetails = async (req, res) => {
   }
 };
 
+const getRestaurantMenu = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get all menu items with their categories
+    const menuItems = await MenuItem.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+        },
+        {
+          model: MenuCategory,
+          as: 'category',
+          include: [
+            {
+              model: MenuCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
+      ],
+      order: [
+        [{ model: MenuCategory, as: 'category' }, 'position', 'ASC'],
+        ['position', 'ASC'],
+      ],
+    });
+
+    // Get all drink items with their categories
+    const drinkItems = await DrinkItem.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: DrinkItemTranslation,
+          as: 'translations',
+        },
+        {
+          model: DrinkCategory,
+          as: 'category',
+          include: [
+            {
+              model: DrinkCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
+      ],
+      order: [
+        [{ model: DrinkCategory, as: 'category' }, 'position', 'ASC'],
+        ['position', 'ASC'],
+      ],
+    });
+
+    // Get all menu categories
+    const menuCategories = await MenuCategory.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+      order: [['position', 'ASC']],
+    });
+
+    // Get all drink categories
+    const drinkCategories = await DrinkCategory.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: DrinkCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+      order: [['position', 'ASC']],
+    });
+
+    // Organize food menu by categories
+    const foodMenu = {
+      categories: menuCategories.map((category) => ({
+        id: category.id,
+        name: category.translations[0]?.name || '',
+        nameEn:
+          category.translations.find((t) => t.language === 'en')?.name || '',
+        nameHr:
+          category.translations.find((t) => t.language === 'hr')?.name || '',
+        items: menuItems
+          .filter((item) => item.categoryId === category.id)
+          .map((item) => ({
+            id: item.id,
+            name: item.translations[0]?.name || '',
+            nameEn:
+              item.translations.find((t) => t.language === 'en')?.name || '',
+            nameHr:
+              item.translations.find((t) => t.language === 'hr')?.name || '',
+            description: item.translations[0]?.description || '',
+            descriptionEn:
+              item.translations.find((t) => t.language === 'en')?.description ||
+              '',
+            descriptionHr:
+              item.translations.find((t) => t.language === 'hr')?.description ||
+              '',
+            price: parseFloat(item.price).toFixed(2),
+            imageUrl: item.imageUrl,
+            allergens: item.allergens || [],
+          })),
+      })),
+      uncategorized: menuItems
+        .filter((item) => !item.categoryId)
+        .map((item) => ({
+          id: item.id,
+          name: item.translations[0]?.name || '',
+          nameEn:
+            item.translations.find((t) => t.language === 'en')?.name || '',
+          nameHr:
+            item.translations.find((t) => t.language === 'hr')?.name || '',
+          description: item.translations[0]?.description || '',
+          descriptionEn:
+            item.translations.find((t) => t.language === 'en')?.description ||
+            '',
+          descriptionHr:
+            item.translations.find((t) => t.language === 'hr')?.description ||
+            '',
+          price: parseFloat(item.price).toFixed(2),
+          imageUrl: item.imageUrl,
+          allergens: item.allergens || [],
+        })),
+    };
+
+    // Organize drinks menu by categories
+    const drinksMenu = {
+      categories: drinkCategories.map((category) => ({
+        id: category.id,
+        name: category.translations[0]?.name || '',
+        nameEn:
+          category.translations.find((t) => t.language === 'en')?.name || '',
+        nameHr:
+          category.translations.find((t) => t.language === 'hr')?.name || '',
+        items: drinkItems
+          .filter((item) => item.categoryId === category.id)
+          .map((item) => ({
+            id: item.id,
+            name: item.translations[0]?.name || '',
+            nameEn:
+              item.translations.find((t) => t.language === 'en')?.name || '',
+            nameHr:
+              item.translations.find((t) => t.language === 'hr')?.name || '',
+            description: item.translations[0]?.description || '',
+            descriptionEn:
+              item.translations.find((t) => t.language === 'en')?.description ||
+              '',
+            descriptionHr:
+              item.translations.find((t) => t.language === 'hr')?.description ||
+              '',
+            price: parseFloat(item.price).toFixed(2),
+            imageUrl: item.imageUrl,
+          })),
+      })),
+      uncategorized: drinkItems
+        .filter((item) => !item.categoryId)
+        .map((item) => ({
+          id: item.id,
+          name: item.translations[0]?.name || '',
+          nameEn:
+            item.translations.find((t) => t.language === 'en')?.name || '',
+          nameHr:
+            item.translations.find((t) => t.language === 'hr')?.name || '',
+          description: item.translations[0]?.description || '',
+          descriptionEn:
+            item.translations.find((t) => t.language === 'en')?.description ||
+            '',
+          descriptionHr:
+            item.translations.find((t) => t.language === 'hr')?.description ||
+            '',
+          price: parseFloat(item.price).toFixed(2),
+          imageUrl: item.imageUrl,
+        })),
+    };
+
+    res.json({
+      food: foodMenu,
+      drinks: drinksMenu,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant menu:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant menu' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1814,4 +2012,5 @@ module.exports = {
   nearYou,
   getPartners,
   getFullRestaurantDetails,
+  getRestaurantMenu,
 };
