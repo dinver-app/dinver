@@ -42,4 +42,11 @@ router.get(
   restaurantController.nearYou,
 );
 
+router.get(
+  '/details/:id',
+  appApiKeyAuth,
+  restaurantController.getFullRestaurantDetails,
+);
+router.get('/menu/:id', appApiKeyAuth, restaurantController.getRestaurantMenu);
+
 module.exports = router;
