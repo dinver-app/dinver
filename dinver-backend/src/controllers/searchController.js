@@ -3,13 +3,8 @@ const {
   MenuItem,
   DrinkItem,
   Restaurant,
-  FoodType,
   MenuItemTranslation,
   DrinkItemTranslation,
-  EstablishmentType,
-  EstablishmentPerk,
-  MealType,
-  DietaryType,
   PriceCategory,
 } = require('../../models');
 
