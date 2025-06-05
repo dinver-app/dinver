@@ -1539,6 +1539,85 @@ const getAllNewRestaurants = async (req, res) => {
   }
 };
 
+const nearYou = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+
+    if (!latitude || !longitude) {
+      return res
+        .status(400)
+        .json({ error: 'Latitude and longitude are required' });
+    }
+
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+
+    // Get all restaurants
+    const restaurants = await Restaurant.findAll({
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'thumbnailUrl',
+        'slug',
+        'isClaimed',
+        'priceCategoryId',
+      ],
+    });
+
+    // Calculate distance for each restaurant and filter those within 60km
+    const restaurantsWithDistance = restaurants
+      .map((restaurant) => {
+        const distance = calculateDistance(
+          userLat,
+          userLon,
+          restaurant.latitude,
+          restaurant.longitude,
+        );
+
+        return {
+          ...restaurant.toJSON(),
+          distance,
+        };
+      })
+      .filter((restaurant) => restaurant.distance <= 60)
+      .sort((a, b) => a.distance - b.distance);
+
+    // Implement pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const paginatedRestaurants = restaurantsWithDistance.slice(
+      startIndex,
+      endIndex,
+    );
+    const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
+
+    return res.json({
+      restaurants: paginatedRestaurants,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRestaurants: restaurantsWithDistance.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error in nearYou:', error);
+    return res
+      .status(500)
+      .json({ error: 'An error occurred while fetching nearby restaurants.' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1563,4 +1642,5 @@ module.exports = {
   getSampleRestaurants,
   getNewRestaurants,
   getAllNewRestaurants,
+  nearYou,
 };

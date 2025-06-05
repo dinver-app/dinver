@@ -36,4 +36,10 @@ router.get(
   restaurantController.getAllNewRestaurants,
 );
 
+router.get(
+  '/restaurants/near-you',
+  appApiKeyAuth,
+  restaurantController.nearYou,
+);
+
 module.exports = router;
