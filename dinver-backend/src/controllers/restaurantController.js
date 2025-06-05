@@ -1,4 +1,18 @@
-const { Restaurant, Review, UserFavorite, ClaimLog } = require('../../models');
+const {
+  Restaurant,
+  Review,
+  UserFavorite,
+  ClaimLog,
+  User,
+  MenuItem,
+  MenuItemTranslation,
+  MenuCategory,
+  MenuCategoryTranslation,
+  DrinkItem,
+  DrinkItemTranslation,
+  DrinkCategory,
+  DrinkCategoryTranslation,
+} = require('../../models');
 const { recordInsight } = require('./insightController');
 const {
   updateFoodExplorerProgress,
@@ -10,6 +24,14 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
+const {
+  FoodType,
+  EstablishmentType,
+  EstablishmentPerk,
+  MealType,
+  DietaryType,
+  PriceCategory,
+} = require('../../models');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -1648,6 +1670,321 @@ const getPartners = async (req, res) => {
   }
 };
 
+const getFullRestaurantDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get restaurant base data
+    const restaurant = await Restaurant.findOne({
+      where: { id },
+      include: [
+        {
+          model: PriceCategory,
+          as: 'priceCategory',
+          attributes: ['id', 'nameEn', 'nameHr', 'icon', 'level'],
+        },
+      ],
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'thumbnailUrl',
+        'slug',
+        'isClaimed',
+        'foodTypes',
+        'establishmentTypes',
+        'establishmentPerks',
+        'mealTypes',
+        'dietaryTypes',
+        'priceCategoryId',
+        'websiteUrl',
+        'fbUrl',
+        'igUrl',
+        'ttUrl',
+        'email',
+        'images',
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get reviews
+    const { count: totalReviews, rows: reviews } = await Review.findAndCountAll(
+      {
+        where: {
+          restaurantId: id,
+          isHidden: false,
+        },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: 5, // Get only latest 5 reviews
+      },
+    );
+
+    // Get all type data
+    const [
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+    ] = await Promise.all([
+      FoodType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.foodTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentPerk.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentPerks || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      MealType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.mealTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      DietaryType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.dietaryTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+    ]);
+
+    // Transform restaurant data
+    const restaurantData = {
+      ...restaurant.toJSON(),
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+      reviews,
+      totalReviews,
+    };
+
+    res.json(restaurantData);
+  } catch (error) {
+    console.error('Error fetching restaurant details:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant details' });
+  }
+};
+
+const getRestaurantMenu = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get all menu items with their categories
+    const menuItems = await MenuItem.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+        },
+        {
+          model: MenuCategory,
+          as: 'category',
+          include: [
+            {
+              model: MenuCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
+      ],
+      order: [
+        [{ model: MenuCategory, as: 'category' }, 'position', 'ASC'],
+        ['position', 'ASC'],
+      ],
+    });
+
+    // Get all drink items with their categories
+    const drinkItems = await DrinkItem.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: DrinkItemTranslation,
+          as: 'translations',
+        },
+        {
+          model: DrinkCategory,
+          as: 'category',
+          include: [
+            {
+              model: DrinkCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
+      ],
+      order: [
+        [{ model: DrinkCategory, as: 'category' }, 'position', 'ASC'],
+        ['position', 'ASC'],
+      ],
+    });
+
+    // Get all menu categories
+    const menuCategories = await MenuCategory.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+      order: [['position', 'ASC']],
+    });
+
+    // Get all drink categories
+    const drinkCategories = await DrinkCategory.findAll({
+      where: { restaurantId: id },
+      include: [
+        {
+          model: DrinkCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+      order: [['position', 'ASC']],
+    });
+
+    // Organize food menu by categories
+    const foodMenu = {
+      categories: menuCategories.map((category) => ({
+        id: category.id,
+        name: category.translations[0]?.name || '',
+        nameEn:
+          category.translations.find((t) => t.language === 'en')?.name || '',
+        nameHr:
+          category.translations.find((t) => t.language === 'hr')?.name || '',
+        items: menuItems
+          .filter((item) => item.categoryId === category.id)
+          .map((item) => ({
+            id: item.id,
+            name: item.translations[0]?.name || '',
+            nameEn:
+              item.translations.find((t) => t.language === 'en')?.name || '',
+            nameHr:
+              item.translations.find((t) => t.language === 'hr')?.name || '',
+            description: item.translations[0]?.description || '',
+            descriptionEn:
+              item.translations.find((t) => t.language === 'en')?.description ||
+              '',
+            descriptionHr:
+              item.translations.find((t) => t.language === 'hr')?.description ||
+              '',
+            price: parseFloat(item.price).toFixed(2),
+            imageUrl: item.imageUrl,
+            allergens: item.allergens || [],
+          })),
+      })),
+      uncategorized: menuItems
+        .filter((item) => !item.categoryId)
+        .map((item) => ({
+          id: item.id,
+          name: item.translations[0]?.name || '',
+          nameEn:
+            item.translations.find((t) => t.language === 'en')?.name || '',
+          nameHr:
+            item.translations.find((t) => t.language === 'hr')?.name || '',
+          description: item.translations[0]?.description || '',
+          descriptionEn:
+            item.translations.find((t) => t.language === 'en')?.description ||
+            '',
+          descriptionHr:
+            item.translations.find((t) => t.language === 'hr')?.description ||
+            '',
+          price: parseFloat(item.price).toFixed(2),
+          imageUrl: item.imageUrl,
+          allergens: item.allergens || [],
+        })),
+    };
+
+    // Organize drinks menu by categories
+    const drinksMenu = {
+      categories: drinkCategories.map((category) => ({
+        id: category.id,
+        name: category.translations[0]?.name || '',
+        nameEn:
+          category.translations.find((t) => t.language === 'en')?.name || '',
+        nameHr:
+          category.translations.find((t) => t.language === 'hr')?.name || '',
+        items: drinkItems
+          .filter((item) => item.categoryId === category.id)
+          .map((item) => ({
+            id: item.id,
+            name: item.translations[0]?.name || '',
+            nameEn:
+              item.translations.find((t) => t.language === 'en')?.name || '',
+            nameHr:
+              item.translations.find((t) => t.language === 'hr')?.name || '',
+            description: item.translations[0]?.description || '',
+            descriptionEn:
+              item.translations.find((t) => t.language === 'en')?.description ||
+              '',
+            descriptionHr:
+              item.translations.find((t) => t.language === 'hr')?.description ||
+              '',
+            price: parseFloat(item.price).toFixed(2),
+            imageUrl: item.imageUrl,
+          })),
+      })),
+      uncategorized: drinkItems
+        .filter((item) => !item.categoryId)
+        .map((item) => ({
+          id: item.id,
+          name: item.translations[0]?.name || '',
+          nameEn:
+            item.translations.find((t) => t.language === 'en')?.name || '',
+          nameHr:
+            item.translations.find((t) => t.language === 'hr')?.name || '',
+          description: item.translations[0]?.description || '',
+          descriptionEn:
+            item.translations.find((t) => t.language === 'en')?.description ||
+            '',
+          descriptionHr:
+            item.translations.find((t) => t.language === 'hr')?.description ||
+            '',
+          price: parseFloat(item.price).toFixed(2),
+          imageUrl: item.imageUrl,
+        })),
+    };
+
+    res.json({
+      food: foodMenu,
+      drinks: drinksMenu,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant menu:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant menu' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1674,4 +2011,6 @@ module.exports = {
   getAllNewRestaurants,
   nearYou,
   getPartners,
+  getFullRestaurantDetails,
+  getRestaurantMenu,
 };

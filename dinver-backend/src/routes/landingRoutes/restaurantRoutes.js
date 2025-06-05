@@ -5,5 +5,15 @@ const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 const router = express.Router();
 
 router.get('/partners', landingApiKeyAuth, restaurantController.getPartners);
+router.get(
+  '/details/:id',
+  landingApiKeyAuth,
+  restaurantController.getFullRestaurantDetails,
+);
+router.get(
+  '/menu/:id',
+  landingApiKeyAuth,
+  restaurantController.getRestaurantMenu,
+);
 
 module.exports = router;
