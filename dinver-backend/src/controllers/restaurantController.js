@@ -1,4 +1,10 @@
-const { Restaurant, Review, UserFavorite, ClaimLog } = require('../../models');
+const {
+  Restaurant,
+  Review,
+  UserFavorite,
+  ClaimLog,
+  User,
+} = require('../../models');
 const { recordInsight } = require('./insightController');
 const {
   updateFoodExplorerProgress,
@@ -10,6 +16,14 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
+const {
+  FoodType,
+  EstablishmentType,
+  EstablishmentPerk,
+  MealType,
+  DietaryType,
+  PriceCategory,
+} = require('../../models');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -1648,6 +1662,131 @@ const getPartners = async (req, res) => {
   }
 };
 
+const getFullRestaurantDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get restaurant base data
+    const restaurant = await Restaurant.findOne({
+      where: { id },
+      include: [
+        {
+          model: PriceCategory,
+          as: 'priceCategory',
+          attributes: ['id', 'nameEn', 'nameHr', 'icon', 'level'],
+        },
+      ],
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'thumbnailUrl',
+        'slug',
+        'isClaimed',
+        'foodTypes',
+        'establishmentTypes',
+        'establishmentPerks',
+        'mealTypes',
+        'dietaryTypes',
+        'priceCategoryId',
+        'websiteUrl',
+        'fbUrl',
+        'igUrl',
+        'ttUrl',
+        'email',
+        'images',
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get reviews
+    const { count: totalReviews, rows: reviews } = await Review.findAndCountAll(
+      {
+        where: {
+          restaurantId: id,
+          isHidden: false,
+        },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: 5, // Get only latest 5 reviews
+      },
+    );
+
+    // Get all type data
+    const [
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+    ] = await Promise.all([
+      FoodType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.foodTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentPerk.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentPerks || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      MealType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.mealTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      DietaryType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.dietaryTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+    ]);
+
+    // Transform restaurant data
+    const restaurantData = {
+      ...restaurant.toJSON(),
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+      reviews,
+      totalReviews,
+    };
+
+    res.json(restaurantData);
+  } catch (error) {
+    console.error('Error fetching restaurant details:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant details' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -1674,4 +1813,5 @@ module.exports = {
   getAllNewRestaurants,
   nearYou,
   getPartners,
+  getFullRestaurantDetails,
 };
