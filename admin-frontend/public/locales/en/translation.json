@@ -446,5 +446,11 @@
   "select_dietary_types": "Select dietary preferences and restrictions for this restaurant",
   "no_uncategorized_items": "No uncategorized items",
   "no_menu_items": "No menu items",
-  "get_started_by_adding_categories_or_items": "Get started by adding categories or items to your menu."
+  "get_started_by_adding_categories_or_items": "Get started by adding categories or items to your menu.",
+  "wifi_settings": "WiFi Settings",
+  "wifi_network_name": "WiFi Network Name",
+  "wifi_password": "WiFi Password",
+  "show_wifi_credentials": "Show WiFi Credentials",
+  "wifi_credentials_helper_text": "Enable this to show WiFi credentials to customers in the QR menu",
+  "wifi_credentials_info": "Enable this to show WiFi credentials to customers in the QR menu"
 }
