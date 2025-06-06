@@ -9,7 +9,6 @@ import Users from "./pages/Users";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
-import Logs from "./pages/Logs";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import Claim from "./pages/Claim";
@@ -38,7 +37,6 @@ function App() {
             <Route path="/users" element={<Users />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/logs" element={<Logs />} />
             <Route path="/claim" element={<Claim />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/blog" element={<BlogPage />} />
