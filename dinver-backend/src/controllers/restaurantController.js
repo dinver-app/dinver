@@ -32,6 +32,7 @@ const {
   DietaryType,
   PriceCategory,
 } = require('../../models');
+const { sequelize } = require('../../models');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -1657,7 +1658,7 @@ const getPartners = async (req, res) => {
         'slug',
         'rating',
       ],
-      order: [['name', 'ASC']],
+      order: sequelize.random(),
     });
 
     res.json({

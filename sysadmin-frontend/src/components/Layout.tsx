@@ -11,7 +11,6 @@ import {
 } from "react-icons/fa";
 import { TfiWrite } from "react-icons/tfi";
 import { IoRestaurant } from "react-icons/io5";
-import { LuLogs } from "react-icons/lu";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 
@@ -75,11 +74,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const preferenceItems = [
-    {
-      name: t("logs"),
-      path: "/logs",
-      icon: <LuLogs className="h-4 w-4 mr-3" />,
-    },
     {
       name: t("settings"),
       path: "/settings",

@@ -335,9 +335,56 @@ const forceUnsubscribe = async (req, res) => {
   }
 };
 
+const getSubscribers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status;
+
+    const whereClause = {};
+    if (status && ['active', 'unsubscribed'].includes(status)) {
+      whereClause.status = status;
+    }
+
+    const { count, rows: subscribers } =
+      await NewsletterSubscriber.findAndCountAll({
+        where: whereClause,
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']],
+        attributes: [
+          'id',
+          'email',
+          'status',
+          'source',
+          'subscribedAt',
+          'unsubscribedAt',
+          'createdAt',
+        ],
+      });
+
+    res.json({
+      subscribers,
+      pagination: {
+        total: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        perPage: limit,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching subscribers:', error);
+    res.status(500).json({
+      error: 'Došlo je do greške prilikom dohvaćanja pretplatnika',
+    });
+  }
+};
+
 module.exports = {
   subscribe,
   unsubscribe,
   getStats,
   forceUnsubscribe,
+  getSubscribers,
 };

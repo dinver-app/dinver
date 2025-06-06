@@ -19,4 +19,11 @@ router.post(
   newsletterController.forceUnsubscribe,
 );
 
+router.get(
+  '/newsletter/subscribers',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  newsletterController.getSubscribers,
+);
+
 module.exports = router;

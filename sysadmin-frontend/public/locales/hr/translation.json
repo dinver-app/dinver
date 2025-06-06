@@ -502,5 +502,15 @@
   "blog_created": "Blog uspješno kreiran",
   "preview": "Pregled",
   "blog_preview": "Blog Pregled",
-  "preview_the_blog_post": "Pregledajte blog objavu prije objavljivanja."
+  "preview_the_blog_post": "Pregledajte blog objavu prije objavljivanja.",
+  "manage_users_and_subscribers": "Upravljaj korisnicima i pretplatnicima",
+  "subscribers": "Pretplatnici",
+  "all_subscribers": "Svi pretplatnici",
+  "active_subscribers": "Aktivni pretplatnici",
+  "inactive_subscribers": "Neaktivni pretplatnici",
+  "no_subscribers_found": "Nema pretplatnika",
+  "source": "Izvor",
+  "unsubscribed": "Odbijen",
+  "subscribed_at": "Pretplatio na",
+  "unsubscribed_at": "Odbijen na"
 }
