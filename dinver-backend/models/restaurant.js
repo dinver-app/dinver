@@ -218,6 +218,19 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
+      wifiSsid: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      wifiPassword: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      showWifiCredentials: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     {
       sequelize,

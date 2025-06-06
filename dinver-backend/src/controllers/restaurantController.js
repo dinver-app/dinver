@@ -295,6 +295,8 @@ const getRestaurants = async (req, res) => {
 const getRestaurantDetails = async (req, res) => {
   try {
     const { slug } = req.params;
+    const { includeWifi } = req.query; // New parameter for QR menu access
+
     const restaurant = await Restaurant.findOne({
       where: { slug },
       attributes: [
@@ -332,6 +334,9 @@ const getRestaurantDetails = async (req, res) => {
         'dietaryTypes',
         'mealTypes',
         'priceCategoryId',
+        ...(includeWifi
+          ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
+          : []),
       ],
       include: [
         {
@@ -343,7 +348,16 @@ const getRestaurantDetails = async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
-    res.json(restaurant);
+
+    // Only include WiFi data if it's allowed and requested
+    const restaurantData = restaurant.get();
+    if (!includeWifi || !restaurantData.showWifiCredentials) {
+      delete restaurantData.wifiSsid;
+      delete restaurantData.wifiPassword;
+      delete restaurantData.showWifiCredentials;
+    }
+
+    res.json(restaurantData);
   } catch (error) {
     res
       .status(500)
@@ -461,6 +475,9 @@ async function updateRestaurant(req, res) {
       priceCategoryId,
       description,
       translations = [],
+      wifiSsid,
+      wifiPassword,
+      showWifiCredentials,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -509,6 +526,9 @@ async function updateRestaurant(req, res) {
       description,
       thumbnailUrl,
       priceCategoryId,
+      wifiSsid,
+      wifiPassword,
+      showWifiCredentials,
     });
 
     // Upsert translations if provided
@@ -525,7 +545,11 @@ async function updateRestaurant(req, res) {
       changes: { old: oldData, new: restaurant.get() },
     });
 
-    res.json(restaurant);
+    // Remove sensitive data from response
+    const responseData = restaurant.get();
+    delete responseData.wifiPassword;
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error updating restaurant:', error);
     res.status(500).json({ error: 'Failed to update restaurant' });
@@ -1674,6 +1698,7 @@ const getPartners = async (req, res) => {
 const getFullRestaurantDetails = async (req, res) => {
   try {
     const { id } = req.params;
+    const { includeWifi } = req.query; // New parameter for QR menu access
 
     // Get restaurant base data
     const restaurant = await Restaurant.findOne({
@@ -1711,6 +1736,9 @@ const getFullRestaurantDetails = async (req, res) => {
         'ttUrl',
         'email',
         'images',
+        ...(includeWifi
+          ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
+          : []),
       ],
     });
 
@@ -1788,6 +1816,13 @@ const getFullRestaurantDetails = async (req, res) => {
       reviews,
       totalReviews,
     };
+
+    // Only include WiFi data if it's allowed and requested
+    if (!includeWifi || !restaurantData.showWifiCredentials) {
+      delete restaurantData.wifiSsid;
+      delete restaurantData.wifiPassword;
+      delete restaurantData.showWifiCredentials;
+    }
 
     res.json(restaurantData);
   } catch (error) {

@@ -68,6 +68,9 @@ export interface Restaurant {
     description: string;
   }[];
   dietaryTypes?: number[];
+  wifiSsid?: string;
+  wifiPassword?: string;
+  showWifiCredentials?: boolean;
 }
 
 export interface FoodType {

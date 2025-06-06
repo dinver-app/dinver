@@ -24,7 +24,9 @@ export const getAllRestaurants = async (page: number, search?: string) => {
 };
 
 export const getRestaurantDetails = async (slug: string) => {
-  const response = await apiClient.get(`api/sysadmin/restaurants/${slug}`);
+  const response = await apiClient.get(
+    `api/sysadmin/restaurants/${slug}?includeWifi=true`
+  );
   return response.data;
 };
 

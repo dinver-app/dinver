@@ -444,5 +444,13 @@
   "select_dietary_types": "Odaberite prehrambene preferencije i ograničenja za ovaj restoran",
   "no_uncategorized_items": "Nema nekategoriziranih stavki.",
   "no_menu_items": "Nema stavki u jelovniku.",
-  "get_started_by_adding_categories_or_items": "Započni dodavanjem kategorija ili stavki u jelovnik."
+  "get_started_by_adding_categories_or_items": "Započni dodavanjem kategorija ili stavki u jelovnik.",
+  "wifi_settings": "WiFi Postavke",
+  "wifi_network_name": "Naziv WiFi Mreže (SSID)",
+  "wifi_password": "WiFi Lozinka",
+  "show_wifi_credentials": "Prikaži WiFi Podatke",
+  "wifi_credentials_helper_text": "Omogućite ovo za prikaz WiFi podataka gostima u QR jelovniku",
+  "wifi_ssid_placeholder": "Unesite naziv WiFi mreže",
+  "wifi_password_placeholder": "Unesite WiFi lozinku",
+  "wifi_credentials_info": "Omogućite ovo za prikaz WiFi podataka gostima u QR jelovniku"
 }
