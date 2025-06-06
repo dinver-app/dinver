@@ -493,5 +493,15 @@
   "preview_the_blog_post": "Preview the blog post before publishing.",
   "blog_user_created": "Blog user created successfully",
   "blog_user_updated": "Blog user updated successfully",
-  "blog_user_deleted": "Blog user deleted successfully"
+  "blog_user_deleted": "Blog user deleted successfully",
+  "manage_users_and_subscribers": "Manage Users and Subscribers",
+  "subscribers": "Subscribers",
+  "all_subscribers": "All Subscribers",
+  "active_subscribers": "Active Subscribers",
+  "inactive_subscribers": "Inactive Subscribers",
+  "no_subscribers_found": "No subscribers found",
+  "source": "Source",
+  "unsubscribed": "Unsubscribed",
+  "subscribed_at": "Subscribed At",
+  "unsubscribed_at": "Unsubscribed At"
 }
