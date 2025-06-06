@@ -503,5 +503,11 @@
   "source": "Source",
   "unsubscribed": "Unsubscribed",
   "subscribed_at": "Subscribed At",
-  "unsubscribed_at": "Unsubscribed At"
+  "unsubscribed_at": "Unsubscribed At",
+  "wifi_settings": "WiFi Settings",
+  "wifi_network_name": "WiFi Network Name",
+  "wifi_password": "WiFi Password",
+  "show_wifi_credentials": "Show WiFi Credentials",
+  "wifi_credentials_helper_text": "Enable this to show WiFi credentials to customers in the QR menu",
+  "wifi_credentials_info": "Enable this to show WiFi credentials to customers in the QR menu"
 }

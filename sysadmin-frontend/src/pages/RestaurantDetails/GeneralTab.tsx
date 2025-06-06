@@ -31,6 +31,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     ttUrl: restaurant.ttUrl || "",
     phone: restaurant.phone || "",
     email: restaurant.email || "",
+    wifiSsid: restaurant.wifiSsid || "",
+    wifiPassword: restaurant.wifiPassword || "",
+    showWifiCredentials: restaurant.showWifiCredentials || false,
   });
 
   const [translations, setTranslations] = useState<Translation[]>([
@@ -166,6 +169,12 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("ttUrl", errors.ttUrl === "" ? formData.ttUrl : "");
       formDataToSend.append("phone", errors.phone === "" ? formData.phone : "");
       formDataToSend.append("email", formData.email);
+      formDataToSend.append("wifiSsid", formData.wifiSsid);
+      formDataToSend.append("wifiPassword", formData.wifiPassword);
+      formDataToSend.append(
+        "showWifiCredentials",
+        formData.showWifiCredentials.toString()
+      );
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -195,7 +204,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
 
   useEffect(() => {
     Object.entries(formData).forEach(([name, value]) => {
-      validateInput(name, value);
+      if (typeof value === "string") {
+        validateInput(name, value);
+      }
     });
   }, []);
 
@@ -336,6 +347,79 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* WiFi Settings */}
+        <div className="border-b border-gray-200 pb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-800">
+              {t("wifi_settings")}
+            </h3>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-600 mr-3">
+                {t("show_wifi_credentials")}
+              </span>
+              <button
+                type="button"
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  formData.showWifiCredentials ? "bg-blue-600" : "bg-gray-200"
+                }`}
+                role="switch"
+                aria-checked={formData.showWifiCredentials}
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    showWifiCredentials: !prev.showWifiCredentials,
+                  }))
+                }
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    formData.showWifiCredentials
+                      ? "translate-x-5"
+                      : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("wifi_network_name")} (SSID)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="wifiSsid"
+                    value={formData.wifiSsid}
+                    onChange={handleInputChange}
+                    className="block w-full pl-10 p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("wifi_password")}
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    name="wifiPassword"
+                    value={formData.wifiPassword}
+                    onChange={handleInputChange}
+                    className="block w-full pl-10 p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              {t("wifi_credentials_info")}
+            </p>
           </div>
         </div>
 

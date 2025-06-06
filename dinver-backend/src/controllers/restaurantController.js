@@ -334,7 +334,9 @@ const getRestaurantDetails = async (req, res) => {
         'dietaryTypes',
         'mealTypes',
         'priceCategoryId',
-        ...(includeWifi && ['wifiSsid', 'wifiPassword', 'showWifiCredentials']),
+        ...(includeWifi
+          ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
+          : []),
       ],
       include: [
         {
@@ -1734,7 +1736,9 @@ const getFullRestaurantDetails = async (req, res) => {
         'ttUrl',
         'email',
         'images',
-        ...(includeWifi && ['wifiSsid', 'wifiPassword', 'showWifiCredentials']),
+        ...(includeWifi
+          ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
+          : []),
       ],
     });
 

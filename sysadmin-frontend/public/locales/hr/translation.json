@@ -512,5 +512,12 @@
   "source": "Izvor",
   "unsubscribed": "Odbijen",
   "subscribed_at": "Pretplatio na",
-  "unsubscribed_at": "Odbijen na"
+  "unsubscribed_at": "Odbijen na",
+  "wifi_settings": "WiFi Postavke",
+  "wifi_ssid": "Naziv WiFi Mreže (SSID)",
+  "wifi_password": "WiFi Lozinka",
+  "show_wifi_credentials": "Prikaži WiFi Podatke",
+  "wifi_credentials_helper_text": "Omogućite ovo za prikaz WiFi podataka gostima u QR jelovniku",
+  "wifi_ssid_placeholder": "Unesite naziv WiFi mreže",
+  "wifi_password_placeholder": "Unesite WiFi lozinku"
 }
