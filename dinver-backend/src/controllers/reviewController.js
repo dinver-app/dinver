@@ -23,6 +23,14 @@ const createReview = async (req, res) => {
     } = req.body;
     const userId = req.user.id;
 
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error: 'Your account has been banned. You cannot create new reviews.',
+      });
+    }
+
     // Validate if restaurant exists
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
@@ -216,6 +224,14 @@ const updateReview = async (req, res) => {
     const { id } = req.params;
     const { rating, text, photos } = req.body;
     const userId = req.user.id;
+
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error: 'Your account has been banned. You cannot update reviews.',
+      });
+    }
 
     const review = await Review.findOne({
       where: {
