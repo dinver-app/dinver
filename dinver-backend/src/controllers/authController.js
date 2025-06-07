@@ -113,11 +113,13 @@ const login = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
       });
-      res.cookie('token', accessToken, {
+      res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
       });
     }
 
@@ -145,16 +147,26 @@ const login = async (req, res) => {
 };
 
 const logout = (req, res) => {
-  res.clearCookie('token');
-  res.clearCookie('refreshToken');
+  // Clear both cookies
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
   res.json({ message: 'Logout successful' });
 };
 
 const checkAuth = async (req, res) => {
   let token;
 
-  if (req.cookies?.token) {
-    token = req.cookies.token;
+  // Try to get access token from cookies or Authorization header
+  if (req.cookies?.accessToken) {
+    token = req.cookies.accessToken;
   } else if (req.headers.authorization?.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
   }
@@ -163,47 +175,93 @@ const checkAuth = async (req, res) => {
     return res.status(401).json({ isAuthenticated: false });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
-    if (err) {
-      const refreshToken = req.cookies.refreshToken;
-      if (!refreshToken) {
-        return res.status(401).json({ isAuthenticated: false });
-      }
+  try {
+    // First try to verify the access token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
 
-      try {
-        const decoded = jwt.verify(
-          refreshToken,
-          process.env.REFRESH_TOKEN_SECRET,
-        );
-        const user = await User.findByPk(decoded.id);
-
-        if (!user) {
-          return res.status(403).json({ isAuthenticated: false });
-        }
-
-        const { accessToken, refreshToken: newRefreshToken } =
-          generateTokens(user);
-
-        res.cookie('appRefreshToken', newRefreshToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none',
-        });
-
-        res.cookie('appAccessToken', accessToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none',
-        });
-
-        return res.json({ isAuthenticated: true, accessToken });
-      } catch (refreshError) {
-        return res.status(403).json({ isAuthenticated: false });
-      }
+    if (!user) {
+      return res.status(403).json({ isAuthenticated: false });
     }
 
-    res.json({ isAuthenticated: true });
-  });
+    // If access token is valid and we're close to expiry (less than 1 hour left),
+    // proactively refresh both tokens
+    const tokenData = jwt.decode(token);
+    const timeUntilExpiry = tokenData.exp - Math.floor(Date.now() / 1000);
+
+    if (timeUntilExpiry < 60 * 60) {
+      // Less than 1 hour left
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+        generateTokens(user);
+
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
+      });
+
+      res.cookie('accessToken', newAccessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      });
+
+      return res.json({
+        isAuthenticated: true,
+        accessToken: newAccessToken,
+      });
+    }
+
+    return res.json({ isAuthenticated: true });
+  } catch (err) {
+    // If access token is invalid or expired, try refresh token
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ isAuthenticated: false });
+    }
+
+    try {
+      // Verify refresh token
+      const decoded = jwt.verify(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+      );
+      const user = await User.findByPk(decoded.id);
+
+      if (!user) {
+        return res.status(403).json({ isAuthenticated: false });
+      }
+
+      // Generate new tokens - both access and refresh tokens are renewed
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+        generateTokens(user);
+
+      // Set new cookies with renewed expiration
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
+      });
+
+      res.cookie('accessToken', newAccessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      });
+
+      return res.json({
+        isAuthenticated: true,
+        accessToken: newAccessToken,
+      });
+    } catch (refreshError) {
+      // If refresh token is also invalid, user needs to login again
+      return res.status(403).json({ isAuthenticated: false });
+    }
+  }
 };
 
 const sysadminCheckAuth = async (req, res) => {
