@@ -1,6 +1,7 @@
 const {
   Reservation,
   ReservationEvent,
+  ReservationMessage,
   User,
   Restaurant,
   UserSysadmin,
@@ -62,6 +63,21 @@ const createReservation = async (req, res) => {
       newStatus: 'pending',
       metadata: { guests, noteFromUser },
     });
+
+    // Create initial system message
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Reservation created for ${guests} guests on ${date} at ${time}.${
+        noteFromUser ? ` Note: ${noteFromUser}` : ''
+      }`,
+      {
+        event: 'created',
+        guests,
+        date,
+        time,
+        noteFromUser,
+      },
+    );
 
     // TODO: Pošalji notifikaciju restoranu
 
@@ -201,6 +217,18 @@ const confirmReservation = async (req, res) => {
       metadata: { noteFromOwner },
     });
 
+    // Create system message
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Reservation confirmed by ${reservation.restaurant.name}.${
+        noteFromOwner ? ` Note: ${noteFromOwner}` : ''
+      }`,
+      {
+        event: 'confirmed',
+        noteFromOwner,
+      },
+    );
+
     // Pošalji email korisniku
     await sendReservationEmail({
       to: reservation.user.email,
@@ -290,6 +318,18 @@ const declineReservation = async (req, res) => {
       metadata: { noteFromOwner },
     });
 
+    // Create system message for decline
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Reservation declined by ${reservation.restaurant.name}.${
+        noteFromOwner ? ` Note: ${noteFromOwner}` : ''
+      }`,
+      {
+        event: 'declined',
+        noteFromOwner,
+      },
+    );
+
     // Pošalji email korisniku
     await sendReservationEmail({
       to: reservation.user.email,
@@ -362,6 +402,20 @@ const suggestAlternativeTime = async (req, res) => {
       newStatus: 'suggested_alt',
       metadata: { suggestedDate, suggestedTime, noteFromOwner },
     });
+
+    // Create suggestion message
+    await ReservationMessage.createSuggestion(
+      reservation.id,
+      userId,
+      `Alternative time suggested: ${suggestedDate} at ${suggestedTime}.${
+        noteFromOwner ? ` Note: ${noteFromOwner}` : ''
+      }`,
+      {
+        suggestedDate,
+        suggestedTime,
+        noteFromOwner,
+      },
+    );
 
     // Pošalji email korisniku
     await sendReservationEmail({
@@ -437,6 +491,16 @@ const cancelReservation = async (req, res) => {
       oldStatus,
       newStatus: 'cancelled_by_user',
     });
+
+    // Create system message for cancellation
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Reservation cancelled by user.`,
+      {
+        event: 'cancelled_by_user',
+        cancelledAt: new Date(),
+      },
+    );
 
     // TODO: Pošalji notifikaciju restoranu
 
@@ -558,6 +622,17 @@ const acceptSuggestedTime = async (req, res) => {
         acceptedTime: reservation.suggestedTime,
       },
     });
+
+    // Create system message for accepting alternative
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Alternative time accepted. Reservation confirmed for ${reservation.suggestedDate} at ${reservation.suggestedTime}.`,
+      {
+        event: 'accepted_alt',
+        newDate: reservation.suggestedDate,
+        newTime: reservation.suggestedTime,
+      },
+    );
 
     // Dohvati svježe podatke o rezervaciji nakon ažuriranja
     const updatedReservation = await Reservation.findByPk(id, {

@@ -16,6 +16,8 @@ const searchRoutes = require('./appRoutes/searchRoutes');
 const typeRoutes = require('./appRoutes/typeRoutes');
 const blogRoutes = require('./appRoutes/blogRoutes');
 const newsletterRoutes = require('./appRoutes/newsletterRoutes');
+const reservationMessageRoutes = require('./appRoutes/reservationMessageRoutes');
+
 const router = express.Router();
 
 router.use(authRoutes);
@@ -35,4 +37,5 @@ router.use(searchRoutes);
 router.use(typeRoutes);
 router.use(blogRoutes);
 router.use(newsletterRoutes);
+router.use(reservationMessageRoutes);
 module.exports = router;
