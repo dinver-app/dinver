@@ -85,6 +85,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL,
         allowNull: true,
       },
+      foodQuality: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+      },
+      service: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+      },
+      atmosphere: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+      },
       priceLevel: {
         type: DataTypes.INTEGER,
         allowNull: true,

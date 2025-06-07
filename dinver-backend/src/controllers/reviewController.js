@@ -17,7 +17,7 @@ const createReview = async (req, res) => {
       foodQuality,
       service,
       atmosphere,
-      valueForMoney,
+      visitDate,
       text,
       photos,
     } = req.body;
@@ -73,7 +73,7 @@ const createReview = async (req, res) => {
       foodQuality,
       service,
       atmosphere,
-      valueForMoney,
+      visitDate: visitDate || new Date(),
       text,
       photos: [],
     });
@@ -341,13 +341,7 @@ const updateRestaurantRating = async (restaurantId) => {
       restaurantId: restaurantId,
       isHidden: false,
     },
-    attributes: [
-      'rating',
-      'foodQuality',
-      'service',
-      'atmosphere',
-      'valueForMoney',
-    ],
+    attributes: ['rating', 'foodQuality', 'service', 'atmosphere'],
   });
 
   const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
@@ -360,10 +354,6 @@ const updateRestaurantRating = async (restaurantId) => {
     (sum, review) => sum + review.atmosphere,
     0,
   );
-  const totalValueForMoney = reviews.reduce(
-    (sum, review) => sum + review.valueForMoney,
-    0,
-  );
 
   const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
   const averageFoodQuality =
@@ -371,8 +361,6 @@ const updateRestaurantRating = async (restaurantId) => {
   const averageService = reviews.length > 0 ? totalService / reviews.length : 0;
   const averageAtmosphere =
     reviews.length > 0 ? totalAtmosphere / reviews.length : 0;
-  const averageValueForMoney =
-    reviews.length > 0 ? totalValueForMoney / reviews.length : 0;
 
   await Restaurant.update(
     {
@@ -380,7 +368,6 @@ const updateRestaurantRating = async (restaurantId) => {
       foodQuality: averageFoodQuality,
       service: averageService,
       atmosphere: averageAtmosphere,
-      valueForMoney: averageValueForMoney,
       userRatingsTotal: reviews.length,
     },
     { where: { id: restaurantId } },

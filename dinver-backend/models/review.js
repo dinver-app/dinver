@@ -62,13 +62,10 @@ module.exports = (sequelize, DataTypes) => {
           max: 5,
         },
       },
-      valueForMoney: {
-        type: DataTypes.FLOAT,
+      visitDate: {
+        type: DataTypes.DATE,
         allowNull: false,
-        validate: {
-          min: 1,
-          max: 5,
-        },
+        defaultValue: DataTypes.NOW,
       },
       text: {
         type: DataTypes.TEXT,

@@ -11,13 +11,7 @@ const calculateAverageRating = async (restaurantId) => {
         restaurantId: restaurantId,
         isHidden: false,
       },
-      attributes: [
-        'rating',
-        'foodQuality',
-        'service',
-        'atmosphere',
-        'valueForMoney',
-      ],
+      attributes: ['rating', 'foodQuality', 'service', 'atmosphere'],
     });
 
     if (reviews.length === 0) {
@@ -27,7 +21,6 @@ const calculateAverageRating = async (restaurantId) => {
           foodQuality: 0,
           service: 0,
           atmosphere: 0,
-          valueForMoney: 0,
           userRatingsTotal: 0,
         },
         { where: { id: restaurantId } },
@@ -48,10 +41,6 @@ const calculateAverageRating = async (restaurantId) => {
       (sum, review) => sum + review.atmosphere,
       0,
     );
-    const totalValueForMoney = reviews.reduce(
-      (sum, review) => sum + review.valueForMoney,
-      0,
-    );
 
     await Restaurant.update(
       {
@@ -59,7 +48,6 @@ const calculateAverageRating = async (restaurantId) => {
         foodQuality: totalFoodQuality / reviews.length,
         service: totalService / reviews.length,
         atmosphere: totalAtmosphere / reviews.length,
-        valueForMoney: totalValueForMoney / reviews.length,
         userRatingsTotal: reviews.length,
       },
       { where: { id: restaurantId } },
