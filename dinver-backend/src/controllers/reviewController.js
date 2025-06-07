@@ -17,11 +17,19 @@ const createReview = async (req, res) => {
       foodQuality,
       service,
       atmosphere,
-      valueForMoney,
+      visitDate,
       text,
       photos,
     } = req.body;
     const userId = req.user.id;
+
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error: 'Your account has been banned. You cannot create new reviews.',
+      });
+    }
 
     // Validate if restaurant exists
     const restaurant = await Restaurant.findByPk(restaurantId);
@@ -73,7 +81,7 @@ const createReview = async (req, res) => {
       foodQuality,
       service,
       atmosphere,
-      valueForMoney,
+      visitDate: visitDate || new Date(),
       text,
       photos: [],
     });
@@ -217,6 +225,14 @@ const updateReview = async (req, res) => {
     const { rating, text, photos } = req.body;
     const userId = req.user.id;
 
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error: 'Your account has been banned. You cannot update reviews.',
+      });
+    }
+
     const review = await Review.findOne({
       where: {
         id,
@@ -341,13 +357,7 @@ const updateRestaurantRating = async (restaurantId) => {
       restaurantId: restaurantId,
       isHidden: false,
     },
-    attributes: [
-      'rating',
-      'foodQuality',
-      'service',
-      'atmosphere',
-      'valueForMoney',
-    ],
+    attributes: ['rating', 'foodQuality', 'service', 'atmosphere'],
   });
 
   const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
@@ -360,10 +370,6 @@ const updateRestaurantRating = async (restaurantId) => {
     (sum, review) => sum + review.atmosphere,
     0,
   );
-  const totalValueForMoney = reviews.reduce(
-    (sum, review) => sum + review.valueForMoney,
-    0,
-  );
 
   const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
   const averageFoodQuality =
@@ -371,8 +377,6 @@ const updateRestaurantRating = async (restaurantId) => {
   const averageService = reviews.length > 0 ? totalService / reviews.length : 0;
   const averageAtmosphere =
     reviews.length > 0 ? totalAtmosphere / reviews.length : 0;
-  const averageValueForMoney =
-    reviews.length > 0 ? totalValueForMoney / reviews.length : 0;
 
   await Restaurant.update(
     {
@@ -380,7 +384,6 @@ const updateRestaurantRating = async (restaurantId) => {
       foodQuality: averageFoodQuality,
       service: averageService,
       atmosphere: averageAtmosphere,
-      valueForMoney: averageValueForMoney,
       userRatingsTotal: reviews.length,
     },
     { where: { id: restaurantId } },

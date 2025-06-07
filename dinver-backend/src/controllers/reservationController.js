@@ -17,8 +17,16 @@ const createReservation = async (req, res) => {
     const userId = req.user.id;
     const { restaurantId, date, time, guests, noteFromUser } = req.body;
 
-    // Provjeri je li korisnik verificiran
+    // Check if user is banned
     const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error:
+          'Your account has been banned. You cannot create new reservations.',
+      });
+    }
+
+    // Provjeri je li korisnik verificiran
     const userSettings = await UserSettings.findOne({ where: { userId } });
     if (!userSettings.isEmailVerified || !userSettings.isPhoneVerified) {
       return res.status(403).json({
@@ -384,6 +392,14 @@ const cancelReservation = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error: 'Your account has been banned. You cannot cancel reservations.',
+      });
+    }
+
     const reservation = await Reservation.findByPk(id, {
       include: [
         {
@@ -472,6 +488,15 @@ const acceptSuggestedTime = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+
+    // Check if user is banned
+    const user = await User.findByPk(userId);
+    if (user.banned) {
+      return res.status(403).json({
+        error:
+          'Your account has been banned. You cannot accept alternative reservation times.',
+      });
+    }
 
     // Dohvati rezervaciju s punim podacima o korisniku i restoranu
     const reservation = await Reservation.findByPk(id, {
