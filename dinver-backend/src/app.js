@@ -46,6 +46,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+// Add X-Robots-Tag header to prevent search engine indexing
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex');
+  next();
+});
+
 // Configure session middleware with Redis
 app.use(
   session({
