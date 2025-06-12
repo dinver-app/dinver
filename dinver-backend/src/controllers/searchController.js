@@ -22,6 +22,7 @@ module.exports = {
       establishmentPerkIds,
       dietaryTypeIds,
       minRating,
+      onlyClaimedRestaurants,
     } = req.query;
 
     const searchTerms = query
@@ -60,6 +61,11 @@ module.exports = {
           },
         ],
       };
+
+      // Filter for claimed restaurants
+      if (onlyClaimedRestaurants === 'true') {
+        restaurantQuery.where.isClaimed = true;
+      }
 
       // Dodaj filter za ocjene
       if (minRating) {
