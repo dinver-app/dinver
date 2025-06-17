@@ -53,6 +53,18 @@ export const updateRestaurant = async (id: string, updatedData: any) => {
   }
 };
 
+export const deleteRestaurantThumbnail = async (id: string) => {
+  try {
+    const response = await apiClient.delete(
+      `/api/sysadmin/restaurants/${id}/thumbnail`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting restaurant thumbnail:", error);
+    throw error;
+  }
+};
+
 export const updateWorkingHours = async (id: string, workingHours: any) => {
   const response = await apiClient.put(
     `api/sysadmin/restaurants/${id}/working-hours`,

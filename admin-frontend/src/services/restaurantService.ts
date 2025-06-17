@@ -185,3 +185,15 @@ export const deleteCustomWorkingDay = async (
   );
   return response.data;
 };
+
+export const deleteRestaurantThumbnail = async (id: string) => {
+  try {
+    const response = await apiClient.delete(
+      `/api/admin/restaurants/${id}/thumbnail`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting restaurant thumbnail:", error);
+    throw error;
+  }
+};

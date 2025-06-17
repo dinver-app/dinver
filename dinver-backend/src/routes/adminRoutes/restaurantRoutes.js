@@ -60,6 +60,13 @@ router.delete(
   restaurantController.deleteRestaurantImage,
 );
 
+router.delete(
+  '/restaurants/:id/thumbnail',
+  adminAuthenticateToken,
+  checkAdmin,
+  restaurantController.deleteRestaurantThumbnail,
+);
+
 router.put(
   '/restaurants/:id/images/order',
   adminAuthenticateToken,

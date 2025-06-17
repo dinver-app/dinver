@@ -351,11 +351,11 @@ const getRestaurantDetails = async (req, res) => {
 
     // Only include WiFi data if it's allowed and requested
     const restaurantData = restaurant.get();
-    if (!includeWifi || !restaurantData.showWifiCredentials) {
-      delete restaurantData.wifiSsid;
-      delete restaurantData.wifiPassword;
-      delete restaurantData.showWifiCredentials;
-    }
+    // if (!includeWifi || !restaurantData.showWifiCredentials) {
+    //   delete restaurantData.wifiSsid;
+    //   delete restaurantData.wifiPassword;
+    //   delete restaurantData.showWifiCredentials;
+    // }
 
     res.json(restaurantData);
   } catch (error) {
@@ -844,7 +844,7 @@ async function addRestaurantImages(req, res) {
 const deleteRestaurantImage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { imageUrl, restaurant_slug } = req.body;
+    const { imageUrl } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -855,9 +855,11 @@ const deleteRestaurantImage = async (req, res) => {
       return res.status(400).json({ error: 'Image not found in restaurant' });
     }
 
+    // Extract the key from the full URL
     const key = imageUrl.split('/').pop();
-    await deleteFromS3(`restaurant_images/${restaurant_slug}/${key}`);
+    await deleteFromS3(`restaurant_images/${restaurant.slug}/${key}`);
 
+    // Remove the image from the restaurant's images array
     const updatedImages = restaurant.images.filter((img) => img !== imageUrl);
     await restaurant.update({ images: updatedImages });
 
@@ -2021,6 +2023,45 @@ const getRestaurantMenu = async (req, res) => {
   }
 };
 
+const deleteRestaurantThumbnail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (!restaurant.thumbnailUrl) {
+      return res
+        .status(400)
+        .json({ error: 'Restaurant has no thumbnail image' });
+    }
+
+    // Delete the thumbnail from S3
+    const oldKey = restaurant.thumbnailUrl.split('/').pop();
+    await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
+
+    // Update restaurant to remove thumbnail URL
+    await restaurant.update({ thumbnailUrl: null });
+
+    // Log the delete thumbnail action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { old: restaurant.thumbnailUrl },
+    });
+
+    res.json({ message: 'Thumbnail deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting thumbnail:', error);
+    res.status(500).json({ error: 'Failed to delete thumbnail' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -2034,6 +2075,7 @@ module.exports = {
   deleteRestaurant,
   addRestaurantImages,
   deleteRestaurantImage,
+  deleteRestaurantThumbnail,
   updateImageOrder,
   getRestaurantById,
   getCustomWorkingDays,
