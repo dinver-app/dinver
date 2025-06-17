@@ -16,6 +16,7 @@ const searchRoutes = require('./appRoutes/searchRoutes');
 const typeRoutes = require('./appRoutes/typeRoutes');
 const blogRoutes = require('./appRoutes/blogRoutes');
 const newsletterRoutes = require('./appRoutes/newsletterRoutes');
+const adminRoutes = require('./appRoutes/adminRoutes');
 
 const router = express.Router();
 
@@ -36,4 +37,5 @@ router.use(searchRoutes);
 router.use(typeRoutes);
 router.use(blogRoutes);
 router.use(newsletterRoutes);
+router.use(adminRoutes);
 module.exports = router;

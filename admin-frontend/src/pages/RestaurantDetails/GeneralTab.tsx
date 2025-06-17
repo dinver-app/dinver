@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { updateRestaurant } from "../../services/restaurantService";
+import {
+  updateRestaurant,
+  deleteRestaurantThumbnail,
+} from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -70,6 +73,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
   const [isDirty, setIsDirty] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const validateInput = (name: string, value: string) => {
     // Skip validation for non-string values
@@ -195,6 +199,20 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       console.error("Failed to save restaurant details", error);
       toast.error(t("failed_to_save_changes"), { id: toastId });
       setSaveStatus(t("failed_to_save_changes"));
+    }
+  };
+
+  const handleDeleteThumbnail = async () => {
+    try {
+      const toastId = toast.loading(t("deleting"));
+      await deleteRestaurantThumbnail(restaurant.id || "");
+      setFormData((prev) => ({ ...prev, thumbnailUrl: "" }));
+      toast.success(t("thumbnail_deleted"), { id: toastId });
+      onUpdate({ ...restaurant, thumbnailUrl: "" });
+      setShowDeleteModal(false);
+    } catch (error) {
+      toast.error(t("failed_to_delete_thumbnail"));
+      console.error("Error deleting thumbnail:", error);
     }
   };
 
@@ -485,15 +503,23 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                   className="w-full h-full object-cover rounded-md shadow-sm"
                 />
                 {role !== "helper" && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md cursor-pointer"
-                    onClick={() =>
-                      document.getElementById("fileInput")?.click()
-                    }
-                  >
-                    <span className="text-white text-sm font-medium">
-                      {t("click_to_change")}
-                    </span>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                    <div className="flex gap-2">
+                      <button
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+                        onClick={() =>
+                          document.getElementById("fileInput")?.click()
+                        }
+                      >
+                        {t("change")}
+                      </button>
+                      <button
+                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium"
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        {t("delete")}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -755,6 +781,61 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <div className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-gray-900"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("delete_thumbnail")}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t("delete_thumbnail_confirmation")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line mb-4"></div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleDeleteThumbnail}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                {t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -517,5 +517,9 @@
   "wifi_password": "WiFi Lozinka",
   "show_wifi_credentials": "Prikaži WiFi Podatke",
   "wifi_network_name": "Naziv WiFi Mreže",
-  "wifi_credentials_info": "Omogućite ovo za prikaz WiFi podataka gostima u QR jelovniku"
+  "wifi_credentials_info": "Omogućite ovo za prikaz WiFi podataka gostima u QR jelovniku",
+  "thumbnail_deleted": "Slika je uspješno uklonjena",
+  "delete_thumbnail": "Ukloni sliku",
+  "delete_thumbnail_confirmation": "Jesi li siguran/na da želiš ukloniti sliku restorana?",
+  "change": "Promijeni"
 }

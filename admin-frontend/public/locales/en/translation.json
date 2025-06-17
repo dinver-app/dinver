@@ -452,5 +452,8 @@
   "wifi_password": "WiFi Password",
   "show_wifi_credentials": "Show WiFi Credentials",
   "wifi_credentials_helper_text": "Enable this to show WiFi credentials to customers in the QR menu",
-  "wifi_credentials_info": "Enable this to show WiFi credentials to customers in the QR menu"
+  "wifi_credentials_info": "Enable this to show WiFi credentials to customers in the QR menu",
+  "thumbnail_deleted": "Thumbnail deleted successfully",
+  "delete_thumbnail": "Delete Thumbnail",
+  "delete_thumbnail_confirmation": "Are you sure you want to delete the thumbnail?"
 }

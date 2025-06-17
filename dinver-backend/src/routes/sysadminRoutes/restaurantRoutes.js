@@ -76,6 +76,13 @@ router.delete(
   restaurantController.deleteRestaurantImage,
 );
 
+router.delete(
+  '/restaurants/:id/thumbnail',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.deleteRestaurantThumbnail,
+);
+
 router.put(
   '/restaurants/:id/images/order',
   sysadminAuthenticateToken,

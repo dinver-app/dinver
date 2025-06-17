@@ -504,7 +504,7 @@ const getOwnedRestaurants = async (req, res) => {
       restaurantIds.length > 0
         ? await Restaurant.findAll({
             where: { id: restaurantIds },
-            attributes: ['id', 'name', 'place'],
+            attributes: ['id', 'name', 'place', 'slug'],
           })
         : [];
     res.json({
@@ -512,6 +512,7 @@ const getOwnedRestaurants = async (req, res) => {
         id: r.id,
         name: r.name,
         city: r.place,
+        slug: r.slug,
       })),
     });
   } catch (error) {
