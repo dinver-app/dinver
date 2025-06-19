@@ -263,17 +263,6 @@ const Reviews = () => {
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">
-                    {t("value_for_money")}
-                  </span>
-                  <span className="text-xs font-medium">
-                    {formatRating(
-                      selectedReview.review.valueForMoney,
-                      i18n.language
-                    )}
-                  </span>
-                </div>
               </div>
             </div>
             <div className="mb-4">
