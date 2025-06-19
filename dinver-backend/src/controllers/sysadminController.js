@@ -75,11 +75,9 @@ async function updateRestaurant(req, res) {
 
     // Validate description length
     if (description && description.length > 150) {
-      return res
-        .status(400)
-        .json({
-          error: 'Description is too long, maximum 150 characters allowed',
-        });
+      return res.status(400).json({
+        error: 'Description is too long, maximum 150 characters allowed',
+      });
     }
 
     await restaurant.update({ name, address, description });
@@ -504,7 +502,6 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
             'foodQuality',
             'service',
             'atmosphere',
-            'valueForMoney',
             'createdAt',
           ],
           limit,

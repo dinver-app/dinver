@@ -165,7 +165,6 @@ export interface Review {
   foodQuality: number;
   service: number;
   atmosphere: number;
-  valueForMoney: number;
   text: string;
   photos: string[];
   userId: string;
