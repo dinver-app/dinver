@@ -23,7 +23,7 @@ const autoTranslate = async (translations) => {
   if (
     hrTranslation.description !== undefined &&
     hrTranslation.description !== '' &&
-    enTranslation.description === undefined
+    enTranslation.description === ''
   ) {
     const [descriptionTranslation] = await translate.translate(
       hrTranslation.description,
@@ -36,7 +36,7 @@ const autoTranslate = async (translations) => {
   } else if (
     enTranslation.description !== undefined &&
     enTranslation.description !== '' &&
-    hrTranslation.description === undefined
+    hrTranslation.description === ''
   ) {
     const [descriptionTranslation] = await translate.translate(
       enTranslation.description,
@@ -52,7 +52,7 @@ const autoTranslate = async (translations) => {
   if (
     hrTranslation.name !== undefined &&
     hrTranslation.name !== '' &&
-    enTranslation.name === undefined
+    enTranslation.name === ''
   ) {
     const [nameTranslation] = await translate.translate(hrTranslation.name, {
       from: 'hr',
@@ -62,7 +62,7 @@ const autoTranslate = async (translations) => {
   } else if (
     enTranslation.name !== undefined &&
     enTranslation.name !== '' &&
-    hrTranslation.name === undefined
+    hrTranslation.name === ''
   ) {
     const [nameTranslation] = await translate.translate(enTranslation.name, {
       from: 'en',
