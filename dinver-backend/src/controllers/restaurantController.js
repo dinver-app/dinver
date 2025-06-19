@@ -671,7 +671,7 @@ const generateSlug = async (name) => {
 async function updateWorkingHours(req, res) {
   try {
     const { id } = req.params;
-    const { openingHours } = req.body;
+    const { opening_hours } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -680,17 +680,17 @@ async function updateWorkingHours(req, res) {
 
     const oldOpeningHours = restaurant.get('openingHours');
 
-    await restaurant.update({ openingHours });
+    await restaurant.update({ openingHours: opening_hours });
 
     // Log the update action
-    if (oldOpeningHours !== openingHours) {
+    if (oldOpeningHours !== opening_hours) {
       await logAudit({
         userId: req.user ? req.user.id : null,
         action: ActionTypes.UPDATE,
         entity: Entities.WORKING_HOURS,
         entityId: restaurant.id,
         restaurantId: restaurant.id,
-        changes: { old: oldOpeningHours, new: openingHours },
+        changes: { old: oldOpeningHours, new: opening_hours },
       });
     }
 
