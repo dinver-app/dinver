@@ -1,6 +1,7 @@
 const express = require('express');
 const restaurantController = require('../../controllers/restaurantController');
 const typeController = require('../../controllers/typeController');
+const menuController = require('../../controllers/menuController');
 
 const {
   appAuthenticateToken,
@@ -178,6 +179,97 @@ router.put(
   appApiKeyAuth,
   checkAdmin,
   restaurantController.updateImageOrder,
+);
+
+// menu routes
+
+router.get(
+  '/admin/menu/categories/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.getCategoryItems,
+);
+
+router.post(
+  '/admin/menu/categories',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.createCategory,
+);
+
+router.put(
+  '/admin/menu/categories/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.updateCategory,
+);
+
+router.delete(
+  '/admin/menu/categories/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.deleteCategory,
+);
+
+router.get(
+  '/admin/menu/menuItems/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.getMenuItems,
+);
+
+router.post(
+  '/admin/menu/menuItems',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  upload.single('imageFile'),
+  menuController.createMenuItem,
+);
+
+router.put(
+  '/admin/menu/menuItems/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  upload.single('imageFile'),
+  menuController.updateMenuItem,
+);
+
+router.delete(
+  '/admin/menu/menuItems/:id',
+  appAuthenticateToken,
+  checkAdmin,
+  menuController.deleteMenuItem,
+);
+
+router.get(
+  '/admin/menu/allergens',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.getAllAllergens,
+);
+
+router.put(
+  '/admin/menu/categories-order',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.updateCategoryOrder,
+);
+
+router.put(
+  '/admin/menu/menuItems-order',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.updateItemOrder,
 );
 
 module.exports = router;
