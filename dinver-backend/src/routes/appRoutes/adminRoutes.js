@@ -2,6 +2,7 @@ const express = require('express');
 const restaurantController = require('../../controllers/restaurantController');
 const typeController = require('../../controllers/typeController');
 const menuController = require('../../controllers/menuController');
+const drinksController = require('../../controllers/drinkController');
 
 const {
   appAuthenticateToken,
@@ -270,6 +271,90 @@ router.put(
   appApiKeyAuth,
   checkAdmin,
   menuController.updateItemOrder,
+);
+
+// drinks routes
+
+router.get(
+  '/admin/drinks/categories/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.getDrinkCategories,
+);
+
+router.post(
+  '/admin/drinks/categories',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.createDrinkCategory,
+);
+
+router.put(
+  '/admin/drinks/categories/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.updateDrinkCategory,
+);
+
+router.delete(
+  '/admin/drinks/categories/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.deleteDrinkCategory,
+);
+
+router.get(
+  '/admin/drinks/drinkItems/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.getDrinkItems,
+);
+
+router.post(
+  '/admin/drinks/drinkItems',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  upload.single('imageFile'),
+  drinksController.createDrinkItem,
+);
+
+router.put(
+  '/admin/drinks/drinkItems/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  upload.single('imageFile'),
+  drinksController.updateDrinkItem,
+);
+
+router.delete(
+  '/admin/drinks/drinkItems/:id',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.deleteDrinkItem,
+);
+
+router.put(
+  '/admin/drinks/categories-order',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.updateDrinkCategoryOrder,
+);
+
+router.put(
+  '/admin/drinks/drinkItems-order',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.updateDrinkItemOrder,
 );
 
 module.exports = router;
