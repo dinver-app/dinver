@@ -4,18 +4,25 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
   isRestaurantOwner,
+  checkAdmin,
 } = require('../../middleware/roleMiddleware');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+});
 
 const router = express.Router();
 
 // Create post (restaurant owners only)
 router.post(
-  '/posts',
+  '/admin/posts',
   appApiKeyAuth,
   appAuthenticateToken,
-  upload.array('media', 10), // Max 10 files (1 video or multiple images)
+  checkAdmin,
+  upload.array('media', 10),
   restaurantPostController.createPost,
 );
 
@@ -24,26 +31,29 @@ router.get('/feed', appApiKeyAuth, restaurantPostController.getFeed);
 
 // Like/Unlike post (authenticated users)
 router.post(
-  '/posts/:postId/like',
+  '/admin/posts/:postId/like',
   appApiKeyAuth,
   appAuthenticateToken,
+  checkAdmin,
   restaurantPostController.toggleLike,
 );
 
 // Delete post (restaurant owners only)
 router.delete(
-  '/posts/:postId',
+  '/admin/posts/:postId',
   appApiKeyAuth,
   appAuthenticateToken,
+  checkAdmin,
   isRestaurantOwner,
   restaurantPostController.deletePost,
 );
 
 // Get all posts for a specific restaurant
 router.get(
-  '/posts',
+  '/admin/posts',
   appApiKeyAuth,
   appAuthenticateToken,
+  checkAdmin,
   restaurantPostController.getPostsByRestaurant,
 );
 
