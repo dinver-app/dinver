@@ -356,7 +356,7 @@ const toggleLike = async (req, res) => {
 const deletePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const restaurantId = req.user.restaurantId;
+    const restaurantId = req.body.restaurantId;
 
     const post = await RestaurantPost.findOne({
       where: { id: postId, restaurantId },
