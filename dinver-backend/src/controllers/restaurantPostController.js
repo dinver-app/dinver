@@ -13,113 +13,85 @@ const { calculateDistance } = require('../../utils/distance');
 const AWS = require('aws-sdk');
 const ffmpeg = require('fluent-ffmpeg');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // Helper za video transcoding
-const transcodeVideo = async (inputBuffer, key) => {
+const transcodeVideo = async (inputBuffer, postId) => {
   const s3 = new AWS.S3();
-  const outputKey = `transcoded/${key}`;
+  const outputKey = `posts/video/${postId}/video.mp4`;
 
-  // Upload original video to temp location
-  const tempInputKey = `temp/${key}`;
-  await s3
-    .putObject({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: tempInputKey,
-      Body: inputBuffer,
-    })
-    .promise();
+  // Create temporary files for input and output
+  const tempInputPath = path.join(os.tmpdir(), `${uuidv4()}-input.mp4`);
+  const tempOutputPath = path.join(os.tmpdir(), `${uuidv4()}-output.mp4`);
+  fs.writeFileSync(tempInputPath, inputBuffer);
 
-  // Get video duration
-  const duration = await new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(inputBuffer, (err, metadata) => {
-      if (err) reject(err);
-      resolve(metadata.format.duration);
+  try {
+    // Get video duration using the temp file
+    const duration = await new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(tempInputPath, (err, metadata) => {
+        if (err) reject(err);
+        resolve(metadata.format.duration);
+      });
     });
-  });
 
-  // Check if video is longer than 60 seconds
-  if (duration > 60) {
-    throw new Error('Video must be 60 seconds or shorter');
+    // Check if video is longer than 60 seconds
+    if (duration > 60) {
+      throw new Error('Video must be 60 seconds or shorter');
+    }
+
+    // Transcode video using the temp file
+    await new Promise((resolve, reject) => {
+      ffmpeg(tempInputPath)
+        .outputOptions([
+          '-c:v libx264',
+          '-preset fast',
+          '-crf 23',
+          '-c:a aac',
+          '-b:a 128k',
+          '-movflags +faststart',
+        ])
+        .toFormat('mp4')
+        .save(tempOutputPath)
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    // Read the transcoded file
+    const outputBuffer = fs.readFileSync(tempOutputPath);
+
+    // Upload transcoded video
+    await s3
+      .putObject({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: outputKey,
+        Body: outputBuffer,
+        ContentType: 'video/mp4',
+      })
+      .promise();
+
+    return outputKey;
+  } finally {
+    // Clean up temporary files
+    try {
+      if (fs.existsSync(tempInputPath)) {
+        fs.unlinkSync(tempInputPath);
+      }
+      if (fs.existsSync(tempOutputPath)) {
+        fs.unlinkSync(tempOutputPath);
+      }
+    } catch (err) {
+      console.error('Error cleaning up temp files:', err);
+    }
   }
-
-  // Transcode video
-  const command = ffmpeg()
-    .input(inputBuffer)
-    .outputOptions([
-      '-c:v libx264',
-      '-preset fast',
-      '-crf 23',
-      '-c:a aac',
-      '-b:a 128k',
-      '-movflags +faststart',
-    ])
-    .format('mp4');
-
-  const outputBuffer = await new Promise((resolve, reject) => {
-    const chunks = [];
-    command
-      .on('end', () => resolve(Buffer.concat(chunks)))
-      .on('error', reject)
-      .on('data', (chunk) => chunks.push(chunk))
-      .pipe();
-  });
-
-  // Upload transcoded video
-  await s3
-    .putObject({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: outputKey,
-      Body: outputBuffer,
-      ContentType: 'video/mp4',
-    })
-    .promise();
-
-  // Delete temp file
-  await s3
-    .deleteObject({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: tempInputKey,
-    })
-    .promise();
-
-  return outputKey;
-};
-
-// Helper za thumbnail generation
-const generateThumbnail = async (inputBuffer, key) => {
-  const s3 = new AWS.S3();
-  const thumbnailKey = `thumbnails/${key}.jpg`;
-
-  const thumbnailBuffer = await new Promise((resolve, reject) => {
-    ffmpeg(inputBuffer)
-      .screenshots({
-        count: 1,
-        folder: '/tmp',
-        filename: 'thumbnail.jpg',
-        size: '320x240',
-      })
-      .on('end', () => {
-        resolve(require('fs').readFileSync('/tmp/thumbnail.jpg'));
-      })
-      .on('error', reject);
-  });
-
-  await s3
-    .putObject({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: thumbnailKey,
-      Body: thumbnailBuffer,
-      ContentType: 'image/jpeg',
-    })
-    .promise();
-
-  return thumbnailKey;
 };
 
 // Create a new post
 const createPost = async (req, res) => {
   try {
-    const { title, description, tags, city, restaurantId } = req.body;
+    const { title, description, tags, city, restaurantId, mediaType } =
+      req.body;
     const files = req.files;
     const userId = req.user.id;
 
@@ -147,41 +119,100 @@ const createPost = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const mediaUrls = [];
-    const mediaType = files.length > 1 ? 'carousel' : 'video';
-
-    // Process each file
-    for (const file of files) {
-      const key = `restaurant_posts/${restaurantId}/${uuidv4()}-${file.originalname}`;
-
-      if (mediaType === 'video') {
-        // Transcode video
-        const transcodedKey = await transcodeVideo(file.buffer, key);
-        // Generate thumbnail
-        const thumbnailKey = await generateThumbnail(file.buffer, key);
-        mediaUrls.push({
-          url: `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${transcodedKey}`,
-          thumbnailUrl: `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${thumbnailKey}`,
-        });
-      } else {
-        // Upload image
-        const imageUrl = await uploadToS3(
-          file,
-          `restaurant_posts/${restaurantId}`,
-        );
-        mediaUrls.push({ url: imageUrl });
-      }
-    }
-
+    // Create post first to get the ID
     const post = await RestaurantPost.create({
       restaurantId,
       title,
       description,
-      mediaUrls,
+      mediaUrls: [],
       mediaType,
       tags: tags ? tags.split(',').map((tag) => tag.trim()) : [],
       city,
     });
+
+    const mediaUrls = [];
+    const s3 = new AWS.S3();
+
+    if (mediaType === 'video') {
+      // For video posts, we need both video and thumbnail
+      const videoFile = files.find((f) => f.originalname.startsWith('video'));
+      const thumbnailFile = files.find((f) =>
+        f.originalname.startsWith('thumbnail'),
+      );
+
+      if (!videoFile || !thumbnailFile) {
+        await post.destroy();
+        return res.status(400).json({
+          error: 'Both video and thumbnail files are required for video posts',
+        });
+      }
+
+      // Process video
+      const videoKey = await transcodeVideo(videoFile.buffer, post.id);
+
+      // Upload thumbnail
+      const thumbnailKey = `postThumbnails/${post.id}/image.jpg`;
+      await s3
+        .putObject({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: thumbnailKey,
+          Body: thumbnailFile.buffer,
+          ContentType: 'image/jpeg',
+        })
+        .promise();
+
+      mediaUrls.push({
+        url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${videoKey}`,
+        thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${thumbnailKey}`,
+      });
+    } else {
+      // For carousel posts
+      const imageFiles = files.filter((f) =>
+        f.originalname.startsWith('image'),
+      );
+
+      if (imageFiles.length === 0) {
+        await post.destroy();
+        return res
+          .status(400)
+          .json({ error: 'No image files provided for carousel post' });
+      }
+
+      // Upload all images
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const imageKey = `posts/carousel/${post.id}/image_${i + 1}.jpg`;
+
+        await s3
+          .putObject({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: imageKey,
+            Body: file.buffer,
+            ContentType: 'image/jpeg',
+          })
+          .promise();
+
+        mediaUrls.push({
+          url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${imageKey}`,
+        });
+
+        // Use first image as thumbnail
+        if (i === 0) {
+          const thumbnailKey = `postThumbnails/${post.id}/image.jpg`;
+          await s3
+            .putObject({
+              Bucket: process.env.AWS_S3_BUCKET_NAME,
+              Key: thumbnailKey,
+              Body: file.buffer,
+              ContentType: 'image/jpeg',
+            })
+            .promise();
+        }
+      }
+    }
+
+    // Update post with media URLs
+    await post.update({ mediaUrls });
 
     // Log the create action
     await logAudit({
@@ -335,16 +366,19 @@ const deletePost = async (req, res) => {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Delete media files from S3
-    for (const media of post.mediaUrls) {
-      const key = media.url.split('/').pop();
-      await deleteFromS3(`restaurant_posts/${restaurantId}/${key}`);
-
-      if (media.thumbnailUrl) {
-        const thumbnailKey = media.thumbnailUrl.split('/').pop();
-        await deleteFromS3(`restaurant_posts/${restaurantId}/${thumbnailKey}`);
+    // Delete all associated files from S3
+    if (post.mediaType === 'video') {
+      // Delete video
+      await deleteFromS3(`posts/video/${post.id}/video.mp4`);
+    } else {
+      // Delete all carousel images
+      for (let i = 0; i < post.mediaUrls.length; i++) {
+        await deleteFromS3(`posts/carousel/${post.id}/image_${i + 1}.jpg`);
       }
     }
+
+    // Delete thumbnail
+    await deleteFromS3(`postThumbnails/${post.id}/image.jpg`);
 
     await post.destroy();
 
