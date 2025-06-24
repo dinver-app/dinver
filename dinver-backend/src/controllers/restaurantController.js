@@ -1738,6 +1738,8 @@ const getFullRestaurantDetails = async (req, res) => {
         'ttUrl',
         'email',
         'images',
+        'openingHours',
+        'customWorkingDays',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),
@@ -1831,6 +1833,22 @@ const getFullRestaurantDetails = async (req, res) => {
       }),
     ]);
 
+    // Filter customWorkingDays to only include dates within next 30 days
+    const now = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(now.getDate() + 30);
+
+    const filteredCustomWorkingDays = restaurant.customWorkingDays
+      ?.customWorkingDays
+      ? {
+          customWorkingDays:
+            restaurant.customWorkingDays.customWorkingDays.filter((day) => {
+              const dayDate = new Date(day.date);
+              return dayDate >= now && dayDate <= thirtyDaysFromNow;
+            }),
+        }
+      : { customWorkingDays: [] };
+
     // Transform restaurant data
     const restaurantData = {
       ...restaurant.toJSON(),
@@ -1842,6 +1860,7 @@ const getFullRestaurantDetails = async (req, res) => {
       reviews,
       totalReviews,
       ratings,
+      customWorkingDays: filteredCustomWorkingDays,
     };
 
     // Only include WiFi data if it's allowed and requested
