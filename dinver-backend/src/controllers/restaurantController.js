@@ -1748,7 +1748,31 @@ const getFullRestaurantDetails = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Get reviews
+    // Get all reviews for rating calculations
+    const allReviews = await Review.findAll({
+      where: {
+        restaurantId: id,
+        isHidden: false,
+      },
+    });
+
+    // Calculate average ratings
+    const calculateAverage = (reviews, field) => {
+      const sum = reviews.reduce(
+        (acc, review) => acc + (review[field] || 0),
+        0,
+      );
+      return reviews.length > 0 ? Number((sum / reviews.length).toFixed(2)) : 0;
+    };
+
+    const ratings = {
+      overall: calculateAverage(allReviews, 'rating'),
+      foodQuality: calculateAverage(allReviews, 'foodQuality'),
+      service: calculateAverage(allReviews, 'service'),
+      atmosphere: calculateAverage(allReviews, 'atmosphere'),
+    };
+
+    // Get latest 5 reviews for display
     const { count: totalReviews, rows: reviews } = await Review.findAndCountAll(
       {
         where: {
@@ -1817,6 +1841,7 @@ const getFullRestaurantDetails = async (req, res) => {
       dietaryTypes,
       reviews,
       totalReviews,
+      ratings,
     };
 
     // Only include WiFi data if it's allowed and requested
