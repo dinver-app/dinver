@@ -343,9 +343,9 @@ const getPostStats = async (req, res) => {
 
     // Calculate interaction counts
     const interactions = {
-      likes: 0,
-      saves: 0,
-      shares: 0,
+      like: 0,
+      save: 0,
+      share: 0,
     };
     post.interactions.forEach((interaction) => {
       if (interaction.interactionType in interactions) {
