@@ -1,0 +1,18 @@
+service: video-processor
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+
+functions:
+  processVideo:
+    handler: src/handler.processVideo
+    timeout: 900 # 15 minuta
+    memorySize: 3008 # Max memorija
+    events:
+      - s3:
+          bucket: ${self:custom.videoBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: uploads/
+            - suffix: .mp4
