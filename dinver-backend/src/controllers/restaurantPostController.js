@@ -1,10 +1,4 @@
-const {
-  RestaurantPost,
-  RestaurantPostLike,
-  Restaurant,
-  User,
-  UserAdmin,
-} = require('../../models');
+const { RestaurantPost, Restaurant, User, UserAdmin } = require('../../models');
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
@@ -234,124 +228,6 @@ const createPost = async (req, res) => {
   }
 };
 
-// Get feed posts
-const getFeed = async (req, res) => {
-  try {
-    const { latitude, longitude, city, page = 1, limit = 10 } = req.query;
-    const userId = req.user?.id;
-
-    const offset = (page - 1) * limit;
-    const whereClause = {};
-
-    if (city) {
-      whereClause.city = city;
-    }
-
-    const posts = await RestaurantPost.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: Restaurant,
-          as: 'restaurant',
-          attributes: ['id', 'name', 'address', 'latitude', 'longitude'],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-
-    // Get user likes if user is logged in
-    let userLikes = new Set();
-    if (userId) {
-      const likes = await RestaurantPostLike.findAll({
-        where: {
-          userId,
-          postId: posts.rows.map((post) => post.id),
-        },
-      });
-      userLikes = new Set(likes.map((like) => like.postId));
-    }
-
-    // Add distance and isLiked to each post
-    const postsWithDistance = posts.rows.map((post) => {
-      const postData = post.get();
-      let distance = null;
-
-      if (
-        latitude &&
-        longitude &&
-        post.restaurant.latitude &&
-        post.restaurant.longitude
-      ) {
-        distance = calculateDistance(
-          parseFloat(latitude),
-          parseFloat(longitude),
-          parseFloat(post.restaurant.latitude),
-          parseFloat(post.restaurant.longitude),
-        );
-      }
-
-      return {
-        ...postData,
-        distance,
-        isLiked: userLikes.has(post.id),
-      };
-    });
-
-    // Sort by distance if coordinates provided
-    if (latitude && longitude) {
-      postsWithDistance.sort((a, b) => {
-        if (a.distance === null) return 1;
-        if (b.distance === null) return -1;
-        return a.distance - b.distance;
-      });
-    }
-
-    res.json({
-      totalPosts: posts.count,
-      totalPages: Math.ceil(posts.count / limit),
-      currentPage: parseInt(page),
-      posts: postsWithDistance,
-    });
-  } catch (error) {
-    console.error('Error fetching feed:', error);
-    res.status(500).json({ error: 'Failed to fetch feed' });
-  }
-};
-
-// Like/Unlike a post
-const toggleLike = async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userId = req.user.id;
-
-    const post = await RestaurantPost.findByPk(postId);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
-
-    const existingLike = await RestaurantPostLike.findOne({
-      where: { userId, postId },
-    });
-
-    if (existingLike) {
-      // Unlike
-      await existingLike.destroy();
-      await post.decrement('likeCount');
-      res.json({ liked: false });
-    } else {
-      // Like
-      await RestaurantPostLike.create({ userId, postId });
-      await post.increment('likeCount');
-      res.json({ liked: true });
-    }
-  } catch (error) {
-    console.error('Error toggling like:', error);
-    res.status(500).json({ error: 'Failed to toggle like' });
-  }
-};
-
 // Delete a post
 const deletePost = async (req, res) => {
   try {
@@ -406,13 +282,22 @@ const getPostsByRestaurant = async (req, res) => {
     if (!restaurantId) {
       return res.status(400).json({ error: 'restaurantId is required' });
     }
+
     const offset = (page - 1) * limit;
     const posts = await RestaurantPost.findAndCountAll({
       where: { restaurantId },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address'],
+        },
+      ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
+
     res.json({
       totalPosts: posts.count,
       totalPages: Math.ceil(posts.count / limit),
@@ -427,8 +312,6 @@ const getPostsByRestaurant = async (req, res) => {
 
 module.exports = {
   createPost,
-  getFeed,
-  toggleLike,
   deletePost,
   getPostsByRestaurant,
 };

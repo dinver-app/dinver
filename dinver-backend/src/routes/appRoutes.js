@@ -17,7 +17,7 @@ const typeRoutes = require('./appRoutes/typeRoutes');
 const blogRoutes = require('./appRoutes/blogRoutes');
 const newsletterRoutes = require('./appRoutes/newsletterRoutes');
 const adminRoutes = require('./appRoutes/adminRoutes');
-
+const feedRoutes = require('./appRoutes/feedRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -38,4 +38,5 @@ router.use(typeRoutes);
 router.use(blogRoutes);
 router.use(newsletterRoutes);
 router.use(adminRoutes);
+router.use(feedRoutes);
 module.exports = router;

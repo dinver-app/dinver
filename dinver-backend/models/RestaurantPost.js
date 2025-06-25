@@ -44,9 +44,65 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
       },
+      viewCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      shareCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      saveCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      avgWatchTime: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      completionRate: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      engagementScore: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      viralScore: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      trendingScore: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      peakHours: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
     },
     {
       tableName: 'RestaurantPosts',
+      indexes: [
+        {
+          name: 'posts_engagement_idx',
+          fields: ['engagementScore', 'createdAt'],
+        },
+        {
+          name: 'posts_viral_idx',
+          fields: ['viralScore', 'createdAt'],
+        },
+        {
+          name: 'posts_trending_idx',
+          fields: ['trendingScore', 'createdAt'],
+        },
+      ],
     },
   );
 
@@ -55,9 +111,13 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'restaurantId',
       as: 'restaurant',
     });
-    RestaurantPost.hasMany(models.RestaurantPostLike, {
+    RestaurantPost.hasMany(models.PostView, {
       foreignKey: 'postId',
-      as: 'likes',
+      as: 'views',
+    });
+    RestaurantPost.hasMany(models.PostInteraction, {
+      foreignKey: 'postId',
+      as: 'interactions',
     });
   };
 
