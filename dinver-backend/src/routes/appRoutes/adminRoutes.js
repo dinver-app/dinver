@@ -3,6 +3,7 @@ const restaurantController = require('../../controllers/restaurantController');
 const typeController = require('../../controllers/typeController');
 const menuController = require('../../controllers/menuController');
 const drinksController = require('../../controllers/drinkController');
+const restaurantPostController = require('../../controllers/restaurantPostController');
 
 const {
   appAuthenticateToken,
@@ -355,6 +356,24 @@ router.put(
   appApiKeyAuth,
   checkAdmin,
   drinksController.updateDrinkItemOrder,
+);
+
+// Get statistics for a specific post
+router.get(
+  '/admin/restaurants/:restaurantId/posts/:postId/stats',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  restaurantPostController.getPostStats,
+);
+
+// Get aggregated statistics for all posts of a restaurant
+router.get(
+  '/admin/restaurants/:restaurantId/posts/stats',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  restaurantPostController.getRestaurantPostStats,
 );
 
 module.exports = router;

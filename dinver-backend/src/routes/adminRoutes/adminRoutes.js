@@ -49,20 +49,4 @@ router.get(
   adminController.getUserRole,
 );
 
-// Get statistics for a specific post
-router.get(
-  '/restaurants/:restaurantId/posts/:postId/stats',
-  adminAuthenticateToken,
-  checkAdmin,
-  adminController.getPostStats,
-);
-
-// Get aggregated statistics for all posts of a restaurant
-router.get(
-  '/restaurants/:restaurantId/posts/stats',
-  adminAuthenticateToken,
-  checkAdmin,
-  adminController.getRestaurantPostStats,
-);
-
 module.exports = router;
