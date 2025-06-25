@@ -26,18 +26,6 @@ router.post(
   restaurantPostController.createPost,
 );
 
-// Get feed (public)
-router.get('/feed', appApiKeyAuth, restaurantPostController.getFeed);
-
-// Like/Unlike post (authenticated users)
-router.post(
-  '/admin/posts/:postId/like',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  restaurantPostController.toggleLike,
-);
-
 // Delete post (restaurant owners only)
 router.delete(
   '/admin/posts/:postId',
