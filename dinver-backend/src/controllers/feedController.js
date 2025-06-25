@@ -383,7 +383,7 @@ const recordInteraction = async (req, res) => {
 const updateViewMetrics = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { completionRate, watchTime } = req.body;
+    const { completionRate = 1, watchTime } = req.body; // Default completionRate to 1 (100%)
     const userId = req.user?.id;
 
     // Get current hour (0-23)
@@ -403,7 +403,9 @@ const updateViewMetrics = async (req, res) => {
     if (view) {
       await view.update({
         ...(watchTime && { watchTime: Math.max(view.watchTime, watchTime) }),
-        completionRate: Math.max(view.completionRate, completionRate),
+        ...(completionRate && {
+          completionRate: Math.max(view.completionRate, completionRate),
+        }),
         timeOfDay: currentHour, // Update time of day even for existing views
       });
     } else {
@@ -411,7 +413,7 @@ const updateViewMetrics = async (req, res) => {
         postId,
         userId,
         watchTime: watchTime || 0,
-        completionRate,
+        completionRate: completionRate || 1,
         timeOfDay: currentHour,
       });
 
@@ -427,20 +429,9 @@ const updateViewMetrics = async (req, res) => {
 
     // Update post metrics
     const post = await RestaurantPost.findByPk(postId);
-    const views = await PostView.findAll({
-      where: { postId },
-      attributes: [
-        [
-          sequelize.fn('AVG', sequelize.col('completionRate')),
-          'avgCompletionRate',
-        ],
-      ],
-    });
 
     const newEngagementScore = calculateEngagementScore(post);
-
     await post.update({
-      completionRate: views[0].get('avgCompletionRate'),
       engagementScore: newEngagementScore,
     });
 
