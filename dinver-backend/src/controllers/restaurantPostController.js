@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { PostView, PostInteraction } = require('../../models');
+const { getSignedUrl } = require('../../config/cdn');
 
 // Helper za video transcoding
 const transcodeVideo = async (inputBuffer, postId) => {
@@ -36,18 +37,24 @@ const transcodeVideo = async (inputBuffer, postId) => {
       throw new Error('Video must be 60 seconds or shorter');
     }
 
-    // Transcode video using the temp file
+    // Optimizirane ffmpeg postavke za brže procesiranje
     await new Promise((resolve, reject) => {
       ffmpeg(tempInputPath)
         .outputOptions([
-          '-c:v libx264',
-          '-preset fast',
-          '-crf 23',
-          '-c:a aac',
-          '-b:a 128k',
-          '-movflags +faststart',
+          '-c:v libx264', // Video codec
+          '-preset medium', // Bolji balans između brzine i kompresije
+          '-tune fastdecode', // Optimizacija za brže dekodiranje
+          '-crf 23', // Bolji balans kvalitete (niži broj = bolja kvaliteta)
+          '-movflags +faststart', // Omogućava streaming prije kompletnog downloada
+          '-vf scale=1280:-2', // Standardizirana rezolucija, aspect ratio očuvan
+          '-c:a aac', // Audio codec
+          '-b:a 128k', // Malo bolji audio bitrate
+          '-threads 0', // Koristi sve dostupne threadove
         ])
         .toFormat('mp4')
+        .on('progress', (progress) => {
+          console.log(`Processing: ${progress.percent}% done`);
+        })
         .save(tempOutputPath)
         .on('end', resolve)
         .on('error', reject);
@@ -55,16 +62,70 @@ const transcodeVideo = async (inputBuffer, postId) => {
 
     // Read the transcoded file
     const outputBuffer = fs.readFileSync(tempOutputPath);
+    const fileSize = outputBuffer.length;
 
-    // Upload transcoded video
-    await s3
-      .putObject({
+    // Ako je file veći od 5MB, koristi multipart upload
+    if (fileSize > 5 * 1024 * 1024) {
+      const multipartParams = {
         Bucket: process.env.AWS_S3_BUCKET_NAME,
         Key: outputKey,
-        Body: outputBuffer,
         ContentType: 'video/mp4',
-      })
-      .promise();
+      };
+
+      const multipartUpload = await s3
+        .createMultipartUpload(multipartParams)
+        .promise();
+      const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+      const chunks = Math.ceil(fileSize / chunkSize);
+      const uploadPromises = [];
+
+      for (let i = 0; i < chunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, fileSize);
+        const chunk = outputBuffer.slice(start, end);
+
+        const uploadPartParams = {
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: outputKey,
+          PartNumber: i + 1,
+          UploadId: multipartUpload.UploadId,
+          Body: chunk,
+        };
+
+        const uploadPromise = s3
+          .uploadPart(uploadPartParams)
+          .promise()
+          .then((result) => ({
+            ETag: result.ETag,
+            PartNumber: i + 1,
+          }));
+
+        uploadPromises.push(uploadPromise);
+      }
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      await s3
+        .completeMultipartUpload({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: outputKey,
+          UploadId: multipartUpload.UploadId,
+          MultipartUpload: {
+            Parts: uploadResults,
+          },
+        })
+        .promise();
+    } else {
+      // Za manje fajlove koristi standardni upload
+      await s3
+        .putObject({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: outputKey,
+          Body: outputBuffer,
+          ContentType: 'video/mp4',
+        })
+        .promise();
+    }
 
     return outputKey;
   } finally {
@@ -142,23 +203,24 @@ const createPost = async (req, res) => {
         });
       }
 
-      // Process video
-      const videoKey = await transcodeVideo(videoFile.buffer, post.id);
-
-      // Upload thumbnail
+      // Paralelno procesiranje videa i uploada thumbnaila
       const thumbnailKey = `postThumbnails/${post.id}/image.jpg`;
-      await s3
-        .putObject({
-          Bucket: process.env.AWS_S3_BUCKET_NAME,
-          Key: thumbnailKey,
-          Body: thumbnailFile.buffer,
-          ContentType: 'image/jpeg',
-        })
-        .promise();
+      const [videoKey] = await Promise.all([
+        transcodeVideo(videoFile.buffer, post.id),
+        s3
+          .putObject({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: thumbnailKey,
+            Body: thumbnailFile.buffer,
+            ContentType: 'image/jpeg',
+          })
+          .promise(),
+      ]);
 
       mediaUrls.push({
-        url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${videoKey}`,
+        url: getSignedUrl(videoKey),
         thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${thumbnailKey}`,
+        videoKey, // Spremamo key za kasnije generiranje URL-a
       });
     } else {
       // For carousel posts
@@ -496,10 +558,18 @@ const getRestaurantPostStats = async (req, res) => {
   }
 };
 
+// Kada vraćamo URL videa, koristimo CDN
+const getPost = async (req, res) => {
+  const post = await RestaurantPost.findByPk(req.params.id);
+  const cdnUrl = getSignedUrl(post.videoKey);
+  res.json({ ...post, videoUrl: cdnUrl });
+};
+
 module.exports = {
   createPost,
   deletePost,
   getPostsByRestaurant,
   getPostStats,
   getRestaurantPostStats,
+  getPost,
 };
