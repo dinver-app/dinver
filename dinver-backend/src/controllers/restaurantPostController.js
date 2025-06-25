@@ -321,12 +321,12 @@ const getPostStats = async (req, res) => {
         {
           model: PostView,
           as: 'views',
-          attributes: ['watchTime', 'completionRate', 'timeOfDay', 'createdAt'],
+          attributes: ['completionRate', 'timeOfDay', 'createdAt', 'userId'],
         },
         {
           model: PostInteraction,
           as: 'interactions',
-          attributes: ['interactionType', 'createdAt'],
+          attributes: ['interactionType', 'createdAt', 'userId'],
         },
       ],
     });
@@ -353,13 +353,17 @@ const getPostStats = async (req, res) => {
       }
     });
 
-    // Calculate average watch time and completion rate
-    const avgWatchTime =
-      post.views.reduce((sum, view) => sum + view.watchTime, 0) /
-      (post.views.length || 1);
+    // Calculate completion rate
     const avgCompletionRate =
       post.views.reduce((sum, view) => sum + view.completionRate, 0) /
       (post.views.length || 1);
+
+    // Calculate unique viewers (reach)
+    const uniqueViewers = new Set(
+      post.views
+        .filter((view) => view.userId) // Filter out null userIds (non-logged in users)
+        .map((view) => view.userId),
+    ).size;
 
     // Get view trends (last 7 days)
     const last7Days = Array(7).fill(0);
@@ -375,20 +379,23 @@ const getPostStats = async (req, res) => {
       }
     });
 
-    res.json({
+    const response = {
       postId: post.id,
       title: post.title,
       metrics: {
         totalViews: post.viewCount,
+        uniqueViewers,
+        reach: uniqueViewers, // Alias za uniqueViewers
         ...interactions,
-        avgWatchTime,
         avgCompletionRate: avgCompletionRate * 100, // Convert to percentage
         engagementScore: post.engagementScore,
       },
       hourlyDistribution: hourlyViews,
       last7DaysViews: last7Days.reverse(), // Reverse so most recent day is last
       peakHours: post.peakHours || {},
-    });
+    };
+
+    res.json(response);
   } catch (error) {
     console.error('Error fetching post statistics:', error);
     res.status(500).json({ error: 'Failed to fetch post statistics' });
@@ -406,12 +413,12 @@ const getRestaurantPostStats = async (req, res) => {
         {
           model: PostView,
           as: 'views',
-          attributes: ['watchTime', 'completionRate', 'timeOfDay'],
+          attributes: ['completionRate', 'timeOfDay', 'userId'],
         },
         {
           model: PostInteraction,
           as: 'interactions',
-          attributes: ['interactionType'],
+          attributes: ['interactionType', 'userId'],
         },
       ],
     });
@@ -420,18 +427,26 @@ const getRestaurantPostStats = async (req, res) => {
     const aggregatedMetrics = {
       totalPosts: posts.length,
       totalViews: 0,
+      uniqueViewers: 0, // New metric
       totalLikes: 0,
       totalSaves: 0,
       totalShares: 0,
-      avgWatchTime: 0,
       avgCompletionRate: 0,
       avgEngagementScore: 0,
       hourlyDistribution: Array(24).fill(0),
     };
 
+    // Set to track unique viewers across all posts
+    const allUniqueViewers = new Set();
+
     // Calculate totals
     posts.forEach((post) => {
       aggregatedMetrics.totalViews += post.viewCount;
+
+      // Add unique viewers for this post
+      post.views
+        .filter((view) => view.userId)
+        .forEach((view) => allUniqueViewers.add(view.userId));
 
       post.interactions.forEach((interaction) => {
         switch (interaction.interactionType) {
@@ -453,45 +468,26 @@ const getRestaurantPostStats = async (req, res) => {
       });
 
       // Add to averages
-      const postAvgWatchTime =
-        post.views.reduce((sum, view) => sum + view.watchTime, 0) /
-        (post.views.length || 1);
       const postAvgCompletionRate =
         post.views.reduce((sum, view) => sum + view.completionRate, 0) /
         (post.views.length || 1);
 
-      aggregatedMetrics.avgWatchTime += postAvgWatchTime;
       aggregatedMetrics.avgCompletionRate += postAvgCompletionRate;
       aggregatedMetrics.avgEngagementScore += post.engagementScore || 0;
     });
 
-    // Calculate final averages
+    // Calculate averages
     if (posts.length > 0) {
-      aggregatedMetrics.avgWatchTime /= posts.length;
       aggregatedMetrics.avgCompletionRate =
-        (aggregatedMetrics.avgCompletionRate / posts.length) * 100; // Convert to percentage
+        (aggregatedMetrics.avgCompletionRate / posts.length) * 100;
       aggregatedMetrics.avgEngagementScore /= posts.length;
     }
 
-    // Find peak posting hours
-    const peakHour = aggregatedMetrics.hourlyDistribution.reduce(
-      (maxHour, views, hour) => {
-        return views > aggregatedMetrics.hourlyDistribution[maxHour]
-          ? hour
-          : maxHour;
-      },
-      0,
-    );
+    // Add total unique viewers
+    aggregatedMetrics.uniqueViewers = allUniqueViewers.size;
+    aggregatedMetrics.reach = allUniqueViewers.size; // Alias za uniqueViewers
 
-    res.json({
-      ...aggregatedMetrics,
-      peakHour,
-      averageInteractionsPerPost: {
-        likes: aggregatedMetrics.totalLikes / posts.length || 0,
-        saves: aggregatedMetrics.totalSaves / posts.length || 0,
-        shares: aggregatedMetrics.totalShares / posts.length || 0,
-      },
-    });
+    res.json(aggregatedMetrics);
   } catch (error) {
     console.error('Error fetching restaurant post statistics:', error);
     res
