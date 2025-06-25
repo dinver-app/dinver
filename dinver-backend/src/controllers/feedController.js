@@ -383,7 +383,7 @@ const recordInteraction = async (req, res) => {
 const updateViewMetrics = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { watchTime, completionRate } = req.body;
+    const { completionRate, watchTime } = req.body;
     const userId = req.user?.id;
 
     // Get current hour (0-23)
@@ -402,7 +402,7 @@ const updateViewMetrics = async (req, res) => {
 
     if (view) {
       await view.update({
-        watchTime: Math.max(view.watchTime, watchTime),
+        ...(watchTime && { watchTime: Math.max(view.watchTime, watchTime) }),
         completionRate: Math.max(view.completionRate, completionRate),
         timeOfDay: currentHour, // Update time of day even for existing views
       });
@@ -410,7 +410,7 @@ const updateViewMetrics = async (req, res) => {
       await PostView.create({
         postId,
         userId,
-        watchTime,
+        watchTime: watchTime || 0,
         completionRate,
         timeOfDay: currentHour,
       });
@@ -430,7 +430,6 @@ const updateViewMetrics = async (req, res) => {
     const views = await PostView.findAll({
       where: { postId },
       attributes: [
-        [sequelize.fn('AVG', sequelize.col('watchTime')), 'avgWatchTime'],
         [
           sequelize.fn('AVG', sequelize.col('completionRate')),
           'avgCompletionRate',
@@ -441,7 +440,6 @@ const updateViewMetrics = async (req, res) => {
     const newEngagementScore = calculateEngagementScore(post);
 
     await post.update({
-      avgWatchTime: views[0].get('avgWatchTime'),
       completionRate: views[0].get('avgCompletionRate'),
       engagementScore: newEngagementScore,
     });

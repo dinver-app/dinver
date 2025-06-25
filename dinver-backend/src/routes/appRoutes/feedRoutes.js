@@ -29,6 +29,7 @@ router.post(
 router.post(
   '/feed/posts/:postId/view',
   appApiKeyAuth,
+  appAuthenticateToken,
   feedController.updateViewMetrics,
 );
 
