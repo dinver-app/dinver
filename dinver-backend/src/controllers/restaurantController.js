@@ -1844,7 +1844,17 @@ const getFullRestaurantDetails = async (req, res) => {
           customWorkingDays:
             restaurant.customWorkingDays.customWorkingDays.filter((day) => {
               const dayDate = new Date(day.date);
-              return dayDate >= now && dayDate <= thirtyDaysFromNow;
+              // Resetiramo vrijeme na početak dana (00:00:00)
+              const startOfDayDate = new Date(dayDate.setHours(0, 0, 0, 0));
+              const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+              const startOfThirtyDays = new Date(
+                thirtyDaysFromNow.setHours(0, 0, 0, 0),
+              );
+
+              return (
+                startOfDayDate >= startOfToday &&
+                startOfDayDate <= startOfThirtyDays
+              );
             }),
         }
       : { customWorkingDays: [] };
