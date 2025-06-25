@@ -17,6 +17,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: true, // Može biti null za nelogirane korisnike
       },
+      deviceId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      isAnonymous: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       watchTime: {
         type: DataTypes.FLOAT,
         allowNull: false,
@@ -55,6 +64,9 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           fields: ['timeOfDay'],
+        },
+        {
+          fields: ['deviceId', 'postId', 'createdAt'],
         },
       ],
     },

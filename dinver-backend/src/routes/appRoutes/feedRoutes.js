@@ -9,13 +9,7 @@ const { validateLocation } = require('../../middleware/validationMiddleware');
 const router = express.Router();
 
 // Get feed (public with optional auth)
-router.get(
-  '/feed',
-  appApiKeyAuth,
-  validateLocation,
-  appAuthenticateToken,
-  feedController.getFeed,
-);
+router.get('/feed', appApiKeyAuth, validateLocation, feedController.getFeed);
 
 // Record interaction with post (like, save, share, etc.)
 router.post(
@@ -29,7 +23,6 @@ router.post(
 router.post(
   '/feed/posts/:postId/view',
   appApiKeyAuth,
-  appAuthenticateToken,
   feedController.updateViewMetrics,
 );
 

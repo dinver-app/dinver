@@ -383,8 +383,15 @@ const recordInteraction = async (req, res) => {
 const updateViewMetrics = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { completionRate = 1, watchTime } = req.body; // Default completionRate to 1 (100%)
+    const { completionRate = 1, watchTime, deviceId } = req.body;
     const userId = req.user?.id;
+
+    // If no user is logged in, require deviceId
+    if (!userId && !deviceId) {
+      return res
+        .status(400)
+        .json({ error: 'deviceId is required for anonymous users' });
+    }
 
     // Get current hour (0-23)
     const currentHour = new Date().getHours();
@@ -393,7 +400,7 @@ const updateViewMetrics = async (req, res) => {
     const view = await PostView.findOne({
       where: {
         postId,
-        userId: userId || null,
+        ...(userId ? { userId } : { deviceId }),
         createdAt: {
           [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24h
         },
@@ -406,12 +413,14 @@ const updateViewMetrics = async (req, res) => {
         ...(completionRate && {
           completionRate: Math.max(view.completionRate, completionRate),
         }),
-        timeOfDay: currentHour, // Update time of day even for existing views
+        timeOfDay: currentHour,
       });
     } else {
       await PostView.create({
         postId,
         userId,
+        deviceId,
+        isAnonymous: !userId,
         watchTime: watchTime || 0,
         completionRate: completionRate || 1,
         timeOfDay: currentHour,
