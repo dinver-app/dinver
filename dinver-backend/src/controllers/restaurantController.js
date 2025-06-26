@@ -34,6 +34,7 @@ const {
 } = require('../../models');
 const { sequelize } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
+const crypto = require('crypto');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -1062,7 +1063,14 @@ const addCustomWorkingDay = async (req, res) => {
         .json({ error: 'custom_working_day_for_this_date_already_exists' });
     }
 
-    customWorkingDays.customWorkingDays.push({ name, date, times });
+    const newCustomWorkingDay = {
+      id: crypto.randomUUID(),
+      name,
+      date,
+      times,
+    };
+
+    customWorkingDays.customWorkingDays.push(newCustomWorkingDay);
     const updatedCustomWorkingDays = {
       customWorkingDays: customWorkingDays.customWorkingDays,
     };
@@ -1081,7 +1089,7 @@ const addCustomWorkingDay = async (req, res) => {
 const updateCustomWorkingDay = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, date, times } = req.body;
+    const { name, date, times, dayId } = req.body;
 
     if (!Array.isArray(times) || times.length > 2) {
       return res.status(400).json({ error: 'maximum_two_time_periods' });
@@ -1103,14 +1111,29 @@ const updateCustomWorkingDay = async (req, res) => {
       customWorkingDays: [],
     };
     const index = customWorkingDays.customWorkingDays.findIndex(
-      (day) => day.date === date,
+      (day) => day.id === dayId,
     );
 
     if (index === -1) {
       return res.status(404).json({ error: 'custom_working_day_not_found' });
     }
 
-    customWorkingDays.customWorkingDays[index] = { name, date, times };
+    // Check if the new date conflicts with other dates (excluding the current one)
+    const dateExists = customWorkingDays.customWorkingDays.some(
+      (day, i) => i !== index && day.date === date,
+    );
+    if (dateExists) {
+      return res
+        .status(400)
+        .json({ error: 'custom_working_day_for_this_date_already_exists' });
+    }
+
+    customWorkingDays.customWorkingDays[index] = {
+      id: dayId,
+      name,
+      date,
+      times,
+    };
     const updatedCustomWorkingDays = {
       customWorkingDays: customWorkingDays.customWorkingDays,
     };
@@ -1129,7 +1152,7 @@ const updateCustomWorkingDay = async (req, res) => {
 const deleteCustomWorkingDay = async (req, res) => {
   try {
     const { id } = req.params;
-    const { date } = req.body;
+    const { dayId } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -1140,7 +1163,7 @@ const deleteCustomWorkingDay = async (req, res) => {
       customWorkingDays: [],
     };
     const updatedDays = customWorkingDays.customWorkingDays.filter(
-      (day) => day.date !== date,
+      (day) => day.id !== dayId,
     );
 
     const updatedCustomWorkingDays = {
