@@ -186,6 +186,7 @@ export interface WorkingHoursTabProps {
 }
 
 export interface CustomWorkingDay {
+  id: string;
   name: string;
   date: string;
   times: { open: string; close: string }[];

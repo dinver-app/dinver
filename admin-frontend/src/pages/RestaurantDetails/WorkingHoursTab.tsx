@@ -81,7 +81,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const [editCustomDay, setEditCustomDay] = useState<CustomWorkingDay | null>(
     null
   );
-  const [newCustomDay, setNewCustomDay] = useState({
+  const [newCustomDay, setNewCustomDay] = useState<
+    Omit<CustomWorkingDay, "id">
+  >({
     name: "",
     date: "",
     times: [{ open: "", close: "" }],
@@ -133,13 +135,18 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     const fetchCustomWorkingDays = async () => {
       try {
         const response = await getCustomWorkingDays(restaurant.id || "");
-        setCustomWorkingDays(response.customWorkingDays || []);
+        const days =
+          response.data?.customWorkingDays || response.customWorkingDays || [];
+        setCustomWorkingDays(days);
       } catch (error) {
         console.error("Failed to fetch custom working days", error);
+        setCustomWorkingDays([]);
       }
     };
 
-    fetchCustomWorkingDays();
+    if (restaurant.id) {
+      fetchCustomWorkingDays();
+    }
   }, [restaurant.id]);
 
   useEffect(() => {
@@ -227,14 +234,30 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
 
       const customDayToSend = { ...newCustomDay, times: timesToSend };
 
-      await addCustomWorkingDay(restaurant.id || "", customDayToSend);
-      setCustomWorkingDays([...customWorkingDays, customDayToSend]);
+      const response = await addCustomWorkingDay(
+        restaurant.id || "",
+        customDayToSend
+      );
+
+      // Backend returns array of all custom working days
+      if (
+        response.customWorkingDays &&
+        Array.isArray(response.customWorkingDays)
+      ) {
+        setCustomWorkingDays(response.customWorkingDays);
+      } else {
+        console.error("Unexpected response format:", response);
+        toast.error(t("unexpected_response_format"));
+      }
+
       toast.success(t("custom_day_added_successfully"));
       setIsAddModalOpen(false);
       setNewCustomDay({ name: "", date: "", times: [{ open: "", close: "" }] });
     } catch (error: any) {
       console.error("Failed to add custom working day", error);
-      toast.error(t(error.response.data.error));
+      toast.error(
+        t(error.response?.data?.error || "Failed to add custom working day")
+      );
     }
   };
 
@@ -246,13 +269,14 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
         ? editCustomDay.times
         : [editCustomDay.times[0]];
 
-      const customDayToSend = { ...editCustomDay, times: timesToSend };
+      const customDayToSend: CustomWorkingDay = {
+        ...editCustomDay,
+        times: timesToSend,
+      };
 
       await updateCustomWorkingDay(restaurant.id || "", customDayToSend);
       setCustomWorkingDays((prev) =>
-        prev.map((day) =>
-          day.date === editCustomDay.date ? customDayToSend : day
-        )
+        prev.map((day) => (day.id === editCustomDay.id ? customDayToSend : day))
       );
       toast.success(t("custom_day_updated_successfully"));
       setIsEditModalOpen(false);
@@ -266,7 +290,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const handleDeleteCustomDay = async (index: number) => {
     try {
       const dayToDelete = customWorkingDays[index];
-      await deleteCustomWorkingDay(restaurant.id || "", dayToDelete.date);
+      await deleteCustomWorkingDay(restaurant.id || "", dayToDelete.id);
       setCustomWorkingDays((prev) => prev.filter((_, i) => i !== index));
       toast.success(t("custom_day_deleted_successfully"));
     } catch (error) {
@@ -274,12 +298,12 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     }
   };
 
-  const validateCustomDay = (customDay: CustomWorkingDay) => {
+  const validateCustomDay = (customDay: Partial<CustomWorkingDay>) => {
     if (!customDay.date) {
       toast.error(t("date_cannot_be_empty"));
       return false;
     }
-    for (const time of customDay.times) {
+    for (const time of customDay.times || []) {
       if (!time.open || !time.close) {
         toast.error(t("time_cannot_be_empty"));
         return false;
@@ -559,7 +583,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
             </button>
           </div>
 
-          {customWorkingDays.length === 0 ? (
+          {customWorkingDays?.length === 0 ? (
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center mt-4">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400"
