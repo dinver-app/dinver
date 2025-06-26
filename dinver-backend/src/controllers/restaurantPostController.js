@@ -11,12 +11,21 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { PostView, PostInteraction } = require('../../models');
-const { getSignedUrl } = require('../../config/cdn');
+const { getMediaUrl } = require('../../config/cdn');
+
+// Mapa za praćenje progress listenera po postId
+let progressListeners = new Map();
+
+// Mapa za praćenje progresa po postId
+const progressMap = new Map();
 
 // Helper za video transcoding
 const transcodeVideo = async (inputBuffer, postId) => {
   const s3 = new AWS.S3();
   const outputKey = `posts/video/${postId}/video.mp4`;
+
+  // Postavi inicijalni progress
+  progressMap.set(postId, 0);
 
   // Create temporary files for input and output
   const tempInputPath = path.join(os.tmpdir(), `${uuidv4()}-input.mp4`);
@@ -41,19 +50,20 @@ const transcodeVideo = async (inputBuffer, postId) => {
     await new Promise((resolve, reject) => {
       ffmpeg(tempInputPath)
         .outputOptions([
-          '-c:v libx264', // Video codec
-          '-preset medium', // Bolji balans između brzine i kompresije
-          '-tune fastdecode', // Optimizacija za brže dekodiranje
-          '-crf 23', // Bolji balans kvalitete (niži broj = bolja kvaliteta)
-          '-movflags +faststart', // Omogućava streaming prije kompletnog downloada
-          '-vf scale=1280:-2', // Standardizirana rezolucija, aspect ratio očuvan
-          '-c:a aac', // Audio codec
-          '-b:a 128k', // Malo bolji audio bitrate
-          '-threads 0', // Koristi sve dostupne threadove
+          '-c:v libx264',
+          '-preset medium',
+          '-tune fastdecode',
+          '-crf 23',
+          '-movflags +faststart',
+          '-vf scale=1280:-2',
+          '-c:a aac',
+          '-b:a 128k',
+          '-threads 0',
         ])
         .toFormat('mp4')
         .on('progress', (progress) => {
-          console.log(`Processing: ${progress.percent}% done`);
+          // Spremi progress u mapu
+          progressMap.set(postId, progress.percent || 0);
         })
         .save(tempOutputPath)
         .on('end', resolve)
@@ -127,6 +137,8 @@ const transcodeVideo = async (inputBuffer, postId) => {
         .promise();
     }
 
+    // Na kraju postavi 100%
+    progressMap.set(postId, 100);
     return outputKey;
   } finally {
     // Clean up temporary files
@@ -218,8 +230,8 @@ const createPost = async (req, res) => {
       ]);
 
       mediaUrls.push({
-        url: getSignedUrl(videoKey),
-        thumbnailUrl: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${thumbnailKey}`,
+        url: getMediaUrl(videoKey, 'video'),
+        thumbnailUrl: getMediaUrl(thumbnailKey, 'image'),
         videoKey, // Spremamo key za kasnije generiranje URL-a
       });
     } else {
@@ -250,7 +262,7 @@ const createPost = async (req, res) => {
           .promise();
 
         mediaUrls.push({
-          url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${imageKey}`,
+          url: getMediaUrl(imageKey, 'image'),
         });
 
         // Use first image as thumbnail
@@ -561,8 +573,47 @@ const getRestaurantPostStats = async (req, res) => {
 // Kada vraćamo URL videa, koristimo CDN
 const getPost = async (req, res) => {
   const post = await RestaurantPost.findByPk(req.params.id);
-  const cdnUrl = getSignedUrl(post.videoKey);
-  res.json({ ...post, videoUrl: cdnUrl });
+
+  // Ako je video post, generiraj novi signed URL
+  if (post.mediaType === 'video' && post.mediaUrls[0]?.videoKey) {
+    const mediaUrl = getMediaUrl(post.mediaUrls[0].videoKey, 'video');
+    return res.json({
+      ...post.toJSON(),
+      mediaUrls: [
+        {
+          ...post.mediaUrls[0],
+          url: mediaUrl,
+        },
+      ],
+    });
+  }
+
+  // Za carousel postove, generiraj nove URL-ove za sve slike
+  const updatedMediaUrls = post.mediaUrls.map((media) => ({
+    ...media,
+    url: getMediaUrl(media.url.split('/').slice(-2).join('/'), 'image'),
+  }));
+
+  res.json({
+    ...post.toJSON(),
+    mediaUrls: updatedMediaUrls,
+  });
+};
+
+// Kontroler za praćenje progresa
+const getVideoProgress = async (req, res) => {
+  const { postId } = req.params;
+
+  // Dohvati trenutni progress iz mape
+  const progress = progressMap.get(postId) || 0;
+
+  // Vrati kao običan JSON response
+  res.json({ progress });
+
+  // Ako je progress 100%, možemo očistiti mapu
+  if (progress >= 100) {
+    progressMap.delete(postId);
+  }
 };
 
 module.exports = {
@@ -572,4 +623,5 @@ module.exports = {
   getPostStats,
   getRestaurantPostStats,
   getPost,
+  getVideoProgress,
 };

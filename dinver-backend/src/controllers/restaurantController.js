@@ -33,6 +33,7 @@ const {
   PriceCategory,
 } = require('../../models');
 const { sequelize } = require('../../models');
+const { getMediaUrl } = require('../../config/cdn');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -484,7 +485,7 @@ async function updateRestaurant(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Parse translations if sent as a string (e.g. via multipart/form-data)
+    // Parse translations if sent as a string
     if (typeof translations === 'string') {
       try {
         translations = JSON.parse(translations);
@@ -502,7 +503,8 @@ async function updateRestaurant(req, res) {
 
     const oldData = { ...restaurant.get() };
 
-    let thumbnailUrl = restaurant.thumbnailUrl;
+    let thumbnailKey = restaurant.thumbnailUrl;
+    let thumbnailUrl = thumbnailKey ? getMediaUrl(thumbnailKey, 'image') : null;
 
     if (req.file) {
       if (restaurant.thumbnailUrl) {
@@ -510,9 +512,11 @@ async function updateRestaurant(req, res) {
         await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
       }
       const folder = 'restaurant_thumbnails';
-      thumbnailUrl = await uploadToS3(req.file, folder);
+      thumbnailKey = await uploadToS3(req.file, folder);
+      thumbnailUrl = getMediaUrl(thumbnailKey, 'image');
     }
 
+    // Update restaurant data
     await restaurant.update({
       name,
       address,
@@ -524,7 +528,7 @@ async function updateRestaurant(req, res) {
       ttUrl,
       email,
       description,
-      thumbnailUrl,
+      thumbnailUrl: thumbnailKey, // Spremamo key u bazu
       priceCategoryId,
       wifiSsid,
       wifiPassword,
@@ -545,9 +549,19 @@ async function updateRestaurant(req, res) {
       changes: { old: oldData, new: restaurant.get() },
     });
 
-    // Remove sensitive data from response
+    // Remove sensitive data and add CDN URL for response
     const responseData = restaurant.get();
     delete responseData.wifiPassword;
+    responseData.thumbnailUrl = thumbnailUrl; // Vraćamo CDN URL u responsu
+
+    // Ako postoje slike u galeriji, generiraj CDN URL-ove
+    if (responseData.images) {
+      responseData.images = responseData.images.map((img) =>
+        typeof img === 'string'
+          ? { key: img, url: getMediaUrl(img, 'image') }
+          : img,
+      );
+    }
 
     res.json(responseData);
   } catch (error) {
@@ -817,11 +831,25 @@ async function addRestaurantImages(req, res) {
     }
 
     const folder = `restaurant_images/${restaurantSlug}`;
-    const imageUrls = await Promise.all(
+    const imageKeys = await Promise.all(
       files.map((file) => uploadToS3(file, folder)),
     );
 
-    const updatedImages = [...(restaurant.images || []), ...imageUrls];
+    // Generiraj CloudFront URL-ove za slike
+    const imageUrls = imageKeys.map((key) => ({
+      key,
+      url: getMediaUrl(key, 'image'),
+    }));
+
+    const updatedImages = [
+      ...(restaurant.images || []).map((img) =>
+        typeof img === 'string'
+          ? { key: img, url: getMediaUrl(img, 'image') }
+          : img,
+      ),
+      ...imageUrls,
+    ];
+
     await restaurant.update({ images: updatedImages });
 
     // Log the add images action

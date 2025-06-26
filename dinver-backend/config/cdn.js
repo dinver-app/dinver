@@ -1,43 +1,40 @@
-const AWS = require('aws-sdk');
+const { getSignedUrl } = require('@aws-sdk/cloudfront-signer');
 
-// Inicijaliziraj CloudFront signer samo ako su dostupni potrebni env varijable
-let cloudfront = null;
-
-function initCloudFront() {
-  if (
-    !cloudfront &&
-    process.env.CLOUDFRONT_KEY_PAIR_ID &&
-    process.env.CLOUDFRONT_PRIVATE_KEY
-  ) {
-    try {
-      cloudfront = new AWS.CloudFront.Signer(
-        process.env.CLOUDFRONT_KEY_PAIR_ID,
-        process.env.CLOUDFRONT_PRIVATE_KEY,
-      );
-    } catch (error) {
-      console.error('Failed to initialize CloudFront signer:', error);
-    }
-  }
-}
-
-function getSignedUrl(videoKey) {
+function getSignedUrlForCloudFront(mediaKey) {
   try {
-    initCloudFront();
+    const url = `${process.env.CLOUDFRONT_URL}/${mediaKey}`;
 
-    if (!cloudfront) {
-      // Ako CloudFront nije dostupan, vrati direktni S3 URL
-      return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${videoKey}`;
-    }
-
-    return cloudfront.getSignedUrl({
-      url: `${process.env.CLOUDFRONT_URL}/${videoKey}`,
-      expires: Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000), // 24h
+    const signedUrl = getSignedUrl({
+      url,
+      keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID,
+      privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+      dateLessThan: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
     });
+
+    return signedUrl;
   } catch (error) {
     console.error('Error generating signed URL:', error);
-    // Fallback na direktni S3 URL u slučaju greške
-    return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${videoKey}`;
+    return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${mediaKey}`;
   }
 }
 
-module.exports = { getSignedUrl };
+// Helper za generiranje URL-a ovisno o tipu medija
+function getMediaUrl(mediaKey, mediaType = 'image') {
+  // Za video uvijek koristimo CloudFront zbog streaminga
+  if (mediaType === 'video') {
+    return getSignedUrlForCloudFront(mediaKey);
+  }
+
+  // Za slike, koristimo CloudFront ako je konfiguriran, inače fallback na S3
+  if (process.env.USE_CLOUDFRONT_FOR_IMAGES === 'true') {
+    return getSignedUrlForCloudFront(mediaKey);
+  }
+
+  // Fallback na direktni S3 URL
+  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${mediaKey}`;
+}
+
+module.exports = {
+  getSignedUrl: getSignedUrlForCloudFront,
+  getMediaUrl,
+};

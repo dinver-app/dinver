@@ -8,6 +8,7 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { autoTranslate } = require('../../utils/translate');
+const { getMediaUrl } = require('../../config/cdn');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -43,6 +44,9 @@ const getDrinkItems = async (req, res) => {
         name: (userTranslation || anyTranslation)?.name || '',
         description: (userTranslation || anyTranslation)?.description || '',
         price: parseFloat(itemData.price).toFixed(2),
+        imageUrl: itemData.imageUrl
+          ? getMediaUrl(itemData.imageUrl, 'image')
+          : null,
       };
     });
 
@@ -115,10 +119,10 @@ const createDrinkItem = async (req, res) => {
     const newPosition = lastPosition + 1;
 
     // Handle image upload
-    let imageUrl = null;
+    let imageKey = null;
     if (file) {
       const folder = 'drink_items';
-      imageUrl = await uploadToS3(file, folder);
+      imageKey = await uploadToS3(file, folder);
     }
 
     // Create drink item
@@ -126,7 +130,7 @@ const createDrinkItem = async (req, res) => {
       price,
       restaurantId,
       position: newPosition,
-      imageUrl,
+      imageUrl: imageKey,
       categoryId,
     });
 
@@ -154,6 +158,7 @@ const createDrinkItem = async (req, res) => {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
     };
 
     res.status(201).json(result);
@@ -188,20 +193,20 @@ const updateDrinkItem = async (req, res) => {
     }
 
     // Handle image
-    let imageUrl = drinkItem.imageUrl;
+    let imageKey = drinkItem.imageUrl;
     if (file) {
       if (drinkItem.imageUrl) {
         const oldKey = drinkItem.imageUrl.split('/').pop();
         await deleteFromS3(`drink_items/${oldKey}`);
       }
       const folder = 'drink_items';
-      imageUrl = await uploadToS3(file, folder);
+      imageKey = await uploadToS3(file, folder);
     } else if (removeImage === 'true') {
       if (drinkItem.imageUrl) {
         const oldKey = drinkItem.imageUrl.split('/').pop();
         await deleteFromS3(`drink_items/${oldKey}`);
       }
-      imageUrl = null;
+      imageKey = null;
     }
 
     // Delete existing translations
@@ -222,7 +227,7 @@ const updateDrinkItem = async (req, res) => {
     // Update drink item
     await drinkItem.update({
       price: price !== undefined ? price : drinkItem.price,
-      imageUrl,
+      imageUrl: imageKey,
       categoryId: categoryId !== undefined ? categoryId : drinkItem.categoryId,
     });
 
@@ -240,6 +245,7 @@ const updateDrinkItem = async (req, res) => {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
       translations: updated.translations,
     };
 
