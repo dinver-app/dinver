@@ -1,3 +1,4 @@
+import { CustomWorkingDay } from "../interfaces/Interfaces";
 import { apiClient } from "./authService";
 
 export const getRestaurants = async (page: number, search?: string) => {
@@ -221,11 +222,7 @@ export const getUpcomingCustomWorkingDays = async (restaurantId: string) => {
 
 export const addCustomWorkingDay = async (
   restaurantId: string,
-  customDay: {
-    name: string;
-    date: string;
-    times: { open: string; close: string }[];
-  }
+  customDay: Omit<CustomWorkingDay, "id">
 ) => {
   const response = await apiClient.post(
     `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
@@ -236,27 +233,24 @@ export const addCustomWorkingDay = async (
 
 export const updateCustomWorkingDay = async (
   restaurantId: string,
-  customDay: {
-    name: string;
-    date: string;
-    times: { open: string; close: string }[];
-  }
+  customDay: CustomWorkingDay
 ) => {
+  const { id, ...rest } = customDay;
   const response = await apiClient.put(
     `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
-    customDay
+    { ...rest, dayId: id }
   );
   return response.data;
 };
 
 export const deleteCustomWorkingDay = async (
   restaurantId: string,
-  date: string
+  dayId: string
 ) => {
   const response = await apiClient.delete(
     `api/sysadmin/restaurants/${restaurantId}/custom-working-days`,
     {
-      data: { date },
+      data: { dayId },
     }
   );
   return response.data;

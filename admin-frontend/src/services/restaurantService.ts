@@ -1,4 +1,5 @@
 import { apiClient } from "./authService";
+import { CustomWorkingDay } from "../interfaces/Interfaces";
 
 export const getRestaurantDetails = async (slug: string) => {
   const response = await apiClient.get(
@@ -145,11 +146,7 @@ export const getUpcomingCustomWorkingDays = async (restaurantId: string) => {
 
 export const addCustomWorkingDay = async (
   restaurantId: string,
-  customDay: {
-    name: string;
-    date: string;
-    times: { open: string; close: string }[];
-  }
+  customDay: Omit<CustomWorkingDay, "id">
 ) => {
   const response = await apiClient.post(
     `/api/admin/restaurants/${restaurantId}/custom-working-days`,
@@ -160,28 +157,23 @@ export const addCustomWorkingDay = async (
 
 export const updateCustomWorkingDay = async (
   restaurantId: string,
-  customDay: {
-    name: string;
-    date: string;
-    times: { open: string; close: string }[];
-  }
+  customDay: CustomWorkingDay
 ) => {
+  const { id, ...rest } = customDay;
   const response = await apiClient.put(
     `/api/admin/restaurants/${restaurantId}/custom-working-days`,
-    customDay
+    { ...rest, dayId: id }
   );
   return response.data;
 };
 
 export const deleteCustomWorkingDay = async (
   restaurantId: string,
-  date: string
+  dayId: string
 ) => {
   const response = await apiClient.delete(
     `/api/admin/restaurants/${restaurantId}/custom-working-days`,
-    {
-      data: { date },
-    }
+    { data: { dayId } }
   );
   return response.data;
 };
