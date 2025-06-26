@@ -9,6 +9,7 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { autoTranslate } = require('../../utils/translate');
+const { getMediaUrl } = require('../../config/cdn');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -44,6 +45,9 @@ const getMenuItems = async (req, res) => {
         name: (userTranslation || anyTranslation)?.name || '',
         description: (userTranslation || anyTranslation)?.description || '',
         price: parseFloat(itemData.price).toFixed(2),
+        imageUrl: itemData.imageUrl
+          ? getMediaUrl(itemData.imageUrl, 'image')
+          : null,
       };
     });
 
@@ -120,10 +124,10 @@ const createMenuItem = async (req, res) => {
     const newPosition = lastPosition + 1;
 
     // Handle image upload
-    let imageUrl = null;
+    let imageKey = null;
     if (file) {
       const folder = 'menu_items';
-      imageUrl = await uploadToS3(file, folder);
+      imageKey = await uploadToS3(file, folder);
     }
 
     // Create menu item
@@ -132,7 +136,7 @@ const createMenuItem = async (req, res) => {
       restaurantId,
       position: newPosition,
       allergens: allergenIds,
-      imageUrl,
+      imageUrl: imageKey,
       categoryId,
     });
 
@@ -160,6 +164,7 @@ const createMenuItem = async (req, res) => {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
     };
 
     res.status(201).json(result);
@@ -197,20 +202,20 @@ const updateMenuItem = async (req, res) => {
     }
 
     // Handle image
-    let imageUrl = menuItem.imageUrl;
+    let imageKey = menuItem.imageUrl;
     if (file) {
       if (menuItem.imageUrl) {
         const oldKey = menuItem.imageUrl.split('/').pop();
         await deleteFromS3(`menu_items/${oldKey}`);
       }
       const folder = 'menu_items';
-      imageUrl = await uploadToS3(file, folder);
+      imageKey = await uploadToS3(file, folder);
     } else if (removeImage === 'true') {
       if (menuItem.imageUrl) {
         const oldKey = menuItem.imageUrl.split('/').pop();
         await deleteFromS3(`menu_items/${oldKey}`);
       }
-      imageUrl = null;
+      imageKey = null;
     }
 
     // Delete existing translations
@@ -231,7 +236,7 @@ const updateMenuItem = async (req, res) => {
     // Update menu item
     await menuItem.update({
       price: price !== undefined ? price : menuItem.price,
-      imageUrl,
+      imageUrl: imageKey,
       allergens: allergenIds !== undefined ? allergenIds : menuItem.allergens,
       categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
     });
@@ -250,6 +255,7 @@ const updateMenuItem = async (req, res) => {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
       translations: updated.translations,
     };
 

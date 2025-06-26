@@ -26,6 +26,15 @@ router.post(
   restaurantPostController.createPost,
 );
 
+// Dodaj rutu za praćenje progresa
+router.get(
+  '/admin/posts/:postId/progress',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  restaurantPostController.getVideoProgress,
+);
+
 // Delete post (restaurant owners only)
 router.delete(
   '/admin/posts/:postId',
