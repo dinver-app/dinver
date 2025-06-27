@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'reservationId',
         as: 'events',
       });
+      Reservation.hasMany(models.ReservationMessage, {
+        foreignKey: 'reservationId',
+        as: 'messages',
+      });
     }
 
     // Helper metode za provjeru statusa
@@ -41,20 +45,43 @@ module.exports = (sequelize, DataTypes) => {
       return this.status === 'suggested_alt';
     }
 
+    isCompleted() {
+      return ['completed', 'no_show'].includes(this.status);
+    }
+
     // Helper metoda za provjeru može li se otkazati
     canBeCancelled() {
-      return ['pending', 'confirmed', 'suggested_alt'].includes(this.status);
+      return (
+        ['pending', 'confirmed', 'suggested_alt'].includes(this.status) &&
+        !this.isPast()
+      );
     }
 
     // Helper metoda za provjeru može li se odgovoriti
     canBeResponded() {
-      return this.status === 'pending';
+      return this.status === 'pending' && !this.isPast();
     }
 
     // Helper metoda za provjeru je li u prošlosti
     isPast() {
       const reservationDateTime = new Date(this.date + 'T' + this.time);
       return reservationDateTime < new Date();
+    }
+
+    // Helper metoda za provjeru je li thread aktivan
+    isThreadActive() {
+      if (this.isCompleted()) {
+        const THREAD_EXPIRY_HOURS = 24;
+        const expiryTime = new Date(this.updatedAt);
+        expiryTime.setHours(expiryTime.getHours() + THREAD_EXPIRY_HOURS);
+        return new Date() < expiryTime;
+      }
+      return !this.isPast();
+    }
+
+    // Helper metoda za provjeru može li se slati poruke
+    canSendMessages() {
+      return this.isThreadActive() && !this.isCancelled() && !this.isDeclined();
     }
   }
 
@@ -134,6 +161,18 @@ module.exports = (sequelize, DataTypes) => {
       cancelledAt: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      threadActive: {
+        type: DataTypes.VIRTUAL,
+        get() {
+          return this.isThreadActive();
+        },
+      },
+      canSendMessages: {
+        type: DataTypes.VIRTUAL,
+        get() {
+          return this.canSendMessages();
+        },
       },
     },
     {

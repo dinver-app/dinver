@@ -1,6 +1,7 @@
 const {
   Reservation,
   ReservationEvent,
+  ReservationMessage,
   User,
   Restaurant,
   UserSysadmin,
@@ -14,8 +15,8 @@ const { sendReservationSMS } = require('../../utils/smsService');
 // Kreiranje nove rezervacije
 const createReservation = async (req, res) => {
   try {
-    const userId = req.user.id;
     const { restaurantId, date, time, guests, noteFromUser } = req.body;
+    const userId = req.user.id;
 
     // Check if user is banned
     const user = await User.findByPk(userId);
@@ -63,9 +64,50 @@ const createReservation = async (req, res) => {
       metadata: { guests, noteFromUser },
     });
 
+    // Kreiraj inicijalnu sistemsku poruku
+    await ReservationMessage.createSystemMessage(
+      reservation.id,
+      `Nova rezervacija kreirana za ${guests} osoba`,
+      {
+        type: 'reservation_created',
+        guests,
+        date,
+        time,
+        noteFromUser,
+      },
+    );
+
+    // Ako postoji bilješka od korisnika, dodaj je kao prvu poruku
+    if (noteFromUser) {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: noteFromUser,
+      });
+    }
+
     // TODO: Pošalji notifikaciju restoranu
 
-    res.status(201).json(reservation);
+    // Dohvati rezervaciju s porukama
+    const reservationWithMessages = await Reservation.findByPk(reservation.id, {
+      include: [
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'firstName', 'lastName'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    res.status(201).json(reservationWithMessages);
   } catch (error) {
     console.error('Error creating reservation:', error);
     res.status(500).json({ error: 'Failed to create reservation' });
@@ -75,15 +117,37 @@ const createReservation = async (req, res) => {
 // Dohvaćanje rezervacija za korisnika
 const getUserReservations = async (req, res) => {
   try {
+    const userId = req.user.id;
+    const { status, showPast = false } = req.query;
+
+    const where = {
+      userId: userId,
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (!showPast) {
+      where.date = {
+        [Op.gte]: new Date().toISOString().split('T')[0],
+      };
+    }
+
     const reservations = await Reservation.findAll({
-      where: {
-        userId: req.user.id,
-      },
+      where,
       include: [
         {
-          as: 'restaurant',
           model: Restaurant,
+          as: 'restaurant',
           attributes: ['id', 'name', 'address', 'place', 'phone'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          separate: true,
+          order: [['createdAt', 'DESC']],
+          limit: 1,
         },
       ],
       order: [
@@ -201,6 +265,24 @@ const confirmReservation = async (req, res) => {
       metadata: { noteFromOwner },
     });
 
+    // Kreiraj sistemsku poruku o potvrdi
+    await ReservationMessage.createStatusMessage(
+      reservation.id,
+      userId,
+      oldStatus,
+      'confirmed',
+    );
+
+    // Ako postoji bilješka od vlasnika, dodaj je kao poruku
+    if (noteFromOwner) {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: noteFromOwner,
+      });
+    }
+
     // Pošalji email korisniku
     await sendReservationEmail({
       to: reservation.user.email,
@@ -217,7 +299,35 @@ const confirmReservation = async (req, res) => {
       });
     }
 
-    res.json(reservation);
+    // Dohvati ažuriranu rezervaciju s porukama
+    const updatedReservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'phone'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'firstName', 'lastName'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    res.json(updatedReservation);
   } catch (error) {
     console.error('Error confirming reservation:', error);
     res.status(500).json({ error: 'Failed to confirm reservation' });
