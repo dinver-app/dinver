@@ -4,6 +4,7 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
+const upload = require('../../../utils/uploadMiddleware');
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.post(
   '/reviews',
   appApiKeyAuth,
   appAuthenticateToken,
+  upload.array('photos'),
   reviewController.createReview,
 );
 
@@ -35,6 +37,7 @@ router.patch(
   '/reviews/:id',
   appApiKeyAuth,
   appAuthenticateToken,
+  upload.array('photos'),
   reviewController.updateReview,
 );
 
