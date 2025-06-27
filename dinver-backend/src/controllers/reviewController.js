@@ -4,6 +4,7 @@ const { ValidationError, Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { calculateAverageRating } = require('../utils/ratingUtils');
 const PointsService = require('../../utils/pointsService');
+const { getMediaUrl } = require('../../config/cdn');
 
 const EDIT_WINDOW_DAYS = 7;
 const MAX_EDITS = 1;
@@ -19,8 +20,8 @@ const createReview = async (req, res) => {
       atmosphere,
       visitDate,
       text,
-      photos,
     } = req.body;
+    const files = req.files;
     const userId = req.user.id;
 
     // Check if user is banned
@@ -58,21 +59,6 @@ const createReview = async (req, res) => {
       });
     }
 
-    // Check if user already reviewed this restaurant
-    const existingReviewAgain = await Review.findOne({
-      where: {
-        userId: userId,
-        restaurantId: restaurantId,
-        isHidden: false,
-      },
-    });
-
-    if (existingReviewAgain) {
-      return res
-        .status(400)
-        .json({ error: 'You have already reviewed this restaurant' });
-    }
-
     // Create the review
     const review = await Review.create({
       userId: userId,
@@ -91,19 +77,24 @@ const createReview = async (req, res) => {
       userId,
       review.id,
       text,
-      photos && photos.length > 0,
+      files && files.length > 0,
       restaurantId,
     );
 
     // Handle photo uploads
-    if (photos && photos.length > 0) {
-      const uploadedPhotos = [];
-      for (const photo of photos) {
-        const uploadResult = await uploadToS3(photo);
-        uploadedPhotos.push(uploadResult.Location);
-      }
+    if (files && files.length > 0) {
+      const folder = `review_images/${review.id}`;
+      const imageKeys = await Promise.all(
+        files.map((file) => uploadToS3(file, folder)),
+      );
 
-      await review.update({ photos: uploadedPhotos });
+      // Generate CloudFront URLs for images
+      const imageUrls = imageKeys.map((key) => ({
+        key,
+        url: getMediaUrl(key, 'image'),
+      }));
+
+      await review.update({ photos: imageUrls });
     }
 
     // Update restaurant's average rating
@@ -222,7 +213,8 @@ const getRestaurantReviews = async (req, res) => {
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, text, photos } = req.body;
+    const { rating, text } = req.body;
+    const files = req.files;
     const userId = req.user.id;
 
     // Check if user is banned
@@ -262,27 +254,35 @@ const updateReview = async (req, res) => {
       });
     }
 
-    // Check if new photos are being added
-    const existingPhotos = review.photos || [];
-    const newPhotos = photos
-      ? photos.filter((photo) => !existingPhotos.includes(photo))
-      : [];
-
     // Handle new photo uploads
-    if (newPhotos.length > 0) {
-      const uploadedPhotos = [];
-      for (const photo of newPhotos) {
-        const uploadResult = await uploadToS3(photo);
-        uploadedPhotos.push(uploadResult.Location);
-      }
+    if (files && files.length > 0) {
+      const folder = `review_images/${review.id}`;
+      const imageKeys = await Promise.all(
+        files.map((file) => uploadToS3(file, folder)),
+      );
+
+      // Generate CloudFront URLs for images
+      const newImageUrls = imageKeys.map((key) => ({
+        key,
+        url: getMediaUrl(key, 'image'),
+      }));
+
+      // Combine existing and new photos
+      const existingPhotos = review.photos || [];
+      const updatedPhotos = [
+        ...existingPhotos.map((photo) =>
+          typeof photo === 'string'
+            ? { key: photo, url: getMediaUrl(photo, 'image') }
+            : photo,
+        ),
+        ...newImageUrls,
+      ];
 
       // Award points for adding new photos if none existed before
       if (existingPhotos.length === 0) {
         await PointsService.addReviewPoints(userId, review.id, null, true);
       }
 
-      // Combine existing and new photos
-      const updatedPhotos = [...existingPhotos, ...uploadedPhotos];
       await review.update({ photos: updatedPhotos });
     }
 
