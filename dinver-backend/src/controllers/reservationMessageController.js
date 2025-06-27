@@ -20,6 +20,11 @@ const getReservationMessages = async (req, res) => {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
+    // Check if thread is still active
+    if (!reservation.isThreadActive()) {
+      return res.status(403).json({ error: 'This conversation has expired' });
+    }
+
     // Check if user has access to this reservation
     const isOwner = reservation.userId === userId;
     if (!isOwner) {
@@ -59,10 +64,38 @@ const getReservationMessages = async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
+    // Mark messages as read
+    const unreadMessages = messages.rows.filter(
+      (msg) => !msg.readAt && msg.senderId !== userId,
+    );
+
+    if (unreadMessages.length > 0) {
+      await ReservationMessage.update(
+        { readAt: new Date() },
+        {
+          where: {
+            id: unreadMessages.map((msg) => msg.id),
+          },
+        },
+      );
+    }
+
+    // Get reservation details
+    const reservationDetails = {
+      id: reservation.id,
+      status: reservation.status,
+      date: reservation.date,
+      time: reservation.time,
+      guests: reservation.guests,
+      threadActive: reservation.threadActive,
+      canSendMessages: reservation.canSendMessages,
+    };
+
     // Calculate pagination metadata
     const totalPages = Math.ceil(messages.count / limit);
 
     res.json({
+      reservation: reservationDetails,
       messages: messages.rows,
       pagination: {
         total: messages.count,
@@ -81,13 +114,25 @@ const getReservationMessages = async (req, res) => {
 const sendMessage = async (req, res) => {
   try {
     const { reservationId } = req.params;
-    const { content, messageType = 'text', metadata = {} } = req.body;
+    const { content, messageType = 'user', metadata = {} } = req.body;
     const userId = req.user.id;
 
     // Find the reservation
     const reservation = await Reservation.findByPk(reservationId);
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    // Check if thread is still active
+    if (!reservation.isThreadActive()) {
+      return res.status(403).json({ error: 'This conversation has expired' });
+    }
+
+    // Check if messages can be sent
+    if (!reservation.canSendMessages()) {
+      return res.status(403).json({
+        error: 'Messages cannot be sent in the current reservation state',
+      });
     }
 
     // Check if user has access to this reservation
@@ -229,54 +274,36 @@ const markMessagesAsRead = async (req, res) => {
   }
 };
 
-// Create a suggestion message (for restaurant admins only)
-const createSuggestion = async (req, res) => {
+// Get unread messages count
+const getUnreadCount = async (req, res) => {
   try {
-    const { reservationId } = req.params;
-    const { content, suggestedDate, suggestedTime } = req.body;
     const userId = req.user.id;
+    const { reservationId } = req.query;
 
-    // Find the reservation
-    const reservation = await Reservation.findByPk(reservationId);
-    if (!reservation) {
-      return res.status(404).json({ error: 'Reservation not found' });
+    const where = {
+      readAt: null,
+      senderId: { [Op.ne]: userId },
+    };
+
+    if (reservationId) {
+      where.reservationId = reservationId;
+    } else {
+      // If no specific reservation, get all unread for user's reservations
+      const userReservations = await Reservation.findAll({
+        where: { userId },
+        attributes: ['id'],
+      });
+      where.reservationId = {
+        [Op.in]: userReservations.map((r) => r.id),
+      };
     }
 
-    // Check if user is restaurant admin
-    const isAdmin = await UserAdmin.findOne({
-      where: { userId, restaurantId: reservation.restaurantId },
-    });
-    if (!isAdmin) {
-      return res
-        .status(403)
-        .json({ error: 'Only restaurant admins can create suggestions' });
-    }
+    const count = await ReservationMessage.count({ where });
 
-    // Create the suggestion message
-    const message = await ReservationMessage.createSuggestion(
-      reservationId,
-      userId,
-      content,
-      { suggestedDate, suggestedTime },
-    );
-
-    // Get message with sender details
-    const messageWithSender = await ReservationMessage.findByPk(message.id, {
-      include: [
-        {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
-        },
-      ],
-    });
-
-    // TODO: Send notification to reservation owner
-
-    res.status(201).json(messageWithSender);
+    res.json({ unreadCount: count });
   } catch (error) {
-    console.error('Error creating suggestion:', error);
-    res.status(500).json({ error: 'Failed to create suggestion' });
+    console.error('Error getting unread count:', error);
+    res.status(500).json({ error: 'Failed to get unread count' });
   }
 };
 
@@ -285,5 +312,5 @@ module.exports = {
   sendMessage,
   markMessageAsRead,
   markMessagesAsRead,
-  createSuggestion,
+  getUnreadCount,
 };

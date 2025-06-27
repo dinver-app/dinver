@@ -39,6 +39,14 @@ router.post(
   reservationMessageController.markMessagesAsRead,
 );
 
+// Get unread messages count
+router.get(
+  '/messages/unread/count',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  reservationMessageController.getUnreadCount,
+);
+
 // Create a suggestion (restaurant admin only)
 router.post(
   '/reservations/:reservationId/suggestions',
