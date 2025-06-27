@@ -371,4 +371,5 @@ module.exports = {
   sendVerificationEmail,
   sendReservationEmail,
   sendPasswordResetEmail,
+  createEmailTemplate,
 };
