@@ -19,6 +19,7 @@ const newsletterRoutes = require('./appRoutes/newsletterRoutes');
 const adminRoutes = require('./appRoutes/adminRoutes');
 const feedRoutes = require('./appRoutes/feedRoutes');
 const restaurantDetailsRoutes = require('./appRoutes/restaurantDetailsRoutes');
+const mailRoutes = require('./appRoutes/mailRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -41,4 +42,5 @@ router.use(newsletterRoutes);
 router.use(adminRoutes);
 router.use(feedRoutes);
 router.use(restaurantDetailsRoutes);
+router.use(mailRoutes);
 module.exports = router;
