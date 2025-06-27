@@ -127,7 +127,12 @@ const createMenuItem = async (req, res) => {
     let imageKey = null;
     if (file) {
       const folder = 'menu_items';
-      imageKey = await uploadToS3(file, folder);
+      try {
+        imageKey = await uploadToS3(file, folder);
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     }
 
     // Create menu item
