@@ -70,6 +70,15 @@ router.patch(
   reservationController.suggestAlternativeTime,
 );
 
+// Ruta za otkazivanje od strane restorana
+router.patch(
+  '/reservations/:id/cancel-by-restaurant',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  restaurantOwnerAuth,
+  reservationController.cancelReservationByRestaurant,
+);
+
 // Ruta za prihvaćanje predloženog termina
 router.patch(
   '/reservations/:id/accept-suggested',

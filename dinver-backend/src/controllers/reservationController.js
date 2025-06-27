@@ -500,6 +500,7 @@ const suggestAlternativeTime = async (req, res) => {
 const cancelReservation = async (req, res) => {
   try {
     const { id } = req.params;
+    const { cancellationReason } = req.body;
     const userId = req.user.id;
 
     // Check if user is banned
@@ -529,6 +530,21 @@ const cancelReservation = async (req, res) => {
     }
 
     if (!reservation.canBeCancelled()) {
+      const reservationDateTime = new Date(
+        reservation.date + 'T' + reservation.time,
+      );
+      const CANCELLATION_HOURS = 24;
+      const cancellationDeadline = new Date(reservationDateTime);
+      cancellationDeadline.setHours(
+        cancellationDeadline.getHours() - CANCELLATION_HOURS,
+      );
+
+      if (new Date() >= cancellationDeadline) {
+        return res.status(400).json({
+          error:
+            'Reservations can only be cancelled at least 24 hours before the reservation time',
+        });
+      }
       return res.status(400).json({ error: 'Reservation cannot be cancelled' });
     }
 
@@ -546,13 +562,180 @@ const cancelReservation = async (req, res) => {
       event: 'cancelled_by_user',
       oldStatus,
       newStatus: 'cancelled_by_user',
+      metadata: { cancellationReason },
     });
+
+    // Kreiraj sistemsku poruku o otkazivanju
+    await ReservationMessage.createStatusMessage(
+      reservation.id,
+      userId,
+      oldStatus,
+      'cancelled_by_user',
+      cancellationReason,
+    );
 
     // TODO: Pošalji notifikaciju restoranu
 
-    res.json(reservation);
+    // Dohvati ažuriranu rezervaciju s porukama
+    const updatedReservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'firstName', 'lastName'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    res.json(updatedReservation);
   } catch (error) {
     console.error('Error cancelling reservation:', error);
+    res.status(500).json({ error: 'Failed to cancel reservation' });
+  }
+};
+
+// Otkazivanje rezervacije od strane restorana
+const cancelReservationByRestaurant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cancellationReason } = req.body;
+    const userId = req.user.id;
+
+    if (!cancellationReason) {
+      return res.status(400).json({
+        error:
+          'Cancellation reason is required when restaurant cancels a reservation',
+      });
+    }
+
+    const reservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place'],
+        },
+      ],
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    // Provjeri je li korisnik admin restorana
+    const isAdmin = await UserAdmin.findOne({
+      where: {
+        userId,
+        restaurantId: reservation.restaurantId,
+      },
+    });
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        error: 'Only restaurant administrators can cancel reservations',
+      });
+    }
+
+    if (!reservation.canBeRestaurantCancelled()) {
+      return res.status(400).json({ error: 'Reservation cannot be cancelled' });
+    }
+
+    const oldStatus = reservation.status;
+
+    await reservation.update({
+      status: 'cancelled_by_restaurant',
+      cancelledAt: new Date(),
+    });
+
+    // Logiraj događaj
+    await ReservationEvent.logEvent({
+      reservationId: reservation.id,
+      userId,
+      event: 'cancelled_by_restaurant',
+      oldStatus,
+      newStatus: 'cancelled_by_restaurant',
+      metadata: { cancellationReason },
+    });
+
+    // Kreiraj sistemsku poruku o otkazivanju
+    await ReservationMessage.createStatusMessage(
+      reservation.id,
+      userId,
+      oldStatus,
+      'cancelled_by_restaurant',
+      cancellationReason,
+    );
+
+    // Pošalji email korisniku
+    await sendReservationEmail({
+      to: reservation.user.email,
+      type: 'cancellation_by_restaurant',
+      reservation: {
+        ...reservation.toJSON(),
+        cancellationReason,
+      },
+    });
+
+    // Pošalji SMS korisniku
+    if (reservation.user.phone) {
+      await sendReservationSMS({
+        to: reservation.user.phone,
+        type: 'cancellation_by_restaurant',
+        reservation: {
+          ...reservation.toJSON(),
+          cancellationReason,
+        },
+      });
+    }
+
+    // Dohvati ažuriranu rezervaciju s porukama
+    const updatedReservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'firstName', 'lastName'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    res.json(updatedReservation);
+  } catch (error) {
+    console.error('Error cancelling reservation by restaurant:', error);
     res.status(500).json({ error: 'Failed to cancel reservation' });
   }
 };
@@ -731,5 +914,6 @@ module.exports = {
   suggestAlternativeTime,
   acceptSuggestedTime,
   cancelReservation,
+  cancelReservationByRestaurant,
   getReservationHistory,
 };

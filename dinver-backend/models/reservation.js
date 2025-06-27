@@ -51,10 +51,47 @@ module.exports = (sequelize, DataTypes) => {
 
     // Helper metoda za provjeru može li se otkazati
     canBeCancelled() {
+      // Ako je već otkazana ili odbijena, ne može se otkazati
+      if (this.isCancelled() || this.isDeclined()) {
+        return false;
+      }
+
+      // Ako je u prošlosti, ne može se otkazati
+      if (this.isPast()) {
+        return false;
+      }
+
+      // Provjeri je li unutar 24h od rezervacije
+      const reservationDateTime = new Date(this.date + 'T' + this.time);
+      const CANCELLATION_HOURS = 24;
+      const cancellationDeadline = new Date(reservationDateTime);
+      cancellationDeadline.setHours(
+        cancellationDeadline.getHours() - CANCELLATION_HOURS,
+      );
+
+      // Može se otkazati ako je status pending, confirmed ili suggested_alt
+      // i ako je više od 24h prije rezervacije
       return (
         ['pending', 'confirmed', 'suggested_alt'].includes(this.status) &&
-        !this.isPast()
+        new Date() < cancellationDeadline
       );
+    }
+
+    // Helper metoda za provjeru može li restoran otkazati
+    canBeRestaurantCancelled() {
+      // Ako je već otkazana ili odbijena, ne može se otkazati
+      if (this.isCancelled() || this.isDeclined()) {
+        return false;
+      }
+
+      // Ako je u prošlosti, ne može se otkazati
+      if (this.isPast()) {
+        return false;
+      }
+
+      // Restoran može otkazati confirmed rezervacije u bilo kojem trenutku
+      // ali mora navesti razlog
+      return this.status === 'confirmed';
     }
 
     // Helper metoda za provjeru može li se odgovoriti
