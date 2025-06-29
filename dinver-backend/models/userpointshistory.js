@@ -67,7 +67,13 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       actionType: {
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM(
+          'review_add',
+          'review_long',
+          'review_with_photo',
+          'visit_qr',
+          'reservation_bonus',
+        ),
         allowNull: false,
       },
       points: {

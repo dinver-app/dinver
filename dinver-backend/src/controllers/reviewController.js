@@ -73,13 +73,13 @@ const createReview = async (req, res) => {
     });
 
     // Award points through PointsService
-    await PointsService.addReviewPoints(
-      userId,
-      review.id,
-      text,
-      files && files.length > 0,
-      restaurantId,
-    );
+    // await PointsService.addReviewPoints(
+    //   userId,
+    //   review.id,
+    //   text,
+    //   files && files.length > 0,
+    //   restaurantId,
+    // );
 
     // Handle photo uploads
     if (files && files.length > 0) {
