@@ -213,7 +213,7 @@ const getRestaurantReviews = async (req, res) => {
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, text } = req.body;
+    const { rating, foodQuality, service, atmosphere, text } = req.body;
     const files = req.files;
     const userId = req.user.id;
 
@@ -279,23 +279,31 @@ const updateReview = async (req, res) => {
       ];
 
       // Award points for adding new photos if none existed before
-      if (existingPhotos.length === 0) {
-        await PointsService.addReviewPoints(userId, review.id, null, true);
-      }
+      // if (existingPhotos.length === 0) {
+      //   await PointsService.addReviewPoints(userId, review.id, null, true);
+      // }
 
       await review.update({ photos: updatedPhotos });
     }
 
-    // Update review content and rating
+    // Update review content and ratings
     await review.update({
       rating: rating || review.rating,
+      foodQuality: foodQuality || review.foodQuality,
+      service: service || review.service,
+      atmosphere: atmosphere || review.atmosphere,
       text: text || review.text,
       lastEditedAt: new Date(),
       editCount: review.editCount + 1,
     });
 
-    // Update restaurant's average rating if rating changed
-    if (rating !== review.rating) {
+    // Update restaurant's average rating if any rating changed
+    if (
+      rating !== review.rating ||
+      foodQuality !== review.foodQuality ||
+      service !== review.service ||
+      atmosphere !== review.atmosphere
+    ) {
       await calculateAverageRating(review.restaurantId);
     }
 
