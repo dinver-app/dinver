@@ -72,7 +72,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       photos: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.ARRAY(DataTypes.TEXT),
         defaultValue: [],
       },
       isVerifiedReviewer: {

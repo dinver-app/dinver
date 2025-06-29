@@ -5,13 +5,22 @@ const { Op } = require('sequelize');
 
 // Definicija bodova za različite akcije
 const POINTS_CONFIG = {
-  review_add: 10, // Osnovna recenzija (<120 znakova)
-  review_long: 10, // Dodatni bodovi za dugu recenziju (>120 znakova)
-  review_with_photo: 10, // Dodatni bodovi za sliku
-  visit_qr: 30, // Skeniranje QR koda u restoranu
-  reservation_bonus: 5, // Bonus za potvrđenu rezervaciju
-  email_verification: 20, // Bodovi za verifikaciju emaila
-  phone_verification: 20, // Bodovi za verifikaciju telefona
+  REVIEW_ADD: 10, // Osnovna recenzija (<120 znakova)
+  REVIEW_LONG: 10, // Dodatni bodovi za dugu recenziju (>120 znakova)
+  REVIEW_WITH_PHOTO: 10, // Dodatni bodovi za sliku
+  VISIT_QR: 30, // Skeniranje QR koda u restoranu
+  RESERVATION_BONUS: 5, // Bonus za potvrđenu rezervaciju
+  EMAIL_VERIFICATION: 20, // Bodovi za verifikaciju emaila
+  PHONE_VERIFICATION: 20, // Bodovi za verifikaciju telefona
+};
+
+// Definicija tipova akcija (mora odgovarati ENUM vrijednostima u bazi)
+const ACTION_TYPES = {
+  REVIEW_ADD: 'review_add',
+  REVIEW_LONG: 'review_long',
+  REVIEW_WITH_PHOTO: 'review_with_photo',
+  VISIT_QR: 'visit_qr',
+  RESERVATION_BONUS: 'reservation_bonus',
 };
 
 class PointsService {
@@ -26,8 +35,8 @@ class PointsService {
     // Prvo dodaj osnovne bodove za recenziju
     await UserPointsHistory.logPoints({
       userId,
-      actionType: 'review_add',
-      points: POINTS_CONFIG.review_add,
+      actionType: ACTION_TYPES.REVIEW_ADD,
+      points: POINTS_CONFIG.REVIEW_ADD,
       referenceId: reviewId,
       restaurantId,
       description: 'Dodana nova recenzija',
@@ -37,8 +46,8 @@ class PointsService {
     if (text && text.length > 120) {
       await UserPointsHistory.logPoints({
         userId,
-        actionType: 'review_long',
-        points: POINTS_CONFIG.review_long,
+        actionType: ACTION_TYPES.REVIEW_LONG,
+        points: POINTS_CONFIG.REVIEW_LONG,
         referenceId: reviewId,
         restaurantId,
         description: 'Bonus za detaljnu recenziju',
@@ -49,8 +58,8 @@ class PointsService {
     if (hasPhoto) {
       await UserPointsHistory.logPoints({
         userId,
-        actionType: 'review_with_photo',
-        points: POINTS_CONFIG.review_with_photo,
+        actionType: ACTION_TYPES.REVIEW_WITH_PHOTO,
+        points: POINTS_CONFIG.REVIEW_WITH_PHOTO,
         referenceId: reviewId,
         restaurantId,
         description: 'Dodana slika uz recenziju',
@@ -68,7 +77,7 @@ class PointsService {
       where: {
         userId,
         restaurantId,
-        actionType: 'visit_qr',
+        actionType: ACTION_TYPES.VISIT_QR,
         createdAt: {
           [Op.gte]: today,
         },
@@ -81,8 +90,8 @@ class PointsService {
 
     await UserPointsHistory.logPoints({
       userId,
-      actionType: 'visit_qr',
-      points: POINTS_CONFIG.visit_qr,
+      actionType: ACTION_TYPES.VISIT_QR,
+      points: POINTS_CONFIG.VISIT_QR,
       referenceId: restaurantId,
       restaurantId,
       description: 'Potvrđen dolazak u restoran',
@@ -93,8 +102,8 @@ class PointsService {
   static async addReservationBonus(userId, reservationId, restaurantId) {
     await UserPointsHistory.logPoints({
       userId,
-      actionType: 'reservation_bonus',
-      points: POINTS_CONFIG.reservation_bonus,
+      actionType: ACTION_TYPES.RESERVATION_BONUS,
+      points: POINTS_CONFIG.RESERVATION_BONUS,
       referenceId: reservationId,
       restaurantId,
       description: 'Bonus za potvrđenu rezervaciju',
@@ -103,8 +112,8 @@ class PointsService {
 
   // Dodavanje bodova za verifikaciju profila
   static async addProfileVerificationPoints(userId, type) {
-    // Using 'reservation_bonus' as this is a valid enum value
-    const actionType = 'reservation_bonus';
+    // Using RESERVATION_BONUS as this is a valid enum value
+    const actionType = ACTION_TYPES.RESERVATION_BONUS;
     const description =
       type === 'email'
         ? 'Verifikacija email adrese'
@@ -115,8 +124,8 @@ class PointsService {
       actionType,
       points:
         type === 'email'
-          ? POINTS_CONFIG.email_verification
-          : POINTS_CONFIG.phone_verification,
+          ? POINTS_CONFIG.EMAIL_VERIFICATION
+          : POINTS_CONFIG.PHONE_VERIFICATION,
       description,
     });
   }
