@@ -14,14 +14,25 @@ const getReservationMessages = async (req, res) => {
     const { page = 1, limit = 50, messageType, beforeId, afterId } = req.query;
     const userId = req.user.id;
 
-    // Find the reservation
-    const reservation = await Reservation.findByPk(reservationId);
+    // Find the reservation with raw: false to get the Sequelize instance
+    const reservation = await Reservation.findByPk(reservationId, {
+      raw: false,
+      nest: true,
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
     // Check if thread is still active
-    if (!reservation.isThreadActive()) {
+    if (!reservation.threadActive) {
       return res.status(403).json({ error: 'This conversation has expired' });
     }
 
@@ -117,19 +128,30 @@ const sendMessage = async (req, res) => {
     const { content, messageType = 'user', metadata = {} } = req.body;
     const userId = req.user.id;
 
-    // Find the reservation
-    const reservation = await Reservation.findByPk(reservationId);
+    // Find the reservation with raw: false to get the Sequelize instance
+    const reservation = await Reservation.findByPk(reservationId, {
+      raw: false,
+      nest: true,
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
     // Check if thread is still active
-    if (!reservation.isThreadActive()) {
+    if (!reservation.threadActive) {
       return res.status(403).json({ error: 'This conversation has expired' });
     }
 
     // Check if messages can be sent
-    if (!reservation.canSendMessages()) {
+    if (!reservation.canSendMessages) {
       return res.status(403).json({
         error: 'Messages cannot be sent in the current reservation state',
       });
@@ -307,10 +329,99 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
+// Create a suggestion (restaurant admin only)
+const createSuggestion = async (req, res) => {
+  try {
+    const { reservationId } = req.params;
+    const { content, suggestedDate, suggestedTime } = req.body;
+    const userId = req.user.id;
+
+    // Validate required fields
+    if (!content || !suggestedDate || !suggestedTime) {
+      return res.status(400).json({
+        error: 'Content, suggestedDate, and suggestedTime are required',
+      });
+    }
+
+    // Find the reservation with raw: false to get the Sequelize instance
+    const reservation = await Reservation.findByPk(reservationId, {
+      raw: false,
+      nest: true,
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    // Check if thread is still active
+    if (!reservation.threadActive) {
+      return res.status(403).json({ error: 'This conversation has expired' });
+    }
+
+    // Check if messages can be sent
+    if (!reservation.canSendMessages) {
+      return res.status(403).json({
+        error: 'Messages cannot be sent in the current reservation state',
+      });
+    }
+
+    // Check if user is restaurant admin
+    const isAdmin = await UserAdmin.findOne({
+      where: { userId, restaurantId: reservation.restaurantId },
+    });
+
+    if (!isAdmin) {
+      return res.status(403).json({
+        error: 'Only restaurant administrators can send suggestions',
+      });
+    }
+
+    // Create the suggestion message
+    const message = await ReservationMessage.create({
+      reservationId,
+      senderId: userId,
+      messageType: 'suggestion',
+      content,
+      metadata: {
+        suggestedDate,
+        suggestedTime,
+        currentDate: reservation.date,
+        currentTime: reservation.time,
+      },
+    });
+
+    // Get message with sender details
+    const messageWithSender = await ReservationMessage.findByPk(message.id, {
+      include: [
+        {
+          model: User,
+          as: 'sender',
+          attributes: ['id', 'firstName', 'lastName'],
+        },
+      ],
+    });
+
+    // TODO: Send notification to user
+
+    res.status(201).json(messageWithSender);
+  } catch (error) {
+    console.error('Error creating suggestion:', error);
+    res.status(500).json({ error: 'Failed to create suggestion' });
+  }
+};
+
 module.exports = {
   getReservationMessages,
   sendMessage,
   markMessageAsRead,
   markMessagesAsRead,
   getUnreadCount,
+  createSuggestion,
 };
