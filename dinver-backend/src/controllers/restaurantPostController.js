@@ -1,9 +1,6 @@
 const { RestaurantPost, Restaurant, User, UserAdmin } = require('../../models');
-const { Op } = require('sequelize');
-const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { calculateDistance } = require('../../utils/distance');
 const AWS = require('aws-sdk');
 const ffmpeg = require('fluent-ffmpeg');
 const { v4: uuidv4 } = require('uuid');
@@ -181,11 +178,8 @@ const createPost = async (req, res) => {
       return res.status(400).json({ error: 'No media files provided' });
     }
 
-    // Validate restaurant exists
-    const restaurant = await Restaurant.findByPk(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
+    // Create unique folder for this post's media
+    const postFolder = uuidv4();
 
     // Create post first to get the ID
     const post = await RestaurantPost.create({
@@ -202,7 +196,7 @@ const createPost = async (req, res) => {
     const s3 = new AWS.S3();
 
     if (mediaType === 'video') {
-      // For video posts, we need both video and thumbnail
+      // Handle video upload
       const videoFile = files.find((f) => f.originalname.startsWith('video'));
       const thumbnailFile = files.find((f) =>
         f.originalname.startsWith('thumbnail'),
@@ -210,29 +204,43 @@ const createPost = async (req, res) => {
 
       if (!videoFile || !thumbnailFile) {
         await post.destroy();
-        return res.status(400).json({
-          error: 'Both video and thumbnail files are required for video posts',
-        });
+        return res
+          .status(400)
+          .json({ error: 'Both video and thumbnail are required' });
       }
 
-      // Paralelno procesiranje videa i uploada thumbnaila
-      const thumbnailKey = `postThumbnails/${post.id}/image.jpg`;
-      const [videoKey] = await Promise.all([
-        transcodeVideo(videoFile.buffer, post.id),
-        s3
-          .putObject({
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: thumbnailKey,
-            Body: thumbnailFile.buffer,
-            ContentType: 'image/jpeg',
-          })
-          .promise(),
-      ]);
+      // Upload video
+      const videoKey = `posts/video/${postFolder}/video.mp4`;
+      await s3
+        .putObject({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: videoKey,
+          Body: videoFile.buffer,
+          ContentType: 'video/mp4',
+        })
+        .promise();
 
+      // Upload thumbnail
+      const thumbnailKey = `posts/thumbnails/${postFolder}/thumbnail.jpg`;
+      await s3
+        .putObject({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: thumbnailKey,
+          Body: thumbnailFile.buffer,
+          ContentType: 'image/jpeg',
+          ContentDisposition: 'inline',
+          CacheControl: 'max-age=31536000',
+          Metadata: {
+            'original-filename': thumbnailFile.originalname,
+          },
+        })
+        .promise();
+
+      // Store only keys in mediaUrls
       mediaUrls.push({
-        url: getMediaUrl(videoKey, 'video'),
-        thumbnailUrl: getMediaUrl(thumbnailKey, 'image'),
-        videoKey, // Spremamo key za kasnije generiranje URL-a
+        videoKey,
+        thumbnailKey,
+        type: 'video',
       });
     } else {
       // For carousel posts
@@ -250,38 +258,77 @@ const createPost = async (req, res) => {
       // Upload all images
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
-        const imageKey = `posts/carousel/${post.id}/image_${i + 1}.jpg`;
+        const imageKey = `posts/carousel/${postFolder}/image_${i + 1}.jpg`;
 
-        await s3
-          .putObject({
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: imageKey,
-            Body: file.buffer,
-            ContentType: 'image/jpeg',
-          })
-          .promise();
-
-        mediaUrls.push({
-          url: getMediaUrl(imageKey, 'image'),
-        });
-
-        // Use first image as thumbnail
-        if (i === 0) {
-          const thumbnailKey = `postThumbnails/${post.id}/image.jpg`;
+        try {
           await s3
             .putObject({
               Bucket: process.env.AWS_S3_BUCKET_NAME,
-              Key: thumbnailKey,
+              Key: imageKey,
               Body: file.buffer,
               ContentType: 'image/jpeg',
+              ContentDisposition: 'inline',
+              CacheControl: 'max-age=31536000',
+              Metadata: {
+                'original-filename': file.originalname,
+              },
             })
             .promise();
+
+          // Store only key in mediaUrls
+          mediaUrls.push({
+            imageKey,
+            type: 'image',
+          });
+        } catch (uploadError) {
+          console.error(`Error uploading image ${i + 1}:`, uploadError);
+          // Clean up any uploaded files
+          for (const media of mediaUrls) {
+            await s3
+              .deleteObject({
+                Bucket: process.env.AWS_S3_BUCKET_NAME,
+                Key: media.imageKey,
+              })
+              .promise()
+              .catch(console.error);
+          }
+          await post.destroy();
+          throw new Error(`Failed to upload image ${i + 1}`);
         }
+      }
+
+      // Upload first image as thumbnail
+      if (imageFiles.length > 0) {
+        const thumbnailKey = `posts/thumbnails/${postFolder}/thumbnail.jpg`;
+        await s3
+          .putObject({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: thumbnailKey,
+            Body: imageFiles[0].buffer,
+            ContentType: 'image/jpeg',
+            ContentDisposition: 'inline',
+            CacheControl: 'max-age=31536000',
+            Metadata: {
+              'original-filename': imageFiles[0].originalname,
+            },
+          })
+          .promise()
+          .catch(console.error); // Non-critical if thumbnail fails
       }
     }
 
-    // Update post with media URLs
+    // Update post with media URLs (keys)
     await post.update({ mediaUrls });
+
+    // Transform keys to URLs for response
+    const responsePost = post.toJSON();
+    if (mediaType === 'video') {
+      responsePost.mediaUrls = [getMediaUrl(mediaUrls[0].videoKey, 'video')];
+    } else {
+      responsePost.mediaUrls = mediaUrls.map((media) =>
+        getMediaUrl(media.imageKey, 'image'),
+      );
+    }
 
     // Log the create action
     await logAudit({
@@ -293,7 +340,7 @@ const createPost = async (req, res) => {
       changes: { new: post.get() },
     });
 
-    res.status(201).json(post);
+    res.status(201).json(responsePost);
   } catch (error) {
     console.error('Error creating post:', error);
     if (error.message === 'Video must be 60 seconds or shorter') {
@@ -373,11 +420,86 @@ const getPostsByRestaurant = async (req, res) => {
       offset: parseInt(offset),
     });
 
+    // Transform mediaUrls to clean URLs for each post
+    const transformedPosts = posts.rows
+      .map((post) => {
+        const postData = post.toJSON();
+
+        // Validate mediaUrls structure
+        if (!postData.mediaUrls || !postData.mediaUrls[0]) {
+          console.error('Invalid mediaUrls structure:', postData);
+          return null;
+        }
+
+        try {
+          if (postData.mediaType === 'video') {
+            // Validate video keys
+            if (
+              !postData.mediaUrls[0].videoKey ||
+              !postData.mediaUrls[0].thumbnailKey
+            ) {
+              console.error(
+                'Missing video or thumbnail key:',
+                postData.mediaUrls[0],
+              );
+              return null;
+            }
+
+            // Za video postove, thumbnail je posebna slika
+            const thumbnailUrl = getMediaUrl(
+              postData.mediaUrls[0].thumbnailKey,
+              'image',
+            );
+            const videoUrl = getMediaUrl(
+              postData.mediaUrls[0].videoKey,
+              'video',
+            );
+
+            postData.thumbnailUrl = thumbnailUrl;
+            postData.mediaUrls = [videoUrl];
+          } else {
+            // Za carousel postove
+            const urls = postData.mediaUrls
+              .map((media, index) => {
+                if (!media.imageKey) {
+                  console.error(
+                    `Missing imageKey for carousel image ${index}:`,
+                    media,
+                  );
+                  return null;
+                }
+                return getMediaUrl(media.imageKey, 'image');
+              })
+              .filter(Boolean); // Remove null URLs
+
+            if (urls.length === 0) {
+              console.error(
+                'No valid image URLs generated for post:',
+                postData.id,
+              );
+              return null;
+            }
+
+            postData.thumbnailUrl = urls[0]; // First image as thumbnail
+            postData.mediaUrls = urls;
+          }
+
+          return postData;
+        } catch (error) {
+          console.error('Error transforming media URLs for post:', {
+            postId: postData.id,
+            error: error.message,
+          });
+          return null;
+        }
+      })
+      .filter(Boolean); // Remove null posts
+
     res.json({
       totalPosts: posts.count,
       totalPages: Math.ceil(posts.count / limit),
       currentPage: parseInt(page),
-      posts: posts.rows,
+      posts: transformedPosts,
     });
   } catch (error) {
     console.error('Error fetching posts by restaurant:', error);
@@ -570,34 +692,42 @@ const getRestaurantPostStats = async (req, res) => {
   }
 };
 
-// Kada vraćamo URL videa, koristimo CDN
+// Get a specific post with transformed URLs
 const getPost = async (req, res) => {
-  const post = await RestaurantPost.findByPk(req.params.id);
+  try {
+    const post = await RestaurantPost.findByPk(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
 
-  // Ako je video post, generiraj novi signed URL
-  if (post.mediaType === 'video' && post.mediaUrls[0]?.videoKey) {
-    const mediaUrl = getMediaUrl(post.mediaUrls[0].videoKey, 'video');
-    return res.json({
-      ...post.toJSON(),
-      mediaUrls: [
-        {
-          ...post.mediaUrls[0],
-          url: mediaUrl,
-        },
-      ],
-    });
+    const responsePost = post.toJSON();
+
+    // Transform stored keys to clean URLs
+    if (post.mediaType === 'video') {
+      // Za video postove, thumbnail je posebna slika
+      responsePost.thumbnailUrl = getMediaUrl(
+        post.mediaUrls[0].thumbnailKey,
+        'image',
+      );
+      responsePost.mediaUrls = [
+        getMediaUrl(post.mediaUrls[0].videoKey, 'video'),
+      ];
+    } else {
+      // Za carousel postove, thumbnail je prva slika
+      responsePost.thumbnailUrl = getMediaUrl(
+        post.mediaUrls[0].imageKey,
+        'image',
+      );
+      responsePost.mediaUrls = post.mediaUrls.map((media) =>
+        getMediaUrl(media.imageKey, 'image'),
+      );
+    }
+
+    res.json(responsePost);
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    res.status(500).json({ error: 'Failed to fetch post' });
   }
-
-  // Za carousel postove, generiraj nove URL-ove za sve slike
-  const updatedMediaUrls = post.mediaUrls.map((media) => ({
-    ...media,
-    url: getMediaUrl(media.url.split('/').slice(-2).join('/'), 'image'),
-  }));
-
-  res.json({
-    ...post.toJSON(),
-    mediaUrls: updatedMediaUrls,
-  });
 };
 
 // Kontroler za praćenje progresa

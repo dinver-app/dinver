@@ -235,6 +235,80 @@ const isRestaurantOwner = async (req, res, next) => {
   }
 };
 
+const appOptionalAuth = (req, res, next) => {
+  // Prvo pokušaj dobiti token iz cookieja (web)
+  let token = req.cookies['appAccessToken'];
+  let refreshToken = req.cookies['appRefreshToken'];
+
+  // Ako nema u cookieju, provjeri Authorization header (mobile)
+  if (!token && req.headers.authorization) {
+    token = req.headers.authorization;
+    refreshToken = req.headers['x-refresh-token'];
+  }
+
+  // Ako nema tokena uopće, nastavi dalje kao anonimni user
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, async (err, decodedUser) => {
+    if (err) {
+      if (!refreshToken) {
+        // Ako je token istekao i nema refresh tokena, nastavi kao anonimni
+        return next();
+      }
+
+      try {
+        const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+          // Ako user ne postoji, nastavi kao anonimni
+          return next();
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } =
+          generateTokens(user);
+
+        // Ako je web request (ima cookies), postavi nove cookieje
+        if (req.cookies['appAccessToken']) {
+          res.cookie('appRefreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: true,
+          });
+
+          res.cookie('appAccessToken', accessToken, {
+            httpOnly: true,
+            secure: true,
+          });
+        } else {
+          // Ako je mobile request, pošalji tokene u response headers
+          res.setHeader('X-Access-Token', accessToken);
+          res.setHeader('X-Refresh-Token', newRefreshToken);
+        }
+
+        req.user = user;
+        return next();
+      } catch (refreshError) {
+        // Ako refresh token nije validan, nastavi kao anonimni
+        return next();
+      }
+    }
+
+    // Token je validan, dohvati usera
+    try {
+      const user = await User.findByPk(decodedUser.id);
+      if (user) {
+        req.user = user;
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+
+    next();
+  });
+};
+
 module.exports = {
   appAuthenticateToken,
   adminAuthenticateToken,
@@ -245,4 +319,5 @@ module.exports = {
   landingApiKeyAuth,
   restaurantOwnerAuth,
   isRestaurantOwner,
+  appOptionalAuth,
 };

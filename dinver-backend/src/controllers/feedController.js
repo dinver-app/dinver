@@ -9,6 +9,7 @@ const {
 } = require('../../models');
 const { Op } = require('sequelize');
 const { calculateDistance } = require('../../utils/distance');
+const { getMediaUrl } = require('../../config/cdn');
 
 const DISTANCE_FILTERS = {
   ALL: Infinity,
@@ -114,6 +115,19 @@ const calculateUserAffinityScore = async (userId, restaurantId, cuisine) => {
     (viewHistory.length || 1);
 
   return Math.min(1, interactionScore + viewScore + avgCompletionRate);
+};
+
+// Helper za transformaciju media URL-ova
+const transformMediaUrls = (mediaUrls) => {
+  if (!mediaUrls || !mediaUrls.length) return [];
+
+  return mediaUrls.map((media) => {
+    if (media.type === 'video') {
+      return getMediaUrl(media.videoKey, 'video');
+    } else {
+      return getMediaUrl(media.imageKey, 'image');
+    }
+  });
 };
 
 // Main feed algorithm
@@ -247,14 +261,17 @@ const getFeed = async (req, res) => {
           WEIGHTS.locality * localityScore +
           WEIGHTS.affinity * affinityScore;
 
-        return {
+        const postData = {
           ...post.toJSON(),
           _score: finalScore,
           _distance: distance,
           isLiked: postInteractions.has('like'),
           isSaved: postInteractions.has('save'),
           isShared: postInteractions.has('share'),
+          mediaUrls: transformMediaUrls(post.mediaUrls),
         };
+
+        return postData;
       }),
     );
 

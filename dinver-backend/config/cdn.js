@@ -1,14 +1,57 @@
 const { getSignedUrl } = require('@aws-sdk/cloudfront-signer');
 
+// Cache za spremanje URL-ova
+const urlCache = new Map();
+
+// Statistika za praćenje učinkovitosti cachea
+const cacheStats = {
+  hits: 0,
+  misses: 0,
+  reset: () => {
+    cacheStats.hits = 0;
+    cacheStats.misses = 0;
+  },
+};
+
+// Čišćenje cachea svakih sat vremena
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, value] of urlCache.entries()) {
+      if (value.expiresAt <= now) {
+        urlCache.delete(key);
+      }
+    }
+
+    cacheStats.reset();
+  },
+  60 * 60 * 1000,
+); // Svaki sat
+
 function getSignedUrlForCloudFront(mediaKey) {
   try {
+    // Provjeri cache
+    const cached = urlCache.get(mediaKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      cacheStats.hits++;
+      return cached.url;
+    }
+    cacheStats.misses++;
+
     const url = `${process.env.CLOUDFRONT_URL}/${mediaKey}`;
+    const expiresIn = 23 * 60 * 60 * 1000; // 23h (malo manje od stvarnog isteka)
 
     const signedUrl = getSignedUrl({
       url,
       keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID,
       privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
-      dateLessThan: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+      dateLessThan: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h za stvarni URL
+    });
+
+    // Spremi u cache
+    urlCache.set(mediaKey, {
+      url: signedUrl,
+      expiresAt: Date.now() + expiresIn,
     });
 
     return signedUrl;
@@ -31,12 +74,7 @@ function getMediaUrl(mediaKey, mediaType = 'image') {
     mediaKey = mediaKey.split('.com/').pop();
   }
 
-  // Za video uvijek koristimo CloudFront zbog streaminga
-  if (mediaType === 'video') {
-    return getSignedUrlForCloudFront(mediaKey);
-  }
-
-  // Za slike, koristimo CloudFront ako je konfiguriran, inače fallback na S3
+  // Za video i slike koristimo CloudFront s cachiranjem
   if (process.env.CLOUDFRONT_URL) {
     return getSignedUrlForCloudFront(mediaKey);
   }
