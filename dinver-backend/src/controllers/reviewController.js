@@ -88,11 +88,8 @@ const createReview = async (req, res) => {
         files.map((file) => uploadToS3(file, folder)),
       );
 
-      // Generate CloudFront URLs for images
-      const imageUrls = imageKeys.map((key) => ({
-        key,
-        url: getMediaUrl(key, 'image'),
-      }));
+      // Generate CloudFront URLs for images - store only URLs
+      const imageUrls = imageKeys.map((key) => getMediaUrl(key, 'image'));
 
       await review.update({ photos: imageUrls });
     }
@@ -261,22 +258,12 @@ const updateReview = async (req, res) => {
         files.map((file) => uploadToS3(file, folder)),
       );
 
-      // Generate CloudFront URLs for images
-      const newImageUrls = imageKeys.map((key) => ({
-        key,
-        url: getMediaUrl(key, 'image'),
-      }));
+      // Generate CloudFront URLs for images - store only URLs
+      const newImageUrls = imageKeys.map((key) => getMediaUrl(key, 'image'));
 
       // Combine existing and new photos
       const existingPhotos = review.photos || [];
-      const updatedPhotos = [
-        ...existingPhotos.map((photo) =>
-          typeof photo === 'string'
-            ? { key: photo, url: getMediaUrl(photo, 'image') }
-            : photo,
-        ),
-        ...newImageUrls,
-      ];
+      const updatedPhotos = [...existingPhotos, ...newImageUrls];
 
       // Award points for adding new photos if none existed before
       // if (existingPhotos.length === 0) {
