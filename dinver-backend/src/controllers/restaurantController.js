@@ -364,10 +364,9 @@ const getRestaurantDetails = async (req, res) => {
 
     // Transformiramo keys u URL-ove za galeriju slika
     if (restaurantData.images && Array.isArray(restaurantData.images)) {
-      restaurantData.images = restaurantData.images.map((imageKey) => ({
-        key: imageKey,
-        url: getMediaUrl(imageKey, 'image'),
-      }));
+      restaurantData.images = restaurantData.images.map((imageKey) =>
+        getMediaUrl(imageKey, 'image'),
+      );
     }
 
     // Only include WiFi data if it's allowed and requested
@@ -578,10 +577,9 @@ async function updateRestaurant(req, res) {
 
     // Transformiramo galeriju slika za response
     if (responseData.images) {
-      responseData.images = responseData.images.map((imageKey) => ({
-        key: imageKey,
-        url: getMediaUrl(imageKey, 'image'),
-      }));
+      responseData.images = responseData.images.map((imageKey) =>
+        getMediaUrl(imageKey, 'image'),
+      );
     }
 
     res.json(responseData);
@@ -877,10 +875,9 @@ const addRestaurantImages = async (req, res) => {
     await restaurant.update({ images: updatedImageKeys });
 
     // Za response generiramo URL-ove
-    const responseImages = updatedImageKeys.map((key) => ({
-      key,
-      url: getMediaUrl(key, 'image'),
-    }));
+    const responseImages = updatedImageKeys.map((key) =>
+      getMediaUrl(key, 'image'),
+    );
 
     await logAudit({
       userId: req.user ? req.user.id : null,
@@ -911,25 +908,29 @@ const deleteRestaurantImage = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    if (!restaurant.images || !restaurant.images.includes(imageUrl)) {
+    // Iz punog URL-a izvuci key
+    const imageKey = restaurant.images.find(
+      (key) => getMediaUrl(key, 'image') === imageUrl,
+    );
+    if (!imageKey) {
       return res.status(400).json({ error: 'Image not found in restaurant' });
     }
 
-    // Extract the key from the full URL
-    const key = imageUrl.split('/').pop();
-    await deleteFromS3(`restaurant_images/${restaurant.slug}/${key}`);
+    // Brišemo sliku iz S3
+    await deleteFromS3(
+      `restaurant_images/${restaurant.slug}/${imageKey.split('/').pop()}`,
+    );
 
-    // Remove the image from the restaurant's images array
+    // Uklanjamo key iz liste slika
     const updatedImageKeys = restaurant.images.filter(
-      (img) => img !== imageUrl,
+      (key) => key !== imageKey,
     );
     await restaurant.update({ images: updatedImageKeys });
 
-    // Transform keys to objects with CloudFront URLs for response
-    const responseImages = updatedImageKeys.map((key) => ({
-      key,
-      url: getMediaUrl(key, 'image'),
-    }));
+    // Za response generiramo URL-ove
+    const responseImages = updatedImageKeys.map((key) =>
+      getMediaUrl(key, 'image'),
+    );
 
     // Log the delete image action
     await logAudit({
@@ -938,7 +939,7 @@ const deleteRestaurantImage = async (req, res) => {
       entity: Entities.IMAGES,
       entityId: restaurant.id,
       restaurantId: restaurant.id,
-      changes: { old: imageUrl },
+      changes: { old: imageKey },
     });
 
     res.json({
@@ -1976,10 +1977,9 @@ const getFullRestaurantDetails = async (req, res) => {
 
     // Transformiramo keys u URL-ove za galeriju slika
     if (restaurantData.images && Array.isArray(restaurantData.images)) {
-      restaurantData.images = restaurantData.images.map((imageKey) => ({
-        key: imageKey,
-        url: getMediaUrl(imageKey, 'image'),
-      }));
+      restaurantData.images = restaurantData.images.map((imageKey) =>
+        getMediaUrl(imageKey, 'image'),
+      );
     }
 
     // Only include WiFi data if it's allowed and requested
@@ -2100,7 +2100,9 @@ const getRestaurantMenu = async (req, res) => {
               item.translations.find((t) => t.language === 'hr')?.description ||
               '',
             price: parseFloat(item.price).toFixed(2),
-            imageUrl: item.imageUrl,
+            imageUrl: item.imageUrl
+              ? getMediaUrl(item.imageUrl, 'image')
+              : null,
             allergens: item.allergens || [],
           })),
       })),
@@ -2121,7 +2123,7 @@ const getRestaurantMenu = async (req, res) => {
             item.translations.find((t) => t.language === 'hr')?.description ||
             '',
           price: parseFloat(item.price).toFixed(2),
-          imageUrl: item.imageUrl,
+          imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
           allergens: item.allergens || [],
         })),
     };
@@ -2152,7 +2154,9 @@ const getRestaurantMenu = async (req, res) => {
               item.translations.find((t) => t.language === 'hr')?.description ||
               '',
             price: parseFloat(item.price).toFixed(2),
-            imageUrl: item.imageUrl,
+            imageUrl: item.imageUrl
+              ? getMediaUrl(item.imageUrl, 'image')
+              : null,
           })),
       })),
       uncategorized: drinkItems
@@ -2172,7 +2176,7 @@ const getRestaurantMenu = async (req, res) => {
             item.translations.find((t) => t.language === 'hr')?.description ||
             '',
           price: parseFloat(item.price).toFixed(2),
-          imageUrl: item.imageUrl,
+          imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
         })),
     };
 
