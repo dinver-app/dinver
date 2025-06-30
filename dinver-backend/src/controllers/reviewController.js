@@ -140,10 +140,9 @@ const createReview = async (req, res) => {
     // Transform image keys to URLs for response
     const responseData = reviewWithDetails.toJSON();
     if (responseData.photos && Array.isArray(responseData.photos)) {
-      responseData.photos = responseData.photos.map((photoKey) => ({
-        key: photoKey,
-        url: getMediaUrl(photoKey, 'image'),
-      }));
+      responseData.photos = responseData.photos.map((photoKey) =>
+        getMediaUrl(photoKey, 'image'),
+      );
     }
 
     res.status(201).json(responseData);
@@ -243,10 +242,9 @@ const getRestaurantReviews = async (req, res) => {
       const reviewData = review.toJSON();
       // Transform photo keys to URLs
       if (reviewData.photos && Array.isArray(reviewData.photos)) {
-        reviewData.photos = reviewData.photos.map((photoKey) => ({
-          key: photoKey,
-          url: getMediaUrl(photoKey, 'image'),
-        }));
+        reviewData.photos = reviewData.photos.map((photoKey) =>
+          getMediaUrl(photoKey, 'image'),
+        );
       }
       return {
         ...reviewData,
@@ -359,10 +357,9 @@ const updateReview = async (req, res) => {
 
     const responseData = updatedReview.toJSON();
     if (responseData.photos && Array.isArray(responseData.photos)) {
-      responseData.photos = responseData.photos.map((photoKey) => ({
-        key: photoKey,
-        url: getMediaUrl(photoKey, 'image'),
-      }));
+      responseData.photos = responseData.photos.map((photoKey) =>
+        getMediaUrl(photoKey, 'image'),
+      );
     }
 
     res.json(responseData);
