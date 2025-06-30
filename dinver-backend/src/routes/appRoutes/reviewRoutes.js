@@ -8,6 +8,14 @@ const upload = require('../../../utils/uploadMiddleware');
 
 const router = express.Router();
 
+// Provjeri može li korisnik napraviti recenziju
+router.get(
+  '/restaurants/:restaurantId/can-review',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  reviewController.canReview,
+);
+
 // Dohvati recenzije korisnika
 router.get(
   '/reviews',
