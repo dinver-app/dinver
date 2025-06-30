@@ -16,6 +16,14 @@ router.get(
   reviewController.canReview,
 );
 
+// Provjeri može li korisnik editirati recenziju
+router.get(
+  '/reviews/:reviewId/can-edit',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  reviewController.canEdit,
+);
+
 // Dohvati recenzije korisnika
 router.get(
   '/reviews',

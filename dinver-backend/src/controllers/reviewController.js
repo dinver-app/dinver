@@ -266,6 +266,84 @@ const getRestaurantReviews = async (req, res) => {
   }
 };
 
+// Helper function to check if user can edit review
+const checkUserCanEdit = async (userId, reviewId) => {
+  // Check if user is banned
+  const user = await User.findByPk(userId);
+  if (user.banned) {
+    return {
+      canEdit: false,
+      error: 'user_banned',
+    };
+  }
+
+  // Find the review
+  const review = await Review.findOne({
+    where: {
+      id: reviewId,
+      userId: userId,
+      isHidden: false,
+    },
+  });
+
+  if (!review) {
+    return {
+      canEdit: false,
+      error: 'review_not_found',
+    };
+  }
+
+  // Check edit window
+  const editWindowEnd = new Date(review.createdAt);
+  editWindowEnd.setDate(editWindowEnd.getDate() + EDIT_WINDOW_DAYS);
+
+  if (new Date() > editWindowEnd) {
+    return {
+      canEdit: false,
+      error: 'edit_window_expired',
+      metadata: {
+        editWindowDays: EDIT_WINDOW_DAYS,
+        editWindowEnds: editWindowEnd,
+      },
+    };
+  }
+
+  // Check edit count
+  if (review.editCount >= MAX_EDITS) {
+    return {
+      canEdit: false,
+      error: 'max_edits_reached',
+      metadata: {
+        maxEdits: MAX_EDITS,
+        currentEdits: review.editCount,
+      },
+    };
+  }
+
+  return {
+    canEdit: true,
+    metadata: {
+      editWindowEnds: editWindowEnd,
+      editsRemaining: MAX_EDITS - review.editCount,
+    },
+  };
+};
+
+// New endpoint to check if user can edit
+const canEdit = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user.id;
+
+    const result = await checkUserCanEdit(userId, reviewId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking edit ability:', error);
+    res.status(500).json({ error: 'server_error' });
+  }
+};
+
+// Modify updateReview to use the new helper
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -273,12 +351,10 @@ const updateReview = async (req, res) => {
     const files = req.files;
     const userId = req.user.id;
 
-    // Check if user is banned
-    const user = await User.findByPk(userId);
-    if (user.banned) {
-      return res.status(403).json({
-        error: 'user_banned',
-      });
+    // Check if user can edit
+    const canEditCheck = await checkUserCanEdit(userId, id);
+    if (!canEditCheck.canEdit) {
+      return res.status(403).json(canEditCheck);
     }
 
     const review = await Review.findOne({
@@ -288,29 +364,6 @@ const updateReview = async (req, res) => {
         isHidden: false,
       },
     });
-
-    if (!review) {
-      return res.status(404).json({ error: 'review_not_found' });
-    }
-
-    // Check edit window
-    const editWindowEnd = new Date(review.createdAt);
-    editWindowEnd.setDate(editWindowEnd.getDate() + EDIT_WINDOW_DAYS);
-
-    if (new Date() > editWindowEnd) {
-      return res.status(403).json({
-        error: 'edit_window_expired',
-        metadata: { editWindowDays: EDIT_WINDOW_DAYS },
-      });
-    }
-
-    // Check edit count
-    if (review.editCount >= MAX_EDITS) {
-      return res.status(403).json({
-        error: 'max_edits_reached',
-        metadata: { maxEdits: MAX_EDITS },
-      });
-    }
 
     // Handle new photo uploads
     if (files && files.length > 0) {
@@ -451,4 +504,5 @@ module.exports = {
   deleteReview,
   getRestaurantReviews,
   canReview,
+  canEdit,
 };
