@@ -202,13 +202,30 @@ module.exports = (sequelize, DataTypes) => {
       threadActive: {
         type: DataTypes.VIRTUAL,
         get() {
-          return this.isThreadActive();
+          // Izbjegavamo rekurziju tako što ne koristimo instance metode
+          if (this.status === 'completed' || this.status === 'no_show') {
+            const THREAD_EXPIRY_HOURS = 24;
+            const expiryTime = new Date(this.updatedAt);
+            expiryTime.setHours(expiryTime.getHours() + THREAD_EXPIRY_HOURS);
+            return new Date() < expiryTime;
+          }
+          const reservationDateTime = new Date(this.date + 'T' + this.time);
+          return reservationDateTime >= new Date();
         },
       },
       canSendMessages: {
         type: DataTypes.VIRTUAL,
         get() {
-          return this.canSendMessages();
+          // Izbjegavamo rekurziju tako što ne koristimo instance metode
+          if (!this.threadActive) {
+            return false;
+          }
+          const cancelledStatuses = [
+            'cancelled_by_user',
+            'cancelled_by_restaurant',
+            'declined',
+          ];
+          return !cancelledStatuses.includes(this.status);
         },
       },
     },
