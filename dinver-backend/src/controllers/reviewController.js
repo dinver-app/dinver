@@ -10,6 +10,67 @@ const EDIT_WINDOW_DAYS = 7;
 const MAX_EDITS = 1;
 const REVIEW_COOLDOWN_MONTHS = 6;
 
+// Helper function to check if user can review
+const checkUserCanReview = async (userId, restaurantId) => {
+  // Check if user is banned
+  const user = await User.findByPk(userId);
+  if (user.banned) {
+    return {
+      canReview: false,
+      error: 'user_banned',
+      metadata: { cooldownMonths: REVIEW_COOLDOWN_MONTHS },
+    };
+  }
+
+  // Validate if restaurant exists
+  const restaurant = await Restaurant.findByPk(restaurantId);
+  if (!restaurant) {
+    return {
+      canReview: false,
+      error: 'restaurant_not_found',
+    };
+  }
+
+  // Check if user has reviewed this restaurant in the last 6 months
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - REVIEW_COOLDOWN_MONTHS);
+
+  const existingReview = await Review.findOne({
+    where: {
+      userId: userId,
+      restaurantId: restaurantId,
+      isHidden: false,
+      createdAt: {
+        [Op.gte]: sixMonthsAgo,
+      },
+    },
+  });
+
+  if (existingReview) {
+    return {
+      canReview: false,
+      error: 'review_cooldown',
+      metadata: { cooldownMonths: REVIEW_COOLDOWN_MONTHS },
+    };
+  }
+
+  return { canReview: true };
+};
+
+// New endpoint to check if user can review
+const canReview = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const userId = req.user.id;
+
+    const result = await checkUserCanReview(userId, restaurantId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking review ability:', error);
+    res.status(500).json({ error: 'server_error' });
+  }
+};
+
 const createReview = async (req, res) => {
   try {
     const {
@@ -24,39 +85,10 @@ const createReview = async (req, res) => {
     const files = req.files;
     const userId = req.user.id;
 
-    // Check if user is banned
-    const user = await User.findByPk(userId);
-    if (user.banned) {
-      return res.status(403).json({
-        error: 'Your account has been banned. You cannot create new reviews.',
-      });
-    }
-
-    // Validate if restaurant exists
-    const restaurant = await Restaurant.findByPk(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    // Check if user has reviewed this restaurant in the last 6 months
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - REVIEW_COOLDOWN_MONTHS);
-
-    const existingReview = await Review.findOne({
-      where: {
-        userId: userId,
-        restaurantId: restaurantId,
-        isHidden: false,
-        createdAt: {
-          [Op.gte]: sixMonthsAgo,
-        },
-      },
-    });
-
-    if (existingReview) {
-      return res.status(400).json({
-        error: `You can review this restaurant again after ${REVIEW_COOLDOWN_MONTHS} months from your last review`,
-      });
+    // Check if user can review
+    const canReviewCheck = await checkUserCanReview(userId, restaurantId);
+    if (!canReviewCheck.canReview) {
+      return res.status(403).json(canReviewCheck);
     }
 
     // Create the review
@@ -88,16 +120,13 @@ const createReview = async (req, res) => {
         files.map((file) => uploadToS3(file, folder)),
       );
 
-      // Generate CloudFront URLs for images - store only URLs
-      const imageUrls = imageKeys.map((key) => getMediaUrl(key, 'image'));
-
-      await review.update({ photos: imageUrls });
+      await review.update({ photos: imageKeys });
     }
 
     // Update restaurant's average rating
     await calculateAverageRating(restaurantId);
 
-    // Return the created review with user details
+    // Return the created review with user details and transformed image URLs
     const reviewWithDetails = await Review.findByPk(review.id, {
       include: [
         {
@@ -108,13 +137,24 @@ const createReview = async (req, res) => {
       ],
     });
 
-    res.status(201).json(reviewWithDetails);
+    // Transform image keys to URLs for response
+    const responseData = reviewWithDetails.toJSON();
+    if (responseData.photos && Array.isArray(responseData.photos)) {
+      responseData.photos = responseData.photos.map((photoKey) => ({
+        key: photoKey,
+        url: getMediaUrl(photoKey, 'image'),
+      }));
+    }
+
+    res.status(201).json(responseData);
   } catch (error) {
     console.error('Error creating review:', error);
     if (error instanceof ValidationError) {
-      return res.status(400).json({ error: error.message });
+      return res
+        .status(400)
+        .json({ error: 'validation_error', details: error.message });
     }
-    res.status(500).json({ error: 'Failed to create review' });
+    res.status(500).json({ error: 'server_error' });
   }
 };
 
@@ -187,12 +227,22 @@ const getRestaurantReviews = async (req, res) => {
       offset,
     });
 
-    // Add virtual fields to each review
-    const reviewsWithMeta = reviews.map((review) => ({
-      ...review.toJSON(),
-      isEdited: review.lastEditedAt !== null,
-      canEdit: userId === review.userId ? review.canEdit : false,
-    }));
+    // Add virtual fields to each review and transform photos
+    const reviewsWithMeta = reviews.map((review) => {
+      const reviewData = review.toJSON();
+      // Transform photo keys to URLs
+      if (reviewData.photos && Array.isArray(reviewData.photos)) {
+        reviewData.photos = reviewData.photos.map((photoKey) => ({
+          key: photoKey,
+          url: getMediaUrl(photoKey, 'image'),
+        }));
+      }
+      return {
+        ...reviewData,
+        isEdited: review.lastEditedAt !== null,
+        canEdit: userId === review.userId ? review.canEdit : false,
+      };
+    });
 
     const totalPages = Math.ceil(count / limit);
 
@@ -218,7 +268,7 @@ const updateReview = async (req, res) => {
     const user = await User.findByPk(userId);
     if (user.banned) {
       return res.status(403).json({
-        error: 'Your account has been banned. You cannot update reviews.',
+        error: 'user_banned',
       });
     }
 
@@ -231,7 +281,7 @@ const updateReview = async (req, res) => {
     });
 
     if (!review) {
-      return res.status(404).json({ error: 'Review not found' });
+      return res.status(404).json({ error: 'review_not_found' });
     }
 
     // Check edit window
@@ -240,37 +290,30 @@ const updateReview = async (req, res) => {
 
     if (new Date() > editWindowEnd) {
       return res.status(403).json({
-        error: `Reviews can only be edited within ${EDIT_WINDOW_DAYS} days of creation`,
+        error: 'edit_window_expired',
+        metadata: { editWindowDays: EDIT_WINDOW_DAYS },
       });
     }
 
     // Check edit count
     if (review.editCount >= MAX_EDITS) {
       return res.status(403).json({
-        error: `Reviews can only be edited ${MAX_EDITS} time`,
+        error: 'max_edits_reached',
+        metadata: { maxEdits: MAX_EDITS },
       });
     }
 
     // Handle new photo uploads
     if (files && files.length > 0) {
       const folder = `review_images/${review.id}`;
-      const imageKeys = await Promise.all(
+      const newImageKeys = await Promise.all(
         files.map((file) => uploadToS3(file, folder)),
       );
 
-      // Generate CloudFront URLs for images - store only URLs
-      const newImageUrls = imageKeys.map((key) => getMediaUrl(key, 'image'));
+      const existingPhotoKeys = review.photos || [];
+      const updatedPhotoKeys = [...existingPhotoKeys, ...newImageKeys];
 
-      // Combine existing and new photos
-      const existingPhotos = review.photos || [];
-      const updatedPhotos = [...existingPhotos, ...newImageUrls];
-
-      // Award points for adding new photos if none existed before
-      // if (existingPhotos.length === 0) {
-      //   await PointsService.addReviewPoints(userId, review.id, null, true);
-      // }
-
-      await review.update({ photos: updatedPhotos });
+      await review.update({ photos: updatedPhotoKeys });
     }
 
     // Update review content and ratings
@@ -284,7 +327,6 @@ const updateReview = async (req, res) => {
       editCount: review.editCount + 1,
     });
 
-    // Update restaurant's average rating if any rating changed
     if (
       rating !== review.rating ||
       foodQuality !== review.foodQuality ||
@@ -294,7 +336,6 @@ const updateReview = async (req, res) => {
       await calculateAverageRating(review.restaurantId);
     }
 
-    // Return updated review with user details
     const updatedReview = await Review.findByPk(review.id, {
       include: [
         {
@@ -305,13 +346,23 @@ const updateReview = async (req, res) => {
       ],
     });
 
-    res.json(updatedReview);
+    const responseData = updatedReview.toJSON();
+    if (responseData.photos && Array.isArray(responseData.photos)) {
+      responseData.photos = responseData.photos.map((photoKey) => ({
+        key: photoKey,
+        url: getMediaUrl(photoKey, 'image'),
+      }));
+    }
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error updating review:', error);
     if (error instanceof ValidationError) {
-      return res.status(400).json({ error: error.message });
+      return res
+        .status(400)
+        .json({ error: 'validation_error', details: error.message });
     }
-    res.status(500).json({ error: 'Failed to update review' });
+    res.status(500).json({ error: 'server_error' });
   }
 };
 
@@ -391,4 +442,5 @@ module.exports = {
   updateReview,
   deleteReview,
   getRestaurantReviews,
+  canReview,
 };

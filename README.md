@@ -1,5 +1,9 @@
 # dinver-app
 
+## Logs
+
+heroku logs --app dinver-backend --tail
+
 ## Kreiranje novog entiteta i migriranje baze
 
 1. **Kreiraj model:**

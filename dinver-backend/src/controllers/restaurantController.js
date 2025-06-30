@@ -297,7 +297,7 @@ const getRestaurants = async (req, res) => {
 const getRestaurantDetails = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { includeWifi } = req.query; // New parameter for QR menu access
+    const { includeWifi } = req.query;
 
     const restaurant = await Restaurant.findOne({
       where: { slug },
@@ -351,13 +351,31 @@ const getRestaurantDetails = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Only include WiFi data if it's allowed and requested
+    // Transformiramo podatke za response
     const restaurantData = restaurant.get();
-    // if (!includeWifi || !restaurantData.showWifiCredentials) {
-    //   delete restaurantData.wifiSsid;
-    //   delete restaurantData.wifiPassword;
-    //   delete restaurantData.showWifiCredentials;
-    // }
+
+    // Dodajemo URL za thumbnail ako postoji key
+    if (restaurantData.thumbnailUrl) {
+      restaurantData.thumbnailUrl = getMediaUrl(
+        restaurantData.thumbnailUrl,
+        'image',
+      );
+    }
+
+    // Transformiramo keys u URL-ove za galeriju slika
+    if (restaurantData.images && Array.isArray(restaurantData.images)) {
+      restaurantData.images = restaurantData.images.map((imageKey) => ({
+        key: imageKey,
+        url: getMediaUrl(imageKey, 'image'),
+      }));
+    }
+
+    // Only include WiFi data if it's allowed and requested
+    if (!includeWifi || !restaurantData.showWifiCredentials) {
+      delete restaurantData.wifiSsid;
+      delete restaurantData.wifiPassword;
+      delete restaurantData.showWifiCredentials;
+    }
 
     res.json(restaurantData);
   } catch (error) {
@@ -505,16 +523,15 @@ async function updateRestaurant(req, res) {
     const oldData = { ...restaurant.get() };
 
     let thumbnailKey = restaurant.thumbnailUrl;
-    let thumbnailUrl = thumbnailKey ? getMediaUrl(thumbnailKey, 'image') : null;
 
     if (req.file) {
-      if (restaurant.thumbnailUrl) {
-        const oldKey = restaurant.thumbnailUrl.split('/').pop();
+      // Ako postoji stari thumbnail, brišemo ga
+      if (thumbnailKey) {
+        const oldKey = thumbnailKey.split('/').pop();
         await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
       }
-      const folder = 'restaurant_thumbnails';
-      thumbnailKey = await uploadToS3(req.file, folder);
-      thumbnailUrl = getMediaUrl(thumbnailKey, 'image');
+      // Spremamo novi key
+      thumbnailKey = await uploadToS3(req.file, 'restaurant_thumbnails');
     }
 
     // Update restaurant data
@@ -529,7 +546,7 @@ async function updateRestaurant(req, res) {
       ttUrl,
       email,
       description,
-      thumbnailUrl: thumbnailKey, // Spremamo key u bazu
+      thumbnailUrl: thumbnailKey, // Spremamo samo key
       priceCategoryId,
       wifiSsid,
       wifiPassword,
@@ -550,18 +567,21 @@ async function updateRestaurant(req, res) {
       changes: { old: oldData, new: restaurant.get() },
     });
 
-    // Remove sensitive data and add CDN URL for response
+    // Za response dodajemo URL
     const responseData = restaurant.get();
-    delete responseData.wifiPassword;
-    responseData.thumbnailUrl = thumbnailUrl; // Vraćamo CDN URL u responsu
-
-    // Ako postoje slike u galeriji, generiraj CDN URL-ove
-    if (responseData.images) {
-      responseData.images = responseData.images.map((img) =>
-        typeof img === 'string'
-          ? { key: img, url: getMediaUrl(img, 'image') }
-          : img,
+    if (responseData.thumbnailUrl) {
+      responseData.thumbnailUrl = getMediaUrl(
+        responseData.thumbnailUrl,
+        'image',
       );
+    }
+
+    // Transformiramo galeriju slika za response
+    if (responseData.images) {
+      responseData.images = responseData.images.map((imageKey) => ({
+        key: imageKey,
+        url: getMediaUrl(imageKey, 'image'),
+      }));
     }
 
     res.json(responseData);
@@ -816,7 +836,7 @@ async function updateFilters(req, res) {
   }
 }
 
-async function addRestaurantImages(req, res) {
+const addRestaurantImages = async (req, res) => {
   try {
     const { id } = req.params;
     const { restaurantSlug } = req.body;
@@ -832,43 +852,54 @@ async function addRestaurantImages(req, res) {
     }
 
     const folder = `restaurant_images/${restaurantSlug}`;
+    // Spremamo samo keys
     const imageKeys = await Promise.all(
       files.map((file) => uploadToS3(file, folder)),
     );
 
-    // Generiraj CloudFront URL-ove za slike
-    const imageUrls = imageKeys.map((key) => ({
-      key,
-      url: getMediaUrl(key, 'image'),
-    }));
-
+    // Trenutno spremaš i key i URL, što nije potrebno
     const updatedImages = [
       ...(restaurant.images || []).map((img) =>
         typeof img === 'string'
           ? { key: img, url: getMediaUrl(img, 'image') }
           : img,
       ),
-      ...imageUrls,
+      ...imageKeys.map((key) => ({
+        key,
+        url: getMediaUrl(key, 'image'),
+      })),
     ];
 
-    await restaurant.update({ images: updatedImages });
+    // ISPRAVAK: Trebamo spremiti samo keys
+    const updatedImageKeys = [...(restaurant.images || []), ...imageKeys];
 
-    // Log the add images action
+    // Spremamo samo keys u bazu
+    await restaurant.update({ images: updatedImageKeys });
+
+    // Za response generiramo URL-ove
+    const responseImages = updatedImageKeys.map((key) => ({
+      key,
+      url: getMediaUrl(key, 'image'),
+    }));
+
     await logAudit({
       userId: req.user ? req.user.id : null,
       action: ActionTypes.CREATE,
       entity: Entities.IMAGES,
       entityId: restaurant.id,
       restaurantId: restaurant.id,
-      changes: { new: imageUrls },
+      changes: { new: imageKeys },
     });
 
-    res.json({ message: 'Images added successfully', images: updatedImages });
+    res.json({
+      message: 'Images added successfully',
+      images: responseImages,
+    });
   } catch (error) {
     console.error('Error adding images:', error);
     res.status(500).json({ error: 'Failed to add images' });
   }
-}
+};
 
 const deleteRestaurantImage = async (req, res) => {
   try {
@@ -1923,6 +1954,22 @@ const getFullRestaurantDetails = async (req, res) => {
       ratings,
       customWorkingDays: filteredCustomWorkingDays,
     };
+
+    // Transformiramo thumbnail URL ako postoji key
+    if (restaurantData.thumbnailUrl) {
+      restaurantData.thumbnailUrl = getMediaUrl(
+        restaurantData.thumbnailUrl,
+        'image',
+      );
+    }
+
+    // Transformiramo keys u URL-ove za galeriju slika
+    if (restaurantData.images && Array.isArray(restaurantData.images)) {
+      restaurantData.images = restaurantData.images.map((imageKey) => ({
+        key: imageKey,
+        url: getMediaUrl(imageKey, 'image'),
+      }));
+    }
 
     // Only include WiFi data if it's allowed and requested
     if (!includeWifi || !restaurantData.showWifiCredentials) {
