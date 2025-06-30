@@ -347,7 +347,14 @@ const canEdit = async (req, res) => {
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, foodQuality, service, atmosphere, text } = req.body;
+    const {
+      rating,
+      foodQuality,
+      service,
+      atmosphere,
+      text,
+      photosToKeep = [],
+    } = req.body;
     const files = req.files;
     const userId = req.user.id;
 
@@ -365,17 +372,25 @@ const updateReview = async (req, res) => {
       },
     });
 
-    // Handle new photo uploads
+    // Handle photos
+    let updatedPhotoKeys = [];
+
+    // 1. Zadrži samo one postojeće slike čiji URL-ovi su u photosToKeep arrayu
+    if (review.photos && Array.isArray(review.photos)) {
+      updatedPhotoKeys = review.photos.filter((photoKey) => {
+        // Pretvori key u URL i provjeri je li taj URL u photosToKeep
+        const photoUrl = getMediaUrl(photoKey, 'image');
+        return photosToKeep.includes(photoUrl);
+      });
+    }
+
+    // 2. Dodaj nove slike ako ih ima
     if (files && files.length > 0) {
       const folder = `review_images/${review.id}`;
       const newImageKeys = await Promise.all(
         files.map((file) => uploadToS3(file, folder)),
       );
-
-      const existingPhotoKeys = review.photos || [];
-      const updatedPhotoKeys = [...existingPhotoKeys, ...newImageKeys];
-
-      await review.update({ photos: updatedPhotoKeys });
+      updatedPhotoKeys = [...updatedPhotoKeys, ...newImageKeys];
     }
 
     // Update review content and ratings
@@ -385,6 +400,7 @@ const updateReview = async (req, res) => {
       service: service || review.service,
       atmosphere: atmosphere || review.atmosphere,
       text: text || review.text,
+      photos: updatedPhotoKeys,
       lastEditedAt: new Date(),
       editCount: review.editCount + 1,
     });
