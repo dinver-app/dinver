@@ -920,8 +920,16 @@ const deleteRestaurantImage = async (req, res) => {
     await deleteFromS3(`restaurant_images/${restaurant.slug}/${key}`);
 
     // Remove the image from the restaurant's images array
-    const updatedImages = restaurant.images.filter((img) => img !== imageUrl);
-    await restaurant.update({ images: updatedImages });
+    const updatedImageKeys = restaurant.images.filter(
+      (img) => img !== imageUrl,
+    );
+    await restaurant.update({ images: updatedImageKeys });
+
+    // Transform keys to objects with CloudFront URLs for response
+    const responseImages = updatedImageKeys.map((key) => ({
+      key,
+      url: getMediaUrl(key, 'image'),
+    }));
 
     // Log the delete image action
     await logAudit({
@@ -933,7 +941,10 @@ const deleteRestaurantImage = async (req, res) => {
       changes: { old: imageUrl },
     });
 
-    res.json({ message: 'Image deleted successfully', images: updatedImages });
+    res.json({
+      message: 'Image deleted successfully',
+      images: responseImages,
+    });
   } catch (error) {
     console.error('Error deleting image:', error);
     res.status(500).json({ error: 'Failed to delete image' });
