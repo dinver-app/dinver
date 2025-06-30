@@ -177,7 +177,18 @@ const getUserReviews = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    res.json(reviews);
+    // Transform photo URLs
+    const transformedReviews = reviews.map((review) => {
+      const reviewData = review.toJSON();
+      if (reviewData.photos && Array.isArray(reviewData.photos)) {
+        reviewData.photos = reviewData.photos.map((photoKey) =>
+          getMediaUrl(photoKey, 'image'),
+        );
+      }
+      return reviewData;
+    });
+
+    res.json(transformedReviews);
   } catch (error) {
     console.error('Error fetching user reviews:', error);
     res.status(500).json({ error: 'Failed to fetch reviews' });
