@@ -363,28 +363,64 @@ const adminCheckAuth = async (req, res) => {
 };
 
 async function refreshToken(req, res) {
-  const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken)
+  // Get refresh token from cookie or header
+  let refreshToken = req.cookies.refreshToken;
+  if (!refreshToken && req.headers['x-refresh-token']) {
+    refreshToken = req.headers['x-refresh-token'];
+  }
+
+  if (!refreshToken) {
     return res.status(401).json({ error: 'Refresh token required' });
+  }
 
   try {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const user = await User.findByPk(decoded.id);
 
-    if (!user) return res.status(403).json({ error: 'Invalid refresh token' });
+    if (!user) {
+      return res.status(403).json({ error: 'Invalid refresh token' });
+    }
 
-    const { accessToken, newRefreshToken } = generateTokens(user);
-    res.cookie('sysadminRefreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: true,
-    });
-    res.cookie('sysadminAccessToken', accessToken, {
-      httpOnly: true,
-      secure: true,
-    });
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
 
-    res.json({ accessToken });
+    // Za web aplikaciju
+    if (req.headers['user-agent']?.includes('Mozilla')) {
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
+      });
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+    } else {
+      // Za mobile aplikaciju
+      res.setHeader('X-Access-Token', accessToken);
+      res.setHeader('X-Refresh-Token', newRefreshToken);
+    }
+
+    // Filtriraj korisničke podatke
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      language: user.language,
+      banned: user.banned,
+    };
+
+    res.json({
+      message: 'Tokens refreshed successfully',
+      user: userData,
+      token: accessToken,
+      refreshToken: newRefreshToken,
+    });
   } catch (error) {
+    console.error('Error refreshing token:', error);
     res.status(403).json({ error: 'Invalid refresh token' });
   }
 }
