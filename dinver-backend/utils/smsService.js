@@ -68,6 +68,12 @@ const sendReservationSMS = async ({ to, type, reservation }) => {
     case 'cancellation':
       message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana.`;
       break;
+    case 'cancellation_by_restaurant':
+      message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana od strane restorana.`;
+      if (reservation.cancellationReason) {
+        message += ` Razlog: ${reservation.cancellationReason}`;
+      }
+      break;
     default:
       throw new Error('Invalid SMS type');
   }

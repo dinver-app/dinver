@@ -299,6 +299,30 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
       `;
       break;
 
+    case 'cancellation_by_restaurant':
+      subject = 'Rezervacija otkazana od strane restorana';
+      text =
+        `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana od strane restorana.\n` +
+        (reservation.cancellationReason
+          ? `\nRazlog: ${reservation.cancellationReason}`
+          : '');
+
+      htmlContent = `
+        <h2>Rezervacija otkazana od strane restorana</h2>
+        <p>Vaša rezervacija u restoranu <strong>"${reservation.restaurant.name}"</strong> za ${formattedDate} u ${formattedTime} je otkazana od strane restorana.</p>
+        ${
+          reservation.cancellationReason
+            ? `
+        <div class="reservation-details">
+          <p><strong>Razlog:</strong> ${reservation.cancellationReason}</p>
+        </div>
+        `
+            : ''
+        }
+        <p>Pozivamo Vas da pokušate rezervirati drugi termin ili drugi restoran putem Dinver platforme.</p>
+      `;
+      break;
+
     default:
       throw new Error('Invalid email type');
   }
