@@ -15,6 +15,8 @@ router.get('/auth/logout', authController.logout);
 
 router.get('/auth/check-auth', authController.checkAuth);
 
+router.post('/auth/refresh', appApiKeyAuth, authController.refreshToken);
+
 router.post('/auth/social-login', authController.socialLogin);
 
 // Verifikacijske rute
