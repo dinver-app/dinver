@@ -1,4 +1,10 @@
-const { Review, Restaurant, User, UserPointsHistory } = require('../../models');
+const {
+  Review,
+  Restaurant,
+  User,
+  UserPointsHistory,
+  UserAchievement,
+} = require('../../models');
 const { handleError } = require('../../utils/errorHandler');
 const { ValidationError, Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
@@ -71,6 +77,18 @@ const canReview = async (req, res) => {
   }
 };
 
+// Helper function to check if a review is high quality
+const isHighQualityReview = (review, hasPhotos) => {
+  return (
+    review.text.length > 100 && // Long text
+    hasPhotos && // Has photos
+    review.rating >= 3 && // Good rating
+    review.foodQuality >= 3 && // Good food quality
+    review.service >= 3 && // Good service
+    review.atmosphere >= 3 // Good atmosphere
+  );
+};
+
 const createReview = async (req, res) => {
   try {
     const {
@@ -124,6 +142,15 @@ const createReview = async (req, res) => {
       );
 
       await review.update({ photos: imageKeys });
+
+      // Check if this is a high-quality review and track achievement
+      if (isHighQualityReview(review, true)) {
+        await UserAchievement.trackProgress(
+          userId,
+          'ELITE_REVIEWER',
+          review.id, // Use review ID as tag
+        );
+      }
     }
 
     // Update restaurant's average rating
@@ -378,16 +405,15 @@ const updateReview = async (req, res) => {
     // Handle photos
     let updatedPhotoKeys = [];
 
-    // 1. Zadrži samo one postojeće slike čiji URL-ovi su u photosToKeep arrayu
+    // 1. Keep only existing photos that are in photosToKeep array
     if (review.photos && Array.isArray(review.photos)) {
       updatedPhotoKeys = review.photos.filter((photoKey) => {
-        // Pretvori key u URL i provjeri je li taj URL u photosToKeep
         const photoUrl = getMediaUrl(photoKey, 'image');
         return photosToKeep.includes(photoUrl);
       });
     }
 
-    // 2. Dodaj nove slike ako ih ima
+    // 2. Add new photos if any
     if (files && files.length > 0) {
       const folder = `review_images/${review.id}`;
       const newImageKeys = await Promise.all(
@@ -408,6 +434,16 @@ const updateReview = async (req, res) => {
       editCount: review.editCount + 1,
     });
 
+    // Check if the review has become high quality after the update
+    const updatedReview = await Review.findByPk(review.id);
+    if (isHighQualityReview(updatedReview, updatedPhotoKeys.length > 0)) {
+      await UserAchievement.trackProgress(
+        userId,
+        'ELITE_REVIEWER',
+        review.id, // Use review ID as tag
+      );
+    }
+
     if (
       rating !== review.rating ||
       foodQuality !== review.foodQuality ||
@@ -417,7 +453,7 @@ const updateReview = async (req, res) => {
       await calculateAverageRating(review.restaurantId);
     }
 
-    const updatedReview = await Review.findByPk(review.id, {
+    const updatedReviewWithDetails = await Review.findByPk(review.id, {
       include: [
         {
           model: User,
@@ -427,7 +463,7 @@ const updateReview = async (req, res) => {
       ],
     });
 
-    const responseData = updatedReview.toJSON();
+    const responseData = updatedReviewWithDetails.toJSON();
     if (responseData.photos && Array.isArray(responseData.photos)) {
       responseData.photos = responseData.photos.map((photoKey) =>
         getMediaUrl(photoKey, 'image'),

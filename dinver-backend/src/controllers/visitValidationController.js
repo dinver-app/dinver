@@ -1,7 +1,16 @@
-const { VisitValidation, Restaurant, Reservation } = require('../../models');
+const {
+  VisitValidation,
+  Restaurant,
+  Reservation,
+  UserRestaurantVisit,
+  UserAchievement,
+} = require('../../models');
 const jwt = require('jsonwebtoken');
 const PointsService = require('../../utils/pointsService');
-const { updateReliableGuestProgress } = require('./achievementController');
+const {
+  updateReliableGuestProgress,
+  updateFoodExplorerProgress,
+} = require('./achievementController');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { Op } = require('sequelize');
 
@@ -133,16 +142,8 @@ const validateVisit = async (req, res) => {
         updatedAt: new Date(), // Force update timestamp for thread expiry calculation
       });
 
-      // Get count of attended reservations for achievements
-      const attendedReservationsCount = await Reservation.count({
-        where: {
-          userId,
-          status: 'completed',
-        },
-      });
-
       // Update RELIABLE_GUEST achievement progress
-      await updateReliableGuestProgress(userId, attendedReservationsCount);
+      await updateReliableGuestProgress(userId, reservationId);
 
       // Send thank you email with review invitation
       await sendReservationEmail({
@@ -175,6 +176,25 @@ const validateVisit = async (req, res) => {
       reservationId: isReservationValid ? reservationId : null,
     });
 
+    // Dohvati restoran za place podatak
+    const restaurant = await Restaurant.findByPk(validation.restaurantId);
+
+    // Zabilježi posjet za FOOD_EXPLORER achievement
+    const uniqueRestaurants = await UserAchievement.trackProgress(
+      userId,
+      'FOOD_EXPLORER',
+      validation.restaurantId,
+    );
+
+    // Ako je restoran u novom gradu, zabilježi za CITY_HOPPER achievement
+    if (restaurant?.place) {
+      await UserAchievement.trackProgress(
+        userId,
+        'CITY_HOPPER',
+        restaurant.place,
+      );
+    }
+
     // Award points through PointsService
     await PointsService.addVisitPoints(
       userId,
@@ -186,6 +206,7 @@ const validateVisit = async (req, res) => {
       message: 'visit_validated',
       canLeaveReviewUntil: reviewExpiration,
       wasReservation: isReservationValid,
+      uniqueRestaurants,
     });
   } catch (error) {
     console.error('Error validating visit:', error);

@@ -1,4 +1,9 @@
-const { Achievement, UserAchievement, User } = require('../../models');
+const {
+  Achievement,
+  UserAchievement,
+  User,
+  Restaurant,
+} = require('../../models');
 const PointsService = require('../../utils/pointsService');
 
 // Dohvati sve achievemente korisnika
@@ -153,15 +158,19 @@ const updateEliteReviewerProgress = async (userId, reviewCount) => {
   await updateCategoryProgress(userId, 'ELITE_REVIEWER', reviewCount);
 };
 
-const updateReliableGuestProgress = async (
-  userId,
-  completedReservationsCount,
-) => {
-  await updateCategoryProgress(
-    userId,
-    'RELIABLE_GUEST',
-    completedReservationsCount,
-  );
+// Update RELIABLE_GUEST achievement progress
+const updateReliableGuestProgress = async (userId, reservationId) => {
+  try {
+    // Track this specific reservation
+    await UserAchievement.trackProgress(
+      userId,
+      'RELIABLE_GUEST',
+      reservationId, // Use reservation ID as tag
+    );
+  } catch (error) {
+    console.error('Error updating RELIABLE_GUEST achievement:', error);
+    throw error;
+  }
 };
 
 module.exports = {
