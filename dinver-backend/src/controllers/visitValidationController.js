@@ -2,15 +2,11 @@ const {
   VisitValidation,
   Restaurant,
   Reservation,
-  UserRestaurantVisit,
-  UserAchievement,
+  User,
+  sequelize,
 } = require('../../models');
 const jwt = require('jsonwebtoken');
-const PointsService = require('../../utils/pointsService');
-const {
-  updateReliableGuestProgress,
-  updateFoodExplorerProgress,
-} = require('./achievementController');
+const PointsService = require('../utils/pointsService');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { Op } = require('sequelize');
 
@@ -105,8 +101,14 @@ const validateVisit = async (req, res) => {
       // Get today's date at midnight for comparison
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Format date in YYYY-MM-DD format using local time
+      const todaysDate =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(today.getDate()).padStart(2, '0');
 
       reservation = await Reservation.findOne({
         where: {
@@ -114,7 +116,7 @@ const validateVisit = async (req, res) => {
           userId,
           restaurantId: decodedToken.restaurantId,
           status: 'confirmed', // Only confirmed reservations can be validated
-          date: today.toISOString().split('T')[0], // Must be today's date
+          date: todaysDate, // Must be today's date
         },
         include: [
           {
@@ -142,9 +144,6 @@ const validateVisit = async (req, res) => {
         updatedAt: new Date(), // Force update timestamp for thread expiry calculation
       });
 
-      // Update RELIABLE_GUEST achievement progress
-      await updateReliableGuestProgress(userId, reservationId);
-
       // Send thank you email with review invitation
       await sendReservationEmail({
         to: reservation.user.email,
@@ -154,14 +153,16 @@ const validateVisit = async (req, res) => {
           restaurant: reservation.restaurant,
         },
       });
-    } else if (lastVisit) {
-      // Ako nema rezervacije i bio je u zadnjih 30 dana, ne dopusti validaciju
-      const nextValidDate = new Date(lastVisit.usedAt);
-      nextValidDate.setDate(nextValidDate.getDate() + 30);
-      return res.status(400).json({
-        error: 'visit_too_soon',
-        nextValidDate: nextValidDate,
-      });
+    } else {
+      // Ako nema rezervacije, provjeri zadnji posjet u zadnjih 30 dana
+      if (lastVisit) {
+        const nextValidDate = new Date(lastVisit.usedAt);
+        nextValidDate.setDate(nextValidDate.getDate() + 30);
+        return res.status(400).json({
+          error: 'visit_too_soon',
+          nextValidDate: nextValidDate,
+        });
+      }
     }
 
     // Update validation record
@@ -176,27 +177,9 @@ const validateVisit = async (req, res) => {
       reservationId: isReservationValid ? reservationId : null,
     });
 
-    // Dohvati restoran za place podatak
-    const restaurant = await Restaurant.findByPk(validation.restaurantId);
-
-    // Zabilježi posjet za FOOD_EXPLORER achievement
-    const uniqueRestaurants = await UserAchievement.trackProgress(
-      userId,
-      'FOOD_EXPLORER',
-      validation.restaurantId,
-    );
-
-    // Ako je restoran u novom gradu, zabilježi za CITY_HOPPER achievement
-    if (restaurant?.place) {
-      await UserAchievement.trackProgress(
-        userId,
-        'CITY_HOPPER',
-        restaurant.place,
-      );
-    }
-
     // Award points through PointsService
-    await PointsService.addVisitPoints(
+    const pointsService = new PointsService(sequelize);
+    await pointsService.addVisitPoints(
       userId,
       validation.restaurantId,
       isReservationValid,
@@ -206,7 +189,6 @@ const validateVisit = async (req, res) => {
       message: 'visit_validated',
       canLeaveReviewUntil: reviewExpiration,
       wasReservation: isReservationValid,
-      uniqueRestaurants,
     });
   } catch (error) {
     console.error('Error validating visit:', error);

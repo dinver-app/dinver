@@ -4,10 +4,14 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Achievement extends Model {
     static associate(models) {
-      Achievement.belongsToMany(models.User, {
-        through: 'UserAchievements',
+      Achievement.hasMany(models.UserAchievement, {
         foreignKey: 'achievementId',
-        as: 'users',
+      });
+
+      Achievement.belongsToMany(models.User, {
+        through: models.UserAchievement,
+        foreignKey: 'achievementId',
+        otherKey: 'userId',
       });
     }
   }

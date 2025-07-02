@@ -49,6 +49,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'posts',
       });
+
+      Restaurant.hasMany(models.VisitValidation, {
+        foreignKey: 'restaurantId',
+      });
     }
   }
   Restaurant.init(

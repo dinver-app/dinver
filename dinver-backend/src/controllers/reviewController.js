@@ -2,14 +2,14 @@ const {
   Review,
   Restaurant,
   User,
-  UserPointsHistory,
   UserAchievement,
+  sequelize,
 } = require('../../models');
 const { handleError } = require('../../utils/errorHandler');
 const { ValidationError, Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { calculateAverageRating } = require('../utils/ratingUtils');
-const PointsService = require('../../utils/pointsService');
+const PointsService = require('../utils/pointsService');
 const { getMediaUrl } = require('../../config/cdn');
 
 const EDIT_WINDOW_DAYS = 7;
@@ -81,11 +81,7 @@ const canReview = async (req, res) => {
 const isHighQualityReview = (review, hasPhotos) => {
   return (
     review.text.length > 100 && // Long text
-    hasPhotos && // Has photos
-    review.rating >= 3 && // Good rating
-    review.foodQuality >= 3 && // Good food quality
-    review.service >= 3 && // Good service
-    review.atmosphere >= 3 // Good atmosphere
+    hasPhotos // Has photos
   );
 };
 
@@ -126,7 +122,8 @@ const createReview = async (req, res) => {
     const isLongReview = text && text.length > 100;
 
     // Award points through PointsService
-    await PointsService.addReviewPoints(
+    const pointsService = new PointsService(sequelize);
+    await pointsService.addReviewPoints(
       userId,
       review.id,
       restaurantId,
