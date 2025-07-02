@@ -5,13 +5,16 @@ const { Op } = require('sequelize');
 
 // Definicija bodova za različite akcije
 const POINTS_CONFIG = {
-  REVIEW_ADD: 10, // Osnovna recenzija (<120 znakova)
+  REVIEW_ADD: 10, // Osnovna recenzija
   REVIEW_LONG: 10, // Dodatni bodovi za dugu recenziju (>120 znakova)
   REVIEW_WITH_PHOTO: 10, // Dodatni bodovi za sliku
   VISIT_QR: 30, // Skeniranje QR koda u restoranu
-  RESERVATION_BONUS: 5, // Bonus za potvrđenu rezervaciju
-  EMAIL_VERIFICATION: 20, // Bodovi za verifikaciju emaila
-  PHONE_VERIFICATION: 20, // Bodovi za verifikaciju telefona
+  RESERVATION_CREATED: 5, // Kreirana rezervacija
+  RESERVATION_ATTENDED: 10, // Odrađena rezervacija
+  PROFILE_VERIFY: 20, // Verifikacija profila
+  FIRST_FAVORITE: 5, // Prvi favorit
+  NEW_CUISINE_TYPE: 5, // Nova vrsta kuhinje
+  ACHIEVEMENT_UNLOCKED: 10, // Otključano postignuće
 };
 
 // Definicija tipova akcija (mora odgovarati ENUM vrijednostima u bazi)
@@ -20,7 +23,13 @@ const ACTION_TYPES = {
   REVIEW_LONG: 'review_long',
   REVIEW_WITH_PHOTO: 'review_with_photo',
   VISIT_QR: 'visit_qr',
-  RESERVATION_BONUS: 'reservation_bonus',
+  RESERVATION_CREATED: 'reservation_created',
+  RESERVATION_ATTENDED: 'reservation_attended',
+  RESERVATION_CANCELLED: 'reservation_cancelled_by_user',
+  PROFILE_VERIFY: 'profile_verify',
+  FIRST_FAVORITE: 'first_favorite',
+  NEW_CUISINE_TYPE: 'new_cuisine_type',
+  ACHIEVEMENT_UNLOCKED: 'achievement_unlocked',
 };
 
 class PointsService {
@@ -98,35 +107,73 @@ class PointsService {
     });
   }
 
-  // Dodavanje bonus bodova za rezervaciju
-  static async addReservationBonus(userId, reservationId, restaurantId) {
-    await UserPointsHistory.logPoints({
-      userId,
-      actionType: ACTION_TYPES.RESERVATION_BONUS,
-      points: POINTS_CONFIG.RESERVATION_BONUS,
-      referenceId: reservationId,
-      restaurantId,
-      description: 'Bonus za potvrđenu rezervaciju',
-    });
-  }
+  // Dodavanje bodova za rezervaciju
+  static async addReservationPoints(userId, reservationId, restaurantId, type) {
+    const actionType =
+      type === 'created'
+        ? ACTION_TYPES.RESERVATION_CREATED
+        : ACTION_TYPES.RESERVATION_ATTENDED;
 
-  // Dodavanje bodova za verifikaciju profila
-  static async addProfileVerificationPoints(userId, type) {
-    // Using RESERVATION_BONUS as this is a valid enum value
-    const actionType = ACTION_TYPES.RESERVATION_BONUS;
+    const points =
+      type === 'created'
+        ? POINTS_CONFIG.RESERVATION_CREATED
+        : POINTS_CONFIG.RESERVATION_ATTENDED;
+
     const description =
-      type === 'email'
-        ? 'Verifikacija email adrese'
-        : 'Verifikacija telefonskog broja';
+      type === 'created' ? 'Kreirana nova rezervacija' : 'Odrađena rezervacija';
 
     await UserPointsHistory.logPoints({
       userId,
       actionType,
-      points:
-        type === 'email'
-          ? POINTS_CONFIG.EMAIL_VERIFICATION
-          : POINTS_CONFIG.PHONE_VERIFICATION,
+      points,
+      referenceId: reservationId,
+      restaurantId,
       description,
+    });
+  }
+
+  // Dodavanje bodova za verifikaciju profila
+  static async addProfileVerificationPoints(userId) {
+    await UserPointsHistory.logPoints({
+      userId,
+      actionType: ACTION_TYPES.PROFILE_VERIFY,
+      points: POINTS_CONFIG.PROFILE_VERIFY,
+      description: 'Verifikacija profila',
+    });
+  }
+
+  // Dodavanje bodova za prvi favorit
+  static async addFirstFavoritePoints(userId, restaurantId) {
+    await UserPointsHistory.logPoints({
+      userId,
+      actionType: ACTION_TYPES.FIRST_FAVORITE,
+      points: POINTS_CONFIG.FIRST_FAVORITE,
+      referenceId: restaurantId,
+      restaurantId,
+      description: 'Prvi favorit dodan',
+    });
+  }
+
+  // Dodavanje bodova za novu vrstu kuhinje
+  static async addNewCuisineTypePoints(userId, restaurantId) {
+    await UserPointsHistory.logPoints({
+      userId,
+      actionType: ACTION_TYPES.NEW_CUISINE_TYPE,
+      points: POINTS_CONFIG.NEW_CUISINE_TYPE,
+      referenceId: restaurantId,
+      restaurantId,
+      description: 'Isprobana nova vrsta kuhinje',
+    });
+  }
+
+  // Dodavanje bodova za otključano postignuće
+  static async addAchievementPoints(userId, achievementId, achievementName) {
+    await UserPointsHistory.logPoints({
+      userId,
+      actionType: ACTION_TYPES.ACHIEVEMENT_UNLOCKED,
+      points: POINTS_CONFIG.ACHIEVEMENT_UNLOCKED,
+      referenceId: achievementId,
+      description: `Otključano postignuće: ${achievementName}`,
     });
   }
 
