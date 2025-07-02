@@ -104,13 +104,16 @@ const createReview = async (req, res) => {
       photos: [],
     });
 
+    // Check if review is long (more than 100 characters)
+    const isLongReview = text && text.length > 100;
+
     // Award points through PointsService
     await PointsService.addReviewPoints(
       userId,
       review.id,
-      text,
-      files && files.length > 0,
       restaurantId,
+      files && files.length > 0,
+      isLongReview,
     );
 
     // Handle photo uploads

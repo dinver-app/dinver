@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'restaurant',
       });
+      VisitValidation.belongsTo(models.Reservation, {
+        foreignKey: 'reservationId',
+        as: 'reservation',
+      });
     }
   }
 
@@ -29,6 +33,10 @@ module.exports = (sequelize, DataTypes) => {
       restaurantId: {
         type: DataTypes.UUID,
         allowNull: false,
+      },
+      reservationId: {
+        type: DataTypes.UUID,
+        allowNull: true,
       },
       validationToken: {
         type: DataTypes.TEXT,

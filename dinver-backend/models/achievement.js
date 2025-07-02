@@ -24,7 +24,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         validate: {
           isIn: [
-            ['FOOD_EXPLORER', 'CITY_HOPPER', 'ELITE_REVIEWER', 'WORLD_CUISINE'],
+            [
+              'FOOD_EXPLORER',
+              'CITY_HOPPER',
+              'ELITE_REVIEWER',
+              'RELIABLE_GUEST',
+            ],
           ],
         },
       },

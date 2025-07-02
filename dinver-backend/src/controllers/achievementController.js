@@ -153,8 +153,15 @@ const updateEliteReviewerProgress = async (userId, reviewCount) => {
   await updateCategoryProgress(userId, 'ELITE_REVIEWER', reviewCount);
 };
 
-const updateWorldCuisineProgress = async (userId, cuisineCount) => {
-  await updateCategoryProgress(userId, 'WORLD_CUISINE', cuisineCount);
+const updateReliableGuestProgress = async (
+  userId,
+  completedReservationsCount,
+) => {
+  await updateCategoryProgress(
+    userId,
+    'RELIABLE_GUEST',
+    completedReservationsCount,
+  );
 };
 
 module.exports = {
@@ -162,5 +169,5 @@ module.exports = {
   updateFoodExplorerProgress,
   updateCityHopperProgress,
   updateEliteReviewerProgress,
-  updateWorldCuisineProgress,
+  updateReliableGuestProgress,
 };
