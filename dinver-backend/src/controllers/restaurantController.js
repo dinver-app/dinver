@@ -2006,6 +2006,26 @@ const getFullRestaurantDetails = async (req, res) => {
       );
     }
 
+    // Transform review photos URLs
+    if (
+      finalRestaurantData.reviews &&
+      Array.isArray(finalRestaurantData.reviews)
+    ) {
+      finalRestaurantData.reviews = finalRestaurantData.reviews.map(
+        (review) => {
+          if (review.photos && Array.isArray(review.photos)) {
+            return {
+              ...review,
+              photos: review.photos.map((photoKey) =>
+                getMediaUrl(photoKey, 'image'),
+              ),
+            };
+          }
+          return review;
+        },
+      );
+    }
+
     // Only include WiFi data if it's allowed and requested
     if (!includeWifi || !finalRestaurantData.showWifiCredentials) {
       delete finalRestaurantData.wifiSsid;
