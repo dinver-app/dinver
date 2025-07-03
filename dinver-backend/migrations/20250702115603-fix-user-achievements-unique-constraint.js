@@ -3,7 +3,13 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // First remove the existing unique constraint if it exists
+    // First add tagId column
+    await queryInterface.addColumn('UserAchievements', 'tagId', {
+      type: Sequelize.UUID,
+      allowNull: true,
+    });
+
+    // Then remove the existing unique constraint if it exists
     try {
       await queryInterface.removeConstraint(
         'UserAchievements',
@@ -34,5 +40,8 @@ module.exports = {
       type: 'unique',
       name: 'UserAchievements_userId_achievementId_key',
     });
+
+    // Remove tagId column
+    await queryInterface.removeColumn('UserAchievements', 'tagId');
   },
 };
