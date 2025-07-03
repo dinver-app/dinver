@@ -2011,6 +2011,11 @@ const getFullRestaurantDetails = async (req, res) => {
       finalRestaurantData.reviews &&
       Array.isArray(finalRestaurantData.reviews)
     ) {
+      // Convert all reviews to plain JS objects to avoid circular references
+      finalRestaurantData.reviews = finalRestaurantData.reviews.map((r) =>
+        typeof r.get === 'function' ? r.get({ plain: true }) : r,
+      );
+
       finalRestaurantData.reviews = finalRestaurantData.reviews.map(
         (review) => {
           if (review.photos && Array.isArray(review.photos)) {
