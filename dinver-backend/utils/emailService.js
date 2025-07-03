@@ -323,6 +323,33 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
       `;
       break;
 
+    case 'visit_completed':
+      subject = 'Hvala na posjetu!';
+      text =
+        `Hvala što ste posjetili restoran "${reservation.restaurant.name}"!\n\n` +
+        `Nadamo se da ste uživali u svom boravku. Podijelite svoje iskustvo s drugima - napišite recenziju kroz Dinver aplikaciju.\n\n` +
+        `Detalji posjete:\n` +
+        `Restoran: "${reservation.restaurant.name}"\n` +
+        `Datum: ${formattedDate}\n` +
+        `Vrijeme: ${formattedTime}\n` +
+        `Broj gostiju: ${reservation.guests}\n\n` +
+        `Imate 14 dana za napisati recenziju. Vaše mišljenje je važno i pomaže drugim korisnicima u odabiru restorana.`;
+
+      htmlContent = `
+        <h2>Hvala na posjetu!</h2>
+        <p>Hvala što ste posjetili restoran <strong>"${reservation.restaurant.name}"</strong>!</p>
+        <div class="reservation-details">
+          <h3>Detalji posjete</h3>
+          <p><strong>Restoran:</strong> "${reservation.restaurant.name}"</p>
+          <p><strong>Datum:</strong> ${formattedDate}</p>
+          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
+          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
+        </div>
+        <p>Nadamo se da ste uživali u svom boravku. Podijelite svoje iskustvo s drugima - napišite recenziju kroz Dinver aplikaciju.</p>
+        <p>Imate 14 dana za napisati recenziju. Vaše mišljenje je važno i pomaže drugim korisnicima u odabiru restorana.</p>
+      `;
+      break;
+
     default:
       throw new Error('Invalid email type');
   }

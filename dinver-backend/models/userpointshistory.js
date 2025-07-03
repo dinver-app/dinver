@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       // Ažuriraj ukupne bodove korisnika
-      const userPoints = await sequelize.models.UserPoints.findOne({
+      const userPoints = await this.sequelize.models.UserPoints.findOne({
         where: { userId },
       });
 
@@ -41,7 +41,7 @@ module.exports = (sequelize, DataTypes) => {
         await userPoints.addPoints(points);
       } else {
         // Ako korisnik nema zapis o bodovima, kreiraj novi
-        await sequelize.models.UserPoints.create({
+        await this.sequelize.models.UserPoints.create({
           userId,
           totalPoints: points,
         });
@@ -72,7 +72,8 @@ module.exports = (sequelize, DataTypes) => {
           'review_long',
           'review_with_photo',
           'visit_qr',
-          'reservation_bonus',
+          'reservation_visit',
+          'achievement_unlocked',
         ),
         allowNull: false,
       },

@@ -126,6 +126,7 @@ const login = async (req, res) => {
 
     // Filtriraj korisničke podatke
     const userData = {
+      userId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,

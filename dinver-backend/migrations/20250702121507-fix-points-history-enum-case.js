@@ -3,35 +3,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Drop the existing table and enum type
-    await queryInterface.sequelize.query(
-      `DROP TABLE IF EXISTS "UserPointsHistory" CASCADE;`,
-    );
-    await queryInterface.sequelize.query(
-      `DROP TYPE IF EXISTS "enum_UserPointsHistory_actionType" CASCADE;`,
-    );
-    await queryInterface.sequelize.query(
-      `DROP TYPE IF EXISTS "enum_userpointshistory_actiontype" CASCADE;`,
-    );
+    // Drop the existing table if it exists
+    await queryInterface.dropTable('UserPointsHistory', { cascade: true });
 
-    // Create the enum type with all values
-    await queryInterface.sequelize.query(`
-      CREATE TYPE "enum_userpointshistory_actiontype" AS ENUM (
-        'review_add',
-        'review_long',
-        'review_with_photo',
-        'reservation_created',
-        'reservation_attended',
-        'reservation_cancelled_by_user',
-        'profile_verify',
-        'first_favorite',
-        'new_cuisine_type',
-        'achievement_unlocked',
-        'visit_qr'
-      );
-    `);
-
-    // Create the table with the correct enum type
+    // Create the table with the enum type
     await queryInterface.createTable('UserPointsHistory', {
       id: {
         type: Sequelize.UUID,
@@ -59,7 +34,14 @@ module.exports = {
         onDelete: 'SET NULL',
       },
       actionType: {
-        type: 'enum_userpointshistory_actiontype',
+        type: Sequelize.ENUM(
+          'review_add',
+          'review_long',
+          'review_with_photo',
+          'visit_qr',
+          'reservation_visit',
+          'achievement_unlocked',
+        ),
         allowNull: false,
       },
       points: {
@@ -72,7 +54,7 @@ module.exports = {
       },
       description: {
         type: Sequelize.STRING,
-        allowNull: true,
+        allowNull: false,
       },
       createdAt: {
         type: Sequelize.DATE,
@@ -91,9 +73,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('UserPointsHistory');
-    await queryInterface.sequelize.query(
-      `DROP TYPE IF EXISTS "enum_userpointshistory_actiontype";`,
-    );
+    await queryInterface.dropTable('UserPointsHistory', { cascade: true });
   },
 };

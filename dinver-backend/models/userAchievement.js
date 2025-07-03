@@ -6,11 +6,9 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       UserAchievement.belongsTo(models.User, {
         foreignKey: 'userId',
-        as: 'user',
       });
       UserAchievement.belongsTo(models.Achievement, {
         foreignKey: 'achievementId',
-        as: 'achievement',
       });
     }
   }
@@ -38,17 +36,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
-      progress: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      achieved: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      achievedAt: {
+      unlockedAt: {
         type: DataTypes.DATE,
         allowNull: true,
       },
@@ -56,6 +44,12 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'UserAchievement',
+      indexes: [
+        {
+          fields: ['userId', 'achievementId'],
+          unique: true,
+        },
+      ],
     },
   );
 

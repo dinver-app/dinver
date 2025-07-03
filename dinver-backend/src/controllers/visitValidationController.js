@@ -1,6 +1,13 @@
-const { VisitValidation, Restaurant } = require('../../models');
+const {
+  VisitValidation,
+  Restaurant,
+  Reservation,
+  User,
+  sequelize,
+} = require('../../models');
 const jwt = require('jsonwebtoken');
-const PointsService = require('../../utils/pointsService');
+const PointsService = require('../utils/pointsService');
+const { sendReservationEmail } = require('../../utils/emailService');
 const { Op } = require('sequelize');
 
 // Generate QR code token for a restaurant visit
@@ -45,7 +52,7 @@ const generateVisitToken = async (req, res) => {
 // Validate a visit token
 const validateVisit = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, reservationId } = req.body;
     const userId = req.user.id;
 
     // Verify and decode token
@@ -71,20 +78,91 @@ const validateVisit = async (req, res) => {
       return res.status(400).json({ error: 'token_expired_or_used' });
     }
 
-    // Check if user has already validated a visit for this restaurant today
-    const existingValidation = await VisitValidation.findOne({
+    // Provjeri zadnji posjet ovom restoranu u zadnjih 30 dana
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const lastVisit = await VisitValidation.findOne({
       where: {
         restaurantId: decodedToken.restaurantId,
         userId,
         isUsed: true,
         usedAt: {
-          [Op.gte]: new Date().setHours(0, 0, 0, 0),
+          [Op.gte]: thirtyDaysAgo,
         },
       },
+      order: [['usedAt', 'DESC']],
     });
 
-    if (existingValidation) {
-      return res.status(400).json({ error: 'already_validated_today' });
+    // If reservationId is provided, verify it exists and belongs to the user and restaurant
+    let isReservationValid = false;
+    let reservation = null;
+    if (reservationId) {
+      // Get today's date at midnight for comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Format date in YYYY-MM-DD format using local time
+      const todaysDate =
+        today.getFullYear() +
+        '-' +
+        String(today.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(today.getDate()).padStart(2, '0');
+
+      reservation = await Reservation.findOne({
+        where: {
+          id: reservationId,
+          userId,
+          restaurantId: decodedToken.restaurantId,
+          status: 'confirmed', // Only confirmed reservations can be validated
+          date: todaysDate, // Must be today's date
+        },
+        include: [
+          {
+            model: Restaurant,
+            as: 'restaurant',
+            attributes: ['id', 'name', 'address', 'place', 'phone'],
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          },
+        ],
+      });
+
+      if (!reservation) {
+        return res.status(400).json({ error: 'invalid_reservation' });
+      }
+
+      isReservationValid = true;
+
+      // Update reservation status to completed
+      await reservation.update({
+        status: 'completed',
+        updatedAt: new Date(), // Force update timestamp for thread expiry calculation
+      });
+
+      // Send thank you email with review invitation
+      await sendReservationEmail({
+        to: reservation.user.email,
+        type: 'visit_completed',
+        reservation: {
+          ...reservation.toJSON(),
+          restaurant: reservation.restaurant,
+        },
+      });
+    } else {
+      // Ako nema rezervacije, provjeri zadnji posjet u zadnjih 30 dana
+      if (lastVisit) {
+        const nextValidDate = new Date(lastVisit.usedAt);
+        nextValidDate.setDate(nextValidDate.getDate() + 30);
+        return res.status(400).json({
+          error: 'visit_too_soon',
+          nextValidDate: nextValidDate,
+        });
+      }
     }
 
     // Update validation record
@@ -96,14 +174,21 @@ const validateVisit = async (req, res) => {
       isUsed: true,
       usedAt: new Date(),
       canLeaveReviewUntil: reviewExpiration,
+      reservationId: isReservationValid ? reservationId : null,
     });
 
     // Award points through PointsService
-    await PointsService.addVisitPoints(userId, validation.restaurantId);
+    const pointsService = new PointsService(sequelize);
+    await pointsService.addVisitPoints(
+      userId,
+      validation.restaurantId,
+      isReservationValid,
+    );
 
     res.json({
       message: 'visit_validated',
       canLeaveReviewUntil: reviewExpiration,
+      wasReservation: isReservationValid,
     });
   } catch (error) {
     console.error('Error validating visit:', error);
@@ -132,6 +217,7 @@ const getValidationStatus = async (req, res) => {
     res.json({
       canLeaveReview: !!validation,
       validUntil: validation ? validation.canLeaveReviewUntil : null,
+      wasReservation: validation ? !!validation.reservationId : false,
     });
   } catch (error) {
     console.error('Error getting validation status:', error);
