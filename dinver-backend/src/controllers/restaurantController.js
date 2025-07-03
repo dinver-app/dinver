@@ -12,6 +12,7 @@ const {
   DrinkItemTranslation,
   DrinkCategory,
   DrinkCategoryTranslation,
+  Allergen,
 } = require('../../models');
 const { recordInsight } = require('./insightController');
 const {
@@ -2000,6 +2001,15 @@ const getRestaurantMenu = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Get all allergens first
+    const allergens = await Allergen.findAll({
+      attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+    });
+
+    const allergenMap = new Map(
+      allergens.map((allergen) => [allergen.id, allergen]),
+    );
+
     // Get all menu items with their categories
     const menuItems = await MenuItem.findAll({
       where: { restaurantId: id },
@@ -2074,6 +2084,24 @@ const getRestaurantMenu = async (req, res) => {
       order: [['position', 'ASC']],
     });
 
+    // Helper function to map allergen IDs to full allergen objects
+    const mapAllergens = (allergenIds) => {
+      if (!allergenIds) return [];
+      return allergenIds
+        .map((id) => {
+          const allergen = allergenMap.get(id);
+          return allergen
+            ? {
+                id: allergen.id,
+                nameEn: allergen.nameEn,
+                nameHr: allergen.nameHr,
+                icon: allergen.icon,
+              }
+            : null;
+        })
+        .filter(Boolean);
+    };
+
     // Organize food menu by categories
     const foodMenu = {
       categories: menuCategories.map((category) => ({
@@ -2103,7 +2131,7 @@ const getRestaurantMenu = async (req, res) => {
             imageUrl: item.imageUrl
               ? getMediaUrl(item.imageUrl, 'image')
               : null,
-            allergens: item.allergens || [],
+            allergens: mapAllergens(item.allergens),
           })),
       })),
       uncategorized: menuItems
@@ -2124,7 +2152,7 @@ const getRestaurantMenu = async (req, res) => {
             '',
           price: parseFloat(item.price).toFixed(2),
           imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
-          allergens: item.allergens || [],
+          allergens: mapAllergens(item.allergens),
         })),
     };
 
