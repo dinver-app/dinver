@@ -1820,6 +1820,7 @@ const getFullRestaurantDetails = async (req, res) => {
         'longitude',
         'phone',
         'rating',
+        'userRatingsTotal',
         'priceLevel',
         'thumbnailUrl',
         'slug',
@@ -1987,6 +1988,10 @@ const getFullRestaurantDetails = async (req, res) => {
       ratings,
       customWorkingDays: filteredCustomWorkingDays,
     };
+
+    // Always include rating and userRatingsTotal from the Restaurant model
+    finalRestaurantData.rating = restaurant.rating;
+    finalRestaurantData.userRatingsTotal = restaurant.userRatingsTotal;
 
     // Transform thumbnail URL if exists
     if (finalRestaurantData.thumbnailUrl) {
