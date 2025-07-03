@@ -1795,7 +1795,7 @@ const getPartners = async (req, res) => {
 const getFullRestaurantDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { includeWifi } = req.query; // New parameter for QR menu access
+    const { includeWifi } = req.query;
 
     // Get restaurant base data
     const restaurant = await Restaurant.findOne({
@@ -1806,11 +1806,14 @@ const getFullRestaurantDetails = async (req, res) => {
           as: 'priceCategory',
           attributes: ['id', 'nameEn', 'nameHr', 'icon', 'level'],
         },
+        {
+          model: require('../../models').RestaurantTranslation,
+          as: 'translations',
+        },
       ],
       attributes: [
         'id',
         'name',
-        'description',
         'address',
         'place',
         'latitude',
@@ -1844,6 +1847,22 @@ const getFullRestaurantDetails = async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
+
+    // Transform restaurant data to include translations
+    const restaurantWithTranslations = {
+      ...restaurant.get(),
+      description: {
+        en:
+          restaurant.translations.find((t) => t.language === 'en')
+            ?.description || '',
+        hr:
+          restaurant.translations.find((t) => t.language === 'hr')
+            ?.description || '',
+      },
+    };
+
+    // Remove translations from the response since we've transformed them
+    delete restaurantWithTranslations.translations;
 
     // Get all reviews for rating calculations
     const allReviews = await Review.findAll({
@@ -1884,7 +1903,7 @@ const getFullRestaurantDetails = async (req, res) => {
           },
         ],
         order: [['createdAt', 'DESC']],
-        limit: 5, // Get only latest 5 reviews
+        limit: 5,
       },
     );
 
@@ -1933,30 +1952,31 @@ const getFullRestaurantDetails = async (req, res) => {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(now.getDate() + 30);
 
-    const filteredCustomWorkingDays = restaurant.customWorkingDays
-      ?.customWorkingDays
+    const filteredCustomWorkingDays = restaurantWithTranslations
+      .customWorkingDays?.customWorkingDays
       ? {
           customWorkingDays:
-            restaurant.customWorkingDays.customWorkingDays.filter((day) => {
-              const dayDate = new Date(day.date);
-              // Resetiramo vrijeme na početak dana (00:00:00)
-              const startOfDayDate = new Date(dayDate.setHours(0, 0, 0, 0));
-              const startOfToday = new Date(now.setHours(0, 0, 0, 0));
-              const startOfThirtyDays = new Date(
-                thirtyDaysFromNow.setHours(0, 0, 0, 0),
-              );
+            restaurantWithTranslations.customWorkingDays.customWorkingDays.filter(
+              (day) => {
+                const dayDate = new Date(day.date);
+                const startOfDayDate = new Date(dayDate.setHours(0, 0, 0, 0));
+                const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+                const startOfThirtyDays = new Date(
+                  thirtyDaysFromNow.setHours(0, 0, 0, 0),
+                );
 
-              return (
-                startOfDayDate >= startOfToday &&
-                startOfDayDate <= startOfThirtyDays
-              );
-            }),
+                return (
+                  startOfDayDate >= startOfToday &&
+                  startOfDayDate <= startOfThirtyDays
+                );
+              },
+            ),
         }
       : { customWorkingDays: [] };
 
-    // Transform restaurant data
-    const restaurantData = {
-      ...restaurant.toJSON(),
+    // Transform final restaurant data
+    const finalRestaurantData = {
+      ...restaurantWithTranslations,
       foodTypes,
       establishmentTypes,
       establishmentPerks,
@@ -1968,29 +1988,32 @@ const getFullRestaurantDetails = async (req, res) => {
       customWorkingDays: filteredCustomWorkingDays,
     };
 
-    // Transformiramo thumbnail URL ako postoji key
-    if (restaurantData.thumbnailUrl) {
-      restaurantData.thumbnailUrl = getMediaUrl(
-        restaurantData.thumbnailUrl,
+    // Transform thumbnail URL if exists
+    if (finalRestaurantData.thumbnailUrl) {
+      finalRestaurantData.thumbnailUrl = getMediaUrl(
+        finalRestaurantData.thumbnailUrl,
         'image',
       );
     }
 
-    // Transformiramo keys u URL-ove za galeriju slika
-    if (restaurantData.images && Array.isArray(restaurantData.images)) {
-      restaurantData.images = restaurantData.images.map((imageKey) =>
+    // Transform image gallery URLs
+    if (
+      finalRestaurantData.images &&
+      Array.isArray(finalRestaurantData.images)
+    ) {
+      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) =>
         getMediaUrl(imageKey, 'image'),
       );
     }
 
     // Only include WiFi data if it's allowed and requested
-    if (!includeWifi || !restaurantData.showWifiCredentials) {
-      delete restaurantData.wifiSsid;
-      delete restaurantData.wifiPassword;
-      delete restaurantData.showWifiCredentials;
+    if (!includeWifi || !finalRestaurantData.showWifiCredentials) {
+      delete finalRestaurantData.wifiSsid;
+      delete finalRestaurantData.wifiPassword;
+      delete finalRestaurantData.showWifiCredentials;
     }
 
-    res.json(restaurantData);
+    res.json(finalRestaurantData);
   } catch (error) {
     console.error('Error fetching restaurant details:', error);
     res.status(500).json({ error: 'Failed to fetch restaurant details' });
