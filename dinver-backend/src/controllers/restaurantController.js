@@ -2134,6 +2134,13 @@ const getRestaurantMenu = async (req, res) => {
           category.translations.find((t) => t.language === 'en')?.name || '',
         nameHr:
           category.translations.find((t) => t.language === 'hr')?.name || '',
+        description: category.translations[0]?.description || '',
+        descriptionEn:
+          category.translations.find((t) => t.language === 'en')?.description ||
+          '',
+        descriptionHr:
+          category.translations.find((t) => t.language === 'hr')?.description ||
+          '',
         items: menuItems
           .filter((item) => item.categoryId === category.id)
           .map((item) => ({
@@ -2188,6 +2195,13 @@ const getRestaurantMenu = async (req, res) => {
           category.translations.find((t) => t.language === 'en')?.name || '',
         nameHr:
           category.translations.find((t) => t.language === 'hr')?.name || '',
+        description: category.translations[0]?.description || '',
+        descriptionEn:
+          category.translations.find((t) => t.language === 'en')?.description ||
+          '',
+        descriptionHr:
+          category.translations.find((t) => t.language === 'hr')?.description ||
+          '',
         items: drinkItems
           .filter((item) => item.categoryId === category.id)
           .map((item) => ({
