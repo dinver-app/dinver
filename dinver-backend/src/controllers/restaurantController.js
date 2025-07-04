@@ -14,7 +14,6 @@ const {
   DrinkCategoryTranslation,
   Allergen,
 } = require('../../models');
-const { recordInsight } = require('./insightController');
 const {
   updateFoodExplorerProgress,
   updateCityHopperProgress,
@@ -393,15 +392,6 @@ async function viewRestaurant(req, res) {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
-
-    // Record the insight
-    await recordInsight(
-      req.user ? req.user.id : null,
-      restaurant.id,
-      null,
-      'view',
-      null,
-    );
 
     res.json(restaurant);
   } catch (error) {
