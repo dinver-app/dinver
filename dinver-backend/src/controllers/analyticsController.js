@@ -11,6 +11,7 @@ const VALID_EVENT_TYPES = [
   'click_download_app',
   'click_phone',
   'click_map',
+  'click_website',
 ];
 
 // Log an analytics event
