@@ -71,12 +71,13 @@ function getChangePercentage(current, previous) {
 const getAnalyticsSummary = async (req, res) => {
   try {
     const { restaurantId } = req.query;
-    if (!restaurantId) {
-      return res.status(400).json({ error: 'restaurantId is required' });
-    }
-    // Fetch all events for this restaurant
+
+    // Ako nema restaurantId, računamo za sve restorane
+    const whereClause = restaurantId ? { restaurant_id: restaurantId } : {};
+
+    // Fetch all events (za jedan restoran ili sve restorane)
     const events = await AnalyticsEvent.findAll({
-      where: { restaurant_id: restaurantId },
+      where: whereClause,
       attributes: [
         'event_type',
         'timestamp',
@@ -84,6 +85,7 @@ const getAnalyticsSummary = async (req, res) => {
         'metadata',
         'source',
         'ip_address',
+        'restaurant_id', // Dodajemo restaurant_id za slučaj da računamo za sve restorane
       ],
       raw: true,
     });
@@ -93,13 +95,15 @@ const getAnalyticsSummary = async (req, res) => {
     const confirmedVisitsByPeriod = {};
     const confirmedVisitsPrevByPeriod = {};
     const confirmedVisitsChange = {};
-    // Prvo dohvati sve VisitValidation za restoran
+
+    // Prvo dohvati sve VisitValidation (za jedan restoran ili sve restorane)
+    const visitValidationWhere = restaurantId ? { restaurantId } : {};
     const allVisitValidations = await VisitValidation.findAll({
       where: {
-        restaurantId,
+        ...visitValidationWhere,
         isUsed: true,
       },
-      attributes: ['id', 'expiresAt', 'createdAt'],
+      attributes: ['id', 'expiresAt', 'createdAt', 'restaurantId'], // Dodajemo restaurantId
       raw: true,
     });
     const periods = {
@@ -382,14 +386,42 @@ const getAnalyticsSummary = async (req, res) => {
     const allItemIds = Array.from(
       new Set(menuEvents.map((e) => e.metadata?.itemId).filter(Boolean)),
     );
+
     // Dohvati sve nazive odjednom (batch)
+    // Ako je restaurantId specificiran, dohvati samo za taj restoran
+    // Ako nije, dohvati sve menu items iz svih restorana
     const menuItemTranslations = await MenuItemTranslation.findAll({
-      where: { menuItemId: allItemIds, language: 'hr' },
+      where: {
+        menuItemId: allItemIds,
+        language: 'hr',
+      },
+      include: restaurantId
+        ? [
+            {
+              model: require('../../models').MenuItem,
+              where: { restaurantId },
+              required: true,
+            },
+          ]
+        : [],
       attributes: ['menuItemId', 'name'],
       raw: true,
     });
+
     const drinkItemTranslations = await DrinkItemTranslation.findAll({
-      where: { drinkItemId: allItemIds, language: 'hr' },
+      where: {
+        drinkItemId: allItemIds,
+        language: 'hr',
+      },
+      include: restaurantId
+        ? [
+            {
+              model: require('../../models').DrinkItem,
+              where: { restaurantId },
+              required: true,
+            },
+          ]
+        : [],
       attributes: ['drinkItemId', 'name'],
       raw: true,
     });
@@ -400,6 +432,15 @@ const getAnalyticsSummary = async (req, res) => {
     const fallbackMenuTranslations = missingMenuIds.length
       ? await MenuItemTranslation.findAll({
           where: { menuItemId: missingMenuIds },
+          include: restaurantId
+            ? [
+                {
+                  model: require('../../models').MenuItem,
+                  where: { restaurantId },
+                  required: true,
+                },
+              ]
+            : [],
           attributes: ['menuItemId', 'name'],
           raw: true,
         })
@@ -412,6 +453,15 @@ const getAnalyticsSummary = async (req, res) => {
     const fallbackDrinkTranslations = missingDrinkIds.length
       ? await DrinkItemTranslation.findAll({
           where: { drinkItemId: missingDrinkIds },
+          include: restaurantId
+            ? [
+                {
+                  model: require('../../models').DrinkItem,
+                  where: { restaurantId },
+                  required: true,
+                },
+              ]
+            : [],
           attributes: ['drinkItemId', 'name'],
           raw: true,
         })
@@ -531,6 +581,8 @@ const getAnalyticsSummary = async (req, res) => {
       qrScansTotal,
       qrScansSummary,
       eventsRaw: events,
+      scope: restaurantId ? 'single_restaurant' : 'all_restaurants',
+      restaurantId: restaurantId || null,
     });
   } catch (error) {
     console.error('Error fetching analytics summary:', error);
