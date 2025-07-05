@@ -824,7 +824,7 @@ const Analytics = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
                 {t("analytics_dashboard")}
@@ -849,230 +849,224 @@ const Analytics = () => {
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* Scope Toggle */}
-                <div className="flex items-center gap-2">
-                  <ChartBarIcon className="w-5 h-5 text-gray-500" />
-                  <button
-                    type="button"
-                    aria-pressed={scope === "all_restaurants"}
-                    onClick={() =>
-                      setScope(
-                        scope === "all_restaurants"
-                          ? "single_restaurant"
-                          : "all_restaurants"
-                      )
-                    }
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                      scope === "all_restaurants"
-                        ? "bg-green-600"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        scope === "all_restaurants"
-                          ? "translate-x-5"
-                          : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                  <span
-                    className={`block text-xs text-center font-medium transition-colors duration-200 w-20 ${
-                      scope === "all_restaurants"
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {scope === "all_restaurants"
-                      ? t("all_restaurants")
-                      : t("single_restaurant")}
-                  </span>
-                </div>
-                {/* Restaurant Dropdown */}
-                {scope === "single_restaurant" && (
-                  <div className="relative restaurant-dropdown">
-                    <button
-                      onClick={() =>
-                        setShowRestaurantDropdown(!showRestaurantDropdown)
-                      }
-                      className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
-                    >
-                      <span className="truncate">
-                        {selectedRestaurant
-                          ? selectedRestaurant.name
-                          : t("select_restaurant")}
-                      </span>
-                      <ChevronDownIcon className="w-4 h-4 text-gray-500" />
-                    </button>
-                    {showRestaurantDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                        <div className="p-2 border-b border-gray-200">
-                          <input
-                            type="text"
-                            placeholder={t("search_restaurants")}
-                            value={restaurantSearch}
-                            onChange={(e) =>
-                              setRestaurantSearch(e.target.value)
-                            }
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="py-1">
-                          {loadingRestaurants ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">
-                              {t("loading")}
-                            </div>
-                          ) : (
-                            restaurants
-                              .filter((restaurant) =>
-                                restaurant.name
-                                  .toLowerCase()
-                                  .includes(restaurantSearch.toLowerCase())
-                              )
-                              .map((restaurant) => (
-                                <button
-                                  key={restaurant.id}
-                                  onClick={() => {
-                                    setSelectedRestaurant(restaurant);
-                                    setShowRestaurantDropdown(false);
-                                    setRestaurantSearch("");
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                                >
-                                  {restaurant.name}
-                                </button>
-                              ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Manual Refresh Button */}
+            <div className="flex flex-wrap items-center gap-4 mt-4">
+              {/* Scope Toggle */}
+              <div className="flex items-center gap-2">
+                <ChartBarIcon className="w-5 h-5 text-gray-500" />
                 <button
-                  onClick={async () => {
-                    try {
-                      setLoading(true);
-                      const response = await getAnalyticsSummary(
-                        getRestaurantIdToUse()
-                      );
-                      setData(response);
-                    } catch (err) {
-                      setError("Greška pri ručnom osvježavanju");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                    loading
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-300"
+                  type="button"
+                  aria-pressed={scope === "all_restaurants"}
+                  onClick={() =>
+                    setScope(
+                      scope === "all_restaurants"
+                        ? "single_restaurant"
+                        : "all_restaurants"
+                    )
+                  }
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                    scope === "all_restaurants" ? "bg-green-600" : "bg-gray-200"
                   }`}
-                  title={t("manual_refresh")}
                 >
-                  <ArrowPathIcon
-                    className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                  />
-                  <span className="text-sm">{t("refresh")}</span>
-                </button>
-                {/* Auto-refresh Toggle */}
-                <div className="flex items-center gap-2">
-                  <ArrowPathIcon
-                    className={`w-5 h-5 transition-all duration-300 ${
-                      isAutoRefresh ? "text-green-500" : "text-gray-500"
-                    } ${isAutoRefresh && !loading ? "animate-pulse" : ""}`}
-                  />
-                  <button
-                    type="button"
-                    aria-pressed={isAutoRefresh}
-                    onClick={() => setIsAutoRefresh((v) => !v)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      isAutoRefresh ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        isAutoRefresh ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                  <span className="ml-2 text-sm text-gray-700 select-none">
-                    {t("auto_refresh")}
-                  </span>
-                </div>
-                {/* Unique vs Total Toggle */}
-                <div className="flex items-center gap-2">
-                  <UserGroupIcon className="w-5 h-5 text-gray-500" />
-                  <button
-                    type="button"
-                    aria-pressed={showUniqueData}
-                    onClick={() => setShowUniqueData((v) => !v)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                      showUniqueData ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        showUniqueData ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
                   <span
-                    className={`block text-xs text-center font-medium transition-colors duration-200 w-16 ${
-                      showUniqueData ? "text-blue-600" : "text-gray-500"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      scope === "all_restaurants"
+                        ? "translate-x-5"
+                        : "translate-x-0"
                     }`}
-                  >
-                    {showUniqueData ? t("unique") : t("total")}
-                  </span>
-                </div>
-                {/* Period Filter */}
-                <div className="flex items-center gap-2">
-                  <CalendarDaysIcon className="w-5 h-5 text-gray-500" />
-                  <select
-                    value={selectedPeriod}
-                    onChange={(e) =>
-                      setSelectedPeriod(e.target.value as PeriodKey)
+                  />
+                </button>
+                <span
+                  className={`block text-xs text-center font-medium transition-colors duration-200 w-20 ${
+                    scope === "all_restaurants"
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {scope === "all_restaurants"
+                    ? t("all_restaurants")
+                    : t("single_restaurant")}
+                </span>
+              </div>
+              {/* Restaurant Dropdown */}
+              {scope === "single_restaurant" && (
+                <div className="relative restaurant-dropdown">
+                  <button
+                    onClick={() =>
+                      setShowRestaurantDropdown(!showRestaurantDropdown)
                     }
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
                   >
-                    {data?.periods?.map((period) => (
-                      <option key={period} value={period}>
-                        {PERIOD_LABELS[period] || period}
-                      </option>
-                    ))}
-                  </select>
+                    <span className="truncate">
+                      {selectedRestaurant
+                        ? selectedRestaurant.name
+                        : t("select_restaurant")}
+                    </span>
+                    <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+                  </button>
+                  {showRestaurantDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                      <div className="p-2 border-b border-gray-200">
+                        <input
+                          type="text"
+                          placeholder={t("search_restaurants")}
+                          value={restaurantSearch}
+                          onChange={(e) => setRestaurantSearch(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="py-1">
+                        {loadingRestaurants ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            {t("loading")}
+                          </div>
+                        ) : (
+                          restaurants
+                            .filter((restaurant) =>
+                              restaurant.name
+                                .toLowerCase()
+                                .includes(restaurantSearch.toLowerCase())
+                            )
+                            .map((restaurant) => (
+                              <button
+                                key={restaurant.id}
+                                onClick={() => {
+                                  setSelectedRestaurant(restaurant);
+                                  setShowRestaurantDropdown(false);
+                                  setRestaurantSearch("");
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              >
+                                {restaurant.name}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {/* Source Filter */}
-                <div className="flex items-center gap-2">
-                  <FunnelIcon className="w-5 h-5 text-gray-500" />
-                  <div className="flex gap-2">
-                    {availableSources.map((source) => (
-                      <button
-                        key={source}
-                        onClick={() => {
-                          if (selectedSources.includes(source)) {
-                            if (selectedSources.length > 1) {
-                              setSelectedSources(
-                                selectedSources.filter((s) => s !== source)
-                              );
-                            }
-                          } else {
-                            setSelectedSources([...selectedSources, source]);
+              )}
+              {/* Manual Refresh Button */}
+              <button
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const response = await getAnalyticsSummary(
+                      getRestaurantIdToUse()
+                    );
+                    setData(response);
+                  } catch (err) {
+                    setError("Greška pri ručnom osvježavanju");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  loading
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-600 hover:bg-gray-50 border-gray-300"
+                }`}
+                title={t("manual_refresh")}
+              >
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
+                <span className="text-sm">{t("refresh")}</span>
+              </button>
+              {/* Auto-refresh Toggle */}
+              <div className="flex items-center gap-2">
+                <ArrowPathIcon
+                  className={`w-5 h-5 transition-all duration-300 ${
+                    isAutoRefresh ? "text-green-500" : "text-gray-500"
+                  } ${isAutoRefresh && !loading ? "animate-pulse" : ""}`}
+                />
+                <button
+                  type="button"
+                  aria-pressed={isAutoRefresh}
+                  onClick={() => setIsAutoRefresh((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    isAutoRefresh ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      isAutoRefresh ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <span className="ml-2 text-sm text-gray-700 select-none">
+                  {t("auto_refresh")}
+                </span>
+              </div>
+              {/* Unique vs Total Toggle */}
+              <div className="flex items-center gap-2">
+                <UserGroupIcon className="w-5 h-5 text-gray-500" />
+                <button
+                  type="button"
+                  aria-pressed={showUniqueData}
+                  onClick={() => setShowUniqueData((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                    showUniqueData ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      showUniqueData ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <span
+                  className={`block text-xs text-center font-medium transition-colors duration-200 w-16 ${
+                    showUniqueData ? "text-blue-600" : "text-gray-500"
+                  }`}
+                >
+                  {showUniqueData ? t("unique") : t("total")}
+                </span>
+              </div>
+              {/* Period Filter */}
+              <div className="flex items-center gap-2">
+                <CalendarDaysIcon className="w-5 h-5 text-gray-500" />
+                <select
+                  value={selectedPeriod}
+                  onChange={(e) =>
+                    setSelectedPeriod(e.target.value as PeriodKey)
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {data?.periods?.map((period) => (
+                    <option key={period} value={period}>
+                      {PERIOD_LABELS[period] || period}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Source Filter */}
+              <div className="flex items-center gap-2">
+                <FunnelIcon className="w-5 h-5 text-gray-500" />
+                <div className="flex gap-2">
+                  {availableSources.map((source) => (
+                    <button
+                      key={source}
+                      onClick={() => {
+                        if (selectedSources.includes(source)) {
+                          if (selectedSources.length > 1) {
+                            setSelectedSources(
+                              selectedSources.filter((s) => s !== source)
+                            );
                           }
-                        }}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                          selectedSources.includes(source)
-                            ? "bg-blue-100 text-blue-700 border border-blue-300"
-                            : "bg-gray-100 text-gray-700 border border-gray-300"
-                        }`}
-                      >
-                        {source}
-                      </button>
-                    ))}
-                  </div>
+                        } else {
+                          setSelectedSources([...selectedSources, source]);
+                        }
+                      }}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                        selectedSources.includes(source)
+                          ? "bg-blue-100 text-blue-700 border border-blue-300"
+                          : "bg-gray-100 text-gray-700 border border-gray-300"
+                      }`}
+                    >
+                      {source}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
