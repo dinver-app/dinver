@@ -53,6 +53,7 @@ const logAnalyticsEvent = async (req, res) => {
       session_id,
       timestamp: new Date(),
       source: eventSource,
+      userType: (metadata && metadata.userType) || req.body.userType || null,
     });
     res.status(201).json({ message: 'Event logged' });
   } catch (error) {
@@ -332,38 +333,47 @@ const getAnalyticsSummary = async (req, res) => {
       const uniqueToday = new Set(
         filteredEvents
           .filter((e) => periods.today(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       const uniqueYesterday = new Set(
         filteredEvents
           .filter((e) => periods.yesterday(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       const uniqueLast7 = new Set(
         filteredEvents
           .filter((e) => periods.last7(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       const uniqueWeekBefore = new Set(
         filteredEvents
           .filter((e) => periods.weekBefore(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       const uniqueLast30 = new Set(
         filteredEvents
           .filter((e) => periods.last30(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       const uniqueMonthBefore = new Set(
         filteredEvents
           .filter((e) => periods.monthBefore(new Date(e.timestamp)))
-          .map((e) => e.session_id || e.ip_address),
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
       ).size;
       eventsSummary[type] = {
         total: aggregate(filteredEvents, (arr) => arr.length),
         unique: aggregate(
           filteredEvents,
-          (arr) => new Set(arr.map((e) => e.session_id || e.ip_address)).size,
+          (arr) =>
+            new Set(
+              arr.map((e) => e.session_id || e.ip_address).filter((id) => !!id),
+            ).size,
         ),
         changeToday: getChangePercentage(totalToday, totalYesterday),
         change7: getChangePercentage(totalLast7, totalWeekBefore),
@@ -490,7 +500,10 @@ const getAnalyticsSummary = async (req, res) => {
         total: aggregate(itemEvents, (arr) => arr.length),
         unique: aggregate(
           itemEvents,
-          (arr) => new Set(arr.map((e) => e.session_id || e.ip_address)).size,
+          (arr) =>
+            new Set(
+              arr.map((e) => e.session_id || e.ip_address).filter((id) => !!id),
+            ).size,
         ),
       });
       // Breakdown po source za ovaj item
@@ -506,7 +519,12 @@ const getAnalyticsSummary = async (req, res) => {
           total: aggregate(eventsForSource, (arr) => arr.length),
           unique: aggregate(
             eventsForSource,
-            (arr) => new Set(arr.map((e) => e.session_id || e.ip_address)).size,
+            (arr) =>
+              new Set(
+                arr
+                  .map((e) => e.session_id || e.ip_address)
+                  .filter((id) => !!id),
+              ).size,
           ),
         };
       }
