@@ -399,6 +399,7 @@ const getAnalyticsSummary = async (req, res) => {
         ? [
             {
               model: require('../../models').MenuItem,
+              as: 'menuItem',
               where: { restaurantId },
               required: true,
             },
@@ -417,6 +418,7 @@ const getAnalyticsSummary = async (req, res) => {
         ? [
             {
               model: require('../../models').DrinkItem,
+              as: 'drinkItem',
               where: { restaurantId },
               required: true,
             },
@@ -436,6 +438,7 @@ const getAnalyticsSummary = async (req, res) => {
             ? [
                 {
                   model: require('../../models').MenuItem,
+                  as: 'menuItem',
                   where: { restaurantId },
                   required: true,
                 },
@@ -457,6 +460,7 @@ const getAnalyticsSummary = async (req, res) => {
             ? [
                 {
                   model: require('../../models').DrinkItem,
+                  as: 'drinkItem',
                   where: { restaurantId },
                   required: true,
                 },

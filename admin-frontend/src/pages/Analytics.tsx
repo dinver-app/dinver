@@ -92,7 +92,7 @@ type PeriodKey =
   | "all_time";
 
 const Analytics = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +100,7 @@ const Analytics = () => {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showUniqueData, setShowUniqueData] = useState(false);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [justRefreshed, setJustRefreshed] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
+  const [refreshInterval, _] = useState(30); // seconds
 
   const restaurantId =
     JSON.parse(localStorage.getItem("currentRestaurant") || "{}")?.id || "";
@@ -185,7 +183,6 @@ const Analytics = () => {
         setError(null);
         const response = await getAnalyticsSummary(restaurantId);
         setData(response);
-        setLastUpdated(new Date());
 
         // Initialize source filter with all sources (only on first load)
         if (selectedSources.length === 0) {
@@ -212,11 +209,6 @@ const Analytics = () => {
       try {
         const response = await getAnalyticsSummary(restaurantId);
         setData(response);
-        setLastUpdated(new Date());
-        setJustRefreshed(true);
-
-        // Hide the refresh indicator after 2 seconds
-        setTimeout(() => setJustRefreshed(false), 2000);
       } catch (err) {
         console.error("Auto-refresh failed:", err);
       }
@@ -784,9 +776,6 @@ const Analytics = () => {
                       setLoading(true);
                       const response = await getAnalyticsSummary(restaurantId);
                       setData(response);
-                      setLastUpdated(new Date());
-                      setJustRefreshed(true);
-                      setTimeout(() => setJustRefreshed(false), 2000);
                     } catch (err) {
                       setError("Greška pri ručnom osvježavanju");
                     } finally {
