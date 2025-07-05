@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "formik": "^2.4.6",
@@ -26,6 +27,7 @@
     "react-image-gallery": "^1.4.0",
     "react-json-view": "^1.21.3",
     "react-router-dom": "^7.1.1",
+    "recharts": "^3.0.2",
     "yup": "^1.6.1"
   },
   "devDependencies": {

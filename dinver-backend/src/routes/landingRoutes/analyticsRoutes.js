@@ -19,18 +19,4 @@ router.post(
   analyticsController.logAnalyticsEvent,
 );
 
-// (Optional) Fetch analytics events (admin/debug)
-router.get(
-  '/analytics',
-  landingApiKeyAuth,
-  analyticsController.getAnalyticsEvents,
-);
-
-// Aggregated summary for admin dashboard
-router.get(
-  '/analytics/summary',
-  landingApiKeyAuth,
-  analyticsController.getAnalyticsSummary,
-);
-
 module.exports = router;
