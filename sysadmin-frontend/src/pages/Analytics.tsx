@@ -24,6 +24,10 @@ import {
   ArrowPathIcon,
   UserGroupIcon,
   ChevronDownIcon,
+  BuildingOfficeIcon,
+  MapPinIcon,
+  UsersIcon,
+  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowTrendingUpIcon,
@@ -67,6 +71,18 @@ interface AnalyticsSummary {
   eventsRaw?: any[];
   scope?: "single_restaurant" | "all_restaurants";
   restaurantId?: string | null;
+  dinverStats?: {
+    claimedRestaurants: Record<string, number>;
+    claimedCities: Record<string, number>;
+    users: Record<string, number>;
+    completedReservations: Record<string, number>;
+  };
+  dinverStatsChange?: {
+    claimedRestaurants: Record<string, number>;
+    claimedCities: Record<string, number>;
+    users: Record<string, number>;
+    completedReservations: Record<string, number>;
+  };
 }
 
 interface Restaurant {
@@ -742,6 +758,57 @@ const Analytics = () => {
     return { views, clicks, visits, qrScans };
   };
 
+  // Helper: Get Dinver KPI values based on selected period
+  const getDinverKPIValues = () => {
+    if (!data?.dinverStats)
+      return {
+        claimedRestaurants: 0,
+        claimedCities: 0,
+        users: 0,
+        completedReservations: 0,
+      };
+
+    return {
+      claimedRestaurants:
+        data.dinverStats.claimedRestaurants[selectedPeriod] || 0,
+      claimedCities: data.dinverStats.claimedCities[selectedPeriod] || 0,
+      users: data.dinverStats.users[selectedPeriod] || 0,
+      completedReservations:
+        data.dinverStats.completedReservations[selectedPeriod] || 0,
+    };
+  };
+
+  // Helper: Get Dinver KPI change values based on selected period
+  const getDinverKPIChanges = () => {
+    if (!data?.dinverStatsChange) {
+      return {
+        claimedRestaurants: 0,
+        claimedCities: 0,
+        users: 0,
+        completedReservations: 0,
+      };
+    }
+
+    // Za all_time period ne prikazujemo trendove
+    if (selectedPeriod === "all_time") {
+      return {
+        claimedRestaurants: 0,
+        claimedCities: 0,
+        users: 0,
+        completedReservations: 0,
+      };
+    }
+
+    return {
+      claimedRestaurants:
+        data.dinverStatsChange.claimedRestaurants[selectedPeriod] || 0,
+      claimedCities: data.dinverStatsChange.claimedCities[selectedPeriod] || 0,
+      users: data.dinverStatsChange.users[selectedPeriod] || 0,
+      completedReservations:
+        data.dinverStatsChange.completedReservations[selectedPeriod] || 0,
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1186,6 +1253,44 @@ const Analytics = () => {
                 subtitle={t("all_qr_scans")}
               />
             </div>
+
+            {/* Dinver KPI Cards - samo za all_restaurants */}
+            {scope === "all_restaurants" && data?.dinverStats && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatCard
+                  title={t("claimed_restaurants")}
+                  value={getDinverKPIValues().claimedRestaurants}
+                  change={getDinverKPIChanges().claimedRestaurants}
+                  icon={BuildingOfficeIcon}
+                  color="bg-purple-500"
+                  subtitle={t("restaurants_on_dinver")}
+                />
+                <StatCard
+                  title={t("cities_with_restaurants")}
+                  value={getDinverKPIValues().claimedCities}
+                  change={getDinverKPIChanges().claimedCities}
+                  icon={MapPinIcon}
+                  color="bg-pink-500"
+                  subtitle={t("cities_covered")}
+                />
+                <StatCard
+                  title={t("total_users")}
+                  value={getDinverKPIValues().users}
+                  change={getDinverKPIChanges().users}
+                  icon={UsersIcon}
+                  color="bg-teal-500"
+                  subtitle={t("users_on_app")}
+                />
+                <StatCard
+                  title={t("completed_reservations")}
+                  value={getDinverKPIValues().completedReservations}
+                  change={getDinverKPIChanges().completedReservations}
+                  icon={CheckCircleIcon}
+                  color="bg-emerald-500"
+                  subtitle={t("successful_bookings")}
+                />
+              </div>
+            )}
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

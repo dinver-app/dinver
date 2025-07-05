@@ -4,6 +4,9 @@ const {
   MenuItemTranslation,
   DrinkItemTranslation,
   VisitValidation,
+  User,
+  ClaimLog,
+  Reservation,
 } = require('../../models');
 
 // Helper: Valid event types
@@ -585,6 +588,245 @@ const getAnalyticsSummary = async (req, res) => {
       byDate[day] = (byDate[day] || 0) + 1;
     });
 
+    // Dinver KPI-jevi samo za all_restaurants
+    let dinverStats = null;
+    let dinverStatsChange = null;
+    if (!restaurantId) {
+      // 1. Claimani restorani po periodima (prema ClaimLog.createdAt)
+      const allClaimLogs = await ClaimLog.findAll({
+        attributes: ['id', 'restaurantId', 'createdAt'],
+        raw: true,
+      });
+      // 2. Gradovi s claimanim restoranima po periodima (preko place iz Restaurant)
+      // 3. Broj usera po periodima (User.createdAt)
+      const allUsers = await User.findAll({
+        attributes: ['id', 'createdAt'],
+        raw: true,
+      });
+      // 4. Broj completed rezervacija po periodima (Reservation.status === 'completed')
+      const allCompletedReservations = await Reservation.findAll({
+        where: { status: 'completed' },
+        attributes: ['id', 'createdAt'],
+        raw: true,
+      });
+      // Helper za claimane restorane (po periodu, unique restaurantId)
+      const claimedRestaurantsByPeriod = {};
+      const claimedRestaurantsPrevByPeriod = {};
+      const claimedCitiesByPeriod = {};
+      const claimedCitiesPrevByPeriod = {};
+      const usersByPeriod = {};
+      const usersPrevByPeriod = {};
+      const completedReservationsByPeriod = {};
+      const completedReservationsPrevByPeriod = {};
+
+      for (const period of periodKeys) {
+        // Svi claimLogovi u periodu
+        const logsInPeriod = allClaimLogs.filter((log) =>
+          periods[period](new Date(log.createdAt)),
+        );
+        // Unique restaurantId
+        const uniqueRestaurantIds = Array.from(
+          new Set(logsInPeriod.map((log) => log.restaurantId)),
+        );
+        claimedRestaurantsByPeriod[period] = uniqueRestaurantIds.length;
+
+        // Dohvati gradove za te restorane
+        if (uniqueRestaurantIds.length > 0) {
+          const restaurants = await Restaurant.findAll({
+            where: { id: uniqueRestaurantIds },
+            attributes: ['id', 'place'],
+            raw: true,
+          });
+          const uniqueCities = Array.from(
+            new Set(restaurants.map((r) => r.place).filter(Boolean)),
+          );
+          claimedCitiesByPeriod[period] = uniqueCities.length;
+        } else {
+          claimedCitiesByPeriod[period] = 0;
+        }
+      }
+
+      // Prethodni periodi za claimane restorane
+      claimedRestaurantsPrevByPeriod.today = allClaimLogs.filter((log) =>
+        periods.yesterday(new Date(log.createdAt)),
+      ).length;
+      claimedRestaurantsPrevByPeriod.last7 = allClaimLogs.filter((log) =>
+        periods.weekBefore(new Date(log.createdAt)),
+      ).length;
+      claimedRestaurantsPrevByPeriod.last14 = allClaimLogs.filter((log) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 28);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 14);
+        const d = new Date(log.createdAt);
+        return d >= start && d < end;
+      }).length;
+      claimedRestaurantsPrevByPeriod.last30 = allClaimLogs.filter((log) =>
+        periods.monthBefore(new Date(log.createdAt)),
+      ).length;
+      claimedRestaurantsPrevByPeriod.last60 = allClaimLogs.filter((log) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 90);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 60);
+        const d = new Date(log.createdAt);
+        return d >= start && d < end;
+      }).length;
+      claimedRestaurantsPrevByPeriod.all_time = allClaimLogs.filter((log) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 60);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 30);
+        const d = new Date(log.createdAt);
+        return d >= start && d < end;
+      }).length;
+
+      // Prethodni periodi za gradove (pojednostavljeno - koristimo istu logiku kao za restorane)
+      claimedCitiesPrevByPeriod.today = claimedRestaurantsPrevByPeriod.today;
+      claimedCitiesPrevByPeriod.last7 = claimedRestaurantsPrevByPeriod.last7;
+      claimedCitiesPrevByPeriod.last14 = claimedRestaurantsPrevByPeriod.last14;
+      claimedCitiesPrevByPeriod.last30 = claimedRestaurantsPrevByPeriod.last30;
+      claimedCitiesPrevByPeriod.last60 = claimedRestaurantsPrevByPeriod.last60;
+      claimedCitiesPrevByPeriod.all_time =
+        claimedRestaurantsPrevByPeriod.all_time;
+
+      // Broj usera po periodima
+      for (const period of periodKeys) {
+        usersByPeriod[period] = allUsers.filter((u) =>
+          periods[period](new Date(u.createdAt)),
+        ).length;
+      }
+
+      // Prethodni periodi za usere
+      usersPrevByPeriod.today = allUsers.filter((u) =>
+        periods.yesterday(new Date(u.createdAt)),
+      ).length;
+      usersPrevByPeriod.last7 = allUsers.filter((u) =>
+        periods.weekBefore(new Date(u.createdAt)),
+      ).length;
+      usersPrevByPeriod.last14 = allUsers.filter((u) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 28);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 14);
+        const d = new Date(u.createdAt);
+        return d >= start && d < end;
+      }).length;
+      usersPrevByPeriod.last30 = allUsers.filter((u) =>
+        periods.monthBefore(new Date(u.createdAt)),
+      ).length;
+      usersPrevByPeriod.last60 = allUsers.filter((u) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 90);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 60);
+        const d = new Date(u.createdAt);
+        return d >= start && d < end;
+      }).length;
+      usersPrevByPeriod.all_time = allUsers.filter((u) => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - 60);
+        const end = new Date(now);
+        end.setDate(now.getDate() - 30);
+        const d = new Date(u.createdAt);
+        return d >= start && d < end;
+      }).length;
+
+      // Broj completed rezervacija po periodima
+      for (const period of periodKeys) {
+        completedReservationsByPeriod[period] = allCompletedReservations.filter(
+          (r) => periods[period](new Date(r.createdAt)),
+        ).length;
+      }
+
+      // Prethodni periodi za completed rezervacije
+      completedReservationsPrevByPeriod.today = allCompletedReservations.filter(
+        (r) => periods.yesterday(new Date(r.createdAt)),
+      ).length;
+      completedReservationsPrevByPeriod.last7 = allCompletedReservations.filter(
+        (r) => periods.weekBefore(new Date(r.createdAt)),
+      ).length;
+      completedReservationsPrevByPeriod.last14 =
+        allCompletedReservations.filter((r) => {
+          const now = new Date();
+          const start = new Date(now);
+          start.setDate(now.getDate() - 28);
+          const end = new Date(now);
+          end.setDate(now.getDate() - 14);
+          const d = new Date(r.createdAt);
+          return d >= start && d < end;
+        }).length;
+      completedReservationsPrevByPeriod.last30 =
+        allCompletedReservations.filter((r) =>
+          periods.monthBefore(new Date(r.createdAt)),
+        ).length;
+      completedReservationsPrevByPeriod.last60 =
+        allCompletedReservations.filter((r) => {
+          const now = new Date();
+          const start = new Date(now);
+          start.setDate(now.getDate() - 90);
+          const end = new Date(now);
+          end.setDate(now.getDate() - 60);
+          const d = new Date(r.createdAt);
+          return d >= start && d < end;
+        }).length;
+      completedReservationsPrevByPeriod.all_time =
+        allCompletedReservations.filter((r) => {
+          const now = new Date();
+          const start = new Date(now);
+          start.setDate(now.getDate() - 60);
+          const end = new Date(now);
+          end.setDate(now.getDate() - 30);
+          const d = new Date(r.createdAt);
+          return d >= start && d < end;
+        }).length;
+
+      // Računanje promjena (trendova)
+      const claimedRestaurantsChange = {};
+      const claimedCitiesChange = {};
+      const usersChange = {};
+      const completedReservationsChange = {};
+
+      for (const period of periodKeys) {
+        claimedRestaurantsChange[period] = getChangePercentage(
+          claimedRestaurantsByPeriod[period],
+          claimedRestaurantsPrevByPeriod[period],
+        );
+        claimedCitiesChange[period] = getChangePercentage(
+          claimedCitiesByPeriod[period],
+          claimedCitiesPrevByPeriod[period],
+        );
+        usersChange[period] = getChangePercentage(
+          usersByPeriod[period],
+          usersPrevByPeriod[period],
+        );
+        completedReservationsChange[period] = getChangePercentage(
+          completedReservationsByPeriod[period],
+          completedReservationsPrevByPeriod[period],
+        );
+      }
+
+      dinverStats = {
+        claimedRestaurants: claimedRestaurantsByPeriod,
+        claimedCities: claimedCitiesByPeriod,
+        users: usersByPeriod,
+        completedReservations: completedReservationsByPeriod,
+      };
+
+      dinverStatsChange = {
+        claimedRestaurants: claimedRestaurantsChange,
+        claimedCities: claimedCitiesChange,
+        users: usersChange,
+        completedReservations: completedReservationsChange,
+      };
+    }
+
     res.json({
       periods: periodKeys,
       events: eventsSummary,
@@ -605,6 +847,8 @@ const getAnalyticsSummary = async (req, res) => {
       eventsRaw: events,
       scope: restaurantId ? 'single_restaurant' : 'all_restaurants',
       restaurantId: restaurantId || null,
+      dinverStats,
+      dinverStatsChange,
     });
   } catch (error) {
     console.error('Error fetching analytics summary:', error);

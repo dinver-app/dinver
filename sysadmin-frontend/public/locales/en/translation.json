@@ -565,5 +565,12 @@
   "unique_data_description": "Counting unique users/sessions",
   "total_data_description": "Counting all interactions",
   "showing_data_for_sources": "Showing data for sources",
-  "show_all": "Show all"
+  "show_all": "Show all",
+  "cities_with_restaurants": "Cities with Restaurants",
+  "total_users": "Total Users",
+  "completed_reservations": "Completed Reservations",
+  "restaurants_on_dinver": "Restaurants on Dinver",
+  "cities_covered": "Cities covered",
+  "users_on_app": "Users on app",
+  "successful_bookings": "Successful bookings"
 }
