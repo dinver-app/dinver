@@ -1,6 +1,11 @@
 const express = require('express');
 const analyticsController = require('../../controllers/analyticsController');
-const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
+const adminController = require('../../controllers/adminController');
+const {
+  adminAuthenticateToken,
+  checkAdmin,
+} = require('../../middleware/roleMiddleware');
+
 const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
@@ -11,12 +16,12 @@ const analyticsLimiter = rateLimit({
   max: 20,
 });
 
-// Log analytics event (rate-limited, API key protected)
-router.post(
-  '/analytics',
-  analyticsLimiter,
-  landingApiKeyAuth,
-  analyticsController.logAnalyticsEvent,
+// Aggregated summary for admin dashboard
+router.get(
+  '/analytics/summary',
+  adminAuthenticateToken,
+  checkAdmin,
+  analyticsController.getAnalyticsSummary,
 );
 
 module.exports = router;
