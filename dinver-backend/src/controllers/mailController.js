@@ -44,6 +44,7 @@ const handleClaimRequest = async (req, res) => {
         <p><strong>Ime i prezime:</strong> ${fullName}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Poruka:</strong> ${message}</p>
+        ${userId ? `<p><strong>User ID:</strong> ${userId})</strong></p>` : ''}
       </div>
       ${userDetails}
     `;
