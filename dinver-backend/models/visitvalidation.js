@@ -16,6 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'reservationId',
         as: 'reservation',
       });
+      VisitValidation.belongsTo(models.User, {
+        foreignKey: 'generatedBy',
+        as: 'generatedByUser',
+      });
     }
   }
 
@@ -28,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
       },
       restaurantId: {
         type: DataTypes.UUID,
@@ -46,10 +50,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: false,
       },
-      isUsed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
       usedAt: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -57,6 +57,14 @@ module.exports = (sequelize, DataTypes) => {
       canLeaveReviewUntil: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      generatedBy: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
       },
     },
     {

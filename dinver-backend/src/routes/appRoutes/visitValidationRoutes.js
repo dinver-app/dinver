@@ -3,28 +3,40 @@ const visitValidationController = require('../../controllers/visitValidationCont
 const {
   appApiKeyAuth,
   appAuthenticateToken,
-  adminAuthenticateToken,
+  checkAdmin,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
-// Generate QR code token (admin only)
+// ===== ADMIN RUTES =====
+// Generate QR code token for restaurant
 router.post(
-  '/restaurants/:restaurantId/visit-token',
+  '/restaurants/:restaurantId/qr-token',
   appApiKeyAuth,
-  adminAuthenticateToken,
+  appAuthenticateToken,
+  checkAdmin,
   visitValidationController.generateVisitToken,
 );
 
-// Validate visit token (user)
+// Close QR code
 router.post(
-  '/validate-visit',
+  '/qr-token/:token/close',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  visitValidationController.closeQRCode,
+);
+
+// ===== USER RUTES =====
+// Validate visit token (scan QR code)
+router.post(
+  '/qr-token/validate',
   appApiKeyAuth,
   appAuthenticateToken,
   visitValidationController.validateVisit,
 );
 
-// Get validation status for a restaurant (user)
+// Get validation status for restaurant (can leave review)
 router.get(
   '/restaurants/:restaurantId/validation-status',
   appApiKeyAuth,

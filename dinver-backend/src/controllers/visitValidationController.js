@@ -22,19 +22,19 @@ const generateVisitToken = async (req, res) => {
       return res.status(404).json({ error: 'restaurant_not_found' });
     }
 
-    // Create validation token with JWT
+    // Create validation token with JWT - 10 minuta
     const tokenPayload = {
       restaurantId,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiration
+      expiresAt: new Date(Date.now() + 3 * 60 * 1000), // 3 minute
     };
 
     const validationToken = jwt.sign(tokenPayload, process.env.JWT_SECRET);
 
-    // Create visit validation record
+    // Create visit validation record (admin record - bez userId)
     await VisitValidation.create({
       restaurantId,
-      userId: adminId,
+      generatedBy: adminId, // Tko je generirao token
       validationToken,
       expiresAt: tokenPayload.expiresAt,
     });
@@ -63,19 +63,19 @@ const validateVisit = async (req, res) => {
       return res.status(400).json({ error: 'invalid_token' });
     }
 
-    // Find validation record
+    // Find validation record - samo provjeri da nije istekli
     const validation = await VisitValidation.findOne({
       where: {
         validationToken: token,
-        isUsed: false,
         expiresAt: {
           [Op.gt]: new Date(),
         },
+        userId: null, // Mora biti admin record (nije još korišten)
       },
     });
 
     if (!validation) {
-      return res.status(400).json({ error: 'token_expired_or_used' });
+      return res.status(400).json({ error: 'token_expired_or_invalid' });
     }
 
     // Provjeri zadnji posjet ovom restoranu u zadnjih 30 dana
@@ -86,7 +86,6 @@ const validateVisit = async (req, res) => {
       where: {
         restaurantId: decodedToken.restaurantId,
         userId,
-        isUsed: true,
         usedAt: {
           [Op.gte]: thirtyDaysAgo,
         },
@@ -165,16 +164,19 @@ const validateVisit = async (req, res) => {
       }
     }
 
-    // Update validation record
+    // Kreiraj NOVI VisitValidation record za ovog gosta
     const reviewExpiration = new Date();
     reviewExpiration.setDate(reviewExpiration.getDate() + 14); // 14 days to leave a review
 
-    await validation.update({
+    await VisitValidation.create({
+      restaurantId: decodedToken.restaurantId,
       userId,
-      isUsed: true,
+      validationToken: token, // Isti token
+      expiresAt: validation.expiresAt, // Isti expiresAt
       usedAt: new Date(),
       canLeaveReviewUntil: reviewExpiration,
       reservationId: isReservationValid ? reservationId : null,
+      generatedBy: validation.generatedBy, // Zadrži tko je generirao
     });
 
     // Award points through PointsService
@@ -196,6 +198,42 @@ const validateVisit = async (req, res) => {
   }
 };
 
+// Close QR code (admin only)
+const closeQRCode = async (req, res) => {
+  try {
+    const { token } = req.params; // Sada je token u URL-u, ne u body-ju
+    const adminId = req.user.id;
+
+    // Find and invalidate the token by setting expiresAt to past
+    const validation = await VisitValidation.findOne({
+      where: {
+        validationToken: token,
+        generatedBy: adminId, // Samo admin koji je generirao može zatvoriti
+        expiresAt: {
+          [Op.gt]: new Date(),
+        },
+        userId: null, // Mora biti admin record
+      },
+    });
+
+    if (!validation) {
+      return res.status(404).json({ error: 'token_not_found_or_expired' });
+    }
+
+    // Set expiresAt to past to invalidate token
+    await validation.update({
+      expiresAt: new Date(Date.now() - 1000), // 1 sekunda u prošlosti
+    });
+
+    res.json({
+      message: 'qr_code_closed',
+    });
+  } catch (error) {
+    console.error('Error closing QR code:', error);
+    res.status(500).json({ error: 'Failed to close QR code' });
+  }
+};
+
 // Get validation status for a restaurant
 const getValidationStatus = async (req, res) => {
   try {
@@ -206,7 +244,6 @@ const getValidationStatus = async (req, res) => {
       where: {
         restaurantId,
         userId,
-        isUsed: true,
         canLeaveReviewUntil: {
           [Op.gt]: new Date(),
         },
@@ -228,5 +265,6 @@ const getValidationStatus = async (req, res) => {
 module.exports = {
   generateVisitToken,
   validateVisit,
+  closeQRCode,
   getValidationStatus,
 };
