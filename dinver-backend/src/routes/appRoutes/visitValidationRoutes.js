@@ -3,7 +3,7 @@ const visitValidationController = require('../../controllers/visitValidationCont
 const {
   appApiKeyAuth,
   appAuthenticateToken,
-  adminAuthenticateToken,
+  checkAdmin,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -13,23 +13,17 @@ const router = express.Router();
 router.post(
   '/restaurants/:restaurantId/qr-token',
   appApiKeyAuth,
-  adminAuthenticateToken,
+  appAuthenticateToken,
+  checkAdmin,
   visitValidationController.generateVisitToken,
-);
-
-// Get QR code status
-router.get(
-  '/qr-token/:token/status',
-  appApiKeyAuth,
-  adminAuthenticateToken,
-  visitValidationController.getQRCodeStatus,
 );
 
 // Close QR code
 router.post(
   '/qr-token/:token/close',
   appApiKeyAuth,
-  adminAuthenticateToken,
+  appAuthenticateToken,
+  checkAdmin,
   visitValidationController.closeQRCode,
 );
 

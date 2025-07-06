@@ -234,40 +234,6 @@ const closeQRCode = async (req, res) => {
   }
 };
 
-// Get QR code status (admin only)
-const getQRCodeStatus = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const adminId = req.user.id;
-
-    const validation = await VisitValidation.findOne({
-      where: {
-        validationToken: token,
-        generatedBy: adminId,
-        userId: null, // Admin record
-      },
-    });
-
-    if (!validation) {
-      return res.status(404).json({ error: 'token_not_found' });
-    }
-
-    const isExpired = new Date() > validation.expiresAt;
-    const timeLeft = isExpired
-      ? 0
-      : Math.max(0, validation.expiresAt - new Date());
-
-    res.json({
-      isActive: !isExpired,
-      expiresAt: validation.expiresAt,
-      timeLeft: Math.floor(timeLeft / 1000), // u sekundama
-    });
-  } catch (error) {
-    console.error('Error getting QR code status:', error);
-    res.status(500).json({ error: 'Failed to get QR code status' });
-  }
-};
-
 // Get validation status for a restaurant
 const getValidationStatus = async (req, res) => {
   try {
@@ -300,6 +266,5 @@ module.exports = {
   generateVisitToken,
   validateVisit,
   closeQRCode,
-  getQRCodeStatus,
   getValidationStatus,
 };
