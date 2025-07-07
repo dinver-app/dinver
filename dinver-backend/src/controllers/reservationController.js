@@ -41,6 +41,7 @@ const createReservation = async (req, res) => {
       where: {
         userId,
         restaurantId,
+        date,
         status: {
           [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
         },
