@@ -41,9 +41,12 @@ const createReservation = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const dateObj = new Date(date);
+    dateObj.setHours(0, 0, 0, 0);
+
     let existingReservation;
 
-    if (date > today) {
+    if (dateObj > today) {
       // Budući datum – blokiraj ako postoji aktivna rezervacija za taj datum
       existingReservation = await Reservation.findOne({
         where: {
@@ -55,7 +58,7 @@ const createReservation = async (req, res) => {
           },
         },
       });
-    } else if (date.getTime() === today.getTime()) {
+    } else if (dateObj.getTime() === today.getTime()) {
       // Danas – blokiraj samo ako postoji aktivna rezervacija s vremenom u budućnosti
       existingReservation = await Reservation.findOne({
         where: {
