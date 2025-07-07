@@ -172,7 +172,7 @@ const validateVisit = async (req, res) => {
       expiresAt: validation.expiresAt, // Isti expiresAt
       usedAt: new Date(),
       canLeaveReviewUntil: reviewExpiration,
-      reservationId: isReservationValid ? reservationId : null,
+      reservationId: isReservationValid ? reservation.id : null,
       generatedBy: validation.generatedBy, // Zadrži tko je generirao
     });
 
