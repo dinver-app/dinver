@@ -875,7 +875,12 @@ const Analytics = () => {
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                               >
-                                {restaurant.name}
+                                <h4
+                                  className="font-medium text-gray-900 truncate w-full"
+                                  title={restaurant.name}
+                                >
+                                  {restaurant.name}
+                                </h4>
                               </button>
                             ))
                         )}
@@ -1461,7 +1466,10 @@ const Analytics = () => {
                                 )}`}
                               />
                             </div>
-                            <h4 className="font-medium text-gray-900">
+                            <h4
+                              className="font-medium text-gray-900 truncate w-full"
+                              title={config.label}
+                            >
                               {config.label}
                             </h4>
                           </div>
@@ -1549,7 +1557,10 @@ const Analytics = () => {
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                               {index + 1}
                             </div>
-                            <h4 className="font-medium text-gray-900 truncate">
+                            <h4
+                              className="font-medium text-gray-900 truncate w-full"
+                              title={item.name}
+                            >
                               {item.name}
                             </h4>
                           </div>

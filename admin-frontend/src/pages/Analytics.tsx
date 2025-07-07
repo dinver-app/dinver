@@ -1197,7 +1197,10 @@ const Analytics = () => {
                         <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                           {index + 1}
                         </div>
-                        <h4 className="font-medium text-gray-900 truncate">
+                        <h4
+                          className="font-medium text-gray-900 truncate w-full"
+                          title={item.name}
+                        >
                           {item.name}
                         </h4>
                       </div>
