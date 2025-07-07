@@ -1553,12 +1553,12 @@ const Analytics = () => {
                         className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                               {index + 1}
                             </div>
                             <h4
-                              className="font-medium text-gray-900 truncate w-full"
+                              className="font-medium text-gray-900 truncate w-full max-w-[180px]"
                               title={item.name}
                             >
                               {item.name}
