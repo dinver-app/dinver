@@ -114,9 +114,10 @@ const validateVisit = async (req, res) => {
       where: {
         userId,
         restaurantId: decodedToken.restaurantId,
-        status: 'confirmed', // Only confirmed reservations can be validated
-        date: todaysDate, // Must be today's date
+        status: 'confirmed',
+        date: todaysDate,
       },
+      order: [['time', 'DESC']],
       include: [
         {
           model: Restaurant,
