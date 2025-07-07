@@ -87,4 +87,11 @@ router.patch(
   reservationController.acceptSuggestedTime,
 );
 
+router.get(
+  '/reservations/available-times',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  reservationController.getAvailableTimes,
+);
+
 module.exports = router;
