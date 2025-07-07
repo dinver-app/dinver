@@ -37,38 +37,22 @@ import { useTranslation } from "react-i18next";
 
 // Types
 interface AnalyticsSummary {
-  periods: string[];
-  events: Record<string, EventSummary>;
-  itemClicks: ItemClick[];
-  topItems: ItemClick[];
-  sourceBreakdown: Record<string, number>;
-  sourceByEvent: Record<string, Record<string, number>>;
-  byHour: Record<string, number[]>;
-  byHourSource?: Record<string, Record<string, number[]>>;
-  clicksTotal: number;
-  viewsTotal: number;
-  byDate: Record<string, number>;
-  confirmedVisits: number;
-  qrScansTotal: number;
-  itemClicksBySource?: Record<
+  summary: any;
+  sourceDistribution: Record<string, Record<string, Record<string, number>>>;
+  dailyActivity: Record<
     string,
-    Record<
-      string,
-      {
-        total: Record<string, number>;
-        unique: Record<string, number>;
-      }
-    >
+    Record<string, Record<string, Record<string, number>>>
   >;
-  confirmedVisitsSummary?: {
-    total: Record<string, number>;
-    change: Record<string, number>;
-  };
-  qrScansSummary?: {
-    total: Record<string, number>;
-    change: Record<string, number>;
-  };
-  eventsRaw?: any[];
+  hourlyActivity: Record<string, Record<string, Record<string, number[]>>>;
+  topMenuItems: Record<
+    string,
+    Record<string, Array<{ name: string; count: number }>>
+  >;
+  events: Record<string, any>;
+  sourceBreakdown?: Record<string, number>;
+  sourceByEvent?: Record<string, Record<string, number>>;
+  topItems?: ItemClick[];
+  clicksTotal?: number;
   scope?: "single_restaurant" | "all_restaurants";
   restaurantId?: string | null;
   dinverStats?: {
@@ -242,7 +226,9 @@ const Analytics = () => {
 
         // Initialize source filter with all sources (only on first load)
         if (selectedSources.length === 0) {
-          const sources = Object.keys(response.sourceBreakdown || {});
+          const sources = Object.keys(
+            response.sourceDistribution?.last7?.total || {}
+          ).filter((s) => s !== "unknown");
           setSelectedSources(sources);
         }
       } catch (err) {
@@ -306,26 +292,34 @@ const Analytics = () => {
   const getFilteredData = (): AnalyticsSummary | null => {
     if (!data || selectedSources.length === 0) return data;
 
-    // 1. Filter sourceBreakdown
-    const filteredSourceBreakdown = Object.entries(data.sourceBreakdown)
+    // 1. Filter sourceDistribution (novi backend response)
+    const currentPeriod =
+      selectedPeriod === "all_time" ? "last30" : selectedPeriod;
+    const sourceDistribution = data.sourceDistribution?.[currentPeriod] || {};
+    const filteredSourceBreakdown = Object.entries(
+      sourceDistribution[showUniqueData ? "unique" : "total"] || {}
+    )
       .filter(([source]) => selectedSources.includes(source))
       .reduce(
         (acc: Record<string, number>, [source, count]) => ({
           ...acc,
-          [source]: count,
+          [source]: count as number,
         }),
         {}
       );
 
-    // 2. Filter sourceByEvent
-    const filteredSourceByEvent = Object.entries(data.sourceByEvent).reduce(
-      (acc: Record<string, Record<string, number>>, [eventType, sources]) => {
-        const filteredSources = Object.entries(sources)
+    // 2. Filter sourceByEvent (iz events objekta)
+    const filteredSourceByEvent = Object.entries(data.events || {}).reduce(
+      (acc: Record<string, Record<string, number>>, [eventType, eventData]) => {
+        const eventSources =
+          eventData?.[currentPeriod]?.[showUniqueData ? "unique" : "total"] ||
+          {};
+        const filteredSources = Object.entries(eventSources)
           .filter(([source]) => selectedSources.includes(source))
           .reduce(
             (acc2: Record<string, number>, [source, count]) => ({
               ...acc2,
-              [source]: count,
+              [source]: count as number,
             }),
             {}
           );
@@ -336,73 +330,61 @@ const Analytics = () => {
 
     // 3. Recalculate events (overview)
     const filteredEvents: Record<string, EventSummary> = {};
-    for (const [eventType, event] of Object.entries(data.events)) {
-      // For each period, sum only sources in selectedSources
+    for (const [eventType, eventData] of Object.entries(data.events || {})) {
+      const periodData = eventData?.[currentPeriod];
+      if (!periodData) continue;
+
       const total: Record<string, number> = {};
       const unique: Record<string, number> = {};
-      for (const period of Object.keys(event.total)) {
-        // Sum all sources for this eventType and period
-        const sources = data.sourceByEvent[eventType] || {};
-        const filteredTotal = Object.entries(sources)
-          .filter(([source]) => selectedSources.includes(source))
-          .reduce((sum, [, count]) => sum + count, 0);
-        total[period] = filteredTotal;
-        // Unique: fallback to original unique (since we don't have unique per source)
-        // If you want to recalc unique per source, you need backend support
-        unique[period] = event.unique[period];
+
+      // Sum selected sources
+      let totalSum = 0;
+      let uniqueSum = 0;
+      for (const source of selectedSources) {
+        totalSum += periodData.total?.[source] || 0;
+        uniqueSum += periodData.unique?.[source] || 0;
       }
+
+      total[currentPeriod] = totalSum;
+      unique[currentPeriod] = uniqueSum;
+
       filteredEvents[eventType] = {
-        ...event,
         total,
         unique,
+        changeToday: 0, // Backend ne vraća ove podatke
+        change7: 0,
+        change30: 0,
+        uniqueChangeToday: 0,
+        uniqueChange7: 0,
+        uniqueChange30: 0,
       };
     }
 
-    // 4. Recalculate topItems (menu items) using itemClicksBySource
-    let filteredTopItems: typeof data.topItems = [];
-    if (data.itemClicksBySource) {
-      filteredTopItems = data.topItems.map((item) => {
-        const total: Record<string, number> = {};
-        const unique: Record<string, number> = {};
-        for (const period of Object.keys(item.total)) {
-          let totalSum = 0;
-          let uniqueSum = 0;
-          const itemSources = data.itemClicksBySource?.[item.id];
-          if (itemSources) {
-            for (const source of selectedSources) {
-              const sourceData = itemSources[source];
-              totalSum += sourceData?.total?.[period] ?? 0;
-              uniqueSum += sourceData?.unique?.[period] ?? 0;
-            }
-          }
-          total[period] = totalSum;
-          unique[period] = uniqueSum;
-        }
-        return { ...item, total, unique };
-      });
-      // Sort by selected period total desc (like backend)
-      filteredTopItems = [...filteredTopItems]
-        .sort(
-          (a, b) =>
-            (b.total[selectedPeriod] || 0) - (a.total[selectedPeriod] || 0)
-        )
-        .slice(0, 5);
-    } else {
-      filteredTopItems = data.topItems;
-    }
+    // 4. Recalculate topItems (menu items)
+    const topItems =
+      data.topMenuItems?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || [];
+    const formattedTopItems: ItemClick[] = topItems.map((item, index) => ({
+      id: `item-${index}`,
+      name: item.name,
+      total: { [currentPeriod]: item.count },
+      unique: { [currentPeriod]: item.count },
+    }));
 
-    // 5. Recalculate clicksTotal
-    const clicksTotal = Object.values(filteredSourceBreakdown).reduce(
-      (sum: number, count: number) => sum + count,
-      0
-    );
+    // 5. Recalculate clicksTotal - sum all click events for selected sources
+    const clicksTotal = Object.entries(filteredSourceByEvent)
+      .filter(([eventType]) => eventType.startsWith("click_"))
+      .reduce((sum, [, sources]) => {
+        return sum + Object.values(sources).reduce((s, count) => s + count, 0);
+      }, 0);
 
     return {
       ...data,
       sourceBreakdown: filteredSourceBreakdown,
       sourceByEvent: filteredSourceByEvent,
       events: filteredEvents,
-      topItems: filteredTopItems,
+      topItems: formattedTopItems,
       clicksTotal,
     };
   };
@@ -466,108 +448,68 @@ const Analytics = () => {
     </div>
   );
 
-  // Helper: Calculate unique breakdown by source for a given event type and period
+  // Helper: Calculate breakdown by source for a given event type and period
   const getSourceBreakdown = (eventType: string) => {
-    if (!data || !data.eventsRaw) return {};
+    if (!data) return {};
     const breakdown: Record<string, number> = {};
-    const sources = Object.keys(data.sourceBreakdown);
+    const currentPeriod =
+      selectedPeriod === "all_time" ? "last30" : selectedPeriod;
 
-    for (const source of sources) {
-      if (showUniqueData) {
-        // Unique: count unique session_id/ip_address for this eventType and source in selected period
-        const events = data.eventsRaw!.filter(
-          (e: any) =>
-            (eventType === "all" || e.event_type === eventType) &&
-            selectedSources.includes(e.source || "unknown") &&
-            (e.source || "unknown") === source &&
-            isInPeriod(e.timestamp, selectedPeriod)
-        );
-        const uniqueSet = new Set(
-          events.map((e: any) => e.session_id || e.ip_address)
-        );
-        breakdown[source] = uniqueSet.size;
-      } else {
-        // Total: count all events for this eventType and source in selected period
-        const count = data.eventsRaw!.filter(
-          (e: any) =>
-            (eventType === "all" || e.event_type === eventType) &&
-            selectedSources.includes(e.source || "unknown") &&
-            (e.source || "unknown") === source &&
-            isInPeriod(e.timestamp, selectedPeriod)
-        ).length;
-        breakdown[source] = count;
+    if (eventType === "all") {
+      // Use sourceDistribution for overall breakdown
+      const sourceData =
+        data.sourceDistribution?.[currentPeriod]?.[
+          showUniqueData ? "unique" : "total"
+        ] || {};
+      for (const source of selectedSources) {
+        breakdown[source] = sourceData[source] || 0;
+      }
+    } else {
+      // Use events data for specific event type
+      const eventData =
+        data.events?.[eventType]?.[currentPeriod]?.[
+          showUniqueData ? "unique" : "total"
+        ] || {};
+      for (const source of selectedSources) {
+        breakdown[source] = eventData[source] || 0;
       }
     }
     return breakdown;
   };
 
-  // Helper: Check if a timestamp is in the selected period
-  const isInPeriod = (timestamp: string, period: PeriodKey) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    if (period === "today") {
-      return date.toDateString() === now.toDateString();
-    } else if (period === "last7") {
-      return (now.getTime() - date.getTime()) / 86400000 < 7;
-    } else if (period === "last14") {
-      return (now.getTime() - date.getTime()) / 86400000 < 14;
-    } else if (period === "last30") {
-      return (now.getTime() - date.getTime()) / 86400000 < 30;
-    } else if (period === "last60") {
-      return (now.getTime() - date.getTime()) / 86400000 < 60;
-    } else if (period === "all_time") {
-      return true; // Uvijek true za sve datume
-    }
-    return false;
-  };
-
   // Helper: Hourly data (views/clicks) for unique/total
   const getHourlyData = () => {
-    if (!data || !data.eventsRaw) return [];
+    if (!data) return [];
+    const currentPeriod =
+      selectedPeriod === "all_time" ? "last30" : selectedPeriod;
+    const hourlyData =
+      data.hourlyActivity?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || {};
+
     return Array.from({ length: 24 }, (_, hour) => {
       let views = 0;
       let clicks = 0;
-      if (showUniqueData) {
-        // Unique: count unique session_id/ip_address per hour
-        const viewEvents = data.eventsRaw!.filter(
-          (e: any) =>
-            e.event_type === "restaurant_view" &&
-            selectedSources.includes(e.source || "unknown") &&
-            isInPeriod(e.timestamp, selectedPeriod) &&
-            new Date(e.timestamp).getHours() === hour
-        );
-        views = new Set(
-          viewEvents.map((e: any) => e.session_id || e.ip_address)
-        ).size;
-        const clickEvents = data.eventsRaw!.filter(
-          (e: any) =>
-            e.event_type.startsWith("click_") &&
-            selectedSources.includes(e.source || "unknown") &&
-            isInPeriod(e.timestamp, selectedPeriod) &&
-            new Date(e.timestamp).getHours() === hour
-        );
-        clicks = new Set(
-          clickEvents.map((e: any) => e.session_id || e.ip_address)
-        ).size;
-      } else if (data.byHourSource) {
-        // Total: sum byHourSource for selected sources
-        for (const source of selectedSources) {
-          views += data.byHourSource.restaurant_view?.[source]?.[hour] || 0;
-          for (const [eventType, sourceObj] of Object.entries(
-            data.byHourSource
-          )) {
-            if (eventType.startsWith("click_")) {
-              clicks += sourceObj?.[source]?.[hour] || 0;
+
+      // Sum selected sources for each hour
+      for (const source of selectedSources) {
+        // Views - from restaurant_view events
+        const viewData = hourlyData[source] || [];
+        if (Array.isArray(viewData)) {
+          views += viewData[hour] || 0;
+        }
+
+        // Clicks - sum all click events for this source
+        for (const [eventType, sourceHours] of Object.entries(hourlyData)) {
+          if (eventType.startsWith("click_")) {
+            const clickData = sourceHours as number[];
+            if (Array.isArray(clickData)) {
+              clicks += clickData[hour] || 0;
             }
           }
         }
-      } else {
-        // Fallback
-        views = filteredData?.byHour?.restaurant_view?.[hour] || 0;
-        clicks = Object.entries(filteredData?.byHour || {})
-          .filter(([key]) => key.startsWith("click_"))
-          .reduce((sum, [, hours]) => sum + (hours[hour] || 0), 0);
       }
+
       return {
         hour: `${hour}:00`,
         views,
@@ -578,21 +520,16 @@ const Analytics = () => {
 
   // Helper: Daily trend (unique/total)
   const getDailyData = () => {
-    if (!data || !data.eventsRaw) return [];
-    // Get all events in selected period, group by day
-    const events = data.eventsRaw!.filter(
-      (e: any) =>
-        selectedSources.includes(e.source || "unknown") &&
-        isInPeriod(e.timestamp, selectedPeriod)
-    );
-    const byDay: Record<string, Set<string> | number> = {};
-    for (const e of events) {
-      const day = new Date(e.timestamp).toISOString().split("T")[0];
-      if (showUniqueData) {
-        if (!byDay[day]) byDay[day] = new Set();
-        (byDay[day] as Set<string>).add(e.session_id || e.ip_address);
-      } else {
-        byDay[day] = ((byDay[day] as number) || 0) + 1;
+    if (!data) return [];
+    const dailyData =
+      data.dailyActivity?.last30?.[showUniqueData ? "unique" : "total"] || {};
+
+    // Sum selected sources for each day
+    const byDay: Record<string, number> = {};
+    for (const source of selectedSources) {
+      const sourceData = dailyData[source] || {};
+      for (const [day, count] of Object.entries(sourceData)) {
+        byDay[day] = (byDay[day] || 0) + (count as number);
       }
     }
 
@@ -609,153 +546,111 @@ const Analytics = () => {
         month: "short",
         day: "numeric",
       }),
-      count: showUniqueData ? (value as Set<string>).size : (value as number),
+      count: value as number,
     }));
   };
 
   // Helper: Source by event heatmap (unique/total)
   const getSourceByEventData = () => {
-    if (!data || !data.eventsRaw) return [];
+    if (!data) return [];
+    const currentPeriod =
+      selectedPeriod === "all_time" ? "last30" : selectedPeriod;
+
     return Object.entries(EVENT_TYPES)
       .map(([eventType, config]) => {
-        const sources = Object.keys(data.sourceBreakdown);
+        const eventData = data.events?.[eventType]?.[currentPeriod];
         const row: Record<string, number> = {};
-        for (const source of sources) {
+
+        for (const source of selectedSources) {
           if (showUniqueData) {
-            const events = data.eventsRaw!.filter(
-              (e: any) =>
-                e.event_type === eventType &&
-                (e.source || "unknown") === source &&
-                selectedSources.includes(source) &&
-                isInPeriod(e.timestamp, selectedPeriod)
-            );
-            row[source] = new Set(
-              events.map((e: any) => e.session_id || e.ip_address)
-            ).size;
+            row[source] = eventData?.unique?.[source] || 0;
           } else {
-            // Total - koristi eventsRaw i isInPeriod umjesto backend sourceByEvent
-            const events = data.eventsRaw!.filter(
-              (e: any) =>
-                e.event_type === eventType &&
-                (e.source || "unknown") === source &&
-                selectedSources.includes(source) &&
-                isInPeriod(e.timestamp, selectedPeriod)
-            );
-            row[source] = events.length;
+            row[source] = eventData?.total?.[source] || 0;
           }
         }
+
+        const total = Object.values(row).reduce((sum, count) => sum + count, 0);
+
         return {
           eventType,
           label: config.label,
           sources: row,
+          total,
         };
       })
-      .filter((item) => Object.keys(item.sources).length > 0);
+      .filter((item) => item.total > 0);
+  };
+
+  // NOVO: Helper za dohvat podataka iz summary (novi backend response)
+  const getSummaryValue = (
+    summary: any,
+    metric: string,
+    period: string,
+    type: "total" | "unique",
+    sources: string[]
+  ) => {
+    if (!summary || !summary[metric] || !summary[metric][period]) return 0;
+    // Zbroji sve izabrane sourceove
+    return sources.reduce(
+      (sum, source) => sum + (summary[metric][period][type]?.[source] || 0),
+      0
+    );
   };
 
   // Helper: Get KPI values based on selected period and unique/total toggle
   const getKPIValues = () => {
     if (!data) return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
-
-    let views = 0;
-    let clicks = 0;
-    let visits = 0;
-    let qrScans = 0;
-
-    if (showUniqueData && data.eventsRaw) {
-      // Unique values for selected period
-      const viewEvents = data.eventsRaw.filter(
-        (e: any) =>
-          e.event_type === "restaurant_view" &&
-          selectedSources.includes(e.source || "unknown") &&
-          isInPeriod(e.timestamp, selectedPeriod)
-      );
-      views = new Set(viewEvents.map((e: any) => e.session_id || e.ip_address))
-        .size;
-
-      const clickEvents = data.eventsRaw.filter(
-        (e: any) =>
-          e.event_type.startsWith("click_") &&
-          selectedSources.includes(e.source || "unknown") &&
-          isInPeriod(e.timestamp, selectedPeriod)
-      );
-      clicks = new Set(
-        clickEvents.map((e: any) => e.session_id || e.ip_address)
-      ).size;
-
-      const qrEvents = data.eventsRaw.filter(
-        (e: any) =>
-          e.event_type === "scan_qr_code" &&
-          selectedSources.includes(e.source || "unknown") &&
-          isInPeriod(e.timestamp, selectedPeriod)
-      );
-      qrScans = new Set(qrEvents.map((e: any) => e.session_id || e.ip_address))
-        .size;
-    } else {
-      // Total values for selected period
-      if (data.eventsRaw) {
-        views = data.eventsRaw.filter(
-          (e: any) =>
-            e.event_type === "restaurant_view" &&
-            selectedSources.includes(e.source || "unknown") &&
-            isInPeriod(e.timestamp, selectedPeriod)
-        ).length;
-
-        clicks = data.eventsRaw.filter(
-          (e: any) =>
-            e.event_type.startsWith("click_") &&
-            selectedSources.includes(e.source || "unknown") &&
-            isInPeriod(e.timestamp, selectedPeriod)
-        ).length;
-
-        qrScans = data.eventsRaw.filter(
-          (e: any) =>
-            e.event_type === "scan_qr_code" &&
-            selectedSources.includes(e.source || "unknown") &&
-            isInPeriod(e.timestamp, selectedPeriod)
-        ).length;
-      }
-    }
-
-    // For visits, use the backend calculated values
-    visits = data.confirmedVisitsSummary?.total?.[selectedPeriod] || 0;
-
+    const views = getSummaryValue(
+      data.summary,
+      "views",
+      selectedPeriod,
+      showUniqueData ? "unique" : "total",
+      selectedSources
+    );
+    const clicks = getSummaryValue(
+      data.summary,
+      "clicks",
+      selectedPeriod,
+      showUniqueData ? "unique" : "total",
+      selectedSources
+    );
+    // Visits: uvijek koristi samo 'all' source
+    const visits = getSummaryValue(
+      data.summary,
+      "visits",
+      selectedPeriod,
+      showUniqueData ? "unique" : "total",
+      ["all"]
+    );
+    const qrScans = getSummaryValue(
+      data.summary,
+      "qr_scans",
+      selectedPeriod,
+      showUniqueData ? "unique" : "total",
+      selectedSources
+    );
     return { views, clicks, visits, qrScans };
   };
 
   // Helper: Get KPI change values based on selected period
   const getKPIChanges = () => {
-    if (!data) return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
+    if (!filteredData || !data)
+      return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
 
     // Za all_time period ne prikazujemo trendove
     if (selectedPeriod === "all_time") {
       return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
     }
 
-    // Backend trenutno vraća samo changeToday, change7, change30 i uniqueChangeToday, uniqueChange7, uniqueChange30
-    // Za ostale periode koristimo fallback
-    let changeKey;
-    if (showUniqueData) {
-      if (selectedPeriod === "today") changeKey = "uniqueChangeToday";
-      else if (selectedPeriod === "last7") changeKey = "uniqueChange7";
-      else if (selectedPeriod === "last30") changeKey = "uniqueChange30";
-      else changeKey = "uniqueChange7"; // fallback za last14, last60, all_time
-    } else {
-      if (selectedPeriod === "today") changeKey = "changeToday";
-      else if (selectedPeriod === "last7") changeKey = "change7";
-      else if (selectedPeriod === "last30") changeKey = "change30";
-      else changeKey = "change7"; // fallback za last14, last60, all_time
-    }
-
-    const views =
-      (data.events.restaurant_view?.[
-        changeKey as keyof EventSummary
-      ] as number) || 0;
-    const clicks = getClickEventsChange();
-    const visits = data.confirmedVisitsSummary?.change?.[selectedPeriod] ?? 0;
-    const qrScans = data.qrScansSummary?.change?.[selectedPeriod] ?? 0;
-
-    return { views, clicks, visits, qrScans };
+    // Backend sada vraća trend podatke u summary.trend
+    const viewsChange = data
+      ? data.summary?.trend?.views?.[selectedPeriod] ?? 0
+      : 0;
+    const clicksChange = data
+      ? data.summary?.trend?.clicks?.[selectedPeriod] ?? 0
+      : 0;
+    // visits i qrScans nemaju trend
+    return { views: viewsChange, clicks: clicksChange, visits: 0, qrScans: 0 };
   };
 
   // Helper: Get Dinver KPI values based on selected period
@@ -840,14 +735,20 @@ const Analytics = () => {
     return null;
 
   const filteredData = data ? getFilteredData() : null;
-  const availableSources = data ? Object.keys(data.sourceBreakdown) : [];
+  const currentPeriod =
+    selectedPeriod === "all_time" ? "last30" : selectedPeriod;
+  const availableSources = Object.keys(
+    data?.sourceDistribution?.[currentPeriod]?.total || {}
+  ).filter((s) => s !== "unknown");
   const pieChartData =
     data && filteredData
       ? Object.entries(getSourceBreakdown("all")).map(([name, value]) => ({
           name,
           value,
           percentage:
-            filteredData && filteredData.clicksTotal > 0
+            filteredData &&
+            filteredData.clicksTotal &&
+            filteredData.clicksTotal > 0
               ? ((value / filteredData.clicksTotal) * 100).toFixed(1)
               : "0",
         }))
@@ -856,35 +757,6 @@ const Analytics = () => {
   const hourlyData = data ? getHourlyData() : [];
   const dailyData = data ? getDailyData() : [];
   const sourceByEventData = data ? getSourceByEventData() : [];
-
-  const getClickEventsChange = () => {
-    if (!data) return 0;
-    if (selectedPeriod === "all_time") {
-      return 0;
-    }
-    const clickEvents = Object.entries(data.events).filter(([key]) =>
-      key.startsWith("click_")
-    );
-    return clickEvents.length > 0
-      ? clickEvents.reduce((sum, [, event]) => {
-          let changeKey;
-          if (showUniqueData) {
-            if (selectedPeriod === "today") changeKey = "uniqueChangeToday";
-            else if (selectedPeriod === "last7") changeKey = "uniqueChange7";
-            else if (selectedPeriod === "last30") changeKey = "uniqueChange30";
-            else changeKey = "uniqueChange7";
-          } else {
-            if (selectedPeriod === "today") changeKey = "changeToday";
-            else if (selectedPeriod === "last7") changeKey = "change7";
-            else if (selectedPeriod === "last30") changeKey = "change30";
-            else changeKey = "change7";
-          }
-          return (
-            sum + ((event[changeKey as keyof EventSummary] as number) || 0)
-          );
-        }, 0) / clickEvents.length
-      : 0;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1072,7 +944,7 @@ const Analytics = () => {
                   type="button"
                   aria-pressed={showUniqueData}
                   onClick={() => setShowUniqueData((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-0 ${
                     showUniqueData ? "bg-blue-600" : "bg-gray-200"
                   }`}
                 >
@@ -1100,7 +972,7 @@ const Analytics = () => {
                   }
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {data?.periods?.map((period) => (
+                  {["today", "last7", "last30", "all_time"].map((period) => (
                     <option key={period} value={period}>
                       {PERIOD_LABELS[period] || period}
                     </option>
@@ -1190,7 +1062,7 @@ const Analytics = () => {
               </span>
               <span
                 className={`text-xs ${
-                  showUniqueData ? "text-blue-50" : "text-gray-500"
+                  showUniqueData ? "text-blue-700" : "text-gray-500"
                 }`}
               >
                 {showUniqueData
@@ -1512,31 +1384,31 @@ const Analytics = () => {
                   {t("event_type_views")}
                 </h3>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span
-                    className={
-                      !showUniqueData ? "font-semibold text-black-600" : ""
-                    }
-                  >
-                    {showUniqueData ? t("unique") : t("total")}
+                  <span className={!showUniqueData ? "font-semibold" : ""}>
+                    {t("total")}
                   </span>
                   <span>•</span>
-                  <span
-                    className={
-                      showUniqueData ? "font-semibold text-purple-600" : ""
-                    }
-                  >
-                    {showUniqueData ? t("total") : t("unique")}
+                  <span className={showUniqueData ? "font-semibold" : ""}>
+                    {t("unique")}
                   </span>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredData &&
+                {data &&
                   Object.entries(EVENT_TYPES).map(([eventType, config]) => {
-                    const eventData = filteredData.events?.[eventType];
+                    const currentPeriod =
+                      selectedPeriod === "all_time" ? "last30" : selectedPeriod;
+                    const eventData = data.events?.[eventType]?.[currentPeriod];
                     if (!eventData) return null;
 
-                    const totalValue = eventData.total?.[selectedPeriod] || 0;
-                    const uniqueValue = eventData.unique?.[selectedPeriod] || 0;
+                    // Sum selected sources
+                    let totalValue = 0;
+                    let uniqueValue = 0;
+                    for (const source of selectedSources) {
+                      totalValue += eventData.total?.[source] || 0;
+                      uniqueValue += eventData.unique?.[source] || 0;
+                    }
+
                     const mainValue = showUniqueData ? uniqueValue : totalValue;
                     const secondaryValue = showUniqueData
                       ? totalValue
@@ -1545,9 +1417,32 @@ const Analytics = () => {
                     const secondaryLabel = showUniqueData
                       ? t("total")
                       : t("unique");
-                    const trendValue = showUniqueData
-                      ? eventData.uniqueChange7
-                      : eventData.change7;
+                    // Prikaz trenda za views i clicks (kao na admin dashboardu)
+                    let trendValue = 0;
+                    if (
+                      selectedPeriod !== "all_time" &&
+                      data &&
+                      data.summary?.trend
+                    ) {
+                      const summary = data.summary;
+                      if (eventType === "restaurant_view") {
+                        trendValue = summary.trend.views?.[selectedPeriod] ?? 0;
+                      } else if (
+                        [
+                          "click_gallery",
+                          "click_reviews",
+                          "click_reserve",
+                          "click_menu",
+                          "click_menu_item",
+                          "click_phone",
+                          "click_map",
+                          "click_website",
+                        ].includes(eventType)
+                      ) {
+                        trendValue =
+                          summary.trend.clicks?.[selectedPeriod] ?? 0;
+                      }
+                    }
 
                     return (
                       <div
@@ -1583,7 +1478,7 @@ const Analytics = () => {
                             <span
                               className={`font-bold text-2xl ${
                                 showUniqueData
-                                  ? "text-purple-700"
+                                  ? "text-black-700"
                                   : "text-black-700"
                               }`}
                             >
@@ -1608,44 +1503,45 @@ const Analytics = () => {
                   {t("top_menu_items")}
                 </h3>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span
-                    className={
-                      !showUniqueData ? "font-semibold text-black-600" : ""
-                    }
-                  >
-                    {showUniqueData ? t("unique") : t("total")}
+                  <span className={!showUniqueData ? "font-semibold" : ""}>
+                    {t("total")}
                   </span>
                   <span>•</span>
-                  <span
-                    className={
-                      showUniqueData ? "font-semibold text-purple-600" : ""
-                    }
-                  >
-                    {showUniqueData ? t("total") : t("unique")}
+                  <span className={showUniqueData ? "font-semibold" : ""}>
+                    {t("unique")}
                   </span>
                 </div>
               </div>
-              {filteredData &&
-              filteredData.topItems &&
-              filteredData.topItems.length > 0 ? (
+              {data?.topMenuItems?.[selectedPeriod]?.[
+                showUniqueData ? "unique" : "total"
+              ] &&
+              data.topMenuItems[selectedPeriod][
+                showUniqueData ? "unique" : "total"
+              ].length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredData.topItems.map((item, index) => {
-                    const totalValueItem = item.total?.[selectedPeriod] || 0;
-                    const uniqueValueItem = item.unique?.[selectedPeriod] || 0;
-                    const mainValue = showUniqueData
-                      ? uniqueValueItem
-                      : totalValueItem;
+                  {data.topMenuItems[selectedPeriod][
+                    showUniqueData ? "unique" : "total"
+                  ].map((item, index) => {
+                    // Find both total and unique counts for this item
+                    const totalArr =
+                      data.topMenuItems[selectedPeriod]["total"] || [];
+                    const uniqueArr =
+                      data.topMenuItems[selectedPeriod]["unique"] || [];
+                    const totalValue =
+                      totalArr.find((i) => i.name === item.name)?.count || 0;
+                    const uniqueValue =
+                      uniqueArr.find((i) => i.name === item.name)?.count || 0;
+                    const mainValue = showUniqueData ? uniqueValue : totalValue;
                     const secondaryValue = showUniqueData
-                      ? totalValueItem
-                      : uniqueValueItem;
+                      ? totalValue
+                      : uniqueValue;
                     const mainLabel = showUniqueData ? t("unique") : t("total");
                     const secondaryLabel = showUniqueData
                       ? t("total")
                       : t("unique");
-
                     return (
                       <div
-                        key={item.id}
+                        key={`${item.name}-${index}`}
                         className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -1666,7 +1562,7 @@ const Analytics = () => {
                             <span
                               className={`font-bold ${
                                 showUniqueData
-                                  ? "text-purple-700"
+                                  ? "text-black-700"
                                   : "text-black-700"
                               }`}
                             >

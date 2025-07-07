@@ -52,7 +52,7 @@ const generateVisitToken = async (req, res) => {
 // Validate a visit token
 const validateVisit = async (req, res) => {
   try {
-    const { token, reservationId } = req.body;
+    const { token } = req.body;
     const userId = req.user.id;
 
     // Verify and decode token
@@ -93,48 +93,45 @@ const validateVisit = async (req, res) => {
       order: [['usedAt', 'DESC']],
     });
 
-    // If reservationId is provided, verify it exists and belongs to the user and restaurant
+    // Automatski pronađi rezervaciju za danas
     let isReservationValid = false;
     let reservation = null;
-    if (reservationId) {
-      // Get today's date at midnight for comparison
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
 
-      // Format date in YYYY-MM-DD format using local time
-      const todaysDate =
-        today.getFullYear() +
-        '-' +
-        String(today.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(today.getDate()).padStart(2, '0');
+    // Get today's date at midnight for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      reservation = await Reservation.findOne({
-        where: {
-          id: reservationId,
-          userId,
-          restaurantId: decodedToken.restaurantId,
-          status: 'confirmed', // Only confirmed reservations can be validated
-          date: todaysDate, // Must be today's date
+    // Format date in YYYY-MM-DD format using local time
+    const todaysDate =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0');
+
+    // Pronađi confirmed rezervaciju za danas
+    reservation = await Reservation.findOne({
+      where: {
+        userId,
+        restaurantId: decodedToken.restaurantId,
+        status: 'confirmed', // Only confirmed reservations can be validated
+        date: todaysDate, // Must be today's date
+      },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'phone'],
         },
-        include: [
-          {
-            model: Restaurant,
-            as: 'restaurant',
-            attributes: ['id', 'name', 'address', 'place', 'phone'],
-          },
-          {
-            model: User,
-            as: 'user',
-            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
-          },
-        ],
-      });
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        },
+      ],
+    });
 
-      if (!reservation) {
-        return res.status(400).json({ error: 'invalid_reservation' });
-      }
-
+    if (reservation) {
       isReservationValid = true;
 
       // Update reservation status to completed
