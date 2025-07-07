@@ -36,6 +36,24 @@ const createReservation = async (req, res) => {
       });
     }
 
+    // Provjeri da korisnik nema već aktivnu rezervaciju u ovom restoranu
+    const existingReservation = await Reservation.findOne({
+      where: {
+        userId,
+        restaurantId,
+        status: {
+          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+        },
+      },
+    });
+
+    if (existingReservation) {
+      return res.status(400).json({
+        error:
+          'You already have an active reservation at this restaurant. Please cancel your existing reservation first.',
+      });
+    }
+
     // Provjeri je li restoran otvoren u to vrijeme
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
@@ -453,6 +471,25 @@ const suggestAlternativeTime = async (req, res) => {
       return res.status(400).json({ error: 'Reservation cannot be modified' });
     }
 
+    // Provjeri da korisnik nema već drugu aktivnu rezervaciju u ovom restoranu
+    const existingReservation = await Reservation.findOne({
+      where: {
+        userId,
+        restaurantId: reservation.restaurantId,
+        id: { [Op.ne]: reservation.id }, // Isključi trenutnu rezervaciju
+        status: {
+          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+        },
+      },
+    });
+
+    if (existingReservation) {
+      return res.status(400).json({
+        error:
+          'User already has another active reservation at this restaurant. Cannot suggest alternative time.',
+      });
+    }
+
     const oldStatus = reservation.status;
 
     await reservation.update({
@@ -826,6 +863,25 @@ const acceptSuggestedTime = async (req, res) => {
       return res.status(400).json({
         error:
           'Can only accept alternative time for reservations with suggested alternative',
+      });
+    }
+
+    // Provjeri da korisnik nema već drugu aktivnu rezervaciju u ovom restoranu
+    const existingReservation = await Reservation.findOne({
+      where: {
+        userId,
+        restaurantId: reservation.restaurantId,
+        id: { [Op.ne]: reservation.id }, // Isključi trenutnu rezervaciju
+        status: {
+          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+        },
+      },
+    });
+
+    if (existingReservation) {
+      return res.status(400).json({
+        error:
+          'You already have another active reservation at this restaurant. Cannot accept alternative time.',
       });
     }
 
