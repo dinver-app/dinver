@@ -994,6 +994,70 @@ const acceptSuggestedTime = async (req, res) => {
   }
 };
 
+// Dohvati dostupne termine za rezervaciju
+const getAvailableTimes = async (req, res) => {
+  try {
+    const { restaurantId, date } = req.query;
+    if (!restaurantId || !date) {
+      return res
+        .status(400)
+        .json({ error: 'restaurantId and date are required' });
+    }
+
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant || !restaurant.openingHours) {
+      return res.json([]); // nema restorana ili radnog vremena
+    }
+
+    // Izračunaj dan u tjednu (0 = ponedjeljak, 6 = nedjelja)
+    const jsDay = new Date(date).getDay(); // 0 = nedjelja, 1 = ponedjeljak, ...
+    const dayOfWeek = (jsDay + 6) % 7; // shift: 0 (nedjelja) -> 6, 1 (pon) -> 0, ...
+
+    // Pronađi period za taj dan
+    const period = restaurant.openingHours.periods.find(
+      (p) => p.open.day === dayOfWeek,
+    );
+
+    if (!period || !period.open.time || !period.close.time) {
+      return res.json([]); // ne radi taj dan
+    }
+
+    // Pretvori "0800" u minute
+    const toMinutes = (str) => {
+      if (!str || str.length !== 4) return null;
+      const h = parseInt(str.slice(0, 2), 10);
+      const m = parseInt(str.slice(2, 4), 10);
+      return h * 60 + m;
+    };
+    const toHHMM = (min) => {
+      const h = Math.floor(min / 60)
+        .toString()
+        .padStart(2, '0');
+      const m = (min % 60).toString().padStart(2, '0');
+      return `${h}:${m}`;
+    };
+
+    const openMin = toMinutes(period.open.time);
+    const closeMin = toMinutes(period.close.time);
+    if (openMin === null || closeMin === null) return res.json([]);
+
+    // Ako je radno vrijeme npr. 08:00 - 00:00, closeMin će biti 0, pa trebaš detektirati prelazak u idući dan
+    let lastSlot = closeMin - 60;
+    if (closeMin === 0) lastSlot = 24 * 60 - 60; // do 23:00
+
+    // Generiraj termine po 30 min
+    const slots = [];
+    for (let min = openMin; min <= lastSlot; min += 30) {
+      slots.push(toHHMM(min));
+    }
+
+    return res.json(slots);
+  } catch (error) {
+    console.error('Error in getAvailableTimes:', error);
+    res.status(500).json({ error: 'Failed to get available times' });
+  }
+};
+
 module.exports = {
   createReservation,
   getUserReservations,
@@ -1005,4 +1069,5 @@ module.exports = {
   cancelReservation,
   cancelReservationByRestaurant,
   getReservationHistory,
+  getAvailableTimes,
 };
