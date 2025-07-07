@@ -619,21 +619,22 @@ const Analytics = () => {
   const availableSources = Object.keys(
     data.sourceDistribution?.[currentPeriod]?.total || {}
   ).filter((s) => s !== "unknown");
-  const pieChartData = Object.entries(getSourceBreakdown("all")).map(
-    ([name, value]) => ({
-      name,
-      value,
-      percentage:
-        filteredData.clicksTotal > 0
-          ? ((value / filteredData.clicksTotal) * 100).toFixed(1)
-          : "0",
-    })
+
+  const pieChartDataRaw =
+    data && filteredData ? Object.entries(getSourceBreakdown("all")) : [];
+  const pieChartTotal = pieChartDataRaw.reduce(
+    (sum, [, value]) => sum + value,
+    0
   );
+  const pieChartData = pieChartDataRaw.map(([name, value]) => ({
+    name,
+    value,
+    percentage:
+      pieChartTotal > 0 ? ((value / pieChartTotal) * 100).toFixed(1) : "0",
+  }));
 
   const hourlyData = getHourlyData();
-
   const dailyData = getDailyData();
-
   const sourceByEventData = getSourceByEventData();
 
   return (
