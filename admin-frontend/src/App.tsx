@@ -13,6 +13,7 @@ import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import Logs from "./pages/Logs";
+import QRGenerator from "./pages/QRGenerator";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import Reviews from "./pages/Reviews";
@@ -41,6 +42,7 @@ function App() {
                 element={<RestaurantDetails />}
               />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/qr-generator" element={<QRGenerator />} />
               <Route
                 path="/analytics"
                 element={

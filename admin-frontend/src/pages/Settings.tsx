@@ -11,10 +11,13 @@ import {
 } from "../services/adminService";
 import { canAccess } from "../utils/permissions";
 import { useRole } from "../context/RoleContext";
+import { useNavigate } from "react-router-dom";
+import { QrCodeIcon } from "@heroicons/react/24/outline";
 
 const Settings = () => {
   const { t } = useTranslation();
   const { role } = useRole();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("general");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [admins, setAdmins] = useState([]);
@@ -30,6 +33,10 @@ const Settings = () => {
     localStorage.getItem("currentRestaurant") || "{}"
   );
   const restaurantId = currentRestaurant.id;
+  const restaurantSlug = currentRestaurant.slug;
+
+  // Generate menu URL
+  const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu`;
 
   useEffect(() => {
     fetchUserLanguage();
@@ -176,6 +183,39 @@ const Settings = () => {
           <h3 className="section-subtitle">
             {t("general_settings_content_goes_here")}
           </h3>
+
+          {/* QR Generator Link */}
+          <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <QrCodeIcon className="w-5 h-5 text-blue-600" />
+                  {t("qr_generator_title")}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {t("qr_generator_description")}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {t("qr_generator_features_templates")}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    {t("qr_generator_features_premium")}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {t("qr_generator_features_bulk")}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/qr-generator")}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {t("qr_generator_open_button")}
+              </button>
+            </div>
+          </div>
+
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700">
               {t("language")}
