@@ -37,16 +37,43 @@ const createReservation = async (req, res) => {
     }
 
     // Provjeri da korisnik nema već aktivnu rezervaciju u ovom restoranu
-    const existingReservation = await Reservation.findOne({
-      where: {
-        userId,
-        restaurantId,
-        date,
-        status: {
-          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let existingReservation;
+
+    if (date > today) {
+      // Budući datum – blokiraj ako postoji aktivna rezervacija za taj datum
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId,
+          date,
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
         },
-      },
-    });
+      });
+    } else if (date.getTime() === today.getTime()) {
+      // Danas – blokiraj samo ako postoji aktivna rezervacija s vremenom u budućnosti
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId,
+          date,
+          time: {
+            [Op.gte]: now.toTimeString().slice(0, 8), // 'HH:MM:SS'
+          },
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
+        },
+      });
+    } else {
+      // Prošli datumi – ne blokiraj
+      existingReservation = null;
+    }
 
     if (existingReservation) {
       return res.status(400).json({
