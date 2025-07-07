@@ -55,7 +55,7 @@ const getUserAchievements = async (req, res) => {
                 model: VisitValidation,
                 where: {
                   userId,
-                  isUsed: true,
+                  usedAt: { [Op.ne]: null },
                 },
                 required: true,
               },
@@ -72,7 +72,7 @@ const getUserAchievements = async (req, res) => {
                 model: VisitValidation,
                 where: {
                   userId,
-                  isUsed: true,
+                  usedAt: { [Op.ne]: null },
                 },
                 required: true,
               },
