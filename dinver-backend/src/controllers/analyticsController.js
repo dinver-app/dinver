@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const {
   AnalyticsEvent,
   Restaurant,
@@ -74,9 +75,24 @@ function getChangePercentage(current, previous) {
 // Napredni summary s periodima i unique sessionima
 const getAnalyticsSummary = async (req, res) => {
   try {
-    const { restaurantId } = req.query;
+    const { restaurantId, scope } = req.query;
 
-    // Ako nema restaurantId, računamo za sve restorane
+    // Sigurnosna provjera - scope mora biti eksplicitno definiran
+    if (!scope || !['single_restaurant', 'all_restaurants'].includes(scope)) {
+      return res.status(400).json({
+        error:
+          'Scope parameter is required and must be either "single_restaurant" or "all_restaurants"',
+      });
+    }
+
+    // Ako je scope single_restaurant, restaurantId je obavezan
+    if (scope === 'single_restaurant' && !restaurantId) {
+      return res.status(400).json({
+        error: 'restaurantId is required when scope is "single_restaurant"',
+      });
+    }
+
+    // Ako nema restaurantId, računamo za sve restorane (samo za all_restaurants scope)
     const whereClause = restaurantId ? { restaurant_id: restaurantId } : {};
 
     // Fetch all events (za jedan restoran ili sve restorane)
@@ -105,9 +121,9 @@ const getAnalyticsSummary = async (req, res) => {
     const allVisitValidations = await VisitValidation.findAll({
       where: {
         ...visitValidationWhere,
-        isUsed: true,
+        usedAt: { [Op.ne]: null }, // Koristimo usedAt umjesto isUsed
       },
-      attributes: ['id', 'expiresAt', 'createdAt', 'restaurantId'], // Dodajemo restaurantId
+      attributes: ['id', 'usedAt', 'createdAt', 'restaurantId'], // Koristimo usedAt umjesto expiresAt
       raw: true,
     });
     const periods = {
@@ -142,32 +158,30 @@ const getAnalyticsSummary = async (req, res) => {
       const result = {};
       for (const period of periodList) {
         const filtered = events.filter((e) =>
-          periods[period](new Date(e.timestamp || e.expiresAt || e.createdAt)),
+          periods[period](new Date(e.timestamp || e.usedAt || e.createdAt)),
         );
         result[period] = keyFn(filtered);
       }
       return result;
     }
     for (const period of periodKeys) {
-      // Koristi expiresAt ili createdAt kao datum posjete
+      // Koristi usedAt kao datum posjete (kada je stvarno potvrđena)
       confirmedVisitsByPeriod[period] = allVisitValidations.filter((v) => {
-        const date = v.expiresAt
-          ? new Date(v.expiresAt)
-          : new Date(v.createdAt);
+        const date = new Date(v.usedAt);
         return periods[period](date);
       }).length;
     }
     // Prethodni periodi
     confirmedVisitsPrevByPeriod.today = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       return periods.yesterday(date);
     }).length;
     confirmedVisitsPrevByPeriod.last7 = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       return periods.weekBefore(date);
     }).length;
     confirmedVisitsPrevByPeriod.last14 = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       // 14 dana prije last14
       const now = new Date();
       const start = new Date(now);
@@ -177,11 +191,11 @@ const getAnalyticsSummary = async (req, res) => {
       return date >= start && date < end;
     }).length;
     confirmedVisitsPrevByPeriod.last30 = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       return periods.monthBefore(date);
     }).length;
     confirmedVisitsPrevByPeriod.last60 = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       // 30 dana prije last60
       const now = new Date();
       const start = new Date(now);
@@ -191,7 +205,7 @@ const getAnalyticsSummary = async (req, res) => {
       return date >= start && date < end;
     }).length;
     confirmedVisitsPrevByPeriod.all_time = allVisitValidations.filter((v) => {
-      const date = v.expiresAt ? new Date(v.expiresAt) : new Date(v.createdAt);
+      const date = new Date(v.usedAt);
       // Za all_time, prethodni period je zadnjih 30 dana kao referenca
       const now = new Date();
       const start = new Date(now);
@@ -537,40 +551,109 @@ const getAnalyticsSummary = async (req, res) => {
       .sort((a, b) => (b.total.last30 || 0) - (a.total.last30 || 0))
       .slice(0, 5);
 
-    // 3. Breakdown po izvoru (source)
+    // 3. Breakdown po izvoru (source) - total i unique
     const sourceBreakdown = {};
+    const sourceBreakdownUnique = {};
     events.forEach((e) => {
       const s = e.source || 'unknown';
       sourceBreakdown[s] = (sourceBreakdown[s] || 0) + 1;
     });
-    // Breakdown po event_type
-    const sourceByEvent = {};
-    for (const type of VALID_EVENT_TYPES) {
-      sourceByEvent[type] = {};
-      events
-        .filter((e) => e.event_type === type)
-        .forEach((e) => {
-          const s = e.source || 'unknown';
-          sourceByEvent[type][s] = (sourceByEvent[type][s] || 0) + 1;
-        });
+
+    // Unique breakdown po source-u
+    for (const source of Object.keys(sourceBreakdown)) {
+      const sourceEvents = events.filter(
+        (e) => (e.source || 'unknown') === source,
+      );
+      const uniqueSet = new Set(
+        sourceEvents
+          .map((e) => e.session_id || e.ip_address)
+          .filter((id) => !!id),
+      );
+      sourceBreakdownUnique[source] = uniqueSet.size;
     }
 
-    // 4. Breakdown po satu (byHour)
+    // Breakdown po event_type - total i unique
+    const sourceByEvent = {};
+    const sourceByEventUnique = {};
+    for (const type of VALID_EVENT_TYPES) {
+      sourceByEvent[type] = {};
+      sourceByEventUnique[type] = {};
+      const typeEvents = events.filter((e) => e.event_type === type);
+
+      typeEvents.forEach((e) => {
+        const s = e.source || 'unknown';
+        sourceByEvent[type][s] = (sourceByEvent[type][s] || 0) + 1;
+      });
+
+      // Unique po event type i source
+      for (const source of Object.keys(sourceByEvent[type])) {
+        const sourceEvents = typeEvents.filter(
+          (e) => (e.source || 'unknown') === source,
+        );
+        const uniqueSet = new Set(
+          sourceEvents
+            .map((e) => e.session_id || e.ip_address)
+            .filter((id) => !!id),
+        );
+        sourceByEventUnique[type][source] = uniqueSet.size;
+      }
+    }
+
+    // 4. Breakdown po satu (byHour) - total i unique
     const byHour = {};
+    const byHourUnique = {};
     const byHourSource = {};
+    const byHourSourceUnique = {};
+
     for (const type of VALID_EVENT_TYPES) {
       byHour[type] = Array(24).fill(0);
+      byHourUnique[type] = Array(24).fill(0);
       byHourSource[type] = {};
-      events
-        .filter((e) => e.event_type === type)
-        .forEach((e) => {
-          const hour = new Date(e.timestamp).getHours();
-          byHour[type][hour]++;
-          const source = e.source || 'unknown';
-          if (!byHourSource[type][source])
-            byHourSource[type][source] = Array(24).fill(0);
-          byHourSource[type][source][hour]++;
-        });
+      byHourSourceUnique[type] = {};
+
+      const typeEvents = events.filter((e) => e.event_type === type);
+
+      typeEvents.forEach((e) => {
+        const hour = new Date(e.timestamp).getHours();
+        byHour[type][hour]++;
+
+        const source = e.source || 'unknown';
+        if (!byHourSource[type][source]) {
+          byHourSource[type][source] = Array(24).fill(0);
+          byHourSourceUnique[type][source] = Array(24).fill(0);
+        }
+        byHourSource[type][source][hour]++;
+      });
+
+      // Unique po satu za svaki event type
+      for (let hour = 0; hour < 24; hour++) {
+        const hourEvents = typeEvents.filter(
+          (e) => new Date(e.timestamp).getHours() === hour,
+        );
+        const uniqueSet = new Set(
+          hourEvents
+            .map((e) => e.session_id || e.ip_address)
+            .filter((id) => !!id),
+        );
+        byHourUnique[type][hour] = uniqueSet.size;
+      }
+
+      // Unique po satu i source za svaki event type
+      for (const source of Object.keys(byHourSource[type])) {
+        for (let hour = 0; hour < 24; hour++) {
+          const hourEvents = typeEvents.filter(
+            (e) =>
+              new Date(e.timestamp).getHours() === hour &&
+              (e.source || 'unknown') === source,
+          );
+          const uniqueSet = new Set(
+            hourEvents
+              .map((e) => e.session_id || e.ip_address)
+              .filter((id) => !!id),
+          );
+          byHourSourceUnique[type][source][hour] = uniqueSet.size;
+        }
+      }
     }
 
     // 5. Globalni total klikova i pregleda
@@ -581,17 +664,29 @@ const getAnalyticsSummary = async (req, res) => {
       (e) => e.event_type === 'restaurant_view',
     ).length;
 
-    // 6. Breakdown po danu (byDate)
+    // 6. Breakdown po danu (byDate) - total i unique
     const byDate = {};
+    const byDateUnique = {};
     events.forEach((e) => {
       const day = new Date(e.timestamp).toISOString().split('T')[0];
       byDate[day] = (byDate[day] || 0) + 1;
     });
 
-    // Dinver KPI-jevi samo za all_restaurants
+    // Unique po danu
+    for (const day of Object.keys(byDate)) {
+      const dayEvents = events.filter(
+        (e) => new Date(e.timestamp).toISOString().split('T')[0] === day,
+      );
+      const uniqueSet = new Set(
+        dayEvents.map((e) => e.session_id || e.ip_address).filter((id) => !!id),
+      );
+      byDateUnique[day] = uniqueSet.size;
+    }
+
+    // Dinver KPI-jevi samo za all_restaurants scope
     let dinverStats = null;
     let dinverStatsChange = null;
-    if (!restaurantId) {
+    if (scope === 'all_restaurants') {
       // 1. Claimani restorani po periodima (prema ClaimLog.createdAt)
       const allClaimLogs = await ClaimLog.findAll({
         attributes: ['id', 'restaurantId', 'createdAt'],
@@ -834,18 +929,22 @@ const getAnalyticsSummary = async (req, res) => {
       topItems,
       itemClicksBySource,
       sourceBreakdown,
+      sourceBreakdownUnique,
       sourceByEvent,
+      sourceByEventUnique,
       byHour,
+      byHourUnique,
       byHourSource,
+      byHourSourceUnique,
       clicksTotal,
       viewsTotal,
       byDate,
+      byDateUnique,
       confirmedVisits,
       confirmedVisitsSummary,
       qrScansTotal,
       qrScansSummary,
-      eventsRaw: events,
-      scope: restaurantId ? 'single_restaurant' : 'all_restaurants',
+      scope,
       restaurantId: restaurantId || null,
       dinverStats,
       dinverStatsChange,

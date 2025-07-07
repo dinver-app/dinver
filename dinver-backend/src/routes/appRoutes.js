@@ -22,6 +22,7 @@ const feedRoutes = require('./appRoutes/feedRoutes');
 const restaurantDetailsRoutes = require('./appRoutes/restaurantDetailsRoutes');
 const mailRoutes = require('./appRoutes/mailRoutes');
 const visitValidationRoutes = require('./appRoutes/visitValidationRoutes');
+const analyticsRoutes = require('./appRoutes/analyticsRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -47,5 +48,6 @@ router.use(feedRoutes);
 router.use(restaurantDetailsRoutes);
 router.use(mailRoutes);
 router.use(visitValidationRoutes);
+router.use(analyticsRoutes);
 
 module.exports = router;
