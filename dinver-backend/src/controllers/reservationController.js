@@ -11,6 +11,10 @@ const {
 const { Op } = require('sequelize');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { sendReservationSMS } = require('../../utils/smsService');
+const { DateTime } = require('luxon');
+
+const now = DateTime.now().setZone('Europe/Zagreb');
+const nowTime = now.toFormat('HH:mm:ss');
 
 // Kreiranje nove rezervacije
 const createReservation = async (req, res) => {
@@ -37,7 +41,6 @@ const createReservation = async (req, res) => {
     }
 
     // Provjeri da korisnik nema već aktivnu rezervaciju u ovom restoranu
-    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -66,7 +69,7 @@ const createReservation = async (req, res) => {
           restaurantId,
           date,
           time: {
-            [Op.gte]: now.toTimeString().slice(0, 8), // 'HH:MM:SS'
+            [Op.gte]: nowTime,
           },
           status: {
             [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
@@ -80,8 +83,7 @@ const createReservation = async (req, res) => {
 
     if (existingReservation) {
       return res.status(400).json({
-        error:
-          'You already have an active reservation at this restaurant. Please cancel your existing reservation first.',
+        error: 'You already have an active reservation at this restaurant.',
       });
     }
 
