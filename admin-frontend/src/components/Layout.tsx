@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { IoRestaurant } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
+import { QrCodeIcon } from "@heroicons/react/24/outline";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 import { getAdminRestaurants } from "../services/adminService";
@@ -127,6 +128,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const preferenceItems = [
+    {
+      name: t("qr_generator"),
+      path: "/qr-generator",
+      icon: <QrCodeIcon className="h-4 w-4 mr-3" />,
+    },
     ...(role === "owner" || role === "admin"
       ? [
           {
