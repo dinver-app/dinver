@@ -33,10 +33,6 @@ const Settings = () => {
     localStorage.getItem("currentRestaurant") || "{}"
   );
   const restaurantId = currentRestaurant.id;
-  const restaurantSlug = currentRestaurant.slug;
-
-  // Generate menu URL
-  const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu`;
 
   useEffect(() => {
     fetchUserLanguage();
