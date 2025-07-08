@@ -79,7 +79,7 @@ router.post(
 
 // Generate QR code for special offer (admin only)
 router.get(
-  '/special-offers/:specialOfferId/qr',
+  '/admin/special-offers/:specialOfferId/qr',
   appApiKeyAuth,
   appAuthenticateToken,
   checkAdmin,

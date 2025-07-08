@@ -577,7 +577,7 @@ const redeemSpecialOffer = async (req, res) => {
 const getRedemptionDetails = async (req, res) => {
   try {
     const { specialOfferId } = req.params;
-    const { userId } = req.query;
+    const userId = req.user.id;
     const language = getUserLanguage(req);
 
     if (!userId) {
