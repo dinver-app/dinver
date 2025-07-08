@@ -626,5 +626,8 @@
   "bulk_export_premium_only": "Bulk export je dostupan samo u Premium planu",
   "bulk_download_success": "Svi QR kodovi uspješno preuzeti!",
   "bulk_generation_error": "Greška pri bulk generiranju",
-  "premium_feature_only": "Ova opcija je dostupna samo u Premium planu"
+  "premium_feature_only": "Ova opcija je dostupna samo u Premium planu",
+  "reservation_settings": "Postavke Rezervacija",
+  "enable_reservations": "Omogući Rezervacije",
+  "reservation_settings_info": "Omogućite ovo da biste dozvolili gostima da rezerviraju stolove kroz aplikaciju. Kada je onemogućeno, funkcija rezervacija će biti skrivena od gostiju."
 }

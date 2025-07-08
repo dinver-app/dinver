@@ -336,6 +336,7 @@ const getRestaurantDetails = async (req, res) => {
         'dietaryTypes',
         'mealTypes',
         'priceCategoryId',
+        'reservationEnabled',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),
@@ -488,6 +489,7 @@ async function updateRestaurant(req, res) {
       wifiSsid,
       wifiPassword,
       showWifiCredentials,
+      reservationEnabled,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -541,6 +543,7 @@ async function updateRestaurant(req, res) {
       wifiSsid,
       wifiPassword,
       showWifiCredentials,
+      reservationEnabled,
     });
 
     // Upsert translations if provided
@@ -1005,6 +1008,7 @@ const getRestaurantById = async (req, res) => {
         'mealTypes',
         'dietaryTypes',
         'priceCategoryId',
+        'reservationEnabled',
       ],
     });
     if (!restaurant) {
@@ -1821,6 +1825,7 @@ const getFullRestaurantDetails = async (req, res) => {
         'mealTypes',
         'dietaryTypes',
         'priceCategoryId',
+        'reservationEnabled',
         'websiteUrl',
         'fbUrl',
         'igUrl',

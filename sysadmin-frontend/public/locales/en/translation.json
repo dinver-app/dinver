@@ -579,5 +579,8 @@
   "restaurants_on_dinver": "Restaurants on Dinver",
   "cities_covered": "Cities covered",
   "users_on_app": "Users on app",
-  "successful_bookings": "Successful bookings"
+  "successful_bookings": "Successful bookings",
+  "reservation_settings": "Reservation Settings",
+  "enable_reservations": "Enable Reservations",
+  "reservation_settings_info": "Enable this to allow customers to make table reservations through the app. When disabled, the reservation feature will be hidden from customers."
 }
