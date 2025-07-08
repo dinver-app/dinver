@@ -73,7 +73,7 @@ const getSpecialOffersByRestaurant = async (req, res) => {
   }
 };
 
-// Get all active special offers for customers (public view)
+// Get all active special offers for customers (public view) - grouped by restaurant
 const getActiveSpecialOffers = async (req, res) => {
   try {
     const { city, restaurantId } = req.query;
@@ -146,37 +146,44 @@ const getActiveSpecialOffers = async (req, res) => {
       include: includeClause,
     });
 
-    const formattedOffers = specialOffers
-      .map((offer) => {
-        const offerData = offer.toJSON();
-        const menuItem = offerData.menuItem;
-        const restaurant = offerData.restaurant;
+    // Group offers by restaurant
+    const groupedOffers = {};
 
-        if (!menuItem || !restaurant) {
-          return null;
-        }
+    specialOffers.forEach((offer) => {
+      const offerData = offer.toJSON();
+      const menuItem = offerData.menuItem;
+      const restaurant = offerData.restaurant;
 
-        const userTranslation = menuItem.translations.find(
-          (t) => t.language === language,
-        );
-        const anyTranslation = menuItem.translations[0];
+      if (!menuItem || !restaurant) {
+        return;
+      }
 
-        return {
-          id: offerData.id,
-          pointsRequired: offerData.pointsRequired,
-          maxRedemptions: offerData.maxRedemptions,
-          currentRedemptions: offerData.currentRedemptions,
-          validFrom: offerData.validFrom,
-          validUntil: offerData.validUntil,
-          menuItem: {
-            id: menuItem.id,
-            name: (userTranslation || anyTranslation)?.name || '',
-            description: (userTranslation || anyTranslation)?.description || '',
-            price: parseFloat(menuItem.price).toFixed(2),
-            imageUrl: menuItem.imageUrl
-              ? getMediaUrl(menuItem.imageUrl, 'image')
-              : null,
-          },
+      const userTranslation = menuItem.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = menuItem.translations[0];
+
+      const formattedOffer = {
+        id: offerData.id,
+        pointsRequired: offerData.pointsRequired,
+        maxRedemptions: offerData.maxRedemptions,
+        currentRedemptions: offerData.currentRedemptions,
+        validFrom: offerData.validFrom,
+        validUntil: offerData.validUntil,
+        menuItem: {
+          id: menuItem.id,
+          name: (userTranslation || anyTranslation)?.name || '',
+          description: (userTranslation || anyTranslation)?.description || '',
+          price: parseFloat(menuItem.price).toFixed(2),
+          imageUrl: menuItem.imageUrl
+            ? getMediaUrl(menuItem.imageUrl, 'image')
+            : null,
+        },
+      };
+
+      // Group by restaurant
+      if (!groupedOffers[restaurant.id]) {
+        groupedOffers[restaurant.id] = {
           restaurant: {
             id: restaurant.id,
             name: restaurant.name,
@@ -186,11 +193,19 @@ const getActiveSpecialOffers = async (req, res) => {
               ? getMediaUrl(restaurant.thumbnailUrl, 'image')
               : null,
           },
+          offers: [],
         };
-      })
-      .filter(Boolean);
+      }
 
-    res.json(formattedOffers);
+      groupedOffers[restaurant.id].offers.push(formattedOffer);
+    });
+
+    // Convert to array and sort by restaurant name
+    const result = Object.values(groupedOffers).sort((a, b) =>
+      a.restaurant.name.localeCompare(b.restaurant.name),
+    );
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching active special offers:', error);
     res.status(500).json({ error: 'Failed to fetch special offers' });
