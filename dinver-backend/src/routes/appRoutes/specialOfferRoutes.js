@@ -76,4 +76,21 @@ router.post(
   specialOfferController.redeemSpecialOffer,
 );
 
+// Generate QR code for special offer (admin only)
+router.get(
+  '/special-offers/:specialOfferId/qr',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  specialOfferController.generateSpecialOfferQR,
+);
+
+// Get redemption details for special offer (for customer preview)
+router.get(
+  '/special-offers/:specialOfferId/redemption-details',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  specialOfferController.getRedemptionDetails,
+);
+
 module.exports = router;
