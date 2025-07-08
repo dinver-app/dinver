@@ -7,6 +7,7 @@ const {
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
+const { Op, literal } = require('sequelize');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -82,37 +83,22 @@ const getActiveSpecialOffers = async (req, res) => {
 
     let whereClause = {
       isActive: true,
-    };
-
-    // Add date validation
-    whereClause = {
-      ...whereClause,
-      [require('sequelize').Op.or]: [
-        { validFrom: null },
-        { validFrom: { [require('sequelize').Op.lte]: now } },
-      ],
-      [require('sequelize').Op.or]: [
-        { validUntil: null },
-        { validUntil: { [require('sequelize').Op.gte]: now } },
-      ],
-    };
-
-    // Add redemption limit validation
-    whereClause = {
-      ...whereClause,
-      [require('sequelize').Op.or]: [
+      [Op.or]: [{ validFrom: null }, { validFrom: { [Op.lte]: now } }],
+      [Op.or]: [{ validUntil: null }, { validUntil: { [Op.gte]: now } }],
+      [Op.or]: [
         { maxRedemptions: null },
         {
-          [require('sequelize').Op.and]: [
-            { maxRedemptions: { [require('sequelize').Op.ne]: null } },
-            {
-              [require('sequelize').Op.literal]:
-                'currentRedemptions < maxRedemptions',
-            },
+          [Op.and]: [
+            { maxRedemptions: { [Op.ne]: null } },
+            literal('"currentRedemptions" < "maxRedemptions"'),
           ],
         },
       ],
     };
+
+    if (restaurantId) {
+      whereClause.restaurantId = restaurantId;
+    }
 
     const includeClause = [
       {
@@ -131,10 +117,6 @@ const getActiveSpecialOffers = async (req, res) => {
         attributes: ['id', 'name', 'address', 'place', 'thumbnailUrl'],
       },
     ];
-
-    if (restaurantId) {
-      whereClause.restaurantId = restaurantId;
-    }
 
     if (city) {
       includeClause[1].where = { place: city };
@@ -436,40 +418,39 @@ const updateSpecialOfferOrder = async (req, res) => {
 // Get points distribution for a restaurant (for admin to decide pricing)
 const getPointsDistribution = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
-
-    // Get all users who have visited this restaurant
+    // Fetch all users with their points
     const users = await User.findAll({
-      attributes: ['id', 'points'],
+      attributes: ['id'],
       include: [
         {
-          model: Restaurant,
-          as: 'favoriteRestaurants',
-          where: { id: restaurantId },
-          attributes: [],
+          model: require('../../models').UserPoints,
+          as: 'points',
+          attributes: ['totalPoints'],
         },
       ],
     });
+
+    // Map points (default to 0 if missing)
+    const pointsArray = users.map((u) => (u.points ? u.points.totalPoints : 0));
 
     const pointsDistribution = {
       totalUsers: users.length,
       averagePoints:
         users.length > 0
           ? Math.round(
-              users.reduce((sum, user) => sum + user.points, 0) / users.length,
+              pointsArray.reduce((sum, p) => sum + p, 0) / users.length,
             )
           : 0,
       pointsRanges: {
-        '0-50': users.filter((u) => u.points >= 0 && u.points <= 50).length,
-        '51-100': users.filter((u) => u.points >= 51 && u.points <= 100).length,
-        '101-200': users.filter((u) => u.points >= 101 && u.points <= 200)
-          .length,
-        '201-500': users.filter((u) => u.points >= 201 && u.points <= 500)
-          .length,
-        '500+': users.filter((u) => u.points > 500).length,
+        0: pointsArray.filter((p) => p === 0).length,
+        '1-50': pointsArray.filter((p) => p >= 1 && p <= 50).length,
+        '51-100': pointsArray.filter((p) => p >= 51 && p <= 100).length,
+        '101-200': pointsArray.filter((p) => p >= 101 && p <= 200).length,
+        '201-500': pointsArray.filter((p) => p >= 201 && p <= 500).length,
+        '500+': pointsArray.filter((p) => p > 500).length,
       },
-      maxPoints: users.length > 0 ? Math.max(...users.map((u) => u.points)) : 0,
-      minPoints: users.length > 0 ? Math.min(...users.map((u) => u.points)) : 0,
+      maxPoints: pointsArray.length > 0 ? Math.max(...pointsArray) : 0,
+      minPoints: pointsArray.length > 0 ? Math.min(...pointsArray) : 0,
     };
 
     res.json(pointsDistribution);
@@ -479,16 +460,21 @@ const getPointsDistribution = async (req, res) => {
   }
 };
 
-// Redeem a special offer (QR code scanning)
+// Redeem a special offer (multiple methods)
 const redeemSpecialOffer = async (req, res) => {
   try {
-    const { specialOfferId, userId } = req.body;
+    const { specialOfferId, userId, redemptionMethod = 'qr_scan' } = req.body;
 
     const specialOffer = await SpecialOffer.findByPk(specialOfferId, {
       include: [
         {
           model: MenuItem,
           as: 'menuItem',
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
         },
       ],
     });
@@ -534,6 +520,9 @@ const redeemSpecialOffer = async (req, res) => {
       });
     }
 
+    // Basic validation - user can only redeem once per offer
+    // Rate limiting can be added later if needed
+
     // Deduct points and increment redemptions
     await user.update({
       points: user.points - specialOffer.pointsRequired,
@@ -543,7 +532,7 @@ const redeemSpecialOffer = async (req, res) => {
       currentRedemptions: specialOffer.currentRedemptions + 1,
     });
 
-    // Log the redemption
+    // Log the redemption with method
     await logAudit({
       userId: userId,
       action: ActionTypes.REDEEM,
@@ -553,23 +542,252 @@ const redeemSpecialOffer = async (req, res) => {
       changes: {
         pointsDeducted: specialOffer.pointsRequired,
         newUserPoints: user.points - specialOffer.pointsRequired,
+        redemptionMethod: redemptionMethod,
+        redeemedAt: now,
       },
     });
+
+    // Rate limiting removed for simplicity
+    // Can be added later if needed
 
     res.json({
       success: true,
       message: 'Special offer redeemed successfully',
       pointsDeducted: specialOffer.pointsRequired,
       remainingPoints: user.points - specialOffer.pointsRequired,
+      redemptionMethod: redemptionMethod,
+      redeemedAt: now,
       menuItem: {
         id: specialOffer.menuItem.id,
         name: specialOffer.menuItem.name,
         price: parseFloat(specialOffer.menuItem.price).toFixed(2),
       },
+      restaurant: {
+        id: specialOffer.restaurant.id,
+        name: specialOffer.restaurant.name,
+      },
     });
   } catch (error) {
     console.error('Error redeeming special offer:', error);
     res.status(500).json({ error: 'Failed to redeem special offer' });
+  }
+};
+
+// Get redemption details for special offer (for customer preview)
+const getRedemptionDetails = async (req, res) => {
+  try {
+    const { specialOfferId } = req.params;
+    const { userId } = req.query;
+    const language = getUserLanguage(req);
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const specialOffer = await SpecialOffer.findByPk(specialOfferId, {
+      include: [
+        {
+          model: MenuItem,
+          as: 'menuItem',
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+            },
+          ],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place'],
+        },
+      ],
+    });
+
+    if (!specialOffer) {
+      return res.status(404).json({ error: 'Special offer not found' });
+    }
+
+    if (!specialOffer.isActive) {
+      return res.status(400).json({ error: 'Special offer is not active' });
+    }
+
+    // Check validity dates
+    const now = new Date();
+    if (specialOffer.validFrom && now < specialOffer.validFrom) {
+      return res.status(400).json({ error: 'Special offer is not yet valid' });
+    }
+    if (specialOffer.validUntil && now > specialOffer.validUntil) {
+      return res.status(400).json({ error: 'Special offer has expired' });
+    }
+
+    // Check redemption limits
+    if (
+      specialOffer.maxRedemptions &&
+      specialOffer.currentRedemptions >= specialOffer.maxRedemptions
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Special offer redemption limit reached' });
+    }
+
+    // Get user and check points
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const canRedeem = user.points >= specialOffer.pointsRequired;
+    const pointsAfterRedemption = user.points - specialOffer.pointsRequired;
+
+    // Format menu item with translations
+    const userTranslation = specialOffer.menuItem.translations.find(
+      (t) => t.language === language,
+    );
+    const anyTranslation = specialOffer.menuItem.translations[0];
+
+    const result = {
+      specialOffer: {
+        id: specialOffer.id,
+        pointsRequired: specialOffer.pointsRequired,
+        maxRedemptions: specialOffer.maxRedemptions,
+        currentRedemptions: specialOffer.currentRedemptions,
+        validFrom: specialOffer.validFrom,
+        validUntil: specialOffer.validUntil,
+        menuItem: {
+          id: specialOffer.menuItem.id,
+          name: (userTranslation || anyTranslation)?.name || '',
+          description: (userTranslation || anyTranslation)?.description || '',
+          price: parseFloat(specialOffer.menuItem.price).toFixed(2),
+          imageUrl: specialOffer.menuItem.imageUrl
+            ? getMediaUrl(specialOffer.menuItem.imageUrl, 'image')
+            : null,
+        },
+        restaurant: {
+          id: specialOffer.restaurant.id,
+          name: specialOffer.restaurant.name,
+          address: specialOffer.restaurant.address,
+          place: specialOffer.restaurant.place,
+        },
+      },
+      userPoints: {
+        current: user.points,
+        afterRedemption: pointsAfterRedemption,
+        canRedeem: canRedeem,
+      },
+      redemptionSummary: {
+        pointsToDeduct: specialOffer.pointsRequired,
+        pointsRemaining: pointsAfterRedemption,
+        savings: parseFloat(specialOffer.menuItem.price).toFixed(2),
+      },
+    };
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching redemption details:', error);
+    res.status(500).json({ error: 'Failed to fetch redemption details' });
+  }
+};
+
+// Generate QR code for special offer
+const generateSpecialOfferQR = async (req, res) => {
+  try {
+    const { specialOfferId } = req.params;
+    const { userId } = req.query;
+
+    const specialOffer = await SpecialOffer.findByPk(specialOfferId, {
+      include: [
+        {
+          model: MenuItem,
+          as: 'menuItem',
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!specialOffer) {
+      return res.status(404).json({ error: 'Special offer not found' });
+    }
+
+    if (!specialOffer.isActive) {
+      return res.status(400).json({ error: 'Special offer is not active' });
+    }
+
+    // Check validity dates
+    const now = new Date();
+    if (specialOffer.validFrom && now < specialOffer.validFrom) {
+      return res.status(400).json({ error: 'Special offer is not yet valid' });
+    }
+    if (specialOffer.validUntil && now > specialOffer.validUntil) {
+      return res.status(400).json({ error: 'Special offer has expired' });
+    }
+
+    // Check redemption limits
+    if (
+      specialOffer.maxRedemptions &&
+      specialOffer.currentRedemptions >= specialOffer.maxRedemptions
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Special offer redemption limit reached' });
+    }
+
+    // If userId provided, check if user has enough points
+    if (userId) {
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.points < specialOffer.pointsRequired) {
+        return res.status(400).json({
+          error: 'Insufficient points',
+          required: specialOffer.pointsRequired,
+          available: user.points,
+        });
+      }
+    }
+
+    // Generate QR code data
+    const qrData = {
+      type: 'special_offer_redemption',
+      specialOfferId: specialOffer.id,
+      restaurantId: specialOffer.restaurantId,
+      pointsRequired: specialOffer.pointsRequired,
+      timestamp: now.getTime(),
+      // Add a simple hash for basic security
+      hash: require('crypto')
+        .createHash('md5')
+        .update(
+          `${specialOffer.id}-${specialOffer.restaurantId}-${now.getTime()}`,
+        )
+        .digest('hex')
+        .substring(0, 8),
+    };
+
+    res.json({
+      qrData: JSON.stringify(qrData),
+      specialOffer: {
+        id: specialOffer.id,
+        pointsRequired: specialOffer.pointsRequired,
+        menuItem: {
+          id: specialOffer.menuItem.id,
+          name: specialOffer.menuItem.name,
+          price: parseFloat(specialOffer.menuItem.price).toFixed(2),
+        },
+        restaurant: {
+          id: specialOffer.restaurant.id,
+          name: specialOffer.restaurant.name,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    res.status(500).json({ error: 'Failed to generate QR code' });
   }
 };
 
@@ -582,4 +800,6 @@ module.exports = {
   updateSpecialOfferOrder,
   getPointsDistribution,
   redeemSpecialOffer,
+  generateSpecialOfferQR,
+  getRedemptionDetails,
 };

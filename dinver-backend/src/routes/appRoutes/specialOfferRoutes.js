@@ -3,8 +3,9 @@ const specialOfferController = require('../../controllers/specialOfferController
 const {
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdmin,
   restaurantOwnerAuth,
+  checkAdmin,
+  checkAdminForRestaurant,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -30,7 +31,7 @@ router.post(
   '/admin/special-offers',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdmin,
+  checkAdminForRestaurant,
   specialOfferController.createSpecialOffer,
 );
 
@@ -38,7 +39,7 @@ router.put(
   '/admin/special-offers/:id',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdmin,
+  checkAdminForRestaurant,
   specialOfferController.updateSpecialOffer,
 );
 
@@ -46,7 +47,7 @@ router.delete(
   '/admin/special-offers/:id',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdmin,
+  checkAdminForRestaurant,
   specialOfferController.deleteSpecialOffer,
 );
 
@@ -54,13 +55,13 @@ router.put(
   '/admin/special-offers-order',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdmin,
+  checkAdminForRestaurant,
   specialOfferController.updateSpecialOfferOrder,
 );
 
 // Points distribution for admin to decide pricing
 router.get(
-  '/admin/restaurants/:restaurantId/points-distribution',
+  '/admin/points-distribution',
   appApiKeyAuth,
   appAuthenticateToken,
   checkAdmin,
@@ -74,6 +75,23 @@ router.post(
   appAuthenticateToken,
   restaurantOwnerAuth,
   specialOfferController.redeemSpecialOffer,
+);
+
+// Generate QR code for special offer (admin only)
+router.get(
+  '/special-offers/:specialOfferId/qr',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  specialOfferController.generateSpecialOfferQR,
+);
+
+// Get redemption details for special offer (for customer preview)
+router.get(
+  '/special-offers/:specialOfferId/redemption-details',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  specialOfferController.getRedemptionDetails,
 );
 
 module.exports = router;

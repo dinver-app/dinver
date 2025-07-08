@@ -131,6 +131,28 @@ async function checkAdmin(req, res, next) {
   }
 }
 
+async function checkAdminForRestaurant(req, res, next) {
+  try {
+    const { restaurantId } = req.body;
+
+    const admin = await UserAdmin.findOne({
+      where: { userId: req.user.id, restaurantId },
+    });
+
+    if (!admin) {
+      return res
+        .status(403)
+        .json({ error: 'Access denied. Admin for this restaurant only.' });
+    }
+
+    next();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: 'An error occurred while checking admin privileges.' });
+  }
+}
+
 const appApiKeyAuth = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
 
@@ -315,6 +337,7 @@ module.exports = {
   sysadminAuthenticateToken,
   checkSysadmin,
   checkAdmin,
+  checkAdminForRestaurant,
   appApiKeyAuth,
   landingApiKeyAuth,
   restaurantOwnerAuth,
