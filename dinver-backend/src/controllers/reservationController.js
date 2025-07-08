@@ -504,17 +504,41 @@ const suggestAlternativeTime = async (req, res) => {
       return res.status(400).json({ error: 'Reservation cannot be modified' });
     }
 
-    // Provjeri da korisnik nema već drugu aktivnu rezervaciju u ovom restoranu
-    const existingReservation = await Reservation.findOne({
-      where: {
-        userId,
-        restaurantId: reservation.restaurantId,
-        id: { [Op.ne]: reservation.id }, // Isključi trenutnu rezervaciju
-        status: {
-          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+    let existingReservation;
+
+    if (dateObj > today) {
+      // Budući datum – blokiraj ako postoji aktivna rezervacija za taj datum
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId: reservation.restaurantId,
+          id: { [Op.ne]: reservation.id },
+          date,
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
         },
-      },
-    });
+      });
+    } else if (dateObj.getTime() === today.getTime()) {
+      // Danas – blokiraj samo ako postoji aktivna rezervacija s vremenom u budućnosti
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId: reservation.restaurantId,
+          id: { [Op.ne]: reservation.id },
+          date,
+          time: {
+            [Op.gte]: nowTime,
+          },
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
+        },
+      });
+    } else {
+      // Prošli datumi – ne blokiraj
+      existingReservation = null;
+    }
 
     if (existingReservation) {
       return res.status(400).json({
