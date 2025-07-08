@@ -10,7 +10,6 @@ import {
   SparklesIcon,
   LockClosedIcon,
   EyeIcon,
-  EyeSlashIcon,
   AdjustmentsHorizontalIcon,
   SwatchIcon,
   ArrowsPointingOutIcon,
