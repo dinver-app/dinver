@@ -7,6 +7,7 @@ const {
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
+const { Op, literal } = require('sequelize');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -82,37 +83,22 @@ const getActiveSpecialOffers = async (req, res) => {
 
     let whereClause = {
       isActive: true,
-    };
-
-    // Add date validation
-    whereClause = {
-      ...whereClause,
-      [require('sequelize').Op.or]: [
-        { validFrom: null },
-        { validFrom: { [require('sequelize').Op.lte]: now } },
-      ],
-      [require('sequelize').Op.or]: [
-        { validUntil: null },
-        { validUntil: { [require('sequelize').Op.gte]: now } },
-      ],
-    };
-
-    // Add redemption limit validation
-    whereClause = {
-      ...whereClause,
-      [require('sequelize').Op.or]: [
+      [Op.or]: [{ validFrom: null }, { validFrom: { [Op.lte]: now } }],
+      [Op.or]: [{ validUntil: null }, { validUntil: { [Op.gte]: now } }],
+      [Op.or]: [
         { maxRedemptions: null },
         {
-          [require('sequelize').Op.and]: [
-            { maxRedemptions: { [require('sequelize').Op.ne]: null } },
-            {
-              [require('sequelize').Op.literal]:
-                'currentRedemptions < maxRedemptions',
-            },
+          [Op.and]: [
+            { maxRedemptions: { [Op.ne]: null } },
+            literal('"currentRedemptions" < "maxRedemptions"'),
           ],
         },
       ],
     };
+
+    if (restaurantId) {
+      whereClause.restaurantId = restaurantId;
+    }
 
     const includeClause = [
       {
@@ -131,10 +117,6 @@ const getActiveSpecialOffers = async (req, res) => {
         attributes: ['id', 'name', 'address', 'place', 'thumbnailUrl'],
       },
     ];
-
-    if (restaurantId) {
-      whereClause.restaurantId = restaurantId;
-    }
 
     if (city) {
       includeClause[1].where = { place: city };
@@ -436,40 +418,39 @@ const updateSpecialOfferOrder = async (req, res) => {
 // Get points distribution for a restaurant (for admin to decide pricing)
 const getPointsDistribution = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
-
-    // Get all users who have visited this restaurant
+    // Fetch all users with their points
     const users = await User.findAll({
-      attributes: ['id', 'points'],
+      attributes: ['id'],
       include: [
         {
-          model: Restaurant,
-          as: 'favoriteRestaurants',
-          where: { id: restaurantId },
-          attributes: [],
+          model: require('../../models').UserPoints,
+          as: 'points',
+          attributes: ['totalPoints'],
         },
       ],
     });
+
+    // Map points (default to 0 if missing)
+    const pointsArray = users.map((u) => (u.points ? u.points.totalPoints : 0));
 
     const pointsDistribution = {
       totalUsers: users.length,
       averagePoints:
         users.length > 0
           ? Math.round(
-              users.reduce((sum, user) => sum + user.points, 0) / users.length,
+              pointsArray.reduce((sum, p) => sum + p, 0) / users.length,
             )
           : 0,
       pointsRanges: {
-        '0-50': users.filter((u) => u.points >= 0 && u.points <= 50).length,
-        '51-100': users.filter((u) => u.points >= 51 && u.points <= 100).length,
-        '101-200': users.filter((u) => u.points >= 101 && u.points <= 200)
-          .length,
-        '201-500': users.filter((u) => u.points >= 201 && u.points <= 500)
-          .length,
-        '500+': users.filter((u) => u.points > 500).length,
+        0: pointsArray.filter((p) => p === 0).length,
+        '1-50': pointsArray.filter((p) => p >= 1 && p <= 50).length,
+        '51-100': pointsArray.filter((p) => p >= 51 && p <= 100).length,
+        '101-200': pointsArray.filter((p) => p >= 101 && p <= 200).length,
+        '201-500': pointsArray.filter((p) => p >= 201 && p <= 500).length,
+        '500+': pointsArray.filter((p) => p > 500).length,
       },
-      maxPoints: users.length > 0 ? Math.max(...users.map((u) => u.points)) : 0,
-      minPoints: users.length > 0 ? Math.min(...users.map((u) => u.points)) : 0,
+      maxPoints: pointsArray.length > 0 ? Math.max(...pointsArray) : 0,
+      minPoints: pointsArray.length > 0 ? Math.min(...pointsArray) : 0,
     };
 
     res.json(pointsDistribution);
