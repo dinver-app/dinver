@@ -4,6 +4,7 @@ const ActionTypes = {
   CREATE: 'created',
   UPDATE: 'updated',
   DELETE: 'deleted',
+  REDEEM: 'redeemed',
 };
 
 const Entities = {
@@ -25,6 +26,7 @@ const Entities = {
     MEAL_TYPES: 'meal_types',
     PRICE_CATEGORY: 'price_category',
   },
+  SPECIAL_OFFER: 'special_offer',
 };
 
 function deepCompare(oldObj, newObj) {
