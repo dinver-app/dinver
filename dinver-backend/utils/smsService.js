@@ -65,6 +65,9 @@ const sendReservationSMS = async ({ to, type, reservation }) => {
     case 'alternative':
       message = `Restoran "${reservation.restaurant.name}" predlaže alternativni termin za vašu rezervaciju: ${formattedSuggestedDate} u ${formattedSuggestedTime}.`;
       break;
+    case 'accepted_alternative':
+      message = `Prihvatili ste alternativni termin rezervacije u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime}. Broj gostiju: ${reservation.guests}`;
+      break;
     case 'cancellation':
       message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana.`;
       break;
