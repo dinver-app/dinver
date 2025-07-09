@@ -3,7 +3,6 @@ const specialOfferController = require('../../controllers/specialOfferController
 const {
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
   checkAdmin,
   checkAdminForRestaurant,
 } = require('../../middleware/roleMiddleware');
@@ -73,7 +72,7 @@ router.post(
   '/admin/special-offers/redeem',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   specialOfferController.redeemSpecialOffer,
 );
 

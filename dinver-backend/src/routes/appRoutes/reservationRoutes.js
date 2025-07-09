@@ -3,7 +3,7 @@ const reservationController = require('../../controllers/reservationController')
 const {
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -42,7 +42,7 @@ router.get(
   '/restaurants/:restaurantId/reservations',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   reservationController.getRestaurantReservations,
 );
 
@@ -50,7 +50,7 @@ router.patch(
   '/reservations/:id/confirm',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   reservationController.confirmReservation,
 );
 
@@ -58,7 +58,7 @@ router.patch(
   '/reservations/:id/decline',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   reservationController.declineReservation,
 );
 
@@ -66,7 +66,7 @@ router.patch(
   '/reservations/:id/suggest',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   reservationController.suggestAlternativeTime,
 );
 
@@ -75,7 +75,7 @@ router.patch(
   '/reservations/:id/cancel-by-restaurant',
   appApiKeyAuth,
   appAuthenticateToken,
-  restaurantOwnerAuth,
+  checkAdmin,
   reservationController.cancelReservationByRestaurant,
 );
 

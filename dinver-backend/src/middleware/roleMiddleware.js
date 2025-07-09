@@ -173,53 +173,6 @@ const landingApiKeyAuth = (req, res, next) => {
   next();
 };
 
-const restaurantOwnerAuth = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { restaurantId: restaurantIdFromParams } = req.params;
-    const { restaurantId: restaurantIdFromBody } = req.body;
-    const { restaurantId: restaurantIdFromQuery } = req.query;
-
-    const restaurantId =
-      restaurantIdFromParams || restaurantIdFromBody || restaurantIdFromQuery;
-
-    if (!restaurantId) {
-      return res.status(400).json({ error: 'Restaurant ID is required' });
-    }
-
-    // Prvo provjeri je li korisnik sysadmin ili admin
-    const sysadmin = await UserSysadmin.findOne({ where: { userId } });
-    if (sysadmin) {
-      return next();
-    }
-
-    const admin = await UserAdmin.findOne({ where: { userId } });
-    if (admin) {
-      return next();
-    }
-
-    // Ako nije admin, provjeri je li vlasnik restorana
-    const restaurant = await Restaurant.findByPk(restaurantId);
-
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    if (restaurant.ownerId !== userId) {
-      return res
-        .status(403)
-        .json({ error: 'Access denied. Restaurant owner only.' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Error checking restaurant owner:', error);
-    res.status(500).json({
-      error: 'An error occurred while checking restaurant owner privileges.',
-    });
-  }
-};
-
 const isRestaurantOwner = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -340,7 +293,6 @@ module.exports = {
   checkAdminForRestaurant,
   appApiKeyAuth,
   landingApiKeyAuth,
-  restaurantOwnerAuth,
   isRestaurantOwner,
   appOptionalAuth,
 };
