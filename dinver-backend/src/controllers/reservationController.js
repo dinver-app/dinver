@@ -533,7 +533,6 @@ const suggestAlternativeTime = async (req, res) => {
       return res.status(400).json({ error: 'Reservation cannot be modified' });
     }
 
-    // Popravi bug s nedostajućim varijablama
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dateObj = new Date(suggestedDate);
@@ -992,22 +991,49 @@ const acceptSuggestedTime = async (req, res) => {
       });
     }
 
-    // Provjeri da korisnik nema već drugu aktivnu rezervaciju u ovom restoranu
-    const existingReservation = await Reservation.findOne({
-      where: {
-        userId,
-        restaurantId: reservation.restaurantId,
-        id: { [Op.ne]: reservation.id }, // Isključi trenutnu rezervaciju
-        status: {
-          [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateObj = new Date(reservation.date);
+    dateObj.setHours(0, 0, 0, 0);
+    const date = reservation.date;
+
+    let existingReservation;
+
+    if (dateObj > today) {
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId: reservation.restaurantId,
+          id: { [Op.ne]: reservation.id },
+          date,
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
         },
-      },
-    });
+      });
+    } else if (dateObj.getTime() === today.getTime()) {
+      existingReservation = await Reservation.findOne({
+        where: {
+          userId,
+          restaurantId: reservation.restaurantId,
+          id: { [Op.ne]: reservation.id },
+          date,
+          time: {
+            [Op.gte]: nowTime,
+          },
+          status: {
+            [Op.in]: ['pending', 'confirmed', 'suggested_alt'],
+          },
+        },
+      });
+    } else {
+      existingReservation = null;
+    }
 
     if (existingReservation) {
       return res.status(400).json({
         error:
-          'You already have another active reservation at this restaurant. Cannot accept alternative time.',
+          'User already has another active reservation at this restaurant. Cannot suggest alternative time.',
       });
     }
 
