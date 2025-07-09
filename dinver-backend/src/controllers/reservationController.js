@@ -882,6 +882,16 @@ const cancelReservationByRestaurant = async (req, res) => {
       cancellationReason,
     );
 
+    // Dodaj user poruku s razlogom otkazivanja ako postoji
+    if (cancellationReason && cancellationReason.trim() !== '') {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: cancellationReason,
+      });
+    }
+
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {
       include: [
