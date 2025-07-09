@@ -129,20 +129,12 @@ const createReservation = async (req, res) => {
     );
 
     // Ako postoji bilješka od korisnika, dodaj je kao prvu poruku
-    if (noteFromUser) {
+    if (noteFromUser && noteFromUser.trim() !== '') {
       await ReservationMessage.create({
         reservationId: reservation.id,
         senderId: userId,
         messageType: 'user',
         content: noteFromUser,
-      });
-    } else {
-      // Dodaj praznu user poruku kako bi admin dobio notifikaciju
-      await ReservationMessage.create({
-        reservationId: reservation.id,
-        senderId: userId,
-        messageType: 'user',
-        content: '',
       });
     }
 
@@ -333,7 +325,7 @@ const confirmReservation = async (req, res) => {
     );
 
     // Ako postoji bilješka od vlasnika, dodaj je kao poruku
-    if (noteFromOwner) {
+    if (noteFromOwner && noteFromOwner.trim() !== '') {
       await ReservationMessage.create({
         reservationId: reservation.id,
         senderId: userId,
@@ -484,7 +476,7 @@ const declineReservation = async (req, res) => {
       noteFromOwner,
     );
     // Ako postoji bilješka od vlasnika, dodaj je kao poruku
-    if (noteFromOwner) {
+    if (noteFromOwner && noteFromOwner.trim() !== '') {
       await ReservationMessage.create({
         reservationId: reservation.id,
         senderId: userId,
@@ -625,7 +617,7 @@ const suggestAlternativeTime = async (req, res) => {
     }
 
     // Ako postoji bilješka od vlasnika, dodaj je kao poruku u thread
-    if (noteFromOwner) {
+    if (noteFromOwner && noteFromOwner.trim() !== '') {
       await ReservationMessage.create({
         reservationId: reservation.id,
         senderId: userId,
@@ -728,7 +720,7 @@ const cancelReservation = async (req, res) => {
       cancellationReason,
     );
     // Dodaj user poruku s razlogom otkazivanja ako postoji
-    if (cancellationReason) {
+    if (cancellationReason && cancellationReason.trim() !== '') {
       await ReservationMessage.create({
         reservationId: reservation.id,
         senderId: userId,
