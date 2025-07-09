@@ -352,6 +352,30 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
       `;
       break;
 
+    case 'new_reservation_admin':
+      subject = 'Nova rezervacija u vašem restoranu';
+      text =
+        `Korisnik ${reservation.user.firstName} ${reservation.user.lastName} (${reservation.user.email}) je napravio novu rezervaciju u vašem restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime}.
+` +
+        `Broj gostiju: ${reservation.guests}
+` +
+        (reservation.noteFromUser && reservation.noteFromUser.trim() !== ''
+          ? `Napomena korisnika: ${reservation.noteFromUser}\n`
+          : '');
+      htmlContent = `
+        <h2>Nova rezervacija</h2>
+        <p>Korisnik <strong>${reservation.user.firstName} ${reservation.user.lastName}</strong> (<a href="mailto:${reservation.user.email}">${reservation.user.email}</a>) je napravio novu rezervaciju u vašem restoranu <strong>"${reservation.restaurant.name}"</strong>.</p>
+        <div class="reservation-details">
+          <h3>Detalji rezervacije</h3>
+          <p><strong>Datum:</strong> ${formattedDate}</p>
+          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
+          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
+          ${reservation.noteFromUser && reservation.noteFromUser.trim() !== '' ? `<p><strong>Napomena korisnika:</strong> ${reservation.noteFromUser}</p>` : ''}
+        </div>
+        <p>Prijavite se u Dinver admin panel za upravljanje rezervacijama.</p>
+      `;
+      break;
+
     default:
       throw new Error('Invalid email type');
   }

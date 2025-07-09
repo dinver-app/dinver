@@ -159,6 +159,43 @@ const createReservation = async (req, res) => {
     });
 
     res.status(201).json(reservationWithMessages);
+
+    // Dohvati sve admine restorana
+    const admins = await UserAdmin.findAll({
+      where: { restaurantId },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['email', 'firstName', 'lastName'],
+        },
+      ],
+    });
+    // Pošalji email svakom adminu
+    for (const admin of admins) {
+      // Ako je include, koristi admin.user.email, inače dohvatiti User ručno
+      let adminEmail = admin.user?.email;
+      if (!adminEmail) {
+        const adminUser = await User.findByPk(admin.userId);
+        adminEmail = adminUser?.email;
+      }
+      if (adminEmail) {
+        await sendReservationEmail({
+          to: adminEmail,
+          type: 'new_reservation_admin',
+          reservation: {
+            ...reservation.toJSON(),
+            user: {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+            },
+            restaurant,
+          },
+        });
+      }
+    }
   } catch (error) {
     console.error('Error creating reservation:', error);
     res.status(500).json({ error: 'Failed to create reservation' });
