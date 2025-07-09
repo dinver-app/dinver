@@ -4,7 +4,6 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
   checkAdmin,
-  checkAdminForRestaurant,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -30,7 +29,7 @@ router.post(
   '/admin/special-offers',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdminForRestaurant,
+  checkAdmin,
   specialOfferController.createSpecialOffer,
 );
 
@@ -38,7 +37,7 @@ router.put(
   '/admin/special-offers/:id',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdminForRestaurant,
+  checkAdmin,
   specialOfferController.updateSpecialOffer,
 );
 
@@ -46,7 +45,7 @@ router.delete(
   '/admin/special-offers/:id',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdminForRestaurant,
+  checkAdmin,
   specialOfferController.deleteSpecialOffer,
 );
 
@@ -54,7 +53,7 @@ router.put(
   '/admin/special-offers-order',
   appApiKeyAuth,
   appAuthenticateToken,
-  checkAdminForRestaurant,
+  checkAdmin,
   specialOfferController.updateSpecialOfferOrder,
 );
 
