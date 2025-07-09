@@ -737,6 +737,16 @@ const cancelReservation = async (req, res) => {
       });
     }
 
+    // Pošalji email korisniku o otkazivanju
+    await sendReservationEmail({
+      to: user.email,
+      type: 'cancellation',
+      reservation: {
+        ...reservation.toJSON(),
+        cancellationReason,
+      },
+    });
+
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {
       include: [
