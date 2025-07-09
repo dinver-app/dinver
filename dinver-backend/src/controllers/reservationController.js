@@ -371,22 +371,6 @@ const confirmReservation = async (req, res) => {
       });
     }
 
-    // Pošalji email korisniku
-    await sendReservationEmail({
-      to: reservation.user.email,
-      type: 'confirmation',
-      reservation,
-    });
-
-    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-    if (reservation.user.phone) {
-      await sendReservationSMS({
-        to: reservation.user.phone,
-        type: 'confirmation',
-        reservation,
-      });
-    }
-
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {
       include: [
@@ -414,6 +398,22 @@ const confirmReservation = async (req, res) => {
         },
       ],
     });
+
+    // Pošalji email korisniku
+    await sendReservationEmail({
+      to: reservation.user.email,
+      type: 'confirmation',
+      reservation,
+    });
+
+    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
+    if (reservation.user.phone) {
+      await sendReservationSMS({
+        to: reservation.user.phone,
+        type: 'confirmation',
+        reservation,
+      });
+    }
 
     res.json(updatedReservation);
   } catch (error) {
@@ -488,22 +488,6 @@ const declineReservation = async (req, res) => {
       metadata: { noteFromOwner },
     });
 
-    // Pošalji email korisniku
-    await sendReservationEmail({
-      to: reservation.user.email,
-      type: 'decline',
-      reservation,
-    });
-
-    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-    if (reservation.user.phone) {
-      await sendReservationSMS({
-        to: reservation.user.phone,
-        type: 'decline',
-        reservation,
-      });
-    }
-
     // Kreiraj sistemsku poruku o odbijanju
     await ReservationMessage.createStatusMessage(
       reservation.id,
@@ -519,6 +503,22 @@ const declineReservation = async (req, res) => {
         senderId: userId,
         messageType: 'user',
         content: noteFromOwner,
+      });
+    }
+
+    // Pošalji email korisniku
+    await sendReservationEmail({
+      to: reservation.user.email,
+      type: 'decline',
+      reservation,
+    });
+
+    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
+    if (reservation.user.phone) {
+      await sendReservationSMS({
+        to: reservation.user.phone,
+        type: 'decline',
+        reservation,
       });
     }
 
@@ -636,22 +636,6 @@ const suggestAlternativeTime = async (req, res) => {
       metadata: { suggestedDate, suggestedTime, noteFromOwner },
     });
 
-    // Pošalji email korisniku
-    await sendReservationEmail({
-      to: reservation.user.email,
-      type: 'alternative',
-      reservation,
-    });
-
-    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-    if (reservation.user.phone) {
-      await sendReservationSMS({
-        to: reservation.user.phone,
-        type: 'alternative',
-        reservation,
-      });
-    }
-
     // Ako postoji bilješka od vlasnika, dodaj je kao poruku u thread
     if (noteFromOwner && noteFromOwner.trim() !== '') {
       await ReservationMessage.create({
@@ -670,6 +654,22 @@ const suggestAlternativeTime = async (req, res) => {
       suggestedDate,
       suggestedTime,
     );
+
+    // Pošalji email korisniku
+    await sendReservationEmail({
+      to: reservation.user.email,
+      type: 'alternative',
+      reservation,
+    });
+
+    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
+    if (reservation.user.phone) {
+      await sendReservationSMS({
+        to: reservation.user.phone,
+        type: 'alternative',
+        reservation,
+      });
+    }
 
     res.json(reservation);
   } catch (error) {
@@ -765,16 +765,6 @@ const cancelReservation = async (req, res) => {
       });
     }
 
-    // Pošalji email korisniku o otkazivanju
-    await sendReservationEmail({
-      to: user.email,
-      type: 'cancellation',
-      reservation: {
-        ...reservation.toJSON(),
-        cancellationReason,
-      },
-    });
-
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {
       include: [
@@ -796,6 +786,16 @@ const cancelReservation = async (req, res) => {
           order: [['createdAt', 'ASC']],
         },
       ],
+    });
+
+    // Pošalji email korisniku o otkazivanju
+    await sendReservationEmail({
+      to: user.email,
+      type: 'cancellation',
+      reservation: {
+        ...reservation.toJSON(),
+        cancellationReason,
+      },
     });
 
     res.json(updatedReservation);
@@ -882,28 +882,6 @@ const cancelReservationByRestaurant = async (req, res) => {
       cancellationReason,
     );
 
-    // Pošalji email korisniku
-    await sendReservationEmail({
-      to: reservation.user.email,
-      type: 'cancellation_by_restaurant',
-      reservation: {
-        ...reservation.toJSON(),
-        cancellationReason,
-      },
-    });
-
-    // Pošalji SMS korisniku
-    if (reservation.user.phone) {
-      await sendReservationSMS({
-        to: reservation.user.phone,
-        type: 'cancellation_by_restaurant',
-        reservation: {
-          ...reservation.toJSON(),
-          cancellationReason,
-        },
-      });
-    }
-
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {
       include: [
@@ -931,6 +909,28 @@ const cancelReservationByRestaurant = async (req, res) => {
         },
       ],
     });
+
+    // Pošalji email korisniku
+    await sendReservationEmail({
+      to: reservation.user.email,
+      type: 'cancellation_by_restaurant',
+      reservation: {
+        ...reservation.toJSON(),
+        cancellationReason,
+      },
+    });
+
+    // Pošalji SMS korisniku
+    if (reservation.user.phone) {
+      await sendReservationSMS({
+        to: reservation.user.phone,
+        type: 'cancellation_by_restaurant',
+        reservation: {
+          ...reservation.toJSON(),
+          cancellationReason,
+        },
+      });
+    }
 
     res.json(updatedReservation);
   } catch (error) {
