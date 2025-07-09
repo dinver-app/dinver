@@ -136,6 +136,14 @@ const createReservation = async (req, res) => {
         messageType: 'user',
         content: noteFromUser,
       });
+    } else {
+      // Dodaj praznu user poruku kako bi admin dobio notifikaciju
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: '',
+      });
     }
 
     // TODO: Pošalji notifikaciju restoranu
@@ -467,6 +475,24 @@ const declineReservation = async (req, res) => {
       });
     }
 
+    // Kreiraj sistemsku poruku o odbijanju
+    await ReservationMessage.createStatusMessage(
+      reservation.id,
+      userId,
+      oldStatus,
+      'declined',
+      noteFromOwner,
+    );
+    // Ako postoji bilješka od vlasnika, dodaj je kao poruku
+    if (noteFromOwner) {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: noteFromOwner,
+      });
+    }
+
     res.json(reservation);
   } catch (error) {
     console.error('Error declining reservation:', error);
@@ -496,6 +522,17 @@ const suggestAlternativeTime = async (req, res) => {
       ],
     });
 
+    const admin = await UserAdmin.findOne({
+      where: { userId, restaurantId: reservation.restaurantId },
+    });
+
+    if (!admin) {
+      return res.status(403).json({
+        error:
+          'Access denied. Only restaurant admins can suggest alternative times.',
+      });
+    }
+
     if (!reservation) {
       return res.status(404).json({ error: 'Reservation not found' });
     }
@@ -504,10 +541,16 @@ const suggestAlternativeTime = async (req, res) => {
       return res.status(400).json({ error: 'Reservation cannot be modified' });
     }
 
+    // Popravi bug s nedostajućim varijablama
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateObj = new Date(suggestedDate);
+    dateObj.setHours(0, 0, 0, 0);
+    const date = suggestedDate;
+
     let existingReservation;
 
     if (dateObj > today) {
-      // Budući datum – blokiraj ako postoji aktivna rezervacija za taj datum
       existingReservation = await Reservation.findOne({
         where: {
           userId,
@@ -520,7 +563,6 @@ const suggestAlternativeTime = async (req, res) => {
         },
       });
     } else if (dateObj.getTime() === today.getTime()) {
-      // Danas – blokiraj samo ako postoji aktivna rezervacija s vremenom u budućnosti
       existingReservation = await Reservation.findOne({
         where: {
           userId,
@@ -536,7 +578,6 @@ const suggestAlternativeTime = async (req, res) => {
         },
       });
     } else {
-      // Prošli datumi – ne blokiraj
       existingReservation = null;
     }
 
@@ -582,6 +623,25 @@ const suggestAlternativeTime = async (req, res) => {
         reservation,
       });
     }
+
+    // Ako postoji bilješka od vlasnika, dodaj je kao poruku u thread
+    if (noteFromOwner) {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: noteFromOwner,
+      });
+    }
+    // Dodaj sistemsku poruku o promjeni termina
+    await ReservationMessage.createTimeChangeMessage(
+      reservation.id,
+      userId,
+      reservation.date,
+      reservation.time,
+      suggestedDate,
+      suggestedTime,
+    );
 
     res.json(reservation);
   } catch (error) {
@@ -667,8 +727,15 @@ const cancelReservation = async (req, res) => {
       'cancelled_by_user',
       cancellationReason,
     );
-
-    // TODO: Pošalji notifikaciju restoranu
+    // Dodaj user poruku s razlogom otkazivanja ako postoji
+    if (cancellationReason) {
+      await ReservationMessage.create({
+        reservationId: reservation.id,
+        senderId: userId,
+        messageType: 'user',
+        content: cancellationReason,
+      });
+    }
 
     // Dohvati ažuriranu rezervaciju s porukama
     const updatedReservation = await Reservation.findByPk(id, {

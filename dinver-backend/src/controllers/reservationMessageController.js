@@ -329,6 +329,53 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
+// Get unread messages count for admin
+const getUnreadAdminCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { reservationId } = req.query;
+
+    // Pronađi sve restorane gdje je user admin
+    const adminRestaurants = await UserAdmin.findAll({
+      where: { userId },
+      attributes: ['restaurantId'],
+    });
+    const adminRestaurantIds = adminRestaurants.map((r) => r.restaurantId);
+    if (adminRestaurantIds.length === 0) {
+      return res.json({ unreadCount: 0 });
+    }
+
+    // Pronađi sve rezervacije za te restorane
+    let reservationWhere = { restaurantId: { [Op.in]: adminRestaurantIds } };
+    if (reservationId) {
+      reservationWhere = { ...reservationWhere, id: reservationId };
+    }
+    const adminReservations = await Reservation.findAll({
+      where: reservationWhere,
+      attributes: ['id'],
+    });
+    const adminReservationIds = adminReservations.map((r) => r.id);
+    if (adminReservationIds.length === 0) {
+      return res.json({ unreadCount: 0 });
+    }
+
+    // Broji poruke koje je poslao user (senderId != adminId), a admin ih nije pročitao
+    const count = await ReservationMessage.count({
+      where: {
+        reservationId: { [Op.in]: adminReservationIds },
+        readAt: null,
+        messageType: { [Op.ne]: 'system' },
+        // senderId != adminId (ali admin može biti više osoba, pa je dovoljno != userId)
+        senderId: { [Op.ne]: userId },
+      },
+    });
+    res.json({ unreadCount: count });
+  } catch (error) {
+    console.error('Error getting unread admin count:', error);
+    res.status(500).json({ error: 'Failed to get unread admin count' });
+  }
+};
+
 // Create a suggestion (restaurant admin only)
 const createSuggestion = async (req, res) => {
   try {
@@ -424,4 +471,5 @@ module.exports = {
   markMessagesAsRead,
   getUnreadCount,
   createSuggestion,
+  getUnreadAdminCount,
 };

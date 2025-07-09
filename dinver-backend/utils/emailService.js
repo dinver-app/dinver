@@ -249,6 +249,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
         `Restoran "${reservation.restaurant.name}" predlaže alternativni termin za vašu rezervaciju:\n` +
         `Novi datum: ${formattedSuggestedDate}\n` +
         `Novo vrijeme: ${formattedSuggestedTime}\n\n` +
+        `${reservation.noteFromOwner ? `Poruka od restorana: ${reservation.noteFromOwner}\n` : ''}` +
         `Molimo vas da potvrdite ili odbijete ovaj prijedlog kroz aplikaciju.`;
 
       htmlContent = `
@@ -259,6 +260,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           <p><strong>Novi datum:</strong> ${formattedSuggestedDate}</p>
           <p><strong>Novo vrijeme:</strong> ${formattedSuggestedTime}</p>
           <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
+          ${reservation.noteFromOwner ? `<p><strong>Poruka od restorana:</strong> ${reservation.noteFromOwner}</p>` : ''}
         </div>
         <p>Molimo Vas da potvrdite ili odbijete ovaj prijedlog kroz Dinver aplikaciju.</p>
       `;
