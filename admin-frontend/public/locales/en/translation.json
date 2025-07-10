@@ -629,5 +629,7 @@
   "premium_feature_only": "This option is only available in Premium plan",
   "reservation_settings": "Reservation Settings",
   "enable_reservations": "Enable Reservations",
-  "reservation_settings_info": "Enable this to allow customers to make table reservations through the app. When disabled, the reservation feature will be hidden from customers."
+  "reservation_settings_info": "Enable this to allow customers to make table reservations through the app. When disabled, the reservation feature will be hidden from customers.",
+  "active": "Active",
+  "inactive": "Inactive"
 }

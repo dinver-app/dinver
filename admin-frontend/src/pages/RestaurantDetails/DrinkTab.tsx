@@ -71,6 +71,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleSaveCategory = async (data: {
     translates: { name: string; language: string }[];
+    isActive: boolean;
   }) => {
     try {
       const category = await createDrinkCategory({
@@ -79,6 +80,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           language: translate.language as Language,
         })),
         restaurantId: restaurantId as string,
+        isActive: data.isActive,
       });
       setCategories([...categories, category]);
       toast.success(t("category_created"));
@@ -92,7 +94,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleUpdateCategory = async (
     id: string,
-    data: { translations: Translation[] }
+    data: { translations: Translation[]; isActive: boolean }
   ) => {
     try {
       await updateDrinkCategory(id, data);
@@ -172,6 +174,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     price: string;
     categoryId?: string | null;
     imageFile?: File;
+    isActive: boolean;
   }) => {
     try {
       const drinkItem = await createDrinkItem({
@@ -184,6 +187,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         restaurantId: restaurantId as string,
         categoryId: data.categoryId,
         imageFile: data.imageFile,
+        isActive: data.isActive,
       });
       setDrinkItems([...drinkItems, drinkItem]);
       toast.success(t("drink_item_created"));
@@ -203,6 +207,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       categoryId?: string | null;
       imageFile: File | null;
       removeImage: boolean;
+      isActive: boolean;
     }
   ) => {
     try {
@@ -216,6 +221,7 @@ const DrinkTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         categoryId: data.categoryId,
         imageFile: data.imageFile || undefined,
         removeImage: data.removeImage,
+        isActive: data.isActive,
       });
       setDrinkItems((prevItems) =>
         prevItems.map((item) => (item.id === id ? updatedDrinkItem : item))

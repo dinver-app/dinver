@@ -10,7 +10,7 @@ export const createDrinkCategory = async (data: DrinkCategoryData) => {
 
 export const updateDrinkCategory = async (
   id: string,
-  data: { translations: Translation[] }
+  data: { translations: Translation[]; isActive?: boolean }
 ) => {
   const response = await apiClient.put(
     `/api/admin/drinks/categories/${id}`,
@@ -28,7 +28,7 @@ export const deleteDrinkCategory = async (id: string) => {
 
 export const getDrinkItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/admin/drinks/drinkItems/${restaurantId}`
+    `/api/admin/drinks/drinkItems-admin/${restaurantId}`
   );
   return response.data;
 };
@@ -39,12 +39,17 @@ export const createDrinkItem = async (data: {
   restaurantId: string;
   categoryId?: string | null;
   imageFile?: File;
+  isActive?: boolean;
 }) => {
   const formData = new FormData();
 
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
   formData.append("restaurantId", data.restaurantId);
+
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
 
   formData.append(
     "categoryId",
@@ -76,6 +81,7 @@ export const updateDrinkItem = async (
     categoryId?: string | null;
     imageFile?: File;
     removeImage?: boolean;
+    isActive?: boolean;
   }
 ) => {
   const formData = new FormData();
@@ -83,6 +89,10 @@ export const updateDrinkItem = async (
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
   formData.append("restaurantId", data.restaurantId);
+
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
 
   formData.append(
     "categoryId",
@@ -117,7 +127,7 @@ export const deleteDrinkItem = async (id: string) => {
 // Get all drink categories for a specific restaurant
 export const getDrinkCategories = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/admin/drinks/categories/${restaurantId}`
+    `/api/admin/drinks/categories-admin/${restaurantId}`
   );
   return response.data;
 };

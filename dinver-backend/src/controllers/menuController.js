@@ -149,7 +149,7 @@ const createMenuItem = async (req, res) => {
       allergens: allergenIds,
       imageUrl: imageKey,
       categoryId,
-      isActive: req.body.isActive || true, // Default to true if not provided
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
     });
 
     // Create translations
@@ -316,7 +316,7 @@ const deleteMenuItem = async (req, res) => {
 // Create a new category for a specific restaurant
 const createCategory = async (req, res) => {
   try {
-    const { restaurantId, translations } = req.body;
+    const { restaurantId, translations, isActive } = req.body;
     const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
@@ -358,7 +358,7 @@ const createCategory = async (req, res) => {
     const category = await MenuCategory.create({
       restaurantId,
       position: newPosition,
-      isActive: req.body.isActive || true, // Default to true if not provided
+      isActive: isActive !== undefined ? isActive : true, // Default to true if not provided
     });
 
     // Create translations

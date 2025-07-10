@@ -158,6 +158,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                         }
                       </span>
                     )}
+                    {!category.isActive && (
+                      <span className="ml-2 px-2 py-0.5 bg-gray-500 text-white text-xs rounded font-medium">
+                        {t("inactive")}
+                      </span>
+                    )}
                   </h3>
                   <div className="flex space-x-2">
                     <button
@@ -189,7 +194,9 @@ const MenuList: React.FC<MenuListProps> = memo(
                   .map((item) => (
                     <div
                       key={item.id}
-                      className="flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group"
+                      className={`flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group ${
+                        !item.isActive || !category.isActive ? "opacity-60" : ""
+                      }`}
                     >
                       <div className="flex items-start space-x-4">
                         {item.imageUrl ? (
@@ -219,11 +226,18 @@ const MenuList: React.FC<MenuListProps> = memo(
                           </div>
                         )}
                         <div className="flex-1 flex flex-col justify-center h-full">
-                          <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
-                            {item.translations?.find(
-                              (t) => t.language === i18n.language
-                            )?.name || item.name}
-                          </h4>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
+                              {item.translations?.find(
+                                (t) => t.language === i18n.language
+                              )?.name || item.name}
+                            </h4>
+                            {!item.isActive && (
+                              <span className="px-2 py-0.5 bg-gray-500 text-white text-xs rounded font-medium">
+                                {t("inactive")}
+                              </span>
+                            )}
+                          </div>
                           {item.translations?.find(
                             (t) => t.language === i18n.language
                           )?.description && (
@@ -340,7 +354,9 @@ const MenuList: React.FC<MenuListProps> = memo(
                   .map((item) => (
                     <div
                       key={item.id}
-                      className="flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group"
+                      className={`flex justify-between items-start p-4 bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow duration-200 group ${
+                        !item.isActive ? "opacity-60" : ""
+                      }`}
                     >
                       <div className="flex items-start space-x-4">
                         {item.imageUrl ? (
@@ -370,11 +386,18 @@ const MenuList: React.FC<MenuListProps> = memo(
                           </div>
                         )}
                         <div className="flex-1 flex flex-col justify-center h-full">
-                          <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
-                            {item.translations?.find(
-                              (t) => t.language === i18n.language
-                            )?.name || item.name}
-                          </h4>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className="font-semibold text-gray-900 text-lg mb-0.5 group-hover:text-green-700 transition-colors duration-200">
+                              {item.translations?.find(
+                                (t) => t.language === i18n.language
+                              )?.name || item.name}
+                            </h4>
+                            {!item.isActive && (
+                              <span className="px-2 py-0.5 bg-gray-500 text-white text-xs rounded font-medium">
+                                {t("inactive")}
+                              </span>
+                            )}
+                          </div>
                           {item.translations?.find(
                             (t) => t.language === i18n.language
                           )?.description && (

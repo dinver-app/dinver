@@ -8,7 +8,7 @@ export const createCategory = async (data: CategoryData) => {
 
 export const updateCategory = async (
   id: string,
-  data: { translations: Translation[] }
+  data: { translations: Translation[]; isActive?: boolean }
 ) => {
   const response = await apiClient.put(
     `/api/admin/menu/categories/${id}`,
@@ -26,7 +26,7 @@ export const deleteCategory = async (id: string) => {
 
 export const getMenuItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/admin/menu/menuItems/${restaurantId}`
+    `/api/admin/menu/menuItems-admin/${restaurantId}`
   );
   return response.data;
 };
@@ -38,12 +38,17 @@ export const createMenuItem = async (data: {
   allergenIds: string[];
   categoryId?: string | null;
   imageFile?: File;
+  isActive?: boolean;
 }) => {
   const formData = new FormData();
 
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
   formData.append("restaurantId", data.restaurantId);
+
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
 
   if (data.allergenIds && data.allergenIds.length > 0) {
     formData.append("allergenIds", JSON.stringify(data.allergenIds));
@@ -76,6 +81,7 @@ export const updateMenuItem = async (
     categoryId?: string | null;
     imageFile?: File;
     removeImage?: boolean;
+    isActive?: boolean;
   }
 ) => {
   const formData = new FormData();
@@ -83,6 +89,10 @@ export const updateMenuItem = async (
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
   formData.append("restaurantId", data.restaurantId);
+
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
 
   if (data.allergenIds && data.allergenIds.length > 0) {
     formData.append("allergenIds", JSON.stringify(data.allergenIds));
@@ -121,7 +131,7 @@ export const deleteMenuItem = async (id: string) => {
 // Get all categories for a specific restaurant
 export const getCategoryItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/admin/menu/categories/${restaurantId}`
+    `/api/admin/menu/categories-admin/${restaurantId}`
   );
   return response.data;
 };

@@ -138,7 +138,7 @@ const createDrinkItem = async (req, res) => {
       position: newPosition,
       imageUrl: imageKey,
       categoryId,
-      isActive: req.body.isActive || true, // Default to true if not provided
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
     });
 
     // Create translations
@@ -344,7 +344,7 @@ const createDrinkCategory = async (req, res) => {
     const category = await DrinkCategory.create({
       restaurantId,
       position: newPosition,
-      isActive: req.body.isActive || true, // Default to true if not provided
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
     });
 
     // Create translations

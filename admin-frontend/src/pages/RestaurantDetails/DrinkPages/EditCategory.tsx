@@ -12,7 +12,10 @@ import TranslateButton from "../../../components/TranslateButton";
 interface EditCategoryProps {
   category: Category;
   onCancel: () => void;
-  onSave: (id: string, data: { translations: Translation[] }) => Promise<void>;
+  onSave: (
+    id: string,
+    data: { translations: Translation[]; isActive: boolean }
+  ) => Promise<void>;
 }
 
 const EditCategory: React.FC<EditCategoryProps> = ({
@@ -42,6 +45,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
           ?.description || "",
     },
   });
+  const [isActive, setIsActive] = useState(category.isActive);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -66,7 +70,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     const loadingToast = toast.loading(t("saving"));
 
     try {
-      await onSave(category.id, { translations: translationsArray });
+      await onSave(category.id, { translations: translationsArray, isActive });
     } finally {
       setIsSaving(false);
       toast.dismiss(loadingToast);
@@ -222,6 +226,28 @@ const EditCategory: React.FC<EditCategoryProps> = ({
           rows={4}
         />
         <p className="text-xs text-gray-500 mt-1">{t("optional")}</p>
+      </div>
+
+      <div className="mb-6 flex items-center">
+        <label className="block text-sm font-medium text-gray-700 mr-3">
+          {t("active")}
+        </label>
+        <button
+          type="button"
+          className={`w-10 h-6 flex items-center bg-gray-200 rounded-full p-1 duration-300 focus:outline-none ${
+            isActive ? "bg-green-500" : "bg-gray-300"
+          }`}
+          onClick={() => setIsActive((prev) => !prev)}
+        >
+          <span
+            className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
+              isActive ? "translate-x-4" : ""
+            }`}
+          />
+        </button>
+        <span className="ml-2 text-sm text-gray-600">
+          {isActive ? t("active") : t("inactive")}
+        </span>
       </div>
 
       <div className="flex justify-start space-x-3">
