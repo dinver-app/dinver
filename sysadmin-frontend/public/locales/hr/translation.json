@@ -496,6 +496,7 @@
   "bio": "Biografija",
   "active": "Aktivan",
   "inactive": "Neaktivan",
+  "category_inactive": "Kategorija neaktivna",
   "activate": "Aktiviraj",
   "deactivate": "Deaktiviraj",
   "add_blog_user": "Dodaj Blog Korisnika",
@@ -582,14 +583,9 @@
   "total_data_description": "Brojanje svih interakcija",
   "showing_data_for_sources": "Prikazivanje podataka za izvore",
   "show_all": "Prikaži sve",
-  "cities_with_restaurants": "Gradovi s restoranima",
-  "total_users": "Ukupno korisnika",
-  "completed_reservations": "Completed rezervacije",
-  "restaurants_on_dinver": "Restorani na Dinveru",
-  "cities_covered": "Pokriveni gradovi",
-  "users_on_app": "Korisnici na aplikaciji",
-  "successful_bookings": "Uspješne rezervacije",
   "reservation_settings": "Postavke Rezervacija",
   "enable_reservations": "Omogući Rezervacije",
-  "reservation_settings_info": "Omogućite ovo da biste dozvolili gostima da rezerviraju stolove kroz aplikaciju. Kada je onemogućeno, funkcija rezervacija će biti skrivena od gostiju."
+  "reservation_settings_info": "Omogućite ovo da biste dozvolili gostima da rezerviraju stolove kroz aplikaciju. Kada je onemogućeno, funkcija rezervacija će biti skrivena od gostiju.",
+  "category_active_description": "Aktivne kategorije se prikazuju gostima u aplikaciji",
+  "item_active_description": "Aktivne stavke se prikazuju gostima u aplikaciji"
 }

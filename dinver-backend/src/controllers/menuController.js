@@ -415,7 +415,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { translations } = req.body;
+    const { translations, isActive } = req.body;
     const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
@@ -443,6 +443,11 @@ const updateCategory = async (req, res) => {
         name: translation.name,
         description: translation.description || null,
       });
+    }
+
+    // Ažuriramo isActive polje ako je proslijeđeno
+    if (isActive !== undefined) {
+      await category.update({ isActive });
     }
 
     // Dohvatimo ažuriranu kategoriju

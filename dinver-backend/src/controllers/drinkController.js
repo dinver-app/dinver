@@ -391,7 +391,7 @@ const createDrinkCategory = async (req, res) => {
 const updateDrinkCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { translations } = req.body;
+    const { translations, isActive } = req.body;
     const language = getUserLanguage(req);
 
     if (!translations || translations.length === 0) {
@@ -420,6 +420,11 @@ const updateDrinkCategory = async (req, res) => {
         name: translation.name,
         description: translation.description || null,
       });
+    }
+
+    // Ažuriramo isActive polje ako je proslijeđeno
+    if (isActive !== undefined) {
+      await category.update({ isActive });
     }
 
     // Fetch updated category

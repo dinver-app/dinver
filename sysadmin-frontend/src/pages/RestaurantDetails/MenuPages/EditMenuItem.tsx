@@ -27,6 +27,7 @@ interface EditMenuItemProps {
       imageFile: File | null;
       removeImage: boolean;
       categoryId?: string | null;
+      isActive: boolean;
     }
   ) => Promise<void>;
   allergens: Allergen[];
@@ -73,6 +74,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     menuItem.categoryId || ""
   );
+  const [isActive, setIsActive] = useState(menuItem.isActive ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -110,6 +112,7 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
+        isActive: isActive,
       });
     } finally {
       setIsSaving(false);
@@ -434,6 +437,30 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
           })}
         </div>
       </div>
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("active")}
+        </label>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              isActive ? "bg-green-600" : "bg-gray-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isActive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <label className="ml-3 text-sm text-gray-700">
+            {t("item_active_description")}
+          </label>
+        </div>
+      </div>
+
       <div className="flex justify-start space-x-3 mt-6">
         <button
           onClick={handleSave}

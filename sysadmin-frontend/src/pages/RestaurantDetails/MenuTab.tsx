@@ -84,6 +84,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleSaveCategory = async (data: {
     translates: { name: string; language: string }[];
+    isActive: boolean;
   }) => {
     try {
       const category = await createCategory({
@@ -92,6 +93,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           language: translate.language as Language,
         })),
         restaurantId: restaurantId as string,
+        isActive: data.isActive,
       });
       setCategories([...categories, category]);
       toast.success(t("category_created"));
@@ -105,7 +107,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
 
   const handleUpdateCategory = async (
     id: string,
-    data: { translations: Translation[] }
+    data: { translations: Translation[]; isActive: boolean }
   ) => {
     try {
       await updateCategory(id, data);
@@ -132,6 +134,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     allergens: string[];
     categoryId?: string | null;
     imageFile?: File;
+    isActive: boolean;
   }) => {
     try {
       const menuItem = await createMenuItem({
@@ -144,6 +147,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         allergenIds: data.allergens,
         categoryId: data.categoryId,
         imageFile: data.imageFile,
+        isActive: data.isActive,
       });
 
       setMenuItems([...menuItems, menuItem]);
@@ -169,6 +173,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       imageFile: File | null;
       removeImage: boolean;
       categoryId?: string | null;
+      isActive: boolean;
     }
   ) => {
     try {
@@ -183,6 +188,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         imageFile: data.imageFile || undefined,
         removeImage: data.removeImage,
         categoryId: data.categoryId,
+        isActive: data.isActive,
       });
 
       setMenuItems(
