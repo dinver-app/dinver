@@ -16,6 +16,14 @@ router.get(
   menuController.getCategoryItems,
 );
 
+// Nova ruta za admin panel - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/menu/categories-admin/:restaurantId',
+  adminAuthenticateToken,
+  checkAdmin,
+  menuController.getAllCategoriesForAdmin,
+);
+
 router.post(
   '/menu/categories',
   adminAuthenticateToken,
@@ -42,6 +50,14 @@ router.get(
   adminAuthenticateToken,
   checkAdmin,
   menuController.getMenuItems,
+);
+
+// Nova ruta za admin panel - sve stavke (aktivne i neaktivne)
+router.get(
+  '/menu/menuItems-admin/:restaurantId',
+  adminAuthenticateToken,
+  checkAdmin,
+  menuController.getAllMenuItemsForAdmin,
 );
 
 router.post(

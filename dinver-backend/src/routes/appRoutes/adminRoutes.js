@@ -193,6 +193,15 @@ router.get(
   menuController.getCategoryItems,
 );
 
+// Nova ruta za admin panel - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/admin/menu/categories-admin/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.getAllCategoriesForAdmin,
+);
+
 router.post(
   '/admin/menu/categories',
   appAuthenticateToken,
@@ -223,6 +232,15 @@ router.get(
   appApiKeyAuth,
   checkAdmin,
   menuController.getMenuItems,
+);
+
+// Nova ruta za admin panel - sve stavke (aktivne i neaktivne)
+router.get(
+  '/admin/menu/menuItems-admin/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  menuController.getAllMenuItemsForAdmin,
 );
 
 router.post(
@@ -284,6 +302,15 @@ router.get(
   drinksController.getDrinkCategories,
 );
 
+// Nova ruta za admin panel - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/admin/drinks/categories-admin/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.getAllDrinkCategoriesForAdmin,
+);
+
 router.post(
   '/admin/drinks/categories',
   appAuthenticateToken,
@@ -314,6 +341,15 @@ router.get(
   appApiKeyAuth,
   checkAdmin,
   drinksController.getDrinkItems,
+);
+
+// Nova ruta za admin panel - sve stavke (aktivne i neaktivne)
+router.get(
+  '/admin/drinks/drinkItems-admin/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  drinksController.getAllDrinkItemsForAdmin,
 );
 
 router.post(

@@ -60,11 +60,27 @@ router.get(
   drinkController.getDrinkItems,
 );
 
+// Nova ruta za sysadmin - sve stavke (aktivne i neaktivne)
+router.get(
+  '/drinks/drinkItems-admin/:restaurantId',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  drinkController.getAllDrinkItemsForAdmin,
+);
+
 router.get(
   '/drinks/categories/:restaurantId',
   sysadminAuthenticateToken,
   checkSysadmin,
   drinkController.getDrinkCategories,
+);
+
+// Nova ruta za sysadmin - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/drinks/categories-admin/:restaurantId',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  drinkController.getAllDrinkCategoriesForAdmin,
 );
 
 router.put(

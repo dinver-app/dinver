@@ -22,7 +22,10 @@ const getDrinkItems = async (req, res) => {
     const language = getUserLanguage(req);
 
     const drinkItems = await DrinkItem.findAll({
-      where: { restaurantId },
+      where: {
+        restaurantId,
+        isActive: true, // Samo aktivne stavke
+      },
       order: [['position', 'ASC']],
       include: [
         {
@@ -63,7 +66,10 @@ const getDrinkCategories = async (req, res) => {
     const language = getUserLanguage(req);
 
     const categories = await DrinkCategory.findAll({
-      where: { restaurantId },
+      where: {
+        restaurantId,
+        isActive: true, // Samo aktivne kategorije
+      },
       order: [['position', 'ASC']],
       include: [
         {
@@ -132,6 +138,7 @@ const createDrinkItem = async (req, res) => {
       position: newPosition,
       imageUrl: imageKey,
       categoryId,
+      isActive: req.body.isActive || true, // Default to true if not provided
     });
 
     // Create translations
@@ -229,6 +236,10 @@ const updateDrinkItem = async (req, res) => {
       price: price !== undefined ? price : drinkItem.price,
       imageUrl: imageKey,
       categoryId: categoryId !== undefined ? categoryId : drinkItem.categoryId,
+      isActive:
+        req.body.isActive !== undefined
+          ? req.body.isActive
+          : drinkItem.isActive,
     });
 
     // Fetch updated item
@@ -333,6 +344,7 @@ const createDrinkCategory = async (req, res) => {
     const category = await DrinkCategory.create({
       restaurantId,
       position: newPosition,
+      isActive: req.body.isActive || true, // Default to true if not provided
     });
 
     // Create translations
@@ -499,6 +511,83 @@ const updateDrinkItemOrder = async (req, res) => {
   }
 };
 
+// Get all drink items for admin (including inactive)
+const getAllDrinkItemsForAdmin = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
+    const drinkItems = await DrinkItem.findAll({
+      where: { restaurantId }, // Uključuje sve stavke, aktivne i neaktivne
+      order: [['position', 'ASC']],
+      include: [
+        {
+          model: DrinkItemTranslation,
+          as: 'translations',
+        },
+      ],
+    });
+
+    const formattedDrinkItems = drinkItems.map((item) => {
+      const itemData = item.toJSON();
+      const userTranslation = itemData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = itemData.translations[0];
+
+      return {
+        ...itemData,
+        name: (userTranslation || anyTranslation)?.name || '',
+        description: (userTranslation || anyTranslation)?.description || '',
+        price: parseFloat(itemData.price).toFixed(2),
+        imageUrl: itemData.imageUrl
+          ? getMediaUrl(itemData.imageUrl, 'image')
+          : null,
+      };
+    });
+
+    res.json(formattedDrinkItems);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch drink items' });
+  }
+};
+
+// Get all drink categories for admin (including inactive)
+const getAllDrinkCategoriesForAdmin = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
+    const categories = await DrinkCategory.findAll({
+      where: { restaurantId }, // Uključuje sve kategorije, aktivne i neaktivne
+      order: [['position', 'ASC']],
+      include: [
+        {
+          model: DrinkCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+    });
+
+    const formattedCategories = categories.map((category) => {
+      const categoryData = category.toJSON();
+      const userTranslation = categoryData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = categoryData.translations[0];
+
+      return {
+        ...categoryData,
+        name: (userTranslation || anyTranslation)?.name || '',
+      };
+    });
+
+    res.json(formattedCategories);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch drink categories' });
+  }
+};
+
 module.exports = {
   getDrinkItems,
   getDrinkCategories,
@@ -510,4 +599,6 @@ module.exports = {
   deleteDrinkCategory,
   updateDrinkCategoryOrder,
   updateDrinkItemOrder,
+  getAllDrinkItemsForAdmin,
+  getAllDrinkCategoriesForAdmin,
 };
