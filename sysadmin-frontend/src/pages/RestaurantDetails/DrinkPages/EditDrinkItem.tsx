@@ -21,6 +21,7 @@ interface EditDrinkItemProps {
       imageFile: File | null;
       removeImage: boolean;
       categoryId?: string | null;
+      isActive: boolean;
     }
   ) => Promise<void>;
   categories: Category[];
@@ -60,6 +61,7 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
     drinkItem.categoryId || ""
   );
+  const [isActive, setIsActive] = useState(drinkItem.isActive ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -96,6 +98,7 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
+        isActive,
       });
       toast.dismiss(loadingToast);
     } catch (error) {
@@ -351,6 +354,30 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("active")}
+        </label>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              isActive ? "bg-green-600" : "bg-gray-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isActive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <label className="ml-3 text-sm text-gray-700">
+            {t("item_active_description")}
+          </label>
+        </div>
       </div>
 
       <div className="flex justify-start space-x-3 mt-6">

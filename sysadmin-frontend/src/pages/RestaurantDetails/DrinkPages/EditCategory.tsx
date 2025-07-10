@@ -12,7 +12,10 @@ import TranslateButton from "../../../components/TranslateButton";
 interface EditCategoryProps {
   category: Category;
   onCancel: () => void;
-  onSave: (id: string, data: { translations: Translation[] }) => Promise<void>;
+  onSave: (
+    id: string,
+    data: { translations: Translation[]; isActive: boolean }
+  ) => Promise<void>;
 }
 
 const EditCategory: React.FC<EditCategoryProps> = ({
@@ -42,6 +45,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
           ?.description || "",
     },
   });
+  const [isActive, setIsActive] = useState(category.isActive ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -66,7 +70,7 @@ const EditCategory: React.FC<EditCategoryProps> = ({
     const loadingToast = toast.loading(t("saving"));
 
     try {
-      await onSave(category.id, { translations: translationsArray });
+      await onSave(category.id, { translations: translationsArray, isActive });
     } finally {
       setIsSaving(false);
       toast.dismiss(loadingToast);
@@ -224,10 +228,36 @@ const EditCategory: React.FC<EditCategoryProps> = ({
         <p className="text-xs text-gray-500 mt-1">{t("optional")}</p>
       </div>
 
-      <div className="flex justify-start space-x-3">
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("active")}
+        </label>
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setIsActive(!isActive)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+              isActive ? "bg-green-600" : "bg-gray-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isActive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <label className="ml-3 text-sm text-gray-700">
+            {t("category_active_description")}
+          </label>
+        </div>
+      </div>
+
+      <div className="flex justify-start space-x-3 mt-6">
         <button
           onClick={handleSave}
-          className="primary-button"
+          className={`primary-button ${
+            isSaving ? "bg-green-600/70 hover:bg-green-600/70" : ""
+          }`}
           disabled={isSaving}
         >
           {isSaving ? t("saving") : t("save")}

@@ -23,7 +23,10 @@ const getMenuItems = async (req, res) => {
     const language = getUserLanguage(req);
 
     const menuItems = await MenuItem.findAll({
-      where: { restaurantId },
+      where: {
+        restaurantId,
+        isActive: true, // Samo aktivne stavke
+      },
       order: [['position', 'ASC']],
       include: [
         {
@@ -64,7 +67,10 @@ const getCategoryItems = async (req, res) => {
     const language = getUserLanguage(req);
 
     const categories = await MenuCategory.findAll({
-      where: { restaurantId },
+      where: {
+        restaurantId,
+        isActive: true, // Samo aktivne kategorije
+      },
       order: [['position', 'ASC']],
       include: [
         {
@@ -143,6 +149,7 @@ const createMenuItem = async (req, res) => {
       allergens: allergenIds,
       imageUrl: imageKey,
       categoryId,
+      isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
     });
 
     // Create translations
@@ -244,6 +251,8 @@ const updateMenuItem = async (req, res) => {
       imageUrl: imageKey,
       allergens: allergenIds !== undefined ? allergenIds : menuItem.allergens,
       categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
+      isActive:
+        req.body.isActive !== undefined ? req.body.isActive : menuItem.isActive,
     });
 
     // Fetch updated item
@@ -307,7 +316,7 @@ const deleteMenuItem = async (req, res) => {
 // Create a new category for a specific restaurant
 const createCategory = async (req, res) => {
   try {
-    const { restaurantId, translations } = req.body;
+    const { restaurantId, translations, isActive } = req.body;
     const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
@@ -349,6 +358,7 @@ const createCategory = async (req, res) => {
     const category = await MenuCategory.create({
       restaurantId,
       position: newPosition,
+      isActive: isActive !== undefined ? isActive : true, // Default to true if not provided
     });
 
     // Create translations
@@ -405,7 +415,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { translations } = req.body;
+    const { translations, isActive } = req.body;
     const translatedData = await autoTranslate(translations);
     const language = getUserLanguage(req);
 
@@ -433,6 +443,11 @@ const updateCategory = async (req, res) => {
         name: translation.name,
         description: translation.description || null,
       });
+    }
+
+    // Ažuriramo isActive polje ako je proslijeđeno
+    if (isActive !== undefined) {
+      await category.update({ isActive });
     }
 
     // Dohvatimo ažuriranu kategoriju
@@ -535,6 +550,84 @@ const updateItemOrder = async (req, res) => {
   }
 };
 
+// Get all menu items for admin (including inactive)
+const getAllMenuItemsForAdmin = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
+    const menuItems = await MenuItem.findAll({
+      where: { restaurantId }, // Uključuje sve stavke, aktivne i neaktivne
+      order: [['position', 'ASC']],
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+        },
+      ],
+    });
+
+    const formattedMenuItems = menuItems.map((item) => {
+      const itemData = item.toJSON();
+      const userTranslation = itemData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = itemData.translations[0];
+
+      return {
+        ...itemData,
+        name: (userTranslation || anyTranslation)?.name || '',
+        description: (userTranslation || anyTranslation)?.description || '',
+        price: parseFloat(itemData.price).toFixed(2),
+        imageUrl: itemData.imageUrl
+          ? getMediaUrl(itemData.imageUrl, 'image')
+          : null,
+      };
+    });
+
+    res.json(formattedMenuItems);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch menu items' });
+  }
+};
+
+// Get all categories for admin (including inactive)
+const getAllCategoriesForAdmin = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const language = getUserLanguage(req);
+
+    const categories = await MenuCategory.findAll({
+      where: { restaurantId }, // Uključuje sve kategorije, aktivne i neaktivne
+      order: [['position', 'ASC']],
+      include: [
+        {
+          model: MenuCategoryTranslation,
+          as: 'translations',
+        },
+      ],
+    });
+
+    const formattedCategories = categories.map((category) => {
+      const categoryData = category.toJSON();
+      const userTranslation = categoryData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = categoryData.translations[0];
+
+      return {
+        ...categoryData,
+        name: (userTranslation || anyTranslation)?.name || '',
+      };
+    });
+
+    res.json(formattedCategories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+};
+
 module.exports = {
   getMenuItems,
   getCategoryItems,
@@ -547,4 +640,6 @@ module.exports = {
   getAllAllergens,
   updateCategoryOrder,
   updateItemOrder,
+  getAllMenuItemsForAdmin,
+  getAllCategoriesForAdmin,
 };

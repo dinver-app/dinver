@@ -10,7 +10,7 @@ export const createCategory = async (data: CategoryData) => {
 
 export const updateCategory = async (
   id: string,
-  data: { translations: Translation[] }
+  data: { translations: Translation[]; isActive?: boolean }
 ) => {
   const response = await apiClient.put(
     `/api/sysadmin/menu/categories/${id}`,
@@ -30,7 +30,7 @@ export const deleteCategory = async (id: string) => {
 
 export const getMenuItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/sysadmin/menu/menuItems/${restaurantId}`
+    `/api/sysadmin/menu/menuItems-admin/${restaurantId}`
   );
   return response.data;
 };
@@ -42,6 +42,7 @@ export const createMenuItem = async (data: {
   allergenIds: string[];
   categoryId?: string | null;
   imageFile?: File;
+  isActive?: boolean;
 }) => {
   const formData = new FormData();
 
@@ -60,6 +61,11 @@ export const createMenuItem = async (data: {
 
   if (data.imageFile) {
     formData.append("imageFile", data.imageFile);
+  }
+
+  // Dodaj isActive ako je definiran
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
   }
 
   const response = await apiClient.post(
@@ -84,6 +90,7 @@ export const updateMenuItem = async (
     categoryId?: string | null;
     imageFile?: File;
     removeImage?: boolean;
+    isActive?: boolean;
   }
 ) => {
   const formData = new FormData();
@@ -109,6 +116,11 @@ export const updateMenuItem = async (
     formData.append("removeImage", "true");
   }
 
+  // Dodaj isActive ako je definiran
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
+
   const response = await apiClient.put(
     `/api/sysadmin/menu/menuItems/${id}`,
     formData,
@@ -126,10 +138,10 @@ export const deleteMenuItem = async (id: string) => {
   return response.data;
 };
 
-// Get all categories for a specific restaurant
+// Get all categories for a specific restaurant (including inactive)
 export const getCategoryItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/sysadmin/menu/categories/${restaurantId}`
+    `/api/sysadmin/menu/categories-admin/${restaurantId}`
   );
   return response.data;
 };

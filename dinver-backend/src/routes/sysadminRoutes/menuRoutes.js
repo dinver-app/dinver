@@ -59,11 +59,28 @@ router.get(
   checkSysadmin,
   menuController.getMenuItems,
 );
+
+// Nova ruta za sysadmin - sve stavke (aktivne i neaktivne)
+router.get(
+  '/menu/menuItems-admin/:restaurantId',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  menuController.getAllMenuItemsForAdmin,
+);
+
 router.get(
   '/menu/categories/:restaurantId',
   sysadminAuthenticateToken,
   checkSysadmin,
   menuController.getCategoryItems,
+);
+
+// Nova ruta za sysadmin - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/menu/categories-admin/:restaurantId',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  menuController.getAllCategoriesForAdmin,
 );
 
 router.get(

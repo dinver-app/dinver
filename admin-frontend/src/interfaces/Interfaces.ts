@@ -122,6 +122,7 @@ export interface MenuItem {
   allergens: string[];
   translations: Translation[];
   position: number;
+  isActive: boolean;
 }
 
 export interface Category {
@@ -130,6 +131,7 @@ export interface Category {
   restaurantId: string;
   translations: Translation[];
   position: number;
+  isActive: boolean;
 }
 
 export interface AuditLog {
@@ -194,16 +196,19 @@ export interface DrinkItem {
   imageUrl?: string;
   translations: Translation[];
   order?: number;
+  isActive: boolean;
 }
 
 export interface DrinkCategoryData {
   translations: Translation[];
   restaurantId: string;
+  isActive: boolean;
 }
 
 export interface CategoryData {
   restaurantId: string;
   translations: Translation[];
+  isActive: boolean;
 }
 
 export interface DietaryType {

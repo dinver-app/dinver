@@ -13,7 +13,7 @@ export const createDrinkCategory = async (data: DrinkCategoryData) => {
 
 export const updateDrinkCategory = async (
   id: string,
-  data: { translations: Translation[] }
+  data: { translations: Translation[]; isActive?: boolean }
 ) => {
   const response = await apiClient.put(
     `/api/sysadmin/drinks/categories/${id}`,
@@ -33,7 +33,7 @@ export const deleteDrinkCategory = async (id: string) => {
 
 export const getDrinkItems = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/sysadmin/drinks/drinkItems/${restaurantId}`
+    `/api/sysadmin/drinks/drinkItems-admin/${restaurantId}`
   );
   return response.data;
 };
@@ -44,6 +44,7 @@ export const createDrinkItem = async (data: {
   restaurantId: string;
   categoryId?: string | null;
   imageFile?: File;
+  isActive?: boolean;
 }) => {
   const formData = new FormData();
 
@@ -58,6 +59,11 @@ export const createDrinkItem = async (data: {
 
   if (data.imageFile) {
     formData.append("imageFile", data.imageFile);
+  }
+
+  // Dodaj isActive ako je definiran
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
   }
 
   const response = await apiClient.post(
@@ -81,6 +87,7 @@ export const updateDrinkItem = async (
     categoryId?: string | null;
     imageFile?: File;
     removeImage?: boolean;
+    isActive?: boolean;
   }
 ) => {
   const formData = new FormData();
@@ -102,6 +109,11 @@ export const updateDrinkItem = async (
     formData.append("removeImage", "true");
   }
 
+  // Dodaj isActive ako je definiran
+  if (data.isActive !== undefined) {
+    formData.append("isActive", data.isActive.toString());
+  }
+
   const response = await apiClient.put(
     `/api/sysadmin/drinks/drinkItems/${id}`,
     formData,
@@ -121,10 +133,10 @@ export const deleteDrinkItem = async (id: string) => {
   return response.data;
 };
 
-// Get all drink categories for a specific restaurant
+// Get all drink categories for a specific restaurant (including inactive)
 export const getDrinkCategories = async (restaurantId: string) => {
   const response = await apiClient.get(
-    `/api/sysadmin/drinks/categories/${restaurantId}`
+    `/api/sysadmin/drinks/categories-admin/${restaurantId}`
   );
   return response.data;
 };

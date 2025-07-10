@@ -573,14 +573,12 @@
   "total_data_description": "Counting all interactions",
   "showing_data_for_sources": "Showing data for sources",
   "show_all": "Show all",
-  "cities_with_restaurants": "Cities with Restaurants",
-  "total_users": "Total Users",
-  "completed_reservations": "Completed Reservations",
-  "restaurants_on_dinver": "Restaurants on Dinver",
-  "cities_covered": "Cities covered",
-  "users_on_app": "Users on app",
-  "successful_bookings": "Successful bookings",
   "reservation_settings": "Reservation Settings",
   "enable_reservations": "Enable Reservations",
-  "reservation_settings_info": "Enable this to allow customers to make table reservations through the app. When disabled, the reservation feature will be hidden from customers."
+  "reservation_settings_info": "Enable this to allow customers to make table reservations through the app. When disabled, the reservation feature will be hidden from customers.",
+  "category_active_description": "Active categories are shown to customers in the app",
+  "item_active_description": "Active items are shown to customers in the app",
+  "active": "Active",
+  "inactive": "Inactive",
+  "category_inactive": "Category Inactive"
 }

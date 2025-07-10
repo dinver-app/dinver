@@ -15,6 +15,14 @@ router.get(
   drinkController.getDrinkCategories,
 );
 
+// Nova ruta za admin panel - sve kategorije (aktivne i neaktivne)
+router.get(
+  '/drinks/categories-admin/:restaurantId',
+  adminAuthenticateToken,
+  checkAdmin,
+  drinkController.getAllDrinkCategoriesForAdmin,
+);
+
 router.post(
   '/drinks/categories',
   adminAuthenticateToken,
@@ -41,6 +49,14 @@ router.get(
   adminAuthenticateToken,
   checkAdmin,
   drinkController.getDrinkItems,
+);
+
+// Nova ruta za admin panel - sve stavke (aktivne i neaktivne)
+router.get(
+  '/drinks/drinkItems-admin/:restaurantId',
+  adminAuthenticateToken,
+  checkAdmin,
+  drinkController.getAllDrinkItemsForAdmin,
 );
 
 router.post(
