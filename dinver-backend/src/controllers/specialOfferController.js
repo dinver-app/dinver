@@ -4,6 +4,7 @@ const {
   MenuItemTranslation,
   Restaurant,
   User,
+  UserPoints,
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
@@ -507,16 +508,19 @@ const redeemSpecialOffer = async (req, res) => {
     }
 
     // Get user and check points
-    const user = await User.findByPk(userId);
-    if (!user) {
+    const userPoints = await UserPoints.findOne({
+      where: { userId },
+    });
+
+    if (!userPoints) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.points < specialOffer.pointsRequired) {
+    if (userPoints.totalPoints < specialOffer.pointsRequired) {
       return res.status(400).json({
         error: 'Insufficient points',
         required: specialOffer.pointsRequired,
-        available: user.points,
+        available: userPoints.totalPoints,
       });
     }
 
@@ -524,8 +528,8 @@ const redeemSpecialOffer = async (req, res) => {
     // Rate limiting can be added later if needed
 
     // Deduct points and increment redemptions
-    await user.update({
-      points: user.points - specialOffer.pointsRequired,
+    await userPoints.update({
+      totalPoints: userPoints.totalPoints - specialOffer.pointsRequired,
     });
 
     await specialOffer.update({
@@ -541,7 +545,7 @@ const redeemSpecialOffer = async (req, res) => {
       restaurantId: specialOffer.restaurantId,
       changes: {
         pointsDeducted: specialOffer.pointsRequired,
-        newUserPoints: user.points - specialOffer.pointsRequired,
+        newUserPoints: userPoints.totalPoints - specialOffer.pointsRequired,
         redemptionMethod: redemptionMethod,
         redeemedAt: now,
       },
@@ -554,7 +558,7 @@ const redeemSpecialOffer = async (req, res) => {
       success: true,
       message: 'Special offer redeemed successfully',
       pointsDeducted: specialOffer.pointsRequired,
-      remainingPoints: user.points - specialOffer.pointsRequired,
+      remainingPoints: userPoints.totalPoints - specialOffer.pointsRequired,
       redemptionMethod: redemptionMethod,
       redeemedAt: now,
       menuItem: {
@@ -631,14 +635,17 @@ const getRedemptionDetails = async (req, res) => {
         .json({ error: 'Special offer redemption limit reached' });
     }
 
-    // Get user and check points
-    const user = await User.findByPk(userId);
-    if (!user) {
+    const userPoints = await UserPoints.findOne({
+      where: { userId },
+    });
+
+    if (!userPoints) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const canRedeem = user.points >= specialOffer.pointsRequired;
-    const pointsAfterRedemption = user.points - specialOffer.pointsRequired;
+    const canRedeem = userPoints.totalPoints >= specialOffer.pointsRequired;
+    const pointsAfterRedemption =
+      userPoints.totalPoints - specialOffer.pointsRequired;
 
     // Format menu item with translations
     const userTranslation = specialOffer.menuItem.translations.find(
@@ -671,7 +678,7 @@ const getRedemptionDetails = async (req, res) => {
         },
       },
       userPoints: {
-        current: user.points,
+        current: userPoints.totalPoints,
         afterRedemption: pointsAfterRedemption,
         canRedeem: canRedeem,
       },
@@ -738,16 +745,18 @@ const generateSpecialOfferQR = async (req, res) => {
 
     // If userId provided, check if user has enough points
     if (userId) {
-      const user = await User.findByPk(userId);
-      if (!user) {
+      const userPoints = await UserPoints.findOne({
+        where: { userId },
+      });
+      if (!userPoints) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      if (user.points < specialOffer.pointsRequired) {
+      if (userPoints.totalPoints < specialOffer.pointsRequired) {
         return res.status(400).json({
           error: 'Insufficient points',
           required: specialOffer.pointsRequired,
-          available: user.points,
+          available: userPoints.totalPoints,
         });
       }
     }
