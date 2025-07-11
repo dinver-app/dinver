@@ -32,9 +32,9 @@ const getReservationMessages = async (req, res) => {
     }
 
     // Check if thread is still active
-    if (!reservation.threadActive) {
-      return res.status(403).json({ error: 'This conversation has expired' });
-    }
+    // if (!reservation.threadActive) {
+    //   return res.status(403).json({ error: 'This conversation has expired' });
+    // }
 
     // Check if user has access to this reservation
     const isOwner = reservation.userId === userId;
