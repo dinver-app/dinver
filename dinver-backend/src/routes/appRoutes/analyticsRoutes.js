@@ -31,4 +31,6 @@ router.get(
   analyticsController.getAnalyticsSummary,
 );
 
+router.get('/popular-restaurants', analyticsController.getPopularRestaurants);
+
 module.exports = router;
