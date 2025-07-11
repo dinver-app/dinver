@@ -206,7 +206,7 @@ const createReservation = async (req, res) => {
 const getUserReservations = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { status, showPast = false } = req.query;
+    const { status, showPast = true } = req.query;
 
     const where = {
       userId: userId,
