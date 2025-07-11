@@ -10,16 +10,10 @@ const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
 const { Op, literal } = require('sequelize');
 
-// Helper function to get user language
-const getUserLanguage = (req) => {
-  return req.user?.language || 'hr';
-};
-
 // Get all special offers for a specific restaurant (admin view)
 const getSpecialOffersByRestaurant = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-    const language = getUserLanguage(req);
 
     const specialOffers = await SpecialOffer.findAll({
       where: { restaurantId },
@@ -49,17 +43,11 @@ const getSpecialOffersByRestaurant = async (req, res) => {
         };
       }
 
-      const userTranslation = menuItem.translations.find(
-        (t) => t.language === language,
-      );
-      const anyTranslation = menuItem.translations[0];
-
       return {
         ...offerData,
         menuItem: {
           ...menuItem,
-          name: (userTranslation || anyTranslation)?.name || '',
-          description: (userTranslation || anyTranslation)?.description || '',
+          translations: menuItem.translations,
           price: parseFloat(menuItem.price).toFixed(2),
           imageUrl: menuItem.imageUrl
             ? getMediaUrl(menuItem.imageUrl, 'image')
@@ -79,7 +67,6 @@ const getSpecialOffersByRestaurant = async (req, res) => {
 const getActiveSpecialOffers = async (req, res) => {
   try {
     const { city, restaurantId } = req.query;
-    const language = getUserLanguage(req);
     const now = new Date();
 
     let whereClause = {
@@ -141,11 +128,6 @@ const getActiveSpecialOffers = async (req, res) => {
         return;
       }
 
-      const userTranslation = menuItem.translations.find(
-        (t) => t.language === language,
-      );
-      const anyTranslation = menuItem.translations[0];
-
       const formattedOffer = {
         id: offerData.id,
         pointsRequired: offerData.pointsRequired,
@@ -155,8 +137,7 @@ const getActiveSpecialOffers = async (req, res) => {
         validUntil: offerData.validUntil,
         menuItem: {
           id: menuItem.id,
-          name: (userTranslation || anyTranslation)?.name || '',
-          description: (userTranslation || anyTranslation)?.description || '',
+          translations: menuItem.translations,
           price: parseFloat(menuItem.price).toFixed(2),
           imageUrl: menuItem.imageUrl
             ? getMediaUrl(menuItem.imageUrl, 'image')
@@ -265,18 +246,11 @@ const createSpecialOffer = async (req, res) => {
       ],
     });
 
-    const language = getUserLanguage(req);
-    const userTranslation = createdOffer.menuItem.translations.find(
-      (t) => t.language === language,
-    );
-    const anyTranslation = createdOffer.menuItem.translations[0];
-
     const result = {
       ...createdOffer.get(),
       menuItem: {
         ...createdOffer.menuItem.get(),
-        name: (userTranslation || anyTranslation)?.name || '',
-        description: (userTranslation || anyTranslation)?.description || '',
+        translations: createdOffer.menuItem.translations,
         price: parseFloat(createdOffer.menuItem.price).toFixed(2),
         imageUrl: createdOffer.menuItem.imageUrl
           ? getMediaUrl(createdOffer.menuItem.imageUrl, 'image')
@@ -347,18 +321,11 @@ const updateSpecialOffer = async (req, res) => {
       ],
     });
 
-    const language = getUserLanguage(req);
-    const userTranslation = updatedOffer.menuItem.translations.find(
-      (t) => t.language === language,
-    );
-    const anyTranslation = updatedOffer.menuItem.translations[0];
-
     const result = {
       ...updatedOffer.get(),
       menuItem: {
         ...updatedOffer.menuItem.get(),
-        name: (userTranslation || anyTranslation)?.name || '',
-        description: (userTranslation || anyTranslation)?.description || '',
+        translations: updatedOffer.menuItem.translations,
         price: parseFloat(updatedOffer.menuItem.price).toFixed(2),
         imageUrl: updatedOffer.menuItem.imageUrl
           ? getMediaUrl(updatedOffer.menuItem.imageUrl, 'image')
@@ -582,7 +549,6 @@ const getRedemptionDetails = async (req, res) => {
   try {
     const { specialOfferId } = req.params;
     const userId = req.user.id;
-    const language = getUserLanguage(req);
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -647,12 +613,6 @@ const getRedemptionDetails = async (req, res) => {
     const pointsAfterRedemption =
       userPoints.totalPoints - specialOffer.pointsRequired;
 
-    // Format menu item with translations
-    const userTranslation = specialOffer.menuItem.translations.find(
-      (t) => t.language === language,
-    );
-    const anyTranslation = specialOffer.menuItem.translations[0];
-
     const result = {
       specialOffer: {
         id: specialOffer.id,
@@ -663,8 +623,7 @@ const getRedemptionDetails = async (req, res) => {
         validUntil: specialOffer.validUntil,
         menuItem: {
           id: specialOffer.menuItem.id,
-          name: (userTranslation || anyTranslation)?.name || '',
-          description: (userTranslation || anyTranslation)?.description || '',
+          translations: specialOffer.menuItem.translations,
           price: parseFloat(specialOffer.menuItem.price).toFixed(2),
           imageUrl: specialOffer.menuItem.imageUrl
             ? getMediaUrl(specialOffer.menuItem.imageUrl, 'image')
@@ -707,6 +666,12 @@ const generateSpecialOfferQR = async (req, res) => {
         {
           model: MenuItem,
           as: 'menuItem',
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+            },
+          ],
         },
         {
           model: Restaurant,
@@ -785,7 +750,7 @@ const generateSpecialOfferQR = async (req, res) => {
         pointsRequired: specialOffer.pointsRequired,
         menuItem: {
           id: specialOffer.menuItem.id,
-          name: specialOffer.menuItem.name,
+          translations: specialOffer.menuItem.translations,
           price: parseFloat(specialOffer.menuItem.price).toFixed(2),
         },
         restaurant: {
