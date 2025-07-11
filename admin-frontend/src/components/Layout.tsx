@@ -125,14 +125,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           },
         ]
       : []),
-  ];
-
-  const preferenceItems = [
     {
       name: t("qr_generator"),
       path: "/qr-generator",
       icon: <QrCodeIcon className="h-4 w-4 mr-3" />,
     },
+  ];
+
+  const preferenceItems = [
     ...(role === "owner" || role === "admin"
       ? [
           {
@@ -155,11 +155,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex">
-      <aside
-        className={`fixed top-0 left-0 h-full bg-white shadow-lg z-50 flex flex-col justify-between transition-all duration-300 ${
-          isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
-        }`}
-      >
+      <aside className="fixed top-0 left-0 h-screen bg-white shadow-lg z-50 overflow-y-auto transition-all duration-300">
         <div>
           <div className="p-4 border-b select-none">
             <img

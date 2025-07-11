@@ -51,7 +51,7 @@ const QRGenerator = () => {
     localStorage.getItem("currentRestaurant") || "{}"
   );
   const restaurantSlug = currentRestaurant.slug;
-  const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu`;
+  const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu?src=qr`;
 
   // Ensure Dinver logo is always shown for Basic users
   useEffect(() => {
