@@ -12,7 +12,6 @@ const router = express.Router();
 router.get(
   '/special-offers',
   appApiKeyAuth,
-  appAuthenticateToken,
   specialOfferController.getActiveSpecialOffers,
 );
 
