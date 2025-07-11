@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const {
   AnalyticsEvent,
   Restaurant,
@@ -9,6 +9,7 @@ const {
   Reservation,
   ClaimLog,
 } = require('../../models');
+const { calculateDistance } = require('../../utils/distance');
 
 // Helper: Valid event types
 const VALID_EVENT_TYPES = [
@@ -727,7 +728,124 @@ const getAnalyticsSummary = async (req, res) => {
   }
 };
 
+const getPopularRestaurants = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+    if (!latitude || !longitude) {
+      return res
+        .status(400)
+        .json({ error: 'latitude and longitude are required' });
+    }
+    const userLat = parseFloat(latitude);
+    const userLon = parseFloat(longitude);
+    const limit = 20;
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    // Dohvati samo restaurant_view događaje s userId (prijavljeni korisnici)
+    const clicks = await AnalyticsEvent.findAll({
+      attributes: [
+        'restaurant_id',
+        [
+          Sequelize.fn(
+            'COUNT',
+            Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+          ),
+          'userCount',
+        ],
+      ],
+      where: {
+        event_type: 'restaurant_view',
+        session_id: { [Op.ne]: null },
+        timestamp: { [Op.gte]: weekAgo },
+        // Samo događaji od prijavljenih korisnika (session_id je UUID, ne guest session)
+        // session_id: {
+        //   [Op.regexp]:
+        //     '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        // },
+      },
+      group: ['restaurant_id'],
+      order: [
+        [
+          Sequelize.fn(
+            'COUNT',
+            Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+          ),
+          'DESC',
+        ],
+      ],
+    });
+
+    const restaurantIds = clicks.map((c) => c.restaurant_id);
+    const restaurants = await Restaurant.findAll({
+      where: { id: restaurantIds },
+    });
+
+    const withDistance = clicks
+      .map((c) => {
+        const r = restaurants.find((rest) => rest.id === c.restaurant_id);
+        let distance = null;
+        if (r && r.latitude && r.longitude) {
+          distance = calculateDistance(
+            userLat,
+            userLon,
+            parseFloat(r.latitude),
+            parseFloat(r.longitude),
+          );
+        }
+        return {
+          restaurant: r
+            ? {
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                address: r.address,
+                place: r.place,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                phone: r.phone,
+                rating: r.rating,
+                priceLevel: r.priceLevel,
+                thumbnailUrl: r.thumbnailUrl,
+                distance,
+              }
+            : null,
+          userCount: parseInt(c.get('userCount'), 10),
+          distance,
+        };
+      })
+      .filter((item) => item.restaurant && item.distance !== null);
+
+    function getWithinRadius(radius) {
+      return withDistance
+        .filter((r) => r.distance <= radius)
+        .sort((a, b) => b.userCount - a.userCount)
+        .slice(0, limit);
+    }
+
+    let popular = getWithinRadius(10);
+    if (popular.length < limit) {
+      const extra = getWithinRadius(25).filter(
+        (r) => !popular.some((p) => p.restaurant.id === r.restaurant.id),
+      );
+      popular = [...popular, ...extra].slice(0, limit);
+    }
+    if (popular.length < limit) {
+      const extra = getWithinRadius(50).filter(
+        (r) => !popular.some((p) => p.restaurant.id === r.restaurant.id),
+      );
+      popular = [...popular, ...extra].slice(0, limit);
+    }
+
+    res.json({ latitude: userLat, longitude: userLon, popular });
+  } catch (error) {
+    console.error('Error fetching popular restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch popular restaurants' });
+  }
+};
+
 module.exports = {
   logAnalyticsEvent,
   getAnalyticsSummary,
+  getPopularRestaurants,
 };
