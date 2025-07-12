@@ -333,11 +333,16 @@ const getUnreadCount = async (req, res) => {
 const getUnreadAdminCount = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { reservationId } = req.query;
+    const { reservationId, restaurantId } = req.query;
 
     // Pronađi sve restorane gdje je user admin
+    let adminWhere = { userId };
+    if (restaurantId) {
+      adminWhere.restaurantId = restaurantId;
+    }
+
     const adminRestaurants = await UserAdmin.findAll({
-      where: { userId },
+      where: adminWhere,
       attributes: ['restaurantId'],
     });
     const adminRestaurantIds = adminRestaurants.map((r) => r.restaurantId);
