@@ -65,4 +65,12 @@ router.get(
   userController.getOwnedRestaurants,
 );
 
+// Brisanje korisničkog računa
+router.delete(
+  '/user/account',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userController.deleteAccount,
+);
+
 module.exports = router;
