@@ -521,6 +521,31 @@ const getOwnedRestaurants = async (req, res) => {
   }
 };
 
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Briši povezane podatke
+    await Promise.all([
+      require('../../models').UserSettings.destroy({ where: { userId } }),
+      require('../../models').UserPoints.destroy({ where: { userId } }),
+      require('../../models').UserFavorite.destroy({ where: { userId } }),
+      require('../../models').UserAdmin.destroy({ where: { userId } }),
+      require('../../models').Review.destroy({ where: { userId } }),
+      require('../../models').Reservation.destroy({ where: { userId } }),
+      // Dodaj još povezane modele ako imaš
+    ]);
+
+    // Briši korisnika
+    await User.destroy({ where: { id: userId } });
+
+    res.status(200).json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
@@ -532,4 +557,5 @@ module.exports = {
   deleteProfileImage,
   changePassword,
   getOwnedRestaurants,
+  deleteAccount,
 };
