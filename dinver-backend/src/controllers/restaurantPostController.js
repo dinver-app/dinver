@@ -378,7 +378,10 @@ const deletePost = async (req, res) => {
     // Delete thumbnail
     await deleteFromS3(`postThumbnails/${post.id}/image.jpg`);
 
-    await post.destroy();
+    // Destroy post with cascade delete for views and interactions
+    await post.destroy({
+      force: true, // Hard delete
+    });
 
     // Log the delete action
     await logAudit({

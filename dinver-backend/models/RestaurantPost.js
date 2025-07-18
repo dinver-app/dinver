@@ -114,10 +114,12 @@ module.exports = (sequelize, DataTypes) => {
     RestaurantPost.hasMany(models.PostView, {
       foreignKey: 'postId',
       as: 'views',
+      onDelete: 'CASCADE',
     });
     RestaurantPost.hasMany(models.PostInteraction, {
       foreignKey: 'postId',
       as: 'interactions',
+      onDelete: 'CASCADE',
     });
   };
 
