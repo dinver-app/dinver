@@ -8,7 +8,15 @@ const {
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
+const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
+
+const DISTANCE_FILTERS = {
+  ALL: Infinity,
+  NEAR_100: 100,
+  NEAR_60: 60,
+  NEAR_30: 30,
+};
 
 // Get all special offers for a specific restaurant (admin view)
 const getSpecialOffersByRestaurant = async (req, res) => {
@@ -66,8 +74,15 @@ const getSpecialOffersByRestaurant = async (req, res) => {
 // Get all active special offers for customers (public view) - grouped by restaurant
 const getActiveSpecialOffers = async (req, res) => {
   try {
-    const { city, restaurantId } = req.query;
+    const {
+      city,
+      restaurantId,
+      userLat,
+      userLng,
+      distanceFilter = 'ALL',
+    } = req.query;
     const now = new Date();
+    const maxDistance = DISTANCE_FILTERS[distanceFilter] || Infinity;
 
     let whereClause = {
       isActive: true,
@@ -102,7 +117,15 @@ const getActiveSpecialOffers = async (req, res) => {
       {
         model: Restaurant,
         as: 'restaurant',
-        attributes: ['id', 'name', 'address', 'place', 'thumbnailUrl'],
+        attributes: [
+          'id',
+          'name',
+          'address',
+          'place',
+          'thumbnailUrl',
+          'latitude',
+          'longitude',
+        ],
       },
     ];
 
@@ -116,7 +139,7 @@ const getActiveSpecialOffers = async (req, res) => {
       include: includeClause,
     });
 
-    // Group offers by restaurant
+    // Filter and group offers by restaurant with distance calculation
     const groupedOffers = {};
 
     specialOffers.forEach((offer) => {
@@ -126,6 +149,22 @@ const getActiveSpecialOffers = async (req, res) => {
 
       if (!menuItem || !restaurant) {
         return;
+      }
+
+      // Calculate distance if user coordinates provided
+      let distance = null;
+      if (userLat && userLng && restaurant.latitude && restaurant.longitude) {
+        distance = calculateDistance(
+          userLat,
+          userLng,
+          restaurant.latitude,
+          restaurant.longitude,
+        );
+
+        // Skip if beyond max distance filter
+        if (distance > maxDistance) {
+          return;
+        }
       }
 
       const formattedOffer = {
@@ -156,6 +195,7 @@ const getActiveSpecialOffers = async (req, res) => {
             thumbnailUrl: restaurant.thumbnailUrl
               ? getMediaUrl(restaurant.thumbnailUrl, 'image')
               : null,
+            distance: distance,
           },
           offers: [],
         };
@@ -169,7 +209,11 @@ const getActiveSpecialOffers = async (req, res) => {
       a.restaurant.name.localeCompare(b.restaurant.name),
     );
 
-    res.json(result);
+    res.json({
+      restaurants: result,
+      distanceFilter,
+      hasDistanceFilter: distanceFilter !== 'ALL',
+    });
   } catch (error) {
     console.error('Error fetching active special offers:', error);
     res.status(500).json({ error: 'Failed to fetch special offers' });
