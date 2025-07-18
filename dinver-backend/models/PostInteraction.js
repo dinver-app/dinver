@@ -63,6 +63,7 @@ module.exports = (sequelize, DataTypes) => {
     PostInteraction.belongsTo(models.RestaurantPost, {
       foreignKey: 'postId',
       as: 'post',
+      onDelete: 'CASCADE',
     });
     PostInteraction.belongsTo(models.User, {
       foreignKey: 'userId',
