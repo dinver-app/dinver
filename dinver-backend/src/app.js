@@ -70,18 +70,30 @@ app.use(
   }),
 );
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://app.dinver.eu',
+  'https://admin.dinver.eu',
+  'https://sysadmin.dinver.eu',
+  'https://dinver.eu',
+  'https://www.dinver.eu',
+];
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://app.dinver.eu',
-      'https://admin.dinver.eu',
-      'https://sysadmin.dinver.eu',
-      'https://dinver.eu',
-      'https://www.dinver.eu',
-      'https://*.dinver.eu',
-    ],
+    origin: function (origin, callback) {
+      // Dozvoli sve .dinver.eu subdomene + allowedOrigins
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/([a-zA-Z0-9-]+\.)*dinver\.eu$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }),
 );
