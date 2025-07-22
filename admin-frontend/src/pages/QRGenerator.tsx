@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
-import html2canvas from "html2canvas";
 import { toast } from "react-hot-toast";
 import {
   QrCodeIcon,
-  PhotoIcon,
-  DocumentArrowDownIcon,
   SparklesIcon,
   LockClosedIcon,
   EyeIcon,
   AdjustmentsHorizontalIcon,
   SwatchIcon,
-  ArrowsPointingOutIcon,
 } from "@heroicons/react/24/outline";
+import {
+  sendQRPrintRequest,
+  getQRPrintRequests,
+} from "../services/restaurantService";
 
 const QRGenerator = () => {
   const { t } = useTranslation();
@@ -23,29 +23,26 @@ const QRGenerator = () => {
   const [qrTextColor, setQrTextColor] = useState("#000000");
   const [qrBackgroundColor, setQrBackgroundColor] = useState("#FFFFFF");
   const [qrBorderColor, setQrBorderColor] = useState("#E5E7EB");
-  const [qrBorderWidth, setQrBorderWidth] = useState(2);
-  const [qrSize, setQrSize] = useState(200);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [qrBorderWidth, setQrBorderWidth] = useState(1);
 
   // Advanced QR options
   const [showDinverLogo, setShowDinverLogo] = useState(true);
   const [showRestaurantName, setShowRestaurantName] = useState(true);
   const [showScanText, setShowScanText] = useState(true);
   const [textPosition, setTextPosition] = useState("top");
-  const [qrBackgroundStyle, setQrBackgroundStyle] = useState("full");
   const [padding, setPadding] = useState(24);
   const [selectedPreset, setSelectedPreset] = useState("classic");
 
   // Premium features
-  const [customLogo, setCustomLogo] = useState<File | null>(null);
-  const [customLogoUrl, setCustomLogoUrl] = useState<string>("");
   const [customText, setCustomText] = useState(
     t("scan_for_e_menu_placeholder")
   );
-  const [qrStyle, setQrStyle] = useState("squares"); // squares, dots, rounded
   const [errorCorrection, setErrorCorrection] = useState("M"); // L, M, Q, H
-  const [exportSizes, setExportSizes] = useState<string[]>(["200px"]);
-  const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+
+  const [quantity, setQuantity] = useState("1");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const currentRestaurant = JSON.parse(
     localStorage.getItem("currentRestaurant") || "{}"
@@ -60,16 +57,6 @@ const QRGenerator = () => {
     }
   }, [isPremium, showDinverLogo]);
 
-  // Handle logo upload
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCustomLogo(file);
-      const url = URL.createObjectURL(file);
-      setCustomLogoUrl(url);
-    }
-  };
-
   // Preset functions
   const applyPreset = (preset: string) => {
     setSelectedPreset(preset);
@@ -80,20 +67,16 @@ const QRGenerator = () => {
         setShowRestaurantName(false);
         setShowScanText(false);
         setTextPosition("none");
-        setQrBackgroundStyle("none");
         setQrBorderWidth(0);
-        setPadding(16);
-        setQrSize(250);
+        setPadding(24);
         break;
       case "classic":
         setShowDinverLogo(true);
         setShowRestaurantName(true);
         setShowScanText(true);
         setTextPosition("top");
-        setQrBackgroundStyle("full");
-        setQrBorderWidth(2);
+        setQrBorderWidth(1);
         setPadding(24);
-        setQrSize(200);
         setQrTextColor("#000000");
         setQrBackgroundColor("#FFFFFF");
         setQrBorderColor("#E5E7EB");
@@ -103,10 +86,8 @@ const QRGenerator = () => {
         setShowRestaurantName(true);
         setShowScanText(false);
         setTextPosition("both");
-        setQrBackgroundStyle("qr_only");
         setQrBorderWidth(0);
         setPadding(32);
-        setQrSize(180);
         setQrTextColor("#1F2937");
         setQrBackgroundColor("#FFFFFF");
         setQrBorderColor("#E5E7EB");
@@ -116,10 +97,8 @@ const QRGenerator = () => {
         setShowRestaurantName(true);
         setShowScanText(true);
         setTextPosition("top");
-        setQrBackgroundStyle("full");
         setQrBorderWidth(4);
-        setPadding(20);
-        setQrSize(220);
+        setPadding(24);
         setQrTextColor("#FFFFFF");
         setQrBackgroundColor("#1F2937");
         setQrBorderColor("#374151");
@@ -133,116 +112,77 @@ const QRGenerator = () => {
         setShowRestaurantName(true);
         setShowScanText(true);
         setTextPosition("both");
-        setQrBackgroundStyle("qr_only");
         setQrBorderWidth(0);
-        setPadding(40);
-        setQrSize(160);
+        setPadding(32);
         setQrTextColor("#1F2937");
         setQrBackgroundColor("#FFFFFF");
         setQrBorderColor("#E5E7EB");
-        setQrStyle("rounded");
         setErrorCorrection("H");
         break;
     }
   };
 
-  // Download single QR code
-  const downloadQRCode = async () => {
-    setIsGeneratingQR(true);
-    try {
-      const qrElement = document.getElementById("qr-code-container");
-      if (!qrElement) {
-        toast.error(t("qr_not_found_error"));
-        return;
-      }
-
-      const canvas = await html2canvas(qrElement, {
-        backgroundColor:
-          qrBackgroundStyle === "full" ? qrBackgroundColor : "transparent",
-        scale: 2,
-        useCORS: true,
-      });
-
-      const link = document.createElement("a");
-      link.download = `qr-menu-${restaurantSlug}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-
-      toast.success(t("qr_download_success"));
-    } catch (error) {
-      console.error("Greška pri generiranju QR koda:", error);
-      toast.error(t("qr_generation_error"));
-    } finally {
-      setIsGeneratingQR(false);
-    }
-  };
-
-  // Bulk download (Premium feature)
-  const downloadBulkQR = async () => {
-    if (!isPremium) {
-      toast.error(t("bulk_export_premium_only"));
+  // 2. Funkcija za slanje zahtjeva
+  const handleSendRequest = async () => {
+    // Validacija quantity
+    const parsedQuantity = parseInt(quantity, 10);
+    if (isNaN(parsedQuantity) || parsedQuantity < 1) {
+      toast.error(
+        t("quantity_invalid_error") ||
+          "Unesite ispravan broj komada (najmanje 1)"
+      );
       return;
     }
-
-    setIsBulkGenerating(true);
+    setIsSubmitting(true);
     try {
-      const sizes = exportSizes.map((size) => parseInt(size));
-      const promises = sizes.map(async (size) => {
-        const qrElement = document.getElementById("qr-code-container");
-        if (!qrElement) return null;
-
-        // Temporarily change size
-        const originalSize = qrSize;
-        setQrSize(size);
-
-        // Wait for re-render
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        const canvas = await html2canvas(qrElement, {
-          backgroundColor:
-            qrBackgroundStyle === "full" ? qrBackgroundColor : "transparent",
-          scale: 2,
-          useCORS: true,
-        });
-
-        setQrSize(originalSize);
-
-        return {
-          size,
-          dataUrl: canvas.toDataURL("image/png"),
-        };
+      await sendQRPrintRequest(currentRestaurant.id, {
+        showDinverLogo,
+        showRestaurantName,
+        showScanText,
+        textPosition,
+        qrTextColor,
+        qrBackgroundColor,
+        qrBorderColor,
+        qrBorderWidth,
+        padding,
+        quantity: parsedQuantity,
       });
-
-      const results = await Promise.all(promises);
-
-      // Create zip file (simplified - just download multiple files)
-      results.forEach((result) => {
-        if (result) {
-          const link = document.createElement("a");
-          link.download = `qr-menu-${restaurantSlug}-${result.size}px.png`;
-          link.href = result.dataUrl;
-          link.click();
-        }
-      });
-
-      toast.success(t("bulk_download_success"));
-    } catch (error) {
-      console.error("Greška pri bulk generiranju:", error);
-      toast.error(t("bulk_generation_error"));
+      toast.success(t("qr_request_sent_success"));
+      setQuantity("1");
+      fetchRequests();
+    } catch (e) {
+      toast.error(t("qr_request_sent_error"));
     } finally {
-      setIsBulkGenerating(false);
+      setIsSubmitting(false);
     }
   };
 
-  const PremiumBadge = ({ children }: { children: React.ReactNode }) => (
-    <div className="relative">
-      {children}
-      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-        <SparklesIcon className="w-3 h-3" />
-        {t("premium_plan")}
-      </div>
-    </div>
-  );
+  // 3. Dohvati zahtjeve na mount
+  useEffect(() => {
+    fetchRequests();
+    // eslint-disable-next-line
+  }, []);
+
+  async function fetchRequests() {
+    if (!currentRestaurant.id) return;
+    const data = await getQRPrintRequests(currentRestaurant.id);
+    setRequests(data);
+  }
+
+  // 4. Funkcija za kopiranje postavki iz zahtjeva
+  const copyRequest = (req: any) => {
+    setShowDinverLogo(req.showDinverLogo);
+    setShowRestaurantName(req.showRestaurantName);
+    setShowScanText(req.showScanText);
+    setTextPosition(req.textPosition);
+    setQrTextColor(req.qrTextColor);
+    setQrBackgroundColor(req.qrBackgroundColor);
+    setQrBorderColor(req.qrBorderColor);
+    setQrBorderWidth(req.qrBorderWidth);
+    setPadding(req.padding);
+    setQuantity(req.quantity);
+    toast.success(t("qr_request_copied"));
+  };
 
   const LockedFeature = ({ children }: { children: React.ReactNode }) => (
     <div className="relative opacity-50">
@@ -383,7 +323,7 @@ const QRGenerator = () => {
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {isPremium ? (
-                    <label className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showDinverLogo}
@@ -398,10 +338,15 @@ const QRGenerator = () => {
                           {t("show_dinver_logo_desc")}
                         </div>
                       </div>
-                    </label>
+                      {showDinverLogo && (
+                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          Premium
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <LockedFeature>
-                      <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-not-allowed">
+                      <div className="flex items-center p-3 border border-gray-200 rounded-lg cursor-not-allowed">
                         <input
                           type="checkbox"
                           checked={true}
@@ -416,7 +361,7 @@ const QRGenerator = () => {
                             {t("premium_option_text")}
                           </div>
                         </div>
-                      </label>
+                      </div>
                     </LockedFeature>
                   )}
 
@@ -454,86 +399,9 @@ const QRGenerator = () => {
                     </div>
                   </label>
 
-                  {isPremium ? (
-                    <PremiumBadge>
-                      <label className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!!customLogo}
-                          onChange={(e) => {
-                            if (!e.target.checked) {
-                              setCustomLogo(null);
-                              setCustomLogoUrl("");
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <div>
-                          <div className="font-medium text-sm">
-                            {t("use_custom_logo_label")}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {t("use_custom_logo_desc")}
-                          </div>
-                        </div>
-                      </label>
-                    </PremiumBadge>
-                  ) : (
-                    <LockedFeature>
-                      <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-not-allowed">
-                        <input type="checkbox" disabled className="mr-3" />
-                        <div>
-                          <div className="font-medium text-sm">
-                            {t("use_custom_logo_label")}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {t("premium_option_text")}
-                          </div>
-                        </div>
-                      </label>
-                    </LockedFeature>
-                  )}
+                  {/* Removed Custom Logo Upload */}
+                  {/* Removed Custom Text */}
                 </div>
-
-                {/* Custom Logo Upload */}
-                {isPremium && (
-                  <div className="mt-4">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <label
-                      htmlFor="logo-upload"
-                      className="block w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors"
-                    >
-                      <PhotoIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <span className="text-sm text-gray-600">
-                        {customLogo
-                          ? customLogo.name
-                          : t("click_to_upload_logo")}
-                      </span>
-                    </label>
-                  </div>
-                )}
-
-                {/* Custom Text */}
-                {isPremium && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("customize_text_label")}
-                    </label>
-                    <input
-                      type="text"
-                      value={customText}
-                      onChange={(e) => setCustomText(e.target.value)}
-                      placeholder={t("scan_for_e_menu_placeholder")}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Layout Options */}
@@ -558,20 +426,7 @@ const QRGenerator = () => {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("background_style_label")}
-                    </label>
-                    <select
-                      value={qrBackgroundStyle}
-                      onChange={(e) => setQrBackgroundStyle(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="full">{t("background_full")}</option>
-                      <option value="qr_only">{t("background_qr_only")}</option>
-                      <option value="none">{t("background_none")}</option>
-                    </select>
-                  </div>
+                  {/* Removed Background Style Select */}
                 </div>
               </div>
 
@@ -640,173 +495,146 @@ const QRGenerator = () => {
                   {t("size_spacing_section")}
                 </h4>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("qr_size_label")} ({qrSize}px)
-                    </label>
-                    <input
-                      type="range"
-                      min="100"
-                      max="400"
-                      step="10"
-                      value={qrSize}
-                      onChange={(e) => setQrSize(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
+                  {/* Ukloni slider za spacing i border, zamijeni s radio/select za stilove */}
+                  <div className="mb-8">
+                    <h4 className="text-sm font-medium text-gray-700 mb-4">
+                      Spacing (Padding)
+                    </h4>
+                    <div className="flex gap-4">
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          padding === 16
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="padding"
+                          value={16}
+                          checked={padding === 16}
+                          onChange={() => setPadding(16)}
+                        />
+                        <span>12px</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          padding === 24
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="padding"
+                          value={24}
+                          checked={padding === 24}
+                          onChange={() => setPadding(24)}
+                        />
+                        <span>24px</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          padding === 32
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="padding"
+                          value={32}
+                          checked={padding === 32}
+                          onChange={() => setPadding(32)}
+                        />
+                        <span>32px</span>
+                      </label>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("spacing_label")} ({padding}px)
-                    </label>
-                    <input
-                      type="range"
-                      min="8"
-                      max="48"
-                      step="4"
-                      value={padding}
-                      onChange={(e) => setPadding(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("border_width_label")} ({qrBorderWidth}px)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="8"
-                      step="1"
-                      value={qrBorderWidth}
-                      onChange={(e) => setQrBorderWidth(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
+                  <div className="mb-8">
+                    <h4 className="text-sm font-medium text-gray-700 mb-4">
+                      Border Width
+                    </h4>
+                    <div className="flex gap-4">
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          qrBorderWidth === 0
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="border-width"
+                          value={0}
+                          checked={qrBorderWidth === 0}
+                          onChange={() => setQrBorderWidth(0)}
+                        />
+                        <span>0px</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          qrBorderWidth === 1
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="border-width"
+                          value={1}
+                          checked={qrBorderWidth === 1}
+                          onChange={() => setQrBorderWidth(1)}
+                        />
+                        <span>1px</span>
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer ${
+                          qrBorderWidth === 4
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="border-width"
+                          value={4}
+                          checked={qrBorderWidth === 4}
+                          onChange={() => setQrBorderWidth(4)}
+                        />
+                        <span>4px</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Premium QR Options */}
-              {isPremium && (
-                <div className="mb-8">
-                  <h4 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <SparklesIcon className="w-4 h-4 text-purple-600" />
-                    {t("advanced_options_section")}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t("qr_style_label")}
-                      </label>
-                      <select
-                        value={qrStyle}
-                        onChange={(e) => setQrStyle(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="squares">{t("style_squares")}</option>
-                        <option value="dots">{t("style_dots")}</option>
-                        <option value="rounded">{t("style_rounded")}</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t("error_correction_label")}
-                      </label>
-                      <select
-                        value={errorCorrection}
-                        onChange={(e) => setErrorCorrection(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="L">{t("error_correction_low")}</option>
-                        <option value="M">
-                          {t("error_correction_medium")}
-                        </option>
-                        <option value="Q">{t("error_correction_high")}</option>
-                        <option value="H">
-                          {t("error_correction_highest")}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Export Options */}
               <div className="mb-8">
-                <h4 className="text-sm font-medium text-gray-700 mb-4">
-                  {t("export_options_section")}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-4 mt-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {t("quantity_label")}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      min={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="ml-2 w-20 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </label>
                   <button
-                    onClick={downloadQRCode}
-                    disabled={isGeneratingQR}
-                    className="flex items-center justify-center gap-2 p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    onClick={() => setShowConfirmModal(true)}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
-                    <DocumentArrowDownIcon className="w-5 h-5" />
-                    {isGeneratingQR
-                      ? t("generating_text")
-                      : t("download_qr_button")}
+                    <QrCodeIcon className="w-4 h-4" />
+                    {isSubmitting
+                      ? t("sending_text")
+                      : t("send_request_button")}
                   </button>
-
-                  {isPremium ? (
-                    <PremiumBadge>
-                      <button
-                        onClick={downloadBulkQR}
-                        disabled={isBulkGenerating}
-                        className="flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 w-full"
-                      >
-                        <ArrowsPointingOutIcon className="w-5 h-5" />
-                        {isBulkGenerating
-                          ? t("generating_text")
-                          : t("bulk_export_button")}
-                      </button>
-                    </PremiumBadge>
-                  ) : (
-                    <LockedFeature>
-                      <button
-                        disabled
-                        className="flex items-center justify-center gap-2 p-4 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed w-full"
-                      >
-                        <ArrowsPointingOutIcon className="w-5 h-5" />
-                        {t("bulk_export_premium_button")}
-                      </button>
-                    </LockedFeature>
-                  )}
                 </div>
-
-                {/* Bulk Export Sizes */}
-                {isPremium && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("bulk_export_sizes_label")}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {["150px", "200px", "250px", "300px", "400px"].map(
-                        (size) => (
-                          <label key={size} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={exportSizes.includes(size)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setExportSizes([...exportSizes, size]);
-                                } else {
-                                  setExportSizes(
-                                    exportSizes.filter((s) => s !== size)
-                                  );
-                                }
-                              }}
-                              className="mr-2"
-                            />
-                            <span className="text-sm">{size}</span>
-                          </label>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -824,10 +652,7 @@ const QRGenerator = () => {
                   id="qr-code-container"
                   className="flex flex-col items-center rounded-lg"
                   style={{
-                    backgroundColor:
-                      qrBackgroundStyle === "full"
-                        ? qrBackgroundColor
-                        : "transparent",
+                    backgroundColor: qrBackgroundColor, // Always use background color for preview
                     border:
                       qrBorderWidth > 0
                         ? `${qrBorderWidth}px solid ${qrBorderColor}`
@@ -838,20 +663,13 @@ const QRGenerator = () => {
                   {/* Top Text */}
                   {(textPosition === "top" || textPosition === "both") && (
                     <div className="text-center mb-4">
-                      {showDinverLogo && !customLogoUrl && (
+                      {showDinverLogo && (
                         <h4
                           className="text-xl font-bold mb-1"
                           style={{ color: qrTextColor }}
                         >
                           Dinver
                         </h4>
-                      )}
-                      {showDinverLogo && customLogoUrl && (
-                        <img
-                          src={customLogoUrl}
-                          alt="Custom Logo"
-                          className="h-8 mb-1 mx-auto"
-                        />
                       )}
                       {showRestaurantName && (
                         <p
@@ -867,24 +685,18 @@ const QRGenerator = () => {
                   {/* QR Code */}
                   <div
                     style={{
-                      backgroundColor:
-                        qrBackgroundStyle === "qr_only"
-                          ? qrBackgroundColor
-                          : "transparent",
-                      padding: qrBackgroundStyle === "qr_only" ? "8px" : "0",
-                      borderRadius:
-                        qrBackgroundStyle === "qr_only" ? "8px" : "0",
+                      backgroundColor: "transparent", // Always transparent for preview
+                      padding: "0", // No padding for preview
+                      borderRadius: "0", // No border radius for preview
                     }}
                   >
                     <QRCodeSVG
                       value={menuUrl}
                       fgColor={qrTextColor}
                       bgColor={
-                        qrBackgroundStyle === "qr_only"
-                          ? qrBackgroundColor
-                          : "transparent"
+                        "transparent" // Always transparent for preview
                       }
-                      size={qrSize}
+                      size={200} // Fixed size for preview
                       level={errorCorrection as any}
                     />
                   </div>
@@ -892,20 +704,13 @@ const QRGenerator = () => {
                   {/* Bottom Text */}
                   {(textPosition === "bottom" || textPosition === "both") && (
                     <div className="text-center mt-4">
-                      {showDinverLogo && !customLogoUrl && (
+                      {showDinverLogo && (
                         <h4
                           className="text-xl font-bold mb-1"
                           style={{ color: qrTextColor }}
                         >
                           Dinver
                         </h4>
-                      )}
-                      {showDinverLogo && customLogoUrl && (
-                        <img
-                          src={customLogoUrl}
-                          alt="Custom Logo"
-                          className="h-8 mb-1 mx-auto"
-                        />
                       )}
                       {showRestaurantName && (
                         <p
@@ -957,6 +762,125 @@ const QRGenerator = () => {
           </div>
         </div>
       </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-0 mb-0 pb-10">
+        <h4 className="text-base font-semibold text-gray-800 mb-4">
+          {t("previous_requests_label")}
+        </h4>
+        <div className="rounded-lg shadow-sm border border-gray-200 bg-white p-6">
+          <table className="min-w-full text-sm text-gray-700">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-2 px-3 font-medium text-center border-b">
+                  {t("date_label")}
+                </th>
+                <th className="py-2 px-3 font-medium text-center border-b">
+                  {t("quantity_label")}
+                </th>
+                <th className="py-2 px-3 font-medium text-center border-b">
+                  {t("status_label")}
+                </th>
+                <th className="py-2 px-3 font-medium text-center border-b">
+                  {t("actions_label")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center text-gray-400 italic"
+                  >
+                    {t("no_requests_yet")}
+                  </td>
+                </tr>
+              ) : (
+                requests.map((req: any) => (
+                  <tr
+                    key={req.id}
+                    className="hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                  >
+                    <td className="py-2 px-3 text-center align-middle">
+                      {new Date(req.createdAt).toLocaleString("hr-HR")}
+                    </td>
+                    <td className="py-2 px-3 text-center align-middle">
+                      {req.quantity}
+                    </td>
+                    <td className="py-2 px-3 text-center align-middle">
+                      <span
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          req.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : req.status === "approved"
+                            ? "bg-green-100 text-green-800"
+                            : req.status === "rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {t(req.status)}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-center align-middle">
+                      <button
+                        onClick={() => copyRequest(req)}
+                        className="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-xs border border-gray-200"
+                      >
+                        {t("copy_request_button")}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* MODAL ZA POTVRDU SLANJA ZAHTJEVA */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowConfirmModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-2">
+              <QrCodeIcon className="w-8 h-8 text-blue-600" />
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("send_request_button")}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {t("confirm_send_qr_request", { n: quantity })}
+                </p>
+              </div>
+            </div>
+            <div className="h-line mb-4"></div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="secondary-button"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={async () => {
+                  setShowConfirmModal(false);
+                  await handleSendRequest();
+                }}
+                className="primary-button"
+                disabled={isSubmitting}
+              >
+                {t("send_request_button")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

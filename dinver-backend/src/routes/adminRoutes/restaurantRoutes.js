@@ -1,6 +1,7 @@
 const express = require('express');
 const reviewController = require('../../controllers/reviewController');
 const restaurantController = require('../../controllers/restaurantController');
+const qrPrintRequestController = require('../../controllers/qrPrintRequestController');
 const {
   checkAdmin,
   adminAuthenticateToken,
@@ -114,6 +115,20 @@ router.delete(
   adminAuthenticateToken,
   checkAdmin,
   restaurantController.deleteCustomWorkingDay,
+);
+
+router.post(
+  '/restaurants/:id/qr-print-request',
+  adminAuthenticateToken,
+  checkAdmin,
+  qrPrintRequestController.createQRPrintRequest,
+);
+
+router.get(
+  '/restaurants/:id/qr-print-requests',
+  adminAuthenticateToken,
+  checkAdmin,
+  qrPrintRequestController.getQRPrintRequests,
 );
 
 module.exports = router;

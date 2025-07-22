@@ -189,3 +189,18 @@ export const deleteRestaurantThumbnail = async (id: string) => {
     throw error;
   }
 };
+
+export const sendQRPrintRequest = async (restaurantId: string, data: any) => {
+  const response = await apiClient.post(
+    `/api/admin/restaurants/${restaurantId}/qr-print-request`,
+    data
+  );
+  return response.data;
+};
+
+export const getQRPrintRequests = async (restaurantId: string) => {
+  const response = await apiClient.get(
+    `/api/admin/restaurants/${restaurantId}/qr-print-requests`
+  );
+  return response.data.requests;
+};
