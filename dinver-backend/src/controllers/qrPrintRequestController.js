@@ -25,6 +25,7 @@ const createQRPrintRequest = async (req, res) => {
       qrBorderWidth,
       padding,
       quantity,
+      customText,
     } = req.body;
 
     // Validacija
@@ -48,6 +49,7 @@ const createQRPrintRequest = async (req, res) => {
       qrBorderWidth,
       padding,
       quantity,
+      customText,
       status: 'pending',
     });
 
@@ -60,7 +62,8 @@ const createQRPrintRequest = async (req, res) => {
       <h2>Novi zahtjev za QR naljepnice</h2>
       <h3>Restoran: ${restaurant?.name || ''}</h3>
       <p><strong>Korisnik:</strong> ${user?.firstName} ${user?.lastName} (${user?.email})</p>
-      <p><strong>Quantity:</strong> ${quantity}</p>
+      <p><strong>Količina:</strong> ${quantity}</p>
+      ${customText ? `<p><strong>Custom tekst:</strong> ${customText}</p>` : ''}
       <ul>
         <li>Prikaži Dinver logo: ${showDinverLogo ? 'DA' : 'NE'}</li>
         <li>Prikaži ime restorana: ${showRestaurantName ? 'DA' : 'NE'}</li>
@@ -75,7 +78,7 @@ const createQRPrintRequest = async (req, res) => {
       <p>Zahtjev kreiran: ${new Date().toLocaleString('hr-HR')}</p>
     `;
 
-    const textContent = `Novi zahtjev za QR naljepnice\nRestoran: ${restaurant?.name || ''}\nKorisnik: ${user?.firstName} ${user?.lastName} (${user?.email})\nQuantity: ${quantity}`;
+    const textContent = `Novi zahtjev za QR naljepnice\nRestoran: ${restaurant?.name || ''}\nKorisnik: ${user?.firstName} ${user?.lastName} (${user?.email})\nKoličina: ${quantity}${customText ? `\nCustom tekst: ${customText}` : ''}`;
 
     // Slanje maila (dev mode samo log)
     const data = {

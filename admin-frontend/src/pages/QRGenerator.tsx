@@ -133,6 +133,12 @@ const QRGenerator = () => {
       );
       return;
     }
+    if (isPremium && customText.length > 30) {
+      toast.error(
+        t("custom_text_too_long") || "Tekst može imati najviše 30 znakova"
+      );
+      return;
+    }
     setIsSubmitting(true);
     try {
       await sendQRPrintRequest(currentRestaurant.id, {
@@ -146,6 +152,7 @@ const QRGenerator = () => {
         qrBorderWidth,
         padding,
         quantity: parsedQuantity,
+        customText,
       });
       toast.success(t("qr_request_sent_success"));
       setQuantity("1");
@@ -181,6 +188,7 @@ const QRGenerator = () => {
     setQrBorderWidth(req.qrBorderWidth);
     setPadding(req.padding);
     setQuantity(req.quantity);
+    setCustomText(req.customText || t("scan_for_e_menu_placeholder"));
     toast.success(t("qr_request_copied"));
   };
 
@@ -338,15 +346,11 @@ const QRGenerator = () => {
                           {t("show_dinver_logo_desc")}
                         </div>
                       </div>
-                      {showDinverLogo && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                          Premium
-                        </span>
-                      )}
+                      <SparklesIcon className="w-4 h-4 text-purple-600" />
                     </div>
                   ) : (
                     <LockedFeature>
-                      <div className="flex items-center p-3 border border-gray-200 rounded-lg cursor-not-allowed">
+                      <div className="flex items-center p-3 border border-gray-200 rounded-lg cursor-not-allowed relative">
                         <input
                           type="checkbox"
                           checked={true}
@@ -361,6 +365,7 @@ const QRGenerator = () => {
                             {t("premium_option_text")}
                           </div>
                         </div>
+                        <SparklesIcon className="absolute top-2 right-2 w-4 h-4 text-purple-600" />
                       </div>
                     </LockedFeature>
                   )}
@@ -401,6 +406,38 @@ const QRGenerator = () => {
 
                   {/* Removed Custom Logo Upload */}
                   {/* Removed Custom Text */}
+                </div>
+                {/* Custom Text za Premium korisnika */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("customize_text_label")}
+                  </label>
+                  {isPremium ? (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={customText}
+                        maxLength={30}
+                        onChange={(e) => setCustomText(e.target.value)}
+                        placeholder={t("scan_for_e_menu_placeholder")}
+                        className="w-full p-2 pr-8 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <SparklesIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-600" />
+                      <div className="text-xs text-gray-500 mt-1 text-right">
+                        {customText.length}/30
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={t("scan_for_e_menu_placeholder")}
+                        disabled
+                        className="w-full p-2 pr-8 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                      />
+                      <SparklesIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-600" />
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -69,6 +69,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      customText: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+      },
       status: {
         type: DataTypes.ENUM('pending', 'approved', 'printed', 'rejected'),
         allowNull: false,
