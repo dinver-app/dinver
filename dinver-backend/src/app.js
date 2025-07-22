@@ -80,6 +80,7 @@ app.use(
       'https://sysadmin.dinver.eu',
       'https://dinver.eu',
       'https://www.dinver.eu',
+      'https://*.dinver.eu',
     ],
     credentials: true,
   }),
