@@ -1,32 +1,15 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useRole } from "../context/RoleContext";
-import { getUserRole } from "../services/adminService";
+import { useAdmin } from "../context/AdminContext";
 import LoadingScreen from "../components/LoadingScreen";
 
 const Home = () => {
   const { t } = useTranslation();
-  const { setRole } = useRole();
-  const [isLoading, setIsLoading] = useState(true);
+  const { role } = useAdmin();
+  const [isLoading, setIsLoading] = useState(false);
   const userName = localStorage.getItem("admin_user_name");
 
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      const storedRestaurant = localStorage.getItem("currentRestaurant");
-      if (storedRestaurant) {
-        const { id: restaurantId } = JSON.parse(storedRestaurant);
-        try {
-          const userRole = await getUserRole(restaurantId);
-          setRole(userRole);
-        } catch (error) {
-          console.error("Failed to fetch user role", error);
-        }
-      }
-      setIsLoading(false);
-    };
-
-    fetchUserRole();
-  }, [setRole]);
+  // Nema više fetchanja role ovdje, to radi context
 
   if (isLoading) {
     return <LoadingScreen />;

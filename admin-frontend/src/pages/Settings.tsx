@@ -10,16 +10,22 @@ import {
   updateRestaurantAdmin,
 } from "../services/adminService";
 import { canAccess } from "../utils/permissions";
-import { useRole } from "../context/RoleContext";
+import { useAdmin } from "../context/AdminContext";
 import { useNavigate } from "react-router-dom";
 import { QrCodeIcon } from "@heroicons/react/24/outline";
 
+const getInitialLanguage = () => {
+  return i18n.language || localStorage.getItem("language") || "en";
+};
+
 const Settings = () => {
   const { t } = useTranslation();
-  const { role } = useRole();
+  const { role } = useAdmin();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("general");
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    getInitialLanguage()
+  );
   const [admins, setAdmins] = useState([]);
   const [isAddAdminModalOpen, setAddAdminModalOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -46,6 +52,8 @@ const Settings = () => {
     try {
       const { language } = await getUserLanguage();
       setSelectedLanguage(language);
+      i18n.changeLanguage(language);
+      localStorage.setItem("language", language);
     } catch (error: any) {
       console.error("Failed to fetch user language", error);
     } finally {

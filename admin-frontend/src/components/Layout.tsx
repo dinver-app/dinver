@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaHome,
@@ -12,14 +12,8 @@ import { LuLogs } from "react-icons/lu";
 import { QrCodeIcon } from "@heroicons/react/24/outline";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
-import { getAdminRestaurants } from "../services/adminService";
-import { useRole } from "../context/RoleContext";
-
-interface Restaurant {
-  id: string;
-  name: string;
-  slug: string;
-}
+import LoadingScreen from "./LoadingScreen";
+import { useAdmin } from "../context/AdminContext";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -27,56 +21,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(
-    null
-  );
-  const [userName, setUserName] = useState<string | null>(null);
-  const { role } = useRole();
+  const {
+    restaurants,
+    currentRestaurant,
+    setCurrentRestaurant,
+    role,
+    userName,
+  } = useAdmin();
 
   const confirmLogout = () => {
     setModalOpen(false);
     navigate("/login");
   };
-
-  useEffect(() => {
-    const userName = localStorage.getItem("admin_user_name");
-    if (!userName) {
-      confirmLogout();
-    }
-    setUserName(userName);
-  }, []);
-
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      try {
-        const data = await getAdminRestaurants();
-        setRestaurants(data);
-        const storedRestaurant = localStorage.getItem("currentRestaurant");
-        if (storedRestaurant) {
-          setCurrentRestaurant(JSON.parse(storedRestaurant));
-        } else if (data.length > 0) {
-          const defaultRestaurant = {
-            id: data[0].id,
-            name: data[0].name,
-            slug: data[0].slug,
-            offer: data[0].offer,
-          };
-          setCurrentRestaurant(defaultRestaurant);
-          localStorage.setItem(
-            "currentRestaurant",
-            JSON.stringify(defaultRestaurant)
-          );
-        } else {
-          navigate("/login");
-        }
-      } catch (error) {
-        console.error("Failed to fetch admin restaurants", error);
-      }
-    };
-
-    fetchRestaurants();
-  }, []);
 
   const handleRestaurantChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -86,18 +42,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       (restaurant) => restaurant.id === selectedId
     );
     if (selectedRestaurant) {
-      const newCurrentRestaurant = {
+      setCurrentRestaurant({
         id: selectedRestaurant.id,
         name: selectedRestaurant.name,
         slug: selectedRestaurant.slug,
-      };
-      setCurrentRestaurant(newCurrentRestaurant);
-      localStorage.setItem(
-        "currentRestaurant",
-        JSON.stringify(newCurrentRestaurant)
-      );
+        offer: selectedRestaurant.offer,
+      });
       navigate("/");
-      window.location.reload();
     }
   };
 
@@ -154,7 +105,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setModalOpen(true);
   };
 
-  return (
+  return role === null ? (
+    <LoadingScreen />
+  ) : (
     <div className="flex">
       <aside className="fixed top-0 left-0 h-screen bg-white shadow-lg z-50 overflow-y-auto transition-all duration-300">
         <div>
@@ -164,7 +117,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               alt="Logo"
               className="h-16 mb-4"
             />
-            {/* <img src="/images/logo__big.svg" alt="Logo" className="h-8 mb-4" /> */}
           </div>
           <div className="p-4 select-none">
             <h2 className="text-sm font-semibold text-gray-500">
