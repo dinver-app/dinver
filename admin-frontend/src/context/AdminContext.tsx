@@ -44,7 +44,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({
         name: data[0].name,
         slug: data[0].slug,
         offer: data[0].offer,
-        subdomain: data[0].subdomain,
+        subdomain: data[0].subdomain ?? null,
       };
       localStorage.setItem("currentRestaurant", JSON.stringify(restaurant));
     }
