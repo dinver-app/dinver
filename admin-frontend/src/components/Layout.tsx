@@ -48,6 +48,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         name: selectedRestaurant.name,
         slug: selectedRestaurant.slug,
         offer: selectedRestaurant.offer,
+        subdomain: selectedRestaurant.subdomain,
       });
       navigate("/");
     }
