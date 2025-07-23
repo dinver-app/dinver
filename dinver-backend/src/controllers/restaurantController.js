@@ -337,6 +337,7 @@ const getRestaurantDetails = async (req, res) => {
         'mealTypes',
         'priceCategoryId',
         'reservationEnabled',
+        'subdomain',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),
@@ -490,6 +491,7 @@ async function updateRestaurant(req, res) {
       wifiPassword,
       showWifiCredentials,
       reservationEnabled,
+      subdomain,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -524,6 +526,20 @@ async function updateRestaurant(req, res) {
       }
       // Spremamo novi key
       thumbnailKey = await uploadToS3(req.file, 'restaurant_thumbnails');
+    }
+
+    // Validacija i update subdomaina
+    if (subdomain !== undefined) {
+      if (subdomain && !/^[a-z0-9-]{3,}$/.test(subdomain)) {
+        return res.status(400).json({ error: 'Invalid subdomain format' });
+      }
+      if (subdomain) {
+        const existing = await Restaurant.findOne({ where: { subdomain } });
+        if (existing && existing.id !== restaurant.id) {
+          return res.status(400).json({ error: 'Subdomain already taken' });
+        }
+      }
+      await restaurant.update({ subdomain });
     }
 
     // Update restaurant data
@@ -1009,6 +1025,7 @@ const getRestaurantById = async (req, res) => {
         'dietaryTypes',
         'priceCategoryId',
         'reservationEnabled',
+        'subdomain',
       ],
     });
     if (!restaurant) {
@@ -1834,6 +1851,7 @@ const getFullRestaurantDetails = async (req, res) => {
         'images',
         'openingHours',
         'customWorkingDays',
+        'subdomain',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),

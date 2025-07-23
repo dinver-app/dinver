@@ -52,7 +52,9 @@ const QRGenerator = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const restaurantSlug = currentRestaurant.slug;
-  const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu?src=qr`;
+  const menuUrl = currentRestaurant.subdomain
+    ? `https://${currentRestaurant.subdomain}.dinver.eu/menu?src=qr`
+    : `https://dinver.eu/restaurants/${restaurantSlug}/menu?src=qr`;
 
   // Ensure Dinver logo is always shown for Basic users
   useEffect(() => {

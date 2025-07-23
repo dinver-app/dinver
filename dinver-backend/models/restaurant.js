@@ -257,6 +257,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
+      subdomain: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+      },
     },
     {
       sequelize,
