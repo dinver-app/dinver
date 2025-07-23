@@ -29,6 +29,10 @@ import { getRestaurantsList } from "../services/restaurantService";
 import { getAuditLogs } from "../services/auditLogsService";
 import ReactJson from "react-json-view";
 
+const getInitialLanguage = () => {
+  return i18n.language || localStorage.getItem("language") || "en";
+};
+
 const Settings = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
@@ -37,7 +41,9 @@ const Settings = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedSysadmin, setSelectedSysadmin] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    getInitialLanguage()
+  );
   const [backups, setBackups] = useState<Backup[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [searchTerm, setSearchTerm] = useState("");

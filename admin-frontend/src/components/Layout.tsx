@@ -14,6 +14,7 @@ import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 import LoadingScreen from "./LoadingScreen";
 import { useAdmin } from "../context/AdminContext";
+import { logout } from "../services/authService";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -29,8 +30,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     userName,
   } = useAdmin();
 
-  const confirmLogout = () => {
-    setModalOpen(false);
+  const confirmLogout = async () => {
+    await logout();
     navigate("/login");
   };
 

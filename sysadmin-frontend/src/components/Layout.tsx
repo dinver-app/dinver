@@ -13,6 +13,7 @@ import { TfiWrite } from "react-icons/tfi";
 import { IoRestaurant } from "react-icons/io5";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
+import { logout } from "../services/authService";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -22,8 +23,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
 
-  const confirmLogout = () => {
-    setModalOpen(false);
+  const confirmLogout = async () => {
+    await logout();
     navigate("/login");
   };
 

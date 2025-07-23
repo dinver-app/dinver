@@ -1,19 +1,8 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAdmin } from "../context/AdminContext";
-import LoadingScreen from "../components/LoadingScreen";
 
 const Home = () => {
   const { t } = useTranslation();
-  const { role } = useAdmin();
-  const [isLoading, setIsLoading] = useState(false);
   const userName = localStorage.getItem("admin_user_name");
-
-  // Nema više fetchanja role ovdje, to radi context
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
 
   return (
     <div className="w-full h-screen flex flex-col justify-between pb-6">
