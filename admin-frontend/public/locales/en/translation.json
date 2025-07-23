@@ -656,5 +656,6 @@
   "pending": "Pending",
   "approved": "Approved",
   "rejected": "Rejected",
+  "printed": "Printed",
   "confirm_send_qr_request": "Are you sure you want to send a request for {{n}} QR stickers?"
 }

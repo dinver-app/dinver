@@ -65,6 +65,9 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    // Zamijeni zarez s točkom za cijenu
+    const normalizedPrice = itemPrice.replace(",", ".");
+
     const translatesArray = Object.entries(translations)
       .filter(([_, value]) => value.name.trim() !== "")
       .map(([language, value]) => ({
@@ -78,12 +81,12 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
       return;
     }
 
-    if (!itemPrice.trim()) {
+    if (!normalizedPrice.trim()) {
       toast.error(t("price_required"));
       return;
     }
 
-    if (isNaN(parseFloat(itemPrice))) {
+    if (isNaN(parseFloat(normalizedPrice))) {
       toast.error(t("invalid_price"));
       return;
     }
@@ -94,17 +97,15 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
     try {
       await onSave(drinkItem.id, {
         translations: translatesArray,
-        price: itemPrice,
+        price: normalizedPrice,
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
         isActive,
       });
-      toast.dismiss(loadingToast);
-    } catch (error) {
-      toast.dismiss(loadingToast);
     } finally {
       setIsSaving(false);
+      toast.dismiss(loadingToast);
     }
   };
 

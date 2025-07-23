@@ -656,5 +656,6 @@
   "pending": "Čeka obradu",
   "approved": "Odobreno",
   "rejected": "Odbijen",
+  "printed": "Ispisano",
   "confirm_send_qr_request": "Želite li sigurno poslati zahtjev za izradu {{n}} QR naljepnica?"
 }
