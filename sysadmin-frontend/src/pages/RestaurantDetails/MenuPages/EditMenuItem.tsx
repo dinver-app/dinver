@@ -78,6 +78,9 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    // Zamijeni zarez s točkom za cijenu
+    const normalizedPrice = itemPrice.replace(",", ".");
+
     const translatesArray = Object.entries(translations)
       .filter(([_, value]) => value.name.trim() !== "")
       .map(([language, value]) => ({
@@ -91,12 +94,12 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
       return;
     }
 
-    if (!itemPrice.trim()) {
+    if (!normalizedPrice.trim()) {
       toast.error(t("price_required"));
       return;
     }
 
-    if (isNaN(parseFloat(itemPrice))) {
+    if (isNaN(parseFloat(normalizedPrice))) {
       toast.error(t("invalid_price"));
       return;
     }
@@ -107,12 +110,12 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     try {
       await onSave(menuItem.id, {
         translations: translatesArray,
-        price: itemPrice,
+        price: normalizedPrice,
         allergens: selectedAllergenIds.map(String),
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
-        isActive: isActive,
+        isActive,
       });
     } finally {
       setIsSaving(false);
