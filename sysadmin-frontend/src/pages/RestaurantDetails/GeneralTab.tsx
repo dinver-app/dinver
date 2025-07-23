@@ -38,6 +38,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     wifiPassword: restaurant.wifiPassword || "",
     showWifiCredentials: restaurant.showWifiCredentials || false,
     reservationEnabled: restaurant.reservationEnabled || false,
+    subdomain: restaurant.subdomain || "",
   });
 
   const [translations, setTranslations] = useState<Translation[]>([
@@ -186,6 +187,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         "reservationEnabled",
         formData.reservationEnabled.toString()
       );
+      formDataToSend.append("subdomain", formData.subdomain);
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -620,6 +622,26 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               }
             }}
           />
+        </div>
+
+        {/* Subdomain */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Subdomain
+          </label>
+          <input
+            type="text"
+            name="subdomain"
+            value={formData.subdomain}
+            onChange={handleInputChange}
+            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            placeholder="npr. tavernaalinea"
+            pattern="^[a-z0-9-]{3,}$"
+            title="Dozvoljena su mala slova, brojevi i crtice (min 3 znaka)"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            npr. tavernaalinea &rarr; https://tavernaalinea.dinver.eu
+          </p>
         </div>
 
         {/* Location Information */}

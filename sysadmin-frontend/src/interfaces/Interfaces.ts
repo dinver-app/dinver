@@ -72,6 +72,7 @@ export interface Restaurant {
   wifiPassword?: string;
   showWifiCredentials?: boolean;
   reservationEnabled?: boolean;
+  subdomain?: string;
 }
 
 export interface FoodType {
