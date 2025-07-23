@@ -14,6 +14,7 @@ import { Toaster } from "react-hot-toast";
 import Claim from "./pages/Claim";
 import Reviews from "./pages/Reviews";
 import BlogPage from "./pages/Blog/BlogPage";
+import QRPrintRequests from "./pages/QRPrintRequests";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
             <Route path="/claim" element={<Claim />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/qr-print-requests" element={<QRPrintRequests />} />
           </Route>
         </Routes>
       </Router>

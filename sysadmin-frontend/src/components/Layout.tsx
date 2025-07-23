@@ -14,6 +14,7 @@ import { IoRestaurant } from "react-icons/io5";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 import { logout } from "../services/authService";
+import { QrCodeIcon } from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -72,6 +73,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       path: "/reviews",
       icon: <FaComments className="h-4 w-4 mr-3" />,
     },
+    {
+      name: t("qr_print_requests"),
+      path: "/qr-print-requests",
+      icon: <QrCodeIcon className="h-4 w-4 mr-3" />,
+    },
   ];
 
   const preferenceItems = [
@@ -89,11 +95,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex">
       <aside
-        className={`fixed top-0 left-0 h-full bg-white shadow-lg z-50 flex flex-col justify-between transition-all duration-300 ${
+        className={`fixed top-0 left-0 h-full bg-white shadow-lg z-50 flex flex-col transition-all duration-300 ${
           isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
         }`}
       >
-        <div>
+        <div className="flex flex-col h-full overflow-y-auto">
           <div className="p-4 border-b select-none">
             <img
               src="/images/sysadmin_logo.svg"
@@ -153,21 +159,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ))}
             </ul>
           </nav>
-        </div>
-        <div className="py-4 border-t flex items-center justify-between px-4">
-          <div className="flex justify-between items-center border border-gray-300 rounded-md p-2 flex-grow select-none">
-            <div className="flex items-center">
-              <div className="flex items-center justify-center bg-gray-200 rounded-full h-8 w-8 mr-2">
-                {userName?.charAt(0).toUpperCase()}
+          <div className="py-4 border-t flex items-center justify-between px-4 bg-white">
+            <div className="flex justify-between items-center border border-gray-300 rounded-md p-2 flex-grow select-none">
+              <div className="flex items-center">
+                <div className="flex items-center justify-center bg-gray-200 rounded-full h-8 w-8 mr-2">
+                  {userName?.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm font-light">{userName}</span>
               </div>
-              <span className="text-sm font-light">{userName}</span>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-light hover:bg-gray-100 p-2 rounded-md ml-4"
+              >
+                <FaSignOutAlt className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-sm font-light hover:bg-gray-100 p-2 rounded-md ml-4"
-            >
-              <FaSignOutAlt className="h-4 w-4" />
-            </button>
           </div>
         </div>
         <button

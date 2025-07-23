@@ -129,7 +129,108 @@ const getQRPrintRequests = async (req, res) => {
   }
 };
 
+// Dohvati sve QR print zahtjeve (sa filtrima)
+const getAllQRPrintRequests = async (req, res) => {
+  try {
+    const {
+      status,
+      restaurantId,
+      userId,
+      search,
+      limit = 50,
+      offset = 0,
+    } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (restaurantId) where.restaurantId = restaurantId;
+    if (userId) where.userId = userId;
+
+    // Search po imenu restorana ili korisnika
+    const include = [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+        where: search
+          ? {
+              [Sequelize.Op.or]: [
+                { firstName: { [Sequelize.Op.iLike]: `%${search}%` } },
+                { lastName: { [Sequelize.Op.iLike]: `%${search}%` } },
+                { email: { [Sequelize.Op.iLike]: `%${search}%` } },
+              ],
+            }
+          : undefined,
+        required: !!search,
+      },
+      {
+        model: Restaurant,
+        as: 'restaurant',
+        attributes: ['id', 'name'],
+        where: search
+          ? {
+              name: { [Sequelize.Op.iLike]: `%${search}%` },
+            }
+          : undefined,
+        required: !!search,
+      },
+    ];
+
+    const requests = await QRPrintRequest.findAll({
+      where,
+      include,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    res.json({ requests });
+  } catch (error) {
+    console.error('Greška kod dohvata svih QR print zahtjeva:', error);
+    res.status(500).json({ error: 'Greška kod dohvata zahtjeva' });
+  }
+};
+
+// Promijeni status QR print zahtjeva
+const updateQRPrintRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowedStatuses = ['pending', 'approved', 'printed', 'rejected'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Neispravan status' });
+    }
+    const request = await QRPrintRequest.findByPk(id);
+    if (!request) {
+      return res.status(404).json({ error: 'Zahtjev nije pronađen' });
+    }
+    request.status = status;
+    await request.save();
+    res.json({ message: 'Status ažuriran', request });
+  } catch (error) {
+    console.error('Greška kod ažuriranja statusa QR print zahtjeva:', error);
+    res.status(500).json({ error: 'Greška kod ažuriranja statusa' });
+  }
+};
+
+const deleteQRPrintRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await QRPrintRequest.findByPk(id);
+    if (!request) {
+      return res.status(404).json({ error: 'QR print request not found' });
+    }
+    await request.destroy();
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting QR print request:', error);
+    return res.status(500).json({ error: 'Failed to delete QR print request' });
+  }
+};
+
 module.exports = {
   createQRPrintRequest,
   getQRPrintRequests,
+  getAllQRPrintRequests,
+  updateQRPrintRequestStatus,
+  deleteQRPrintRequest,
 };
