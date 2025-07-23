@@ -17,7 +17,14 @@ import {
 
 const QRGenerator = () => {
   const { t } = useTranslation();
-  const [isPremium, setIsPremium] = useState(false); // Toggle za testiranje
+  // Prvo dohvati currentRestaurant i ponudi offer
+  const currentRestaurant = JSON.parse(
+    localStorage.getItem("currentRestaurant") || "{}"
+  );
+  const restaurantOffer = currentRestaurant.offer;
+  const isPremiumDefault =
+    restaurantOffer === "premium" || restaurantOffer === "enterprise";
+  const [isPremium] = useState(isPremiumDefault);
 
   // Basic QR states
   const [qrTextColor, setQrTextColor] = useState("#000000");
@@ -44,9 +51,6 @@ const QRGenerator = () => {
   const [requests, setRequests] = useState([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const currentRestaurant = JSON.parse(
-    localStorage.getItem("currentRestaurant") || "{}"
-  );
   const restaurantSlug = currentRestaurant.slug;
   const menuUrl = `https://dinver.eu/restaurants/${restaurantSlug}/menu?src=qr`;
 
@@ -217,32 +221,16 @@ const QRGenerator = () => {
               </p>
             </div>
 
-            {/* Premium Toggle */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">{t("plan_label")}</span>
-                <button
-                  onClick={() => setIsPremium(!isPremium)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    isPremium
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600"
-                      : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      isPremium ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-                <span
-                  className={`text-sm font-medium ${
-                    isPremium ? "text-purple-600" : "text-gray-500"
-                  }`}
-                >
-                  {isPremium ? t("premium_plan") : t("basic_plan")}
-                </span>
-              </div>
+            {/* Prikaz plana bez mogućnosti promjene */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">{t("plan_label")}</span>
+              <span
+                className={`text-sm font-medium ${
+                  isPremium ? "text-purple-600" : "text-gray-500"
+                }`}
+              >
+                {isPremium ? t("premium_plan") : t("basic_plan")}
+              </span>
             </div>
           </div>
         </div>
@@ -331,7 +319,7 @@ const QRGenerator = () => {
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {isPremium ? (
-                    <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div className="relative flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={showDinverLogo}
@@ -346,7 +334,7 @@ const QRGenerator = () => {
                           {t("show_dinver_logo_desc")}
                         </div>
                       </div>
-                      <SparklesIcon className="w-4 h-4 text-purple-600" />
+                      <SparklesIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600" />
                     </div>
                   ) : (
                     <LockedFeature>
@@ -412,30 +400,33 @@ const QRGenerator = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t("customize_text_label")}
                   </label>
-                  {isPremium ? (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={customText}
-                        maxLength={30}
-                        onChange={(e) => setCustomText(e.target.value)}
-                        placeholder={t("scan_for_e_menu_placeholder")}
-                        className="w-full p-2 pr-8 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <SparklesIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-600" />
-                      <div className="text-xs text-gray-500 mt-1 text-right">
-                        {customText.length}/30
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={t("scan_for_e_menu_placeholder")}
-                        disabled
-                        className="w-full p-2 pr-8 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
-                      />
-                      <SparklesIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-600" />
+                  <div className="relative h-full flex items-center">
+                    <input
+                      type="text"
+                      value={
+                        isPremium
+                          ? customText
+                          : t("scan_for_e_menu_placeholder")
+                      }
+                      maxLength={30}
+                      onChange={
+                        isPremium
+                          ? (e) => setCustomText(e.target.value)
+                          : undefined
+                      }
+                      placeholder={t("scan_for_e_menu_placeholder")}
+                      disabled={!isPremium}
+                      className={`w-full p-2 pr-8 border ${
+                        isPremium
+                          ? "border-gray-300"
+                          : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                      } rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                    <SparklesIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-600 pointer-events-none" />
+                  </div>
+                  {isPremium && (
+                    <div className="text-xs text-gray-500 mt-1 text-right">
+                      {customText.length}/30
                     </div>
                   )}
                 </div>

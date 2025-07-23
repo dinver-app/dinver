@@ -60,6 +60,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             id: data[0].id,
             name: data[0].name,
             slug: data[0].slug,
+            offer: data[0].offer,
           };
           setCurrentRestaurant(defaultRestaurant);
           localStorage.setItem(

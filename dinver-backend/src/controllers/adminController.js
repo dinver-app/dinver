@@ -1,4 +1,4 @@
-const { Restaurant, UserAdmin, User } = require('../../models');
+const { Restaurant, UserAdmin, User, ClaimLog } = require('../../models');
 const bcrypt = require('bcrypt');
 const { generateTokens } = require('../../utils/tokenUtils');
 
@@ -50,10 +50,36 @@ async function getAdminRestaurants(req, res) {
 
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
-      attributes: ['id', 'name', 'slug'],
+      attributes: ['id', 'name', 'slug', 'isClaimed'],
     });
 
-    res.json(restaurants);
+    const filteredRestaurants = restaurants.filter(
+      (restaurant) => restaurant.isClaimed,
+    );
+
+    const filteredRestaurantIds = filteredRestaurants.map(
+      (restaurant) => restaurant.id,
+    );
+
+    const claimLogs = await ClaimLog.findAll({
+      where: { restaurantId: filteredRestaurantIds },
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Mapiraj restoranima offer iz claimLoga
+    const restaurantOffers = {};
+    claimLogs.forEach((log) => {
+      if (!restaurantOffers[log.restaurantId]) {
+        restaurantOffers[log.restaurantId] = log.offer;
+      }
+    });
+
+    const restaurantsWithOffer = filteredRestaurants.map((r) => ({
+      ...r.toJSON(),
+      offer: restaurantOffers[r.id] || null,
+    }));
+
+    res.json(restaurantsWithOffer);
   } catch (error) {
     console.error('Error fetching admin restaurants:', error);
     res.status(500).json({ error: 'Failed to fetch admin restaurants' });
