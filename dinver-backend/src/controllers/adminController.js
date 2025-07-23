@@ -50,7 +50,7 @@ async function getAdminRestaurants(req, res) {
 
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
-      attributes: ['id', 'name', 'slug', 'isClaimed'],
+      attributes: ['id', 'name', 'slug', 'isClaimed', 'subdomain'],
     });
 
     const filteredRestaurants = restaurants.filter(
