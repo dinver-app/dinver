@@ -17,12 +17,13 @@ import QRGenerator from "./pages/QRGenerator";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
 import Reviews from "./pages/Reviews";
-import { RoleProvider, useRole } from "./context/RoleContext";
+import { AdminProvider, useAdmin } from "./context/AdminContext";
+import LoadingScreen from "./components/LoadingScreen";
 
 function App() {
   return (
-    <AuthProvider>
-      <RoleProvider>
+    <AdminProvider>
+      <AuthProvider>
         <Router>
           <Toaster />
           <Routes>
@@ -70,8 +71,8 @@ function App() {
             </Route>
           </Routes>
         </Router>
-      </RoleProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </AdminProvider>
   );
 }
 
@@ -82,11 +83,12 @@ const RoleBasedRoute = ({
   component: React.FC;
   allowedRoles: string[];
 }) => {
-  const { role } = useRole();
-  const isAuthorized =
-    allowedRoles.includes(role || "") ||
-    (role === "owner" && allowedRoles.includes("owner"));
-  return !isAuthorized ? <Navigate to="/" /> : <Component />;
+  const { role } = useAdmin();
+  if (role === null) {
+    return <LoadingScreen />;
+  }
+  const isAuthorized = allowedRoles.includes(role);
+  return isAuthorized ? <Component /> : <Navigate to="/" />;
 };
 
 export default App;

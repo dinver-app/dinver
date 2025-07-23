@@ -6,7 +6,7 @@ import {
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useRole } from "../../context/RoleContext";
+import { useAdmin } from "../../context/AdminContext";
 import { translateText } from "../../services/translateService";
 import TranslateButton from "../../components/TranslateButton";
 
@@ -23,7 +23,7 @@ interface Translation {
 
 const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const { t } = useTranslation();
-  const { role } = useRole();
+  const { role } = useAdmin();
   const [formData, setFormData] = useState({
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",

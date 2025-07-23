@@ -1,36 +1,8 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useRole } from "../context/RoleContext";
-import { getUserRole } from "../services/adminService";
-import LoadingScreen from "../components/LoadingScreen";
 
 const Home = () => {
   const { t } = useTranslation();
-  const { setRole } = useRole();
-  const [isLoading, setIsLoading] = useState(true);
   const userName = localStorage.getItem("admin_user_name");
-
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      const storedRestaurant = localStorage.getItem("currentRestaurant");
-      if (storedRestaurant) {
-        const { id: restaurantId } = JSON.parse(storedRestaurant);
-        try {
-          const userRole = await getUserRole(restaurantId);
-          setRole(userRole);
-        } catch (error) {
-          console.error("Failed to fetch user role", error);
-        }
-      }
-      setIsLoading(false);
-    };
-
-    fetchUserRole();
-  }, [setRole]);
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
 
   return (
     <div className="w-full h-screen flex flex-col justify-between pb-6">

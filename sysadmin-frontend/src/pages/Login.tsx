@@ -38,7 +38,7 @@ const Login = () => {
         i18n.changeLanguage(user.language);
 
         toast.success(t("login_successful"));
-        navigate("/");
+        navigate("/", { replace: true });
       }
     } catch (error) {
       toast.error(t("login_failed"));
@@ -60,6 +60,8 @@ const Login = () => {
           initialValues={initialValues}
           validationSchema={validationSchema}
           onSubmit={onSubmit}
+          validateOnBlur={false}
+          validateOnChange={false}
         >
           <Form className="space-y-6">
             <div>

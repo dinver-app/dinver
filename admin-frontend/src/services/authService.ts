@@ -47,6 +47,12 @@ export const login = async (email: string, password: string) => {
 
 export const logout = async () => {
   const response = await apiClient.get("/api/admin/auth/logout");
+  // Očisti localStorage
+  localStorage.removeItem("token");
+  localStorage.removeItem("currentRestaurant");
+  localStorage.removeItem("role");
+  localStorage.removeItem("admin_user_name");
+  localStorage.removeItem("language");
   return response.data;
 };
 

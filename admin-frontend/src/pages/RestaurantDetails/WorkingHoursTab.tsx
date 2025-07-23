@@ -16,7 +16,7 @@ import { format, isBefore, startOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { hr, enUS } from "date-fns/locale";
-import { useRole } from "../../context/RoleContext";
+import { useAdmin } from "../../context/AdminContext";
 
 const formatTime = (time: string) => {
   if (time.length === 4) {
@@ -31,7 +31,7 @@ const unformatTime = (time: string) => {
 
 const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const { t, i18n } = useTranslation();
-  const { role } = useRole();
+  const { role } = useAdmin();
 
   const locale = i18n.language === "hr" ? hr : enUS;
 

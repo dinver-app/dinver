@@ -160,6 +160,26 @@ const logout = (req, res) => {
     secure: true,
     sameSite: 'none',
   });
+  res.clearCookie('adminAccessToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
+  res.clearCookie('adminRefreshToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
+  res.clearCookie('sysadminAccessToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
+  res.clearCookie('sysadminRefreshToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+  });
   res.json({ message: 'Logout successful' });
 };
 

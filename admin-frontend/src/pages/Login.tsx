@@ -3,15 +3,18 @@ import * as Yup from "yup";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { login, logout } from "../services/authService";
-import { useEffect, useState } from "react";
 import i18n from "i18next";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingScreen from "../components/LoadingScreen";
+import { useAdmin } from "../context/AdminContext";
+
 const Login = () => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const initialValues = { email: "", password: "" };
   const navigate = useNavigate();
+  const { refreshRestaurants, setUserName } = useAdmin();
   const validationSchema = Yup.object({
     email: Yup.string()
       .email("Invalid email format")
@@ -28,16 +31,21 @@ const Login = () => {
     try {
       const response = await login(values.email, values.password);
       if (response) {
-        const { user } = response;
+        const { user, token } = response;
         localStorage.setItem("language", user.language);
         localStorage.setItem(
           "admin_user_name",
           user.firstName + " " + user.lastName
         );
+        setUserName(user.firstName + " " + user.lastName);
+        if (token) localStorage.setItem("token", token);
         i18n.changeLanguage(user.language);
 
+        // Osvježi restorane i rolu kroz context
+        await refreshRestaurants();
+
         toast.success(t("login_successful"));
-        navigate("/");
+        navigate("/", { replace: true });
       }
     } catch (error) {
       toast.error(t("login_failed"));
@@ -59,6 +67,8 @@ const Login = () => {
           initialValues={initialValues}
           validationSchema={validationSchema}
           onSubmit={onSubmit}
+          validateOnBlur={false}
+          validateOnChange={false}
         >
           <Form className="space-y-6">
             <div>
