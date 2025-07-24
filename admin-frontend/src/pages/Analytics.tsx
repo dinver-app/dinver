@@ -73,6 +73,11 @@ interface AnalyticsSummary {
     Record<string, Record<string, Record<string, number>>>
   >;
   hourlyActivity: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityViews: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityClicks: Record<
+    string,
+    Record<string, Record<string, number[]>>
+  >;
   topMenuItems: Record<
     string,
     Record<string, Array<{ name: string; count: number }>>
@@ -425,8 +430,12 @@ const Analytics = () => {
     if (!data) return [];
     const currentPeriod =
       selectedPeriod === "all_time" ? "last30" : selectedPeriod;
-    const hourlyData =
-      data.hourlyActivity?.[currentPeriod]?.[
+    const viewsData =
+      data.hourlyActivityViews?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || {};
+    const clicksData =
+      data.hourlyActivityClicks?.[currentPeriod]?.[
         showUniqueData ? "unique" : "total"
       ] || {};
 
@@ -436,12 +445,13 @@ const Analytics = () => {
 
       // Sum selected sources
       for (const source of selectedSources) {
-        const sourceData = hourlyData[source] || [];
-        if (Array.isArray(sourceData)) {
-          views += sourceData[hour] || 0;
-          // For clicks, sum all click events
-          // This is simplified - in reality you'd need to sum specific click events
-          clicks += sourceData[hour] || 0;
+        const vArr = viewsData[source] || [];
+        const cArr = clicksData[source] || [];
+        if (Array.isArray(vArr)) {
+          views += vArr[hour] || 0;
+        }
+        if (Array.isArray(cArr)) {
+          clicks += cArr[hour] || 0;
         }
       }
 

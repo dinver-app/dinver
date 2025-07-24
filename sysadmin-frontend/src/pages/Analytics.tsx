@@ -44,6 +44,11 @@ interface AnalyticsSummary {
     Record<string, Record<string, Record<string, number>>>
   >;
   hourlyActivity: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityViews: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityClicks: Record<
+    string,
+    Record<string, Record<string, number[]>>
+  >;
   topMenuItems: Record<
     string,
     Record<string, Array<{ name: string; count: number }>>
@@ -482,8 +487,12 @@ const Analytics = () => {
     if (!data) return [];
     const currentPeriod =
       selectedPeriod === "all_time" ? "last30" : selectedPeriod;
-    const hourlyData =
-      data.hourlyActivity?.[currentPeriod]?.[
+    const viewsData =
+      data.hourlyActivityViews?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || {};
+    const clicksData =
+      data.hourlyActivityClicks?.[currentPeriod]?.[
         showUniqueData ? "unique" : "total"
       ] || {};
 
@@ -491,22 +500,15 @@ const Analytics = () => {
       let views = 0;
       let clicks = 0;
 
-      // Sum selected sources for each hour
+      // Sum selected sources
       for (const source of selectedSources) {
-        // Views - from restaurant_view events
-        const viewData = hourlyData[source] || [];
-        if (Array.isArray(viewData)) {
-          views += viewData[hour] || 0;
+        const vArr = viewsData[source] || [];
+        const cArr = clicksData[source] || [];
+        if (Array.isArray(vArr)) {
+          views += vArr[hour] || 0;
         }
-
-        // Clicks - sum all click events for this source
-        for (const [eventType, sourceHours] of Object.entries(hourlyData)) {
-          if (eventType.startsWith("click_")) {
-            const clickData = sourceHours as number[];
-            if (Array.isArray(clickData)) {
-              clicks += clickData[hour] || 0;
-            }
-          }
+        if (Array.isArray(cArr)) {
+          clicks += cArr[hour] || 0;
         }
       }
 

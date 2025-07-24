@@ -239,11 +239,19 @@ const getAnalyticsSummary = async (req, res) => {
     }
     // --- HOURLY ACTIVITY ---
     const hourlyActivity = {};
+    const hourlyActivityViews = {};
+    const hourlyActivityClicks = {};
     for (const period of PERIODS) {
       hourlyActivity[period] = { total: {}, unique: {} };
+      hourlyActivityViews[period] = { total: {}, unique: {} };
+      hourlyActivityClicks[period] = { total: {}, unique: {} };
       for (const source of SOURCES) {
         const arr = Array(24).fill(0);
         const arrUnique = Array(24).fill(0);
+        const arrViews = Array(24).fill(0);
+        const arrViewsUnique = Array(24).fill(0);
+        const arrClicks = Array(24).fill(0);
+        const arrClicksUnique = Array(24).fill(0);
         let filtered = events.filter((e) => periodFilter(e.timestamp, period));
         filtered = filterBySource(filtered, source);
         for (let h = 0; h < 24; h++) {
@@ -254,9 +262,29 @@ const getAnalyticsSummary = async (req, res) => {
           arrUnique[h] = new Set(
             hourEvents.map((e) => e.session_id).filter(Boolean),
           ).size;
+          // Views (restaurant_view)
+          const hourViews = hourEvents.filter(
+            (e) => e.event_type === 'restaurant_view',
+          );
+          arrViews[h] = hourViews.length;
+          arrViewsUnique[h] = new Set(
+            hourViews.map((e) => e.session_id).filter(Boolean),
+          ).size;
+          // Clicks (svi click_*)
+          const hourClicks = hourEvents.filter((e) =>
+            e.event_type.startsWith('click_'),
+          );
+          arrClicks[h] = hourClicks.length;
+          arrClicksUnique[h] = new Set(
+            hourClicks.map((e) => e.session_id).filter(Boolean),
+          ).size;
         }
         hourlyActivity[period].total[source] = arr;
         hourlyActivity[period].unique[source] = arrUnique;
+        hourlyActivityViews[period].total[source] = arrViews;
+        hourlyActivityViews[period].unique[source] = arrViewsUnique;
+        hourlyActivityClicks[period].total[source] = arrClicks;
+        hourlyActivityClicks[period].unique[source] = arrClicksUnique;
       }
     }
     // --- DAILY ACTIVITY (last 30 days) ---
@@ -747,6 +775,8 @@ const getAnalyticsSummary = async (req, res) => {
       summary,
       sourceDistribution,
       hourlyActivity,
+      hourlyActivityViews,
+      hourlyActivityClicks,
       dailyActivity,
       events: eventsSummary,
       topMenuItems,
