@@ -20,7 +20,6 @@ import {
   ChartBarIcon,
   FunnelIcon,
   TableCellsIcon,
-  ArrowPathIcon,
   UserGroupIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -117,8 +116,6 @@ type PeriodKey =
 const Analytics = () => {
   const { t } = useTranslation();
   const [data, setData] = useState<AnalyticsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("last7");
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showUniqueData, setShowUniqueData] = useState(false);
@@ -200,8 +197,6 @@ const Analytics = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const response = await getAnalyticsSummary(restaurantId);
         setData(response);
 
@@ -213,9 +208,7 @@ const Analytics = () => {
           setSelectedSources(sources);
         }
       } catch (err) {
-        setError("Greška pri dohvaćanju podataka");
-      } finally {
-        setLoading(false);
+        console.error(err);
       }
     };
 
