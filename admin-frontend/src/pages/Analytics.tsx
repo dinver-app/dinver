@@ -528,6 +528,93 @@ const Analytics = () => {
     );
   };
 
+  // Helper: Calculate trend percentage
+  const calcTrend = (current: number, previous: number) => {
+    if (previous === 0) return current === 0 ? 0 : 100;
+    return ((current - previous) / previous) * 100;
+  };
+
+  // Helper: Get KPI change values based on selected period
+  const getKPIChanges = () => {
+    if (!data) return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
+    if (selectedPeriod === "all_time") {
+      return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
+    }
+    // Map selectedPeriod to previous period
+    const periodMap: Record<string, string> = {
+      today: "yesterday",
+      last7: "prev7",
+      last30: "prev30",
+    };
+    const prevPeriod = periodMap[selectedPeriod] || null;
+    const type = showUniqueData ? "unique" : "total";
+    const viewsCurrent = getSummaryValue(
+      data.summary,
+      "views",
+      selectedPeriod,
+      type,
+      selectedSources
+    );
+    const viewsPrev = prevPeriod
+      ? getSummaryValue(
+          data.summary,
+          "views",
+          prevPeriod,
+          type,
+          selectedSources
+        )
+      : 0;
+    const clicksCurrent = getSummaryValue(
+      data.summary,
+      "clicks",
+      selectedPeriod,
+      type,
+      selectedSources
+    );
+    const clicksPrev = prevPeriod
+      ? getSummaryValue(
+          data.summary,
+          "clicks",
+          prevPeriod,
+          type,
+          selectedSources
+        )
+      : 0;
+    // Visits: uvijek koristi samo 'all' source
+    const visitsCurrent = getSummaryValue(
+      data.summary,
+      "visits",
+      selectedPeriod,
+      type,
+      ["all"]
+    );
+    const visitsPrev = prevPeriod
+      ? getSummaryValue(data.summary, "visits", prevPeriod, type, ["all"])
+      : 0;
+    const qrCurrent = getSummaryValue(
+      data.summary,
+      "qr_scans",
+      selectedPeriod,
+      type,
+      selectedSources
+    );
+    const qrPrev = prevPeriod
+      ? getSummaryValue(
+          data.summary,
+          "qr_scans",
+          prevPeriod,
+          type,
+          selectedSources
+        )
+      : 0;
+    return {
+      views: calcTrend(viewsCurrent, viewsPrev),
+      clicks: calcTrend(clicksCurrent, clicksPrev),
+      visits: calcTrend(visitsCurrent, visitsPrev),
+      qrScans: calcTrend(qrCurrent, qrPrev),
+    };
+  };
+
   // Helper: Get KPI values based on selected period and unique/total toggle
   const getKPIValues = () => {
     if (!data) return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
@@ -561,27 +648,6 @@ const Analytics = () => {
       selectedSources
     );
     return { views, clicks, visits, qrScans };
-  };
-
-  // Helper: Get KPI change values based on selected period
-  const getKPIChanges = () => {
-    if (!filteredData || !data)
-      return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
-
-    // Za all_time period ne prikazujemo trendove
-    if (selectedPeriod === "all_time") {
-      return { views: 0, clicks: 0, visits: 0, qrScans: 0 };
-    }
-
-    // Backend sada vraća trend podatke u summary.trend
-    const viewsChange = data
-      ? data.summary?.trend?.views?.[selectedPeriod] ?? 0
-      : 0;
-    const clicksChange = data
-      ? data.summary?.trend?.clicks?.[selectedPeriod] ?? 0
-      : 0;
-    // visits i qrScans nemaju trend
-    return { views: viewsChange, clicks: clicksChange, visits: 0, qrScans: 0 };
   };
 
   if (loading) {
@@ -1087,28 +1153,21 @@ const Analytics = () => {
               const secondaryValue = showUniqueData ? totalValue : uniqueValue;
               const mainLabel = showUniqueData ? t("unique") : t("total");
               const secondaryLabel = showUniqueData ? t("total") : t("unique");
+              // Trend za event type
               let trendValue = 0;
-              if (
-                selectedPeriod !== "all_time" &&
-                data &&
-                data.summary?.trend
-              ) {
-                if (eventType === "restaurant_view") {
-                  trendValue = data.summary.trend.views?.[selectedPeriod] ?? 0;
-                } else if (
-                  [
-                    "click_gallery",
-                    "click_reviews",
-                    "click_reserve",
-                    "click_menu",
-                    "click_menu_item",
-                    "click_phone",
-                    "click_map",
-                    "click_website",
-                  ].includes(eventType)
-                ) {
-                  trendValue = data.summary.trend.clicks?.[selectedPeriod] ?? 0;
-                }
+              if (selectedPeriod !== "all_time") {
+                const periodMap: Record<string, string> = {
+                  today: "yesterday",
+                  last7: "prev7",
+                  last30: "prev30",
+                };
+                const prevPeriod = periodMap[selectedPeriod] || null;
+                const type = showUniqueData ? "unique" : "total";
+                const current = eventData[type]?.[currentPeriod] || 0;
+                const prev = prevPeriod
+                  ? eventData[type]?.[prevPeriod] || 0
+                  : 0;
+                trendValue = calcTrend(current, prev);
               }
 
               return (

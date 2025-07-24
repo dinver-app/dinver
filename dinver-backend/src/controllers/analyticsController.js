@@ -74,15 +74,48 @@ function getChangePercentage(current, previous) {
 }
 
 // Helper za filtriranje po periodu
-const PERIODS = ['today', 'last7', 'last30', 'all_time'];
+const PERIODS = [
+  'today',
+  'yesterday',
+  'last7',
+  'prev7',
+  'last30',
+  'prev30',
+  'all_time',
+];
 const SOURCES = ['all', 'web', 'app'];
 
 function periodFilter(date, period) {
   const now = new Date();
   const d = new Date(date);
   if (period === 'today') return d.toDateString() === now.toDateString();
-  if (period === 'last7') return (now - d) / 86400000 < 7;
-  if (period === 'last30') return (now - d) / 86400000 < 30;
+  if (period === 'yesterday') {
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    return d.toDateString() === yesterday.toDateString();
+  }
+  if (period === 'last7')
+    return (now - d) / 86400000 < 7 && (now - d) / 86400000 >= 0;
+  if (period === 'prev7') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 14);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setDate(now.getDate() - 7);
+    end.setHours(23, 59, 59, 999);
+    return d >= start && d <= end;
+  }
+  if (period === 'last30')
+    return (now - d) / 86400000 < 30 && (now - d) / 86400000 >= 0;
+  if (period === 'prev30') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 60);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setDate(now.getDate() - 30);
+    end.setHours(23, 59, 59, 999);
+    return d >= start && d <= end;
+  }
   if (period === 'all_time') return true;
   return false;
 }
