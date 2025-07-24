@@ -616,5 +616,11 @@
   "status_updated_error": "Failed to update status.",
   "filter_by_status": "Filter by Status",
   "all_statuses": "All Statuses",
-  "view_details": "View Details"
+  "view_details": "View Details",
+  "generate_static_qr": "Generate static QR code",
+  "enter_url_to_generate_qr": "Enter the URL for which you want to generate a QR code.",
+  "download_svg": "Download SVG",
+  "download_png": "Download PNG",
+  "invalid_url": "Please enter a valid URL.",
+  "enter_valid_url_to_preview_qr": "Enter a valid URL to preview the QR code."
 }

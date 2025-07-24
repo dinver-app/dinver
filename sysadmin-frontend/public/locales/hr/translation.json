@@ -623,5 +623,11 @@
   "status_updated_error": "Greška pri ažuriranju statusa.",
   "filter_by_status": "Filtriraj po statusu",
   "all_statuses": "Svi statusi",
-  "view_details": "Pogledaj detalje"
+  "view_details": "Pogledaj detalje",
+  "generate_static_qr": "Generiraj statični QR kod",
+  "enter_url_to_generate_qr": "Unesi URL za koji želiš generirati QR kod.",
+  "download_svg": "Preuzmi SVG",
+  "download_png": "Preuzmi PNG",
+  "invalid_url": "Unesi ispravan URL.",
+  "enter_valid_url_to_preview_qr": "Unesi ispravan URL za prikaz QR koda."
 }

@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { QrCodeIcon } from "@heroicons/react/24/outline";
+import { QRCodeSVG } from "qrcode.react";
+import { useRef } from "react";
 
 const QRPrintRequests = () => {
   const { t } = useTranslation();
@@ -23,6 +25,10 @@ const QRPrintRequests = () => {
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrUrl, setQrUrl] = useState("");
+  const qrRef = useRef<HTMLDivElement>(null);
+  const [qrError, setQrError] = useState("");
 
   useEffect(() => {
     fetchRequests();
@@ -111,8 +117,137 @@ const QRPrintRequests = () => {
     );
   };
 
+  const handleDownloadSVG = () => {
+    if (!qrRef.current) return;
+    const svg = qrRef.current.querySelector("svg");
+    if (!svg) return;
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    const blob = new Blob([source], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "qr-code.svg";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPNG = () => {
+    if (!qrRef.current) return;
+    const svg = qrRef.current.querySelector("svg");
+    if (!svg) return;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const img = new window.Image();
+    img.src = "data:image/svg+xml;base64," + window.btoa(xml);
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      const pngUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = "qr-code.png";
+      a.click();
+    };
+  };
+
+  const validateUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <div className="mx-auto p-4">
+      {/* QR GENERATOR BUTTON */}
+      <div className="flex justify-end mb-4">
+        <button
+          className="px-3 py-1.5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition text-sm"
+          onClick={() => {
+            setShowQRModal(true);
+            setQrUrl("");
+            setQrError("");
+          }}
+        >
+          + {t("generate_static_qr")}
+        </button>
+      </div>
+      {/* QR GENERATOR MODAL */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowQRModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              <QrCodeIcon className="w-6 h-6 text-blue-600" />
+              {t("generate_static_qr")}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {t("enter_url_to_generate_qr")}
+            </p>
+            <input
+              type="text"
+              value={qrUrl}
+              onChange={(e) => {
+                setQrUrl(e.target.value);
+                setQrError("");
+              }}
+              placeholder="https://example.com"
+              className="w-full p-2 border border-gray-300 rounded mb-2"
+            />
+            {qrError && (
+              <div className="text-xs text-red-600 mb-2">{qrError}</div>
+            )}
+            <div className="flex flex-col items-center my-4" ref={qrRef}>
+              {qrUrl && validateUrl(qrUrl) ? (
+                <QRCodeSVG value={qrUrl} size={200} />
+              ) : (
+                <div className="text-gray-400 text-xs italic h-[200px] flex items-center justify-center">
+                  {t("enter_valid_url_to_preview_qr")}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 justify-center mt-2">
+              <button
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
+                disabled={!qrUrl || !validateUrl(qrUrl)}
+                onClick={() => {
+                  if (!qrUrl || !validateUrl(qrUrl)) {
+                    setQrError(t("invalid_url"));
+                    return;
+                  }
+                  handleDownloadSVG();
+                }}
+              >
+                {t("download_svg")}
+              </button>
+              <button
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
+                disabled={!qrUrl || !validateUrl(qrUrl)}
+                onClick={() => {
+                  if (!qrUrl || !validateUrl(qrUrl)) {
+                    setQrError(t("invalid_url"));
+                    return;
+                  }
+                  handleDownloadPNG();
+                }}
+              >
+                {t("download_png")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col justify-between items-start mb-4">
         <h1 className="page-title">{t("qr_print_requests")}</h1>
         <h3 className="page-subtitle">{t("list_of_all_qr_print_requests")}</h3>
