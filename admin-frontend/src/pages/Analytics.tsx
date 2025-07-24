@@ -1163,14 +1163,15 @@ const Analytics = () => {
                 };
                 const prevPeriod = periodMap[selectedPeriod] || null;
                 const type = showUniqueData ? "unique" : "total";
-                // Ispravno sumiraj sve izabrane sourceove
+                // Za trend koristi originalni data.events
+                const eventDataRaw = data.events[eventType];
                 const sumSources = (
                   obj: Record<string, number>,
                   sources: string[]
                 ) => sources.reduce((sum, s) => sum + (obj?.[s] || 0), 0);
-                const currentObj = eventData[type]?.[currentPeriod];
+                const currentObj = eventDataRaw?.[currentPeriod]?.[type];
                 const prevObj = prevPeriod
-                  ? eventData[type]?.[prevPeriod]
+                  ? eventDataRaw?.[prevPeriod]?.[type]
                   : undefined;
                 const current =
                   typeof currentObj === "object" && currentObj !== null
