@@ -657,5 +657,17 @@
   "approved": "Odobreno",
   "rejected": "Odbijen",
   "printed": "Ispisano",
-  "confirm_send_qr_request": "Želite li sigurno poslati zahtjev za izradu {{n}} QR naljepnica?"
+  "confirm_send_qr_request": "Želite li sigurno poslati zahtjev za izradu {{n}} QR naljepnica?",
+  "kpi_total_views_desc": "Broj otvaranja profila restorana (restaurantDetails) na webu ili aplikaciji.",
+  "kpi_total_clicks_desc": "Sve interakcije korisnika na profilu restorana (klikovi na galeriju, recenzije, rezervaciju, meni, stavku, telefon, mapu, web, ...)",
+  "kpi_total_visits_desc": "Svi potvrđeni dolasci korisnika u restoran (potvrđeni kroz sustav).",
+  "kpi_total_qr_scans_desc": "Broj korisnika koji su skenirali QR kod menija restorana.",
+  "event_type_profile_views_desc": "Broj otvaranja profila restorana (restaurantDetails) na webu ili aplikaciji.",
+  "event_type_click_desc": "Broj klikova na određenu sekciju ili akciju na profilu restorana (npr. galerija, recenzije, rezervacija, meni, stavka, telefon, mapa, web, ...)",
+  "kpi_profile_views_short": "Pregledi profila",
+  "kpi_clicks_short": "Svi klikovi",
+  "kpi_visits_short": "Potvrđene posjete",
+  "kpi_qr_scans_short": "QR skeniranja jelovnika",
+  "event_type_profile_views_short": "Pregledi profila",
+  "event_type_click_short": "Klikovi"
 }

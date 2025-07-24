@@ -657,5 +657,17 @@
   "approved": "Approved",
   "rejected": "Rejected",
   "printed": "Printed",
-  "confirm_send_qr_request": "Are you sure you want to send a request for {{n}} QR stickers?"
+  "confirm_send_qr_request": "Are you sure you want to send a request for {{n}} QR stickers?",
+  "kpi_total_views_desc": "Number of times a restaurant profile (restaurantDetails) was opened on web or app.",
+  "kpi_total_clicks_desc": "All user interactions on the restaurant profile (clicks on gallery, reviews, reservation, menu, item, phone, map, website, etc.)",
+  "kpi_total_visits_desc": "All confirmed visits by users to the restaurant (confirmed through the system).",
+  "kpi_total_qr_scans_desc": "Number of users who scanned the restaurant's QR menu code.",
+  "event_type_profile_views_desc": "Number of times a restaurant profile (restaurantDetails) was opened on web or app.",
+  "event_type_click_desc": "Number of clicks on a specific section or action on the restaurant profile (e.g. gallery, reviews, reservation, menu, item, phone, map, website, etc.)",
+  "kpi_profile_views_short": "Profile views",
+  "kpi_clicks_short": "All clicks",
+  "kpi_visits_short": "Confirmed visits",
+  "kpi_qr_scans_short": "QR menu scans",
+  "event_type_profile_views_short": "Profile views",
+  "event_type_click_short": "Clicks"
 }
