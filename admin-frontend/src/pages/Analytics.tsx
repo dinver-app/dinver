@@ -22,12 +22,15 @@ import {
   TableCellsIcon,
   ArrowPathIcon,
   UserGroupIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
 } from "@heroicons/react/24/solid";
 import { useTranslation } from "react-i18next";
+import { Tooltip } from "react-tooltip";
+import "react-tooltip/dist/react-tooltip.css";
 
 // Types
 interface AnalyticsSummary {
@@ -73,6 +76,11 @@ interface AnalyticsSummary {
     Record<string, Record<string, Record<string, number>>>
   >;
   hourlyActivity: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityViews: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityClicks: Record<
+    string,
+    Record<string, Record<string, number[]>>
+  >;
   topMenuItems: Record<
     string,
     Record<string, Array<{ name: string; count: number }>>
@@ -114,8 +122,6 @@ const Analytics = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("last7");
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [showUniqueData, setShowUniqueData] = useState(false);
-  const [isAutoRefresh, setIsAutoRefresh] = useState(true);
-  const [refreshInterval, _] = useState(30); // seconds
 
   const restaurantId =
     JSON.parse(localStorage.getItem("currentRestaurant") || "{}")?.id || "";
@@ -217,22 +223,6 @@ const Analytics = () => {
       fetchData();
     }
   }, [restaurantId]);
-
-  // Auto-refresh effect
-  useEffect(() => {
-    if (!isAutoRefresh || !restaurantId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const response = await getAnalyticsSummary(restaurantId);
-        setData(response);
-      } catch (err) {
-        console.error("Auto-refresh failed:", err);
-      }
-    }, refreshInterval * 1000); // Convert seconds to milliseconds
-
-    return () => clearInterval(interval);
-  }, [isAutoRefresh, restaurantId, refreshInterval]);
 
   // Helper function to filter data by selected sources
   const getFilteredData = (): AnalyticsSummary | null => {
@@ -359,13 +349,23 @@ const Analytics = () => {
     );
   };
 
+  // Helper: Render title with info icon (returns string only)
+  const InfoIcon = ({ infoKey }: { infoKey: string }) => (
+    <span
+      data-tooltip-id={infoKey}
+      className="ml-1 cursor-pointer align-middle"
+    >
+      <InformationCircleIcon className="w-4 h-4 text-gray-400 hover:text-blue-500 inline" />
+    </span>
+  );
+
   const StatCard = ({
     title,
     value,
     change,
     icon: Icon,
     color,
-    subtitle,
+    infoKey,
   }: {
     title: string;
     value: number;
@@ -373,6 +373,7 @@ const Analytics = () => {
     icon: any;
     color: string;
     subtitle?: string;
+    infoKey?: string;
   }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
@@ -382,11 +383,26 @@ const Analytics = () => {
         <TrendIndicator value={change} className="text-sm" />
       </div>
       <div className="space-y-1">
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
+            {title}
+            {infoKey && <InfoIcon infoKey={infoKey} />}
+            {infoKey && (
+              <Tooltip
+                id={infoKey}
+                place="top"
+                style={{ zIndex: 9999 }}
+                className="text-xs font-medium text-gray-100"
+              >
+                {t(infoKey)}
+              </Tooltip>
+            )}
+          </span>
+        </div>
         <h3 className="text-2xl font-bold text-gray-900">
           {value.toLocaleString()}
         </h3>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        {/* Subtitle removed for KPI cards as per request */}
       </div>
     </div>
   );
@@ -425,8 +441,12 @@ const Analytics = () => {
     if (!data) return [];
     const currentPeriod =
       selectedPeriod === "all_time" ? "last30" : selectedPeriod;
-    const hourlyData =
-      data.hourlyActivity?.[currentPeriod]?.[
+    const viewsData =
+      data.hourlyActivityViews?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || {};
+    const clicksData =
+      data.hourlyActivityClicks?.[currentPeriod]?.[
         showUniqueData ? "unique" : "total"
       ] || {};
 
@@ -436,12 +456,13 @@ const Analytics = () => {
 
       // Sum selected sources
       for (const source of selectedSources) {
-        const sourceData = hourlyData[source] || [];
-        if (Array.isArray(sourceData)) {
-          views += sourceData[hour] || 0;
-          // For clicks, sum all click events
-          // This is simplified - in reality you'd need to sum specific click events
-          clicks += sourceData[hour] || 0;
+        const vArr = viewsData[source] || [];
+        const cArr = clicksData[source] || [];
+        if (Array.isArray(vArr)) {
+          views += vArr[hour] || 0;
+        }
+        if (Array.isArray(cArr)) {
+          clicks += cArr[hour] || 0;
         }
       }
 
@@ -650,33 +671,6 @@ const Analytics = () => {
     return { views, clicks, visits, qrScans };
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t("loading_analytics")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {t("try_again")}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (!data) return null;
 
   const filteredData = getFilteredData()!;
@@ -719,57 +713,6 @@ const Analytics = () => {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-4 flex-wrap">
-                {/* Manual Refresh Button */}
-                <button
-                  onClick={async () => {
-                    try {
-                      setLoading(true);
-                      const response = await getAnalyticsSummary(restaurantId);
-                      setData(response);
-                    } catch (err) {
-                      setError("Greška pri ručnom osvježavanju");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                    loading
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-300"
-                  }`}
-                  title={t("manual_refresh")}
-                >
-                  <ArrowPathIcon
-                    className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                  />
-                  <span className="text-sm">{t("refresh")}</span>
-                </button>
-                {/* Auto-refresh Toggle */}
-                <div className="flex items-center gap-2">
-                  <ArrowPathIcon
-                    className={`w-5 h-5 transition-all duration-300 ${
-                      isAutoRefresh ? "text-green-500" : "text-gray-500"
-                    } ${isAutoRefresh && !loading ? "animate-pulse" : ""}`}
-                  />
-                  <button
-                    type="button"
-                    aria-pressed={isAutoRefresh}
-                    onClick={() => setIsAutoRefresh((v) => !v)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      isAutoRefresh ? "bg-blue-600" : "bg-gray-200"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        isAutoRefresh ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                  <span className="ml-2 text-sm text-gray-700 select-none">
-                    {t("auto_refresh")}
-                  </span>
-                </div>
                 {/* Unique vs Total Toggle */}
                 <div className="flex items-center gap-2">
                   <UserGroupIcon className="w-5 h-5 text-gray-500" />
@@ -903,36 +846,36 @@ const Analytics = () => {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
-            title={t("total_views")}
+            title={t("kpi_profile_views_short")}
             value={getKPIValues().views}
             change={getKPIChanges().views}
             icon={EyeIcon}
             color="bg-blue-500"
-            subtitle={t("all_profile_views")}
+            infoKey="kpi_total_views_desc"
           />
           <StatCard
-            title={t("total_clicks")}
+            title={t("kpi_clicks_short")}
             value={getKPIValues().clicks}
             change={getKPIChanges().clicks}
             icon={CursorArrowRaysIcon}
             color="bg-green-500"
-            subtitle={t("all_interactions")}
+            infoKey="kpi_total_clicks_desc"
           />
           <StatCard
-            title={t("total_visits")}
+            title={t("kpi_visits_short")}
             value={getKPIValues().visits}
             change={getKPIChanges().visits}
             icon={UserGroupIcon}
             color="bg-indigo-500"
-            subtitle={t("all_confirmed_visits")}
+            infoKey="kpi_total_visits_desc"
           />
           <StatCard
-            title={t("total_qr_scans")}
+            title={t("kpi_qr_scans_short")}
             value={getKPIValues().qrScans}
             change={getKPIChanges().qrScans}
             icon={ChartBarIcon}
             color="bg-yellow-500"
-            subtitle={t("all_qr_scans")}
+            infoKey="kpi_total_qr_scans_desc"
           />
         </div>
 
@@ -1184,6 +1127,12 @@ const Analytics = () => {
                 trendValue = calcTrend(current, prev);
               }
 
+              // Novi opis ispod naslova
+              let eventInfoKey =
+                eventType === "restaurant_view"
+                  ? "event_type_profile_views_desc"
+                  : "event_type_click_desc";
+
               return (
                 <div
                   key={eventType}
@@ -1201,8 +1150,18 @@ const Analytics = () => {
                           )}`}
                         />
                       </div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-gray-900 flex items-center gap-1">
                         {config.label}
+                        <InfoIcon infoKey={eventInfoKey} />
+                        <Tooltip
+                          id={eventInfoKey}
+                          place="top"
+                          style={{ zIndex: 9999 }}
+                        >
+                          <span className="text-xs font-medium text-gray-100">
+                            {t(eventInfoKey)}
+                          </span>
+                        </Tooltip>
                       </h4>
                     </div>
                     <TrendIndicator value={trendValue} className="text-xs" />
@@ -1224,6 +1183,7 @@ const Analytics = () => {
                       <span>{secondaryLabel}:</span>
                       <span>{secondaryValue.toLocaleString()}</span>
                     </div>
+                    {/* Subtitle removed for event type grid as per request */}
                   </div>
                 </div>
               );
@@ -1267,12 +1227,12 @@ const Analytics = () => {
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
                           {index + 1}
                         </div>
                         <h4
-                          className="font-medium text-gray-900 truncate w-full max-w-[180px]"
+                          className="font-medium text-gray-900 truncate"
                           title={item.name}
                         >
                           {item.name}

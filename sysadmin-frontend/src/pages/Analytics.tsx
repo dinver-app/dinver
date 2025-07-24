@@ -44,6 +44,11 @@ interface AnalyticsSummary {
     Record<string, Record<string, Record<string, number>>>
   >;
   hourlyActivity: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityViews: Record<string, Record<string, Record<string, number[]>>>;
+  hourlyActivityClicks: Record<
+    string,
+    Record<string, Record<string, number[]>>
+  >;
   topMenuItems: Record<
     string,
     Record<string, Array<{ name: string; count: number }>>
@@ -482,8 +487,12 @@ const Analytics = () => {
     if (!data) return [];
     const currentPeriod =
       selectedPeriod === "all_time" ? "last30" : selectedPeriod;
-    const hourlyData =
-      data.hourlyActivity?.[currentPeriod]?.[
+    const viewsData =
+      data.hourlyActivityViews?.[currentPeriod]?.[
+        showUniqueData ? "unique" : "total"
+      ] || {};
+    const clicksData =
+      data.hourlyActivityClicks?.[currentPeriod]?.[
         showUniqueData ? "unique" : "total"
       ] || {};
 
@@ -491,22 +500,15 @@ const Analytics = () => {
       let views = 0;
       let clicks = 0;
 
-      // Sum selected sources for each hour
+      // Sum selected sources
       for (const source of selectedSources) {
-        // Views - from restaurant_view events
-        const viewData = hourlyData[source] || [];
-        if (Array.isArray(viewData)) {
-          views += viewData[hour] || 0;
+        const vArr = viewsData[source] || [];
+        const cArr = clicksData[source] || [];
+        if (Array.isArray(vArr)) {
+          views += vArr[hour] || 0;
         }
-
-        // Clicks - sum all click events for this source
-        for (const [eventType, sourceHours] of Object.entries(hourlyData)) {
-          if (eventType.startsWith("click_")) {
-            const clickData = sourceHours as number[];
-            if (Array.isArray(clickData)) {
-              clicks += clickData[hour] || 0;
-            }
-          }
+        if (Array.isArray(cArr)) {
+          clicks += cArr[hour] || 0;
         }
       }
 
@@ -1620,12 +1622,12 @@ const Analytics = () => {
                         className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
                               {index + 1}
                             </div>
                             <h4
-                              className="font-medium text-gray-900 truncate w-full max-w-[180px]"
+                              className="font-medium text-gray-900 truncate"
                               title={item.name}
                             >
                               {item.name}
