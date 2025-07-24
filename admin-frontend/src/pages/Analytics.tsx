@@ -1163,10 +1163,23 @@ const Analytics = () => {
                 };
                 const prevPeriod = periodMap[selectedPeriod] || null;
                 const type = showUniqueData ? "unique" : "total";
-                const current = eventData[type]?.[currentPeriod] || 0;
-                const prev = prevPeriod
-                  ? eventData[type]?.[prevPeriod] || 0
-                  : 0;
+                // Ispravno sumiraj sve izabrane sourceove
+                const sumSources = (
+                  obj: Record<string, number>,
+                  sources: string[]
+                ) => sources.reduce((sum, s) => sum + (obj?.[s] || 0), 0);
+                const currentObj = eventData[type]?.[currentPeriod];
+                const prevObj = prevPeriod
+                  ? eventData[type]?.[prevPeriod]
+                  : undefined;
+                const current =
+                  typeof currentObj === "object" && currentObj !== null
+                    ? sumSources(currentObj, selectedSources)
+                    : 0;
+                const prev =
+                  prevObj && typeof prevObj === "object" && prevObj !== null
+                    ? sumSources(prevObj, selectedSources)
+                    : 0;
                 trendValue = calcTrend(current, prev);
               }
 
