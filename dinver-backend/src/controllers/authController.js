@@ -49,11 +49,13 @@ const register = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        maxAge: 3 * 60 * 1000, // 3 minutes for testing
       });
       res.cookie('token', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
+        maxAge: 1 * 60 * 1000, // 1 minute for testing
       });
     }
 
@@ -113,13 +115,13 @@ const login = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
+        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
     }
 
@@ -205,13 +207,13 @@ const checkAuth = async (req, res) => {
       return res.status(403).json({ isAuthenticated: false });
     }
 
-    // If access token is valid and we're close to expiry (less than 1 hour left),
+    // If access token is valid and we're close to expiry (less than 30 seconds left),
     // proactively refresh both tokens
     const tokenData = jwt.decode(token);
     const timeUntilExpiry = tokenData.exp - Math.floor(Date.now() / 1000);
 
-    if (timeUntilExpiry < 60 * 60) {
-      // Less than 1 hour left
+    if (timeUntilExpiry < 30) {
+      // Less than 30 seconds left
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
         generateTokens(user);
 
@@ -219,14 +221,14 @@ const checkAuth = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
+        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
 
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
 
       return res.json({
@@ -264,14 +266,14 @@ const checkAuth = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days in milliseconds
+        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
 
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
 
       return res.json({
@@ -410,13 +412,13 @@ async function refreshToken(req, res) {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
+        maxAge: 3 * 60 * 1000, // 3 minutes for testing
       });
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 1 * 60 * 1000, // 1 minute for testing
       });
     } else {
       // Za mobile aplikaciju
