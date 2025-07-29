@@ -3,6 +3,36 @@ const fs = require('fs');
 const path = require('path');
 const { Restaurant } = require('../models');
 
+/**
+ * Generate a unique slug for restaurant name
+ * @param {string} name - Restaurant name
+ * @returns {string} - Unique slug
+ */
+async function generateSlug(name) {
+  const normalizedName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[čć]/g, 'c')
+    .replace(/[š]/g, 's')
+    .replace(/[ž]/g, 'z')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^\w\s-]/g, '');
+
+  const baseSlug = normalizedName
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w\-]+/g, '');
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (await Restaurant.findOne({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
+
 // Command line interface
 if (require.main === module) {
   const args = process.argv.slice(2);
@@ -68,71 +98,106 @@ async function populateDatabase(updateIfExists = false) {
       const addressParts = entry.vicinity.split(',');
       const place = addressParts[addressParts.length - 1].trim();
 
-      // Clean opening hours JSON
-      const cleanOpeningHours = entry.opening_hours
-        ? {
-            open_now: entry.opening_hours.open_now,
-            periods: entry.opening_hours.periods || [],
-            weekday_text: entry.opening_hours.weekday_text || [],
+      // Clean opening hours JSON - convert to expected format
+      let cleanOpeningHours = null;
+      if (entry.opening_hours) {
+        cleanOpeningHours = {
+          open_now: entry.opening_hours.open_now,
+          periods: [],
+          weekday_text: entry.opening_hours.weekday_text || [],
+        };
+
+        // Convert periods to the expected format if they exist
+        if (
+          entry.opening_hours.periods &&
+          entry.opening_hours.periods.length > 0
+        ) {
+          // Filter out periods with empty or invalid times
+          const validPeriods = entry.opening_hours.periods.filter(
+            (period) =>
+              period.open &&
+              period.close &&
+              period.open.time &&
+              period.close.time &&
+              period.open.time !== '' &&
+              period.close.time !== '' &&
+              period.open.day !== undefined &&
+              period.close.day !== undefined,
+          );
+
+          if (validPeriods.length > 0) {
+            cleanOpeningHours.periods = validPeriods.map((period) => ({
+              open: {
+                day: period.open.day,
+                time: period.open.time,
+              },
+              close: {
+                day: period.close.day,
+                time: period.close.time,
+              },
+              shifts: period.shifts || [],
+            }));
+          } else {
+            // If no valid periods, set periods to empty array
+            cleanOpeningHours.periods = [];
+            console.log(
+              '⚠️  No valid opening hours periods found, setting to empty array',
+            );
           }
-        : null;
+        }
+      }
+
+      const dbData = {
+        name: entry.name,
+        placeId: entry.place_id,
+        address: entry.vicinity,
+        place: place,
+        latitude: entry.geometry.location.lat,
+        longitude: entry.geometry.location.lng,
+        rating: entry.rating,
+        userRatingsTotal: entry.user_ratings_total,
+        priceLevel: entry.price_level,
+        isOpenNow: entry.opening_hours ? entry.opening_hours.open_now : null,
+        types: entry.types || null,
+        phone: entry.phone,
+        websiteUrl: entry.website,
+      };
+
+      // Only add openingHours if we have valid data
+      if (cleanOpeningHours && cleanOpeningHours.periods.length > 0) {
+        // Store as JSON object, not string
+        dbData.openingHours = cleanOpeningHours;
+        console.log('✅ Opening hours saved as JSON object');
+      } else {
+        console.log('ℹ️  Skipping opening hours - no valid data available');
+      }
 
       if (existingRestaurant) {
         if (updateIfExists) {
+          // Generate slug for existing restaurant
+          const slug = await generateSlug(entry.name);
           await existingRestaurant.update({
-            name: entry.name,
-            address: entry.vicinity,
-            latitude: entry.geometry.location.lat,
-            longitude: entry.geometry.location.lng,
-            rating: entry.rating,
-            userRatingsTotal: entry.user_ratings_total,
-            priceLevel: entry.price_level,
-            isOpenNow: entry.opening_hours
-              ? entry.opening_hours.open_now
-              : null,
-            openingHours: cleanOpeningHours
-              ? JSON.stringify(cleanOpeningHours)
-              : null,
-            types: entry.types || null,
-            iconUrl: entry.icon,
-            photoReference:
-              entry.photos && entry.photos.length > 0
-                ? entry.photos[0].photo_reference
-                : null,
-            vicinity: entry.vicinity,
-            businessStatus: entry.business_status,
-            geometry: cleanGeometry ? JSON.stringify(cleanGeometry) : null,
-            iconBackgroundColor: entry.icon_background_color,
-            iconMaskBaseUri: entry.icon_mask_base_uri,
-
-            plusCode: cleanPlusCode ? JSON.stringify(cleanPlusCode) : null,
+            ...dbData,
+            slug: slug,
           });
-          console.log(`Updated restaurant with place_id: ${entry.place_id}`);
+          console.log(
+            `Updated restaurant with place_id: ${entry.place_id} (slug: ${slug})`,
+          );
         } else {
           console.log(
             `Restaurant with place_id: ${entry.place_id} already exists. Skipping...`,
           );
         }
       } else {
+        // Generate slug for new restaurant
+        const slug = await generateSlug(entry.name);
         await Restaurant.create({
-          name: entry.name,
-          placeId: entry.place_id,
-          address: entry.vicinity,
-          place: place,
-          latitude: entry.geometry.location.lat,
-          longitude: entry.geometry.location.lng,
-          rating: entry.rating,
-          userRatingsTotal: entry.user_ratings_total,
-          priceLevel: entry.price_level,
-          isOpenNow: entry.opening_hours ? entry.opening_hours.open_now : null,
-          openingHours: cleanOpeningHours
-            ? JSON.stringify(cleanOpeningHours)
-            : null,
-          types: entry.types || null,
-          phone: entry.phone,
-          websiteUrl: entry.website,
+          ...dbData,
+          slug: slug,
         });
-        console.log(`Added new restaurant with place_id: ${entry.place_id}`);
+        console.log(
+          `Added new restaurant with place_id: ${entry.place_id} (slug: ${slug})`,
+        );
       }
     }
     console.log('Database operation completed successfully!');

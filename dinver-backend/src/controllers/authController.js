@@ -49,13 +49,11 @@ const register = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 3 * 60 * 1000, // 3 minutes for testing
       });
       res.cookie('token', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 1 * 60 * 1000, // 1 minute for testing
       });
     }
 
@@ -116,13 +114,11 @@ const login = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
     }
 
@@ -222,14 +218,12 @@ const checkAuth = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
 
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
 
       return res.json({
@@ -267,14 +261,12 @@ const checkAuth = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 3 * 60 * 1000, // 3 minutes in milliseconds for testing
       });
 
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 1 * 60 * 1000, // 1 minute in milliseconds for testing
       });
 
       return res.json({
@@ -413,13 +405,11 @@ async function refreshToken(req, res) {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 3 * 60 * 1000, // 3 minutes for testing
       });
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
-        maxAge: 1 * 60 * 1000, // 1 minute for testing
       });
     } else {
       // Za mobile aplikaciju
