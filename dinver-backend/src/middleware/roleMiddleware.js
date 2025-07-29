@@ -13,7 +13,12 @@ function authenticateToken(tokenName, refreshTokenName) {
 
     // Ako nema u cookieju, provjeri Authorization header (mobile)
     if (!token && req.headers.authorization) {
-      token = req.headers.authorization;
+      // Handle both "Bearer <token>" and direct token formats
+      if (req.headers.authorization.startsWith('Bearer ')) {
+        token = req.headers.authorization.split(' ')[1];
+      } else {
+        token = req.headers.authorization;
+      }
       // Za mobile, refresh token će biti poslan u posebnom headeru
       refreshToken = req.headers['x-refresh-token'];
     }
@@ -42,11 +47,13 @@ function authenticateToken(tokenName, refreshTokenName) {
             res.cookie(refreshTokenName, newRefreshToken, {
               httpOnly: true,
               secure: true,
+              sameSite: 'none',
             });
 
             res.cookie(tokenName, accessToken, {
               httpOnly: true,
               secure: true,
+              sameSite: 'none',
             });
           } else {
             // Ako je mobile request, pošalji tokene u response headers
@@ -65,6 +72,40 @@ function authenticateToken(tokenName, refreshTokenName) {
       const user = await User.findByPk(decodedUser.id);
       if (!user) {
         return res.status(401).json({ error: 'User not found' });
+      }
+
+      // Proaktivno osvježavanje tokena ako je blizu isteka (manje od 30 sekundi)
+      try {
+        const tokenData = jwt.decode(token);
+        const timeUntilExpiry = tokenData.exp - Math.floor(Date.now() / 1000);
+
+        if (timeUntilExpiry < 30) {
+          // Manje od 30 sekundi do isteka, osvježi tokene
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+            generateTokens(user);
+
+          // Ako je web request (ima cookies), postavi nove cookieje
+          if (req.cookies[tokenName]) {
+            res.cookie(refreshTokenName, newRefreshToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: 'none',
+            });
+
+            res.cookie(tokenName, newAccessToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: 'none',
+            });
+          } else {
+            // Ako je mobile request, pošalji tokene u response headers
+            res.setHeader('X-Access-Token', newAccessToken);
+            res.setHeader('X-Refresh-Token', newRefreshToken);
+          }
+        }
+      } catch (error) {
+        console.error('Error in proactive token refresh:', error);
+        // Nastavi s originalnim tokenom ako nešto ne uspije
       }
 
       req.user = user;
@@ -217,7 +258,12 @@ const appOptionalAuth = (req, res, next) => {
 
   // Ako nema u cookieju, provjeri Authorization header (mobile)
   if (!token && req.headers.authorization) {
-    token = req.headers.authorization;
+    // Handle both "Bearer <token>" and direct token formats
+    if (req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else {
+      token = req.headers.authorization;
+    }
     refreshToken = req.headers['x-refresh-token'];
   }
 
@@ -250,11 +296,13 @@ const appOptionalAuth = (req, res, next) => {
           res.cookie('appRefreshToken', newRefreshToken, {
             httpOnly: true,
             secure: true,
+            sameSite: 'none',
           });
 
           res.cookie('appAccessToken', accessToken, {
             httpOnly: true,
             secure: true,
+            sameSite: 'none',
           });
         } else {
           // Ako je mobile request, pošalji tokene u response headers

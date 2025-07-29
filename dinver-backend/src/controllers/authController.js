@@ -109,12 +109,12 @@ const login = async (req, res) => {
     // Za web aplikaciju
     if (req.headers['user-agent']?.includes('Mozilla')) {
       console.log('Setting cookies for web client');
-      res.cookie('refreshToken', refreshToken, {
+      res.cookie('appRefreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
       });
-      res.cookie('accessToken', accessToken, {
+      res.cookie('appAccessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
@@ -147,12 +147,12 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   // Clear both cookies
-  res.clearCookie('accessToken', {
+  res.clearCookie('appAccessToken', {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
   });
-  res.clearCookie('refreshToken', {
+  res.clearCookie('appRefreshToken', {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
@@ -184,8 +184,8 @@ const checkAuth = async (req, res) => {
   let token;
 
   // Try to get access token from cookies or Authorization header
-  if (req.cookies?.accessToken) {
-    token = req.cookies.accessToken;
+  if (req.cookies?.appAccessToken) {
+    token = req.cookies.appAccessToken;
   } else if (req.headers.authorization?.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
   }
@@ -213,17 +213,24 @@ const checkAuth = async (req, res) => {
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
         generateTokens(user);
 
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      });
+      // Set cookies for web client
+      if (req.cookies?.appAccessToken) {
+        res.cookie('appRefreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
 
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      });
+        res.cookie('appAccessToken', newAccessToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+      } else {
+        // For mobile client, send tokens in response headers
+        res.setHeader('X-Access-Token', newAccessToken);
+        res.setHeader('X-Refresh-Token', newRefreshToken);
+      }
 
       return res.json({
         isAuthenticated: true,
@@ -234,7 +241,8 @@ const checkAuth = async (req, res) => {
     return res.json({ isAuthenticated: true });
   } catch (err) {
     // If access token is invalid or expired, try refresh token
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken =
+      req.cookies?.appRefreshToken || req.headers['x-refresh-token'];
     if (!refreshToken) {
       return res.status(401).json({ isAuthenticated: false });
     }
@@ -255,18 +263,24 @@ const checkAuth = async (req, res) => {
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
         generateTokens(user);
 
-      // Set new cookies with renewed expiration
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      });
+      // Set new cookies with renewed expiration for web client
+      if (req.cookies?.appAccessToken) {
+        res.cookie('appRefreshToken', newRefreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
 
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-      });
+        res.cookie('appAccessToken', newAccessToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+        });
+      } else {
+        // For mobile client, send tokens in response headers
+        res.setHeader('X-Access-Token', newAccessToken);
+        res.setHeader('X-Refresh-Token', newRefreshToken);
+      }
 
       return res.json({
         isAuthenticated: true,
@@ -379,7 +393,7 @@ const adminCheckAuth = async (req, res) => {
 
 async function refreshToken(req, res) {
   // Get refresh token from cookie or header
-  let refreshToken = req.cookies.refreshToken;
+  let refreshToken = req.cookies?.appRefreshToken;
   if (!refreshToken && req.headers['x-refresh-token']) {
     refreshToken = req.headers['x-refresh-token'];
   }
@@ -400,12 +414,12 @@ async function refreshToken(req, res) {
 
     // Za web aplikaciju
     if (req.headers['user-agent']?.includes('Mozilla')) {
-      res.cookie('refreshToken', newRefreshToken, {
+      res.cookie('appRefreshToken', newRefreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
       });
-      res.cookie('accessToken', accessToken, {
+      res.cookie('appAccessToken', accessToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
