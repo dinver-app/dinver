@@ -89,6 +89,38 @@ function saveToJsonFile(restaurantData) {
 }
 
 /**
+ * Generate a unique slug for restaurant name
+ * @param {string} name - Restaurant name
+ * @returns {string} - Unique slug
+ */
+async function generateSlug(name) {
+  const { Restaurant } = require('../models');
+
+  const normalizedName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[čć]/g, 'c')
+    .replace(/[š]/g, 's')
+    .replace(/[ž]/g, 'z')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^\w\s-]/g, '');
+
+  const baseSlug = normalizedName
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w\-]+/g, '');
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (await Restaurant.findOne({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
+
+/**
  * Insert restaurant into database
  * @param {Object} restaurantData - Restaurant data to insert
  * @param {boolean} updateIfExists - Whether to update if restaurant already exists
@@ -120,14 +152,78 @@ async function insertIntoDatabase(
     const addressParts = restaurantData.vicinity.split(',');
     const place = addressParts[addressParts.length - 1].trim();
 
-    // Clean opening hours JSON
-    const cleanOpeningHours = restaurantData.opening_hours
-      ? {
-          open_now: restaurantData.opening_hours.open_now,
-          periods: restaurantData.opening_hours.periods || [],
-          weekday_text: restaurantData.opening_hours.weekday_text || [],
+    // Clean opening hours JSON - convert to expected format
+    let cleanOpeningHours = null;
+    if (restaurantData.opening_hours) {
+      console.log(
+        '🔍 Raw opening hours from API:',
+        JSON.stringify(restaurantData.opening_hours, null, 2),
+      );
+
+      cleanOpeningHours = {
+        open_now: restaurantData.opening_hours.open_now,
+        periods: [],
+        weekday_text: restaurantData.opening_hours.weekday_text || [],
+      };
+
+      // Convert periods to the expected format if they exist
+      if (
+        restaurantData.opening_hours.periods &&
+        restaurantData.opening_hours.periods.length > 0
+      ) {
+        console.log(
+          '📅 Processing periods:',
+          restaurantData.opening_hours.periods.length,
+          'periods found',
+        );
+
+        // Filter out periods with empty or invalid times
+        const validPeriods = restaurantData.opening_hours.periods.filter(
+          (period) => {
+            const isValid =
+              period.open &&
+              period.close &&
+              period.open.time &&
+              period.close.time &&
+              period.open.time !== '' &&
+              period.close.time !== '' &&
+              period.open.day !== undefined &&
+              period.close.day !== undefined;
+
+            if (!isValid) {
+              console.log('❌ Invalid period found:', period);
+            }
+            return isValid;
+          },
+        );
+
+        console.log('✅ Valid periods:', validPeriods.length);
+
+        if (validPeriods.length > 0) {
+          cleanOpeningHours.periods = validPeriods.map((period) => ({
+            open: {
+              day: period.open.day,
+              time: period.open.time,
+            },
+            close: {
+              day: period.close.day,
+              time: period.close.time,
+            },
+            shifts: period.shifts || [],
+          }));
+        } else {
+          // If no valid periods, set periods to empty array
+          cleanOpeningHours.periods = [];
+          console.log(
+            '⚠️  No valid opening hours periods found, setting to empty array',
+          );
         }
-      : null;
+      } else {
+        console.log('⚠️  No periods found in opening_hours');
+      }
+    } else {
+      console.log('⚠️  No opening_hours data available');
+    }
 
     const dbData = {
       name: restaurantData.name,
@@ -142,13 +238,31 @@ async function insertIntoDatabase(
       isOpenNow: restaurantData.opening_hours
         ? restaurantData.opening_hours.open_now
         : null,
-      openingHours: cleanOpeningHours
-        ? JSON.stringify(cleanOpeningHours)
-        : null,
       types: restaurantData.types || null,
       phone: restaurantData.phone,
       websiteUrl: restaurantData.website,
     };
+
+    // Only add openingHours if we have valid data
+    if (cleanOpeningHours && cleanOpeningHours.periods.length > 0) {
+      // Store as JSON object, not string
+      dbData.openingHours = cleanOpeningHours;
+      console.log('✅ Opening hours saved as JSON object');
+    } else {
+      console.log('ℹ️  Skipping opening hours - no valid data available');
+    }
+
+    // Generate slug for the restaurant
+    const slug = await generateSlug(restaurantData.name);
+    dbData.slug = slug;
+    console.log(`🔗 Generated slug: ${slug}`);
+
+    // Log opening hours format for debugging
+    if (cleanOpeningHours) {
+      console.log(
+        `🕒 Opening hours format: ${JSON.stringify(cleanOpeningHours).substring(0, 100)}...`,
+      );
+    }
 
     if (existingRestaurant) {
       if (updateIfExists || forceUpdate) {
@@ -156,6 +270,19 @@ async function insertIntoDatabase(
         console.log(
           `Updated restaurant with place_id: ${restaurantData.place_id}`,
         );
+
+        // Verify how it was stored
+        const updatedRestaurant = await Restaurant.findOne({
+          where: { placeId: restaurantData.place_id },
+        });
+        console.log(
+          `📊 Stored opening hours type: ${typeof updatedRestaurant.openingHours}`,
+        );
+        if (updatedRestaurant.openingHours) {
+          console.log(
+            `📊 Stored opening hours preview: ${JSON.stringify(updatedRestaurant.openingHours).substring(0, 100)}...`,
+          );
+        }
       } else {
         console.log(
           `Restaurant with place_id: ${restaurantData.place_id} already exists. Skipping...`,
@@ -168,6 +295,19 @@ async function insertIntoDatabase(
       console.log(
         `Added new restaurant with place_id: ${restaurantData.place_id}`,
       );
+
+      // Verify how it was stored
+      const newRestaurant = await Restaurant.findOne({
+        where: { placeId: restaurantData.place_id },
+      });
+      console.log(
+        `📊 Stored opening hours type: ${typeof newRestaurant.openingHours}`,
+      );
+      if (newRestaurant.openingHours) {
+        console.log(
+          `📊 Stored opening hours preview: ${JSON.stringify(newRestaurant.openingHours).substring(0, 100)}...`,
+        );
+      }
     }
   } catch (error) {
     console.error('Error inserting into database:', error);
@@ -182,13 +322,15 @@ async function insertIntoDatabase(
  * @param {boolean} insertToDb - Whether to insert into database
  * @param {boolean} updateIfExists - Whether to update if restaurant already exists
  * @param {boolean} forceUpdate - Whether to force update existing restaurant
+ * @param {string} jsonFile - Optional JSON file to load data from instead of API
  */
 async function fetchAndProcessRestaurant(
   placeId,
-  saveToJson = false, // Changed default to false
+  saveToJson = false,
   insertToDb = false,
   updateIfExists = false,
   forceUpdate = false,
+  jsonFile = null,
 ) {
   try {
     console.log('=== Restaurant Fetcher ===');
@@ -197,15 +339,41 @@ async function fetchAndProcessRestaurant(
     console.log(`Insert to DB: ${insertToDb}`);
     console.log(`Update if exists: ${updateIfExists}`);
     console.log(`Force update: ${forceUpdate}`);
+    if (jsonFile) {
+      console.log(`Load from JSON: ${jsonFile}`);
+    }
     console.log('');
 
     // Check if API key is available
-    if (!GOOGLE_API_KEY) {
+    if (!GOOGLE_API_KEY && !jsonFile) {
       throw new Error('GOOGLE_PLACES_API_KEY environment variable is required');
     }
 
     // Fetch restaurant data
-    const restaurantData = await fetchRestaurantDetails(placeId);
+    let restaurantData;
+    if (jsonFile) {
+      // Load from JSON file
+      const fs = require('fs');
+      const path = require('path');
+      const jsonPath = path.join(__dirname, '../data', jsonFile);
+
+      if (!fs.existsSync(jsonPath)) {
+        throw new Error(`JSON file not found: ${jsonPath}`);
+      }
+
+      const jsonContent = fs.readFileSync(jsonPath, 'utf8');
+      const jsonData = JSON.parse(jsonContent);
+
+      if (jsonData.length > 0) {
+        restaurantData = jsonData[0]; // Take first restaurant from array
+        console.log(`📁 Loaded restaurant data from: ${jsonFile}`);
+      } else {
+        throw new Error('No restaurant data found in JSON file');
+      }
+    } else {
+      // Fetch from API
+      restaurantData = await fetchRestaurantDetails(placeId);
+    }
 
     // Display fetched data
     console.log('=== Fetched Restaurant Data ===');
@@ -253,6 +421,7 @@ if (require.main === module) {
     console.log('  --update      Update if restaurant exists in database');
     console.log('  --force       Force update even if restaurant exists');
     console.log('  --prod        Use production database');
+    console.log('  --json <file> Load restaurant data from a JSON file');
     console.log('');
     console.log('Examples:');
     console.log('  node fetchSingleRestaurant.js ChIJN1t_tDeuEmsRUsoyG83frY4');
@@ -268,6 +437,9 @@ if (require.main === module) {
     console.log(
       '  node fetchSingleRestaurant.js ChIJN1t_tDeuEmsRUsoyG83frY4 --save-json --insert-db --prod',
     );
+    console.log(
+      '  node fetchSingleRestaurant.js ChIJN1t_tDeuEmsRUsoyG83frY4 --json restaurants_2023-10-27T10-30-00.json',
+    );
     process.exit(1);
   }
 
@@ -277,6 +449,8 @@ if (require.main === module) {
   const updateIfExists = args.includes('--update');
   const forceUpdate = args.includes('--force');
   const useProd = args.includes('--prod');
+  const jsonFile = args.find((arg) => arg.startsWith('--json='));
+  const jsonFileName = jsonFile ? jsonFile.split('=')[1] : null;
 
   // Set production database URL if requested
   if (useProd) {
@@ -308,6 +482,7 @@ if (require.main === module) {
     insertToDb,
     updateIfExists,
     forceUpdate,
+    jsonFileName,
   );
 }
 

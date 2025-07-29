@@ -191,6 +191,13 @@ Podaci se mapiraju na postojeću `Restaurants` tablicu:
 | `formatted_phone_number` | `phone`            |
 | `website`                | `websiteUrl`       |
 
+**Automatsko generiranje slug-ova:**
+
+- Skripte automatski generiraju jedinstvene slug-ove za svaki restoran
+- Slug se kreira na temelju imena restorana s normalizacijom hrvatskih znakova
+- Ako slug već postoji, dodaje se sufiks (-1, -2, itd.)
+- Primjer: "Pizza Bar Zagreb" → "pizza-bar-zagreb"
+
 ## Error Handling
 
 - **API Key missing**: Provjeri `GOOGLE_PLACES_API_KEY` environment varijablu
