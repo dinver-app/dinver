@@ -2361,6 +2361,154 @@ const getRestaurantBySubdomain = async (req, res) => {
   }
 };
 
+const getClaimFilters = async (req, res) => {
+  try {
+    const [
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+    ] = await Promise.all([
+      FoodType.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+        order: [['nameEn', 'ASC']],
+      }),
+      EstablishmentType.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+        order: [['nameEn', 'ASC']],
+      }),
+      EstablishmentPerk.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+        order: [['nameEn', 'ASC']],
+      }),
+      MealType.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+        order: [['nameEn', 'ASC']],
+      }),
+      DietaryType.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+        order: [['nameEn', 'ASC']],
+      }),
+    ]);
+
+    res.json({
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+    });
+  } catch (error) {
+    console.error('Error fetching claim filters:', error);
+    res.status(500).json({ error: 'Failed to fetch claim filters' });
+  }
+};
+
+const submitClaimForm = async (req, res) => {
+  try {
+    const {
+      restaurantId,
+      restaurantName,
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+      contactInfo,
+    } = req.body;
+
+    if (!restaurantId || !restaurantName) {
+      return res
+        .status(400)
+        .json({ error: 'Restaurant ID and name are required' });
+    }
+
+    // Get restaurant details
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get selected filter names for email
+    const getFilterNames = async (filterIds, model) => {
+      if (!filterIds || filterIds.length === 0) return [];
+      const filters = await model.findAll({
+        where: { id: { [Op.in]: filterIds } },
+        attributes: ['nameEn', 'nameHr'],
+      });
+      return filters.map((f) => ({ en: f.nameEn, hr: f.nameHr }));
+    };
+
+    const [
+      selectedFoodTypes,
+      selectedEstablishmentTypes,
+      selectedEstablishmentPerks,
+      selectedMealTypes,
+      selectedDietaryTypes,
+    ] = await Promise.all([
+      getFilterNames(foodTypes, FoodType),
+      getFilterNames(establishmentTypes, EstablishmentType),
+      getFilterNames(establishmentPerks, EstablishmentPerk),
+      getFilterNames(mealTypes, MealType),
+      getFilterNames(dietaryTypes, DietaryType),
+    ]);
+
+    // Format email content
+    const formatFilterList = (filters, title) => {
+      if (!filters || filters.length === 0) return '';
+      return `${title}:\n${filters.map((f) => `- ${f.en} (${f.hr})`).join('\n')}\n`;
+    };
+
+    const emailContent = `
+Novi zahtjev za claim restorana
+
+Restoran: ${restaurantName}
+ID: ${restaurantId}
+Adresa: ${restaurant.address || 'N/A'}
+Place: ${restaurant.place || 'N/A'}
+
+Kontakt informacije:
+${contactInfo || 'N/A'}
+
+Odabrani filteri:
+
+${formatFilterList(selectedFoodTypes, 'Tipovi hrane')}
+${formatFilterList(selectedEstablishmentTypes, 'Tipovi objekta')}
+${formatFilterList(selectedEstablishmentPerks, 'Pogodnosti objekta')}
+${formatFilterList(selectedMealTypes, 'Tipovi obroka')}
+${formatFilterList(selectedDietaryTypes, 'Dijetni tipovi')}
+
+Datum: ${new Date().toLocaleString('hr-HR')}
+    `.trim();
+
+    // Send email using the same mailgun setup as in claimLogController
+    const mailgun = require('mailgun-js');
+    const mg = mailgun({
+      apiKey: process.env.MAILGUN_API_KEY,
+      domain: process.env.MAILGUN_DOMAIN,
+    });
+
+    const emailData = {
+      from: 'Dinver <info@dinverapp.com>',
+      to: 'ivankikic49@gmail.com',
+      subject: `Novi zahtjev za claim: ${restaurantName}`,
+      text: emailContent,
+    };
+
+    await mg.messages().send(emailData);
+
+    res.json({
+      message: 'Claim form submitted successfully',
+      restaurantId,
+      restaurantName,
+    });
+  } catch (error) {
+    console.error('Error submitting claim form:', error);
+    res.status(500).json({ error: 'Failed to submit claim form' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -2391,4 +2539,6 @@ module.exports = {
   getFullRestaurantDetails,
   getRestaurantMenu,
   getRestaurantBySubdomain,
+  getClaimFilters,
+  submitClaimForm,
 };

@@ -20,5 +20,15 @@ router.get(
   landingApiKeyAuth,
   restaurantController.getRestaurantBySubdomain,
 );
+router.get(
+  '/claim-filters',
+  landingApiKeyAuth,
+  restaurantController.getClaimFilters,
+);
+router.post(
+  '/submit-claim',
+  landingApiKeyAuth,
+  restaurantController.submitClaimForm,
+);
 
 module.exports = router;
