@@ -31,7 +31,6 @@ const {
   EstablishmentPerk,
   MealType,
   DietaryType,
-  PriceCategory,
 } = require('../../models');
 const { sequelize } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
