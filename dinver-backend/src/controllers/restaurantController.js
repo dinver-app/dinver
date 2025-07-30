@@ -2337,6 +2337,30 @@ const deleteRestaurantThumbnail = async (req, res) => {
   }
 };
 
+const getRestaurantBySubdomain = async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+
+    if (!subdomain) {
+      return res.status(400).json({ error: 'Subdomain is required' });
+    }
+
+    const restaurant = await Restaurant.findOne({
+      where: { subdomain },
+      attributes: ['id', 'slug', 'name'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json({ slug: restaurant.slug });
+  } catch (error) {
+    console.error('Error fetching restaurant by subdomain:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant by subdomain' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -2366,4 +2390,5 @@ module.exports = {
   getPartners,
   getFullRestaurantDetails,
   getRestaurantMenu,
+  getRestaurantBySubdomain,
 };

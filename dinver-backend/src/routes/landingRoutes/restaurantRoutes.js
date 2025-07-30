@@ -15,5 +15,10 @@ router.get(
   landingApiKeyAuth,
   restaurantController.getRestaurantMenu,
 );
+router.get(
+  '/subdomain/:subdomain',
+  landingApiKeyAuth,
+  restaurantController.getRestaurantBySubdomain,
+);
 
 module.exports = router;
