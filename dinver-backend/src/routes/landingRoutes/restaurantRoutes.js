@@ -25,6 +25,11 @@ router.get(
   landingApiKeyAuth,
   restaurantController.getClaimFilters,
 );
+router.get(
+  '/claim-restaurant/:id',
+  landingApiKeyAuth,
+  restaurantController.getClaimRestaurantInfo,
+);
 router.post(
   '/submit-claim',
   landingApiKeyAuth,
