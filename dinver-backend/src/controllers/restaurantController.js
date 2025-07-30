@@ -2416,6 +2416,10 @@ const submitClaimForm = async (req, res) => {
       mealTypes,
       dietaryTypes,
       contactInfo,
+      firstName,
+      lastName,
+      email,
+      phone,
     } = req.body;
 
     if (!restaurantId || !restaurantName) {
@@ -2469,6 +2473,12 @@ Adresa: ${restaurant.address || 'N/A'}
 Place: ${restaurant.place || 'N/A'}
 
 Kontakt informacije:
+Ime: ${firstName || 'N/A'}
+Prezime: ${lastName || 'N/A'}
+Email: ${email || 'N/A'}
+Telefon: ${phone || 'N/A'}
+
+Dodatne kontakt informacije:
 ${contactInfo || 'N/A'}
 
 Odabrani filteri:
