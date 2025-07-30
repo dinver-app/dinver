@@ -2416,6 +2416,10 @@ const submitClaimForm = async (req, res) => {
       mealTypes,
       dietaryTypes,
       contactInfo,
+      firstName,
+      lastName,
+      email,
+      phone,
     } = req.body;
 
     if (!restaurantId || !restaurantName) {
@@ -2469,6 +2473,12 @@ Adresa: ${restaurant.address || 'N/A'}
 Place: ${restaurant.place || 'N/A'}
 
 Kontakt informacije:
+Ime: ${firstName || 'N/A'}
+Prezime: ${lastName || 'N/A'}
+Email: ${email || 'N/A'}
+Telefon: ${phone || 'N/A'}
+
+Dodatne kontakt informacije:
 ${contactInfo || 'N/A'}
 
 Odabrani filteri:
@@ -2509,6 +2519,35 @@ Datum: ${new Date().toLocaleString('hr-HR')}
   }
 };
 
+const getClaimRestaurantInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id, {
+      attributes: ['id', 'name', 'address', 'place', 'slug'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json({
+      id: restaurant.id,
+      name: restaurant.name,
+      address: restaurant.address,
+      place: restaurant.place,
+      slug: restaurant.slug,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant info for claim:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant info' });
+  }
+};
+
 module.exports = {
   getAllRestaurants,
   getRestaurants,
@@ -2540,5 +2579,6 @@ module.exports = {
   getRestaurantMenu,
   getRestaurantBySubdomain,
   getClaimFilters,
+  getClaimRestaurantInfo,
   submitClaimForm,
 };
