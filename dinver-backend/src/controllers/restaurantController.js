@@ -13,6 +13,7 @@ const {
   DrinkCategory,
   DrinkCategoryTranslation,
   Allergen,
+  PriceCategory,
 } = require('../../models');
 const {
   updateFoodExplorerProgress,
@@ -2369,6 +2370,7 @@ const getClaimFilters = async (req, res) => {
       establishmentPerks,
       mealTypes,
       dietaryTypes,
+      priceCategories,
     ] = await Promise.all([
       FoodType.findAll({
         attributes: ['id', 'nameEn', 'nameHr', 'icon'],
@@ -2390,6 +2392,10 @@ const getClaimFilters = async (req, res) => {
         attributes: ['id', 'nameEn', 'nameHr', 'icon'],
         order: [['nameEn', 'ASC']],
       }),
+      PriceCategory.findAll({
+        attributes: ['id', 'nameEn', 'nameHr', 'icon', 'level'],
+        order: [['level', 'ASC']],
+      }),
     ]);
 
     res.json({
@@ -2398,6 +2404,7 @@ const getClaimFilters = async (req, res) => {
       establishmentPerks,
       mealTypes,
       dietaryTypes,
+      priceCategories,
     });
   } catch (error) {
     console.error('Error fetching claim filters:', error);
@@ -2415,6 +2422,7 @@ const submitClaimForm = async (req, res) => {
       establishmentPerks,
       mealTypes,
       dietaryTypes,
+      priceCategoryId,
       contactInfo,
       firstName,
       lastName,
@@ -2450,12 +2458,18 @@ const submitClaimForm = async (req, res) => {
       selectedEstablishmentPerks,
       selectedMealTypes,
       selectedDietaryTypes,
+      selectedPriceCategory,
     ] = await Promise.all([
       getFilterNames(foodTypes, FoodType),
       getFilterNames(establishmentTypes, EstablishmentType),
       getFilterNames(establishmentPerks, EstablishmentPerk),
       getFilterNames(mealTypes, MealType),
       getFilterNames(dietaryTypes, DietaryType),
+      priceCategoryId
+        ? PriceCategory.findByPk(priceCategoryId, {
+            attributes: ['nameEn', 'nameHr', 'icon', 'level'],
+          })
+        : null,
     ]);
 
     // Format email content
@@ -2483,6 +2497,7 @@ ${contactInfo || 'N/A'}
 
 Odabrani filteri:
 
+${selectedPriceCategory ? `Cjenovna kategorija: ${selectedPriceCategory.icon} ${selectedPriceCategory.nameEn} (${selectedPriceCategory.nameHr}) - Level ${selectedPriceCategory.level}\n` : ''}
 ${formatFilterList(selectedFoodTypes, 'Tipovi hrane')}
 ${formatFilterList(selectedEstablishmentTypes, 'Tipovi objekta')}
 ${formatFilterList(selectedEstablishmentPerks, 'Pogodnosti objekta')}
