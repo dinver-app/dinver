@@ -10,7 +10,7 @@ function generateTokens(user) {
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
     {
-      expiresIn: '1m', // Access token lasts 1 minute for testing
+      expiresIn: '24h', // Access token lasts 24 hours for testing
     },
   );
 
@@ -18,7 +18,7 @@ function generateTokens(user) {
     { id: user.id },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn: '3m', // Refresh token lasts 3 minutes for testing
+      expiresIn: '90d', // Refresh token lasts 90 days for testing
     },
   );
 
