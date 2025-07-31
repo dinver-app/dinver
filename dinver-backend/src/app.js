@@ -131,6 +131,16 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+// Apple App Site Association for iOS Keychain integration
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    webcredentials: {
+      apps: ['com.dinver.app'],
+    },
+  });
+});
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/translate', translateRoutes);
