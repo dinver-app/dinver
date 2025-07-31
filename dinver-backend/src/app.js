@@ -136,7 +136,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json({
     webcredentials: {
-      apps: ['com.dinver.app'],
+      apps: ['A5FJC265LU.com.dinver.app'],
     },
   });
 });
