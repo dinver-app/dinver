@@ -2411,6 +2411,63 @@ const getClaimFilters = async (req, res) => {
   }
 };
 
+const getClaimRestaurantInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id, {
+      attributes: ['id', 'name', 'address', 'place', 'slug'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json({
+      id: restaurant.id,
+      name: restaurant.name,
+      address: restaurant.address,
+      place: restaurant.place,
+      slug: restaurant.slug,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant info for claim:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant info' });
+  }
+};
+
+const getClaimRestaurantWorkingHours = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Restaurant ID is required' });
+    }
+
+    const restaurant = await Restaurant.findByPk(id, {
+      attributes: ['id', 'name', 'openingHours', 'workingHoursInfo'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json({
+      id: restaurant.id,
+      name: restaurant.name,
+      openingHours: restaurant.openingHours,
+      workingHoursInfo: restaurant.workingHoursInfo,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant working hours for claim:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant working hours' });
+  }
+};
+
 const submitClaimForm = async (req, res) => {
   try {
     const {
@@ -2427,6 +2484,9 @@ const submitClaimForm = async (req, res) => {
       lastName,
       email,
       phone,
+      workingHours,
+      hasProfessionalPhotos,
+      needsPhotography,
     } = req.body;
 
     if (!restaurantId || !restaurantName) {
@@ -2471,39 +2531,92 @@ const submitClaimForm = async (req, res) => {
         : null,
     ]);
 
-    // Format email content
+    // Format email content with better structure
     const formatFilterList = (filters, title) => {
       if (!filters || filters.length === 0) return '';
-      return `${title}:\n${filters.map((f) => `- ${f.en} (${f.hr})`).join('\n')}\n`;
+      return `${title}:\n${filters.map((f) => `  • ${f.en} (${f.hr})`).join('\n')}\n`;
+    };
+
+    const formatWorkingHours = (hours) => {
+      if (!hours || !hours.periods) return 'Nije definirano';
+
+      const days = [
+        'Ponedjeljak',
+        'Utorak',
+        'Srijeda',
+        'Četvrtak',
+        'Petak',
+        'Subota',
+        'Nedjelja',
+      ];
+      let formatted = '';
+
+      hours.periods.forEach((period, index) => {
+        const dayName = days[index] || `Dan ${index + 1}`;
+        if (period.open && period.close) {
+          const openTime = period.open.time || '';
+          const closeTime = period.close.time || '';
+          formatted += `${dayName}: ${openTime} - ${closeTime}\n`;
+        } else {
+          formatted += `${dayName}: Zatvoreno\n`;
+        }
+      });
+
+      return formatted || 'Nije definirano';
     };
 
     const emailContent = `
-Novi zahtjev za claim restorana
+🏪 NOVI ZAHTJEV ZA CLAIM RESTORANA
+═══════════════════════════════════════════════════════════════
 
-Restoran: ${restaurantName}
-ID: ${restaurantId}
-Adresa: ${restaurant.address || 'N/A'}
-Place: ${restaurant.place || 'N/A'}
+📋 OSNOVNE INFORMACIJE
+───────────────────────────────────────────────────────────────
+• Restoran: ${restaurantName}
+• ID: ${restaurantId}
+• Adresa: ${restaurant.address || 'N/A'}
+• Mjesto: ${restaurant.place || 'N/A'}
 
-Kontakt informacije:
-Ime: ${firstName || 'N/A'}
-Prezime: ${lastName || 'N/A'}
-Email: ${email || 'N/A'}
-Telefon: ${phone || 'N/A'}
+👤 KONTAKT INFORMACIJE
+───────────────────────────────────────────────────────────────
+• Ime: ${firstName || 'N/A'}
+• Prezime: ${lastName || 'N/A'}
+• Email: ${email || 'N/A'}
+• Telefon: ${phone || 'N/A'}
 
-Dodatne kontakt informacije:
-${contactInfo || 'N/A'}
+📝 DODATNE KONTAKT INFORMACIJE
+───────────────────────────────────────────────────────────────
+${contactInfo || 'Nije uneseno'}
 
-Odabrani filteri:
+⏰ RADNO VRIJEME
+───────────────────────────────────────────────────────────────
+${formatWorkingHours(workingHours)}
 
-${selectedPriceCategory ? `Cjenovna kategorija: ${selectedPriceCategory.icon} ${selectedPriceCategory.nameEn} (${selectedPriceCategory.nameHr}) - Level ${selectedPriceCategory.level}\n` : ''}
-${formatFilterList(selectedFoodTypes, 'Tipovi hrane')}
-${formatFilterList(selectedEstablishmentTypes, 'Tipovi objekta')}
-${formatFilterList(selectedEstablishmentPerks, 'Pogodnosti objekta')}
-${formatFilterList(selectedMealTypes, 'Tipovi obroka')}
-${formatFilterList(selectedDietaryTypes, 'Dijetni tipovi')}
+📸 FOTOGRAFSKE USLUGE
+───────────────────────────────────────────────────────────────
+• Ima profesionalne slike: ${hasProfessionalPhotos ? 'DA' : 'NE'}
+• Treba fotografiranje: ${needsPhotography ? 'DA' : 'NE'}
 
-Datum: ${new Date().toLocaleString('hr-HR')}
+🏷️ ODABRANI FILTERI
+───────────────────────────────────────────────────────────────
+${selectedPriceCategory ? `💰 Cjenovna kategorija: ${selectedPriceCategory.icon} ${selectedPriceCategory.nameEn} (${selectedPriceCategory.nameHr}) - Level ${selectedPriceCategory.level}\n` : ''}
+${formatFilterList(selectedFoodTypes, '🍽️ Tipovi hrane')}
+${formatFilterList(selectedEstablishmentTypes, '🏢 Tipovi objekta')}
+${formatFilterList(selectedEstablishmentPerks, '⭐ Pogodnosti objekta')}
+${formatFilterList(selectedMealTypes, '🍴 Tipovi obroka')}
+${formatFilterList(selectedDietaryTypes, '🥗 Dijetni tipovi')}
+
+📅 DATUM ZAHTJEVA
+───────────────────────────────────────────────────────────────
+${new Date().toLocaleString('hr-HR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+})}
+
+═══════════════════════════════════════════════════════════════
     `.trim();
 
     // Send email using the same mailgun setup as in claimLogController
@@ -2516,7 +2629,7 @@ Datum: ${new Date().toLocaleString('hr-HR')}
     const emailData = {
       from: 'Dinver <info@dinverapp.com>',
       to: 'ivankikic49@gmail.com',
-      subject: `Novi zahtjev za claim: ${restaurantName}`,
+      subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
       text: emailContent,
     };
 
@@ -2530,35 +2643,6 @@ Datum: ${new Date().toLocaleString('hr-HR')}
   } catch (error) {
     console.error('Error submitting claim form:', error);
     res.status(500).json({ error: 'Failed to submit claim form' });
-  }
-};
-
-const getClaimRestaurantInfo = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!id) {
-      return res.status(400).json({ error: 'Restaurant ID is required' });
-    }
-
-    const restaurant = await Restaurant.findByPk(id, {
-      attributes: ['id', 'name', 'address', 'place', 'slug'],
-    });
-
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-
-    res.json({
-      id: restaurant.id,
-      name: restaurant.name,
-      address: restaurant.address,
-      place: restaurant.place,
-      slug: restaurant.slug,
-    });
-  } catch (error) {
-    console.error('Error fetching restaurant info for claim:', error);
-    res.status(500).json({ error: 'Failed to fetch restaurant info' });
   }
 };
 
@@ -2594,5 +2678,6 @@ module.exports = {
   getRestaurantBySubdomain,
   getClaimFilters,
   getClaimRestaurantInfo,
+  getClaimRestaurantWorkingHours,
   submitClaimForm,
 };
