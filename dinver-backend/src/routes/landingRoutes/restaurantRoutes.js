@@ -30,6 +30,11 @@ router.get(
   landingApiKeyAuth,
   restaurantController.getClaimRestaurantInfo,
 );
+router.get(
+  '/claim-restaurant/:id/working-hours',
+  landingApiKeyAuth,
+  restaurantController.getClaimRestaurantWorkingHours,
+);
 router.post(
   '/submit-claim',
   landingApiKeyAuth,
