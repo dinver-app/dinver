@@ -2556,7 +2556,14 @@ const submitClaimForm = async (req, res) => {
         if (period.open && period.close) {
           const openTime = period.open.time || '';
           const closeTime = period.close.time || '';
-          formatted += `${dayName}: ${openTime} - ${closeTime}\n`;
+          // Format time from HHMM to HH:MM
+          const formatTime = (time) => {
+            if (time && time.length === 4) {
+              return `${time.substring(0, 2)}:${time.substring(2, 4)}`;
+            }
+            return time;
+          };
+          formatted += `${dayName}: ${formatTime(openTime)} - ${formatTime(closeTime)}\n`;
         } else {
           formatted += `${dayName}: Zatvoreno\n`;
         }
@@ -2594,7 +2601,7 @@ ${formatWorkingHours(workingHours)}
 📸 FOTOGRAFSKE USLUGE
 ───────────────────────────────────────────────────────────────
 • Ima profesionalne slike: ${hasProfessionalPhotos ? 'DA' : 'NE'}
-• Treba fotografiranje: ${needsPhotography ? 'DA' : 'NE'}
+${!hasProfessionalPhotos ? `• Treba fotografiranje: ${needsPhotography ? 'DA' : 'NE'}` : ''}
 
 🏷️ ODABRANI FILTERI
 ───────────────────────────────────────────────────────────────
@@ -2608,6 +2615,7 @@ ${formatFilterList(selectedDietaryTypes, '🥗 Dijetni tipovi')}
 📅 DATUM ZAHTJEVA
 ───────────────────────────────────────────────────────────────
 ${new Date().toLocaleString('hr-HR', {
+  timeZone: 'Europe/Zagreb',
   year: 'numeric',
   month: 'long',
   day: 'numeric',
