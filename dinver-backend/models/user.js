@@ -105,6 +105,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
+      pushToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+      },
     },
     {
       sequelize,

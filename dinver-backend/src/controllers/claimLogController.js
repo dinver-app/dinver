@@ -1,6 +1,9 @@
 const { ClaimLog, Restaurant } = require('../../models');
 const mailgun = require('mailgun-js');
 const { format } = require('date-fns');
+const {
+  sendPushNotificationToAllUsers,
+} = require('../../utils/pushNotificationService');
 
 const mg = mailgun({
   apiKey: process.env.MAILGUN_API_KEY,
@@ -65,6 +68,26 @@ const handleClaimStatus = async (req, res) => {
         'Dogovorena nova suradnja s restoranom',
         `Poštovani,\n\nS veseljem vas obavještavamo da je dogovorena nova suradnja s restoranom ${restaurant.name}.\nSuradnju je dogovorio/la ${req.user.email} dana ${format(new Date(), 'dd.MM.yyyy.')} s ponudom: ${offerHR}.\n\nSrdačan pozdrav,\nDinver Team`,
       );
+
+      // Pošalji push notifikaciju svim korisnicima o novom restoranu
+      try {
+        await sendPushNotificationToAllUsers({
+          title: `Novi restoran u ${restaurant.place || 'Dinver aplikaciji'}! 🍽️`,
+          body: `Restoran "${restaurant.name}" je sada dostupan u Dinver aplikaciji!`,
+          data: {
+            type: 'new_restaurant',
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            place: restaurant.place,
+          },
+        });
+      } catch (error) {
+        console.error(
+          'Error sending push notification for new restaurant claim:',
+          error,
+        );
+        // Ne prekida flow ako push notifikacija ne uspije
+      }
 
       return res.status(201).json({
         message: 'Suradnja s restoranom je uspješno dogovorena',

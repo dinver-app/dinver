@@ -73,4 +73,12 @@ router.delete(
   userController.deleteAccount,
 );
 
+// Ažuriranje push tokena
+router.post(
+  '/users/:id/push-token',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  userController.updatePushToken,
+);
+
 module.exports = router;

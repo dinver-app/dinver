@@ -6,6 +6,9 @@ const {
   UserAdmin,
 } = require('../../models');
 const { Op } = require('sequelize');
+const {
+  sendPushNotificationToUsers,
+} = require('../../utils/pushNotificationService');
 
 // Get all messages for a reservation
 const getReservationMessages = async (req, res) => {
@@ -189,7 +192,45 @@ const sendMessage = async (req, res) => {
       ],
     });
 
-    // TODO: Send notification to other party
+    // Pošalji push notifikaciju o novoj poruci
+    try {
+      if (isOwner) {
+        // Korisnik je poslao poruku - obavijesti admine restorana
+        const admins = await UserAdmin.findAll({
+          where: { restaurantId: reservation.restaurantId },
+          attributes: ['userId'],
+        });
+
+        if (admins.length > 0) {
+          const adminUserIds = admins.map((admin) => admin.userId);
+          await sendPushNotificationToUsers(adminUserIds, {
+            title: 'Nova poruka od korisnika! 💬',
+            body: `Nova poruka u rezervaciji za ${reservation.date} u ${reservation.time}h`,
+            data: {
+              type: 'new_message_from_user',
+              reservationId: reservation.id,
+              restaurantId: reservation.restaurantId,
+              messageId: message.id,
+            },
+          });
+        }
+      } else {
+        // Admin je poslao poruku - obavijesti korisnika
+        await sendPushNotificationToUsers([reservation.userId], {
+          title: 'Nova poruka od restorana! 💬',
+          body: `${reservation.restaurant.name} vam je poslao novu poruku`,
+          data: {
+            type: 'new_message_from_restaurant',
+            reservationId: reservation.id,
+            restaurantId: reservation.restaurantId,
+            restaurantName: reservation.restaurant.name,
+            messageId: message.id,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error sending push notification for new message:', error);
+    }
 
     res.status(201).json(messageWithSender);
   } catch (error) {
@@ -460,7 +501,27 @@ const createSuggestion = async (req, res) => {
       ],
     });
 
-    // TODO: Send notification to user
+    // Pošalji push notifikaciju korisniku o novom predlogu
+    try {
+      await sendPushNotificationToUsers([reservation.userId], {
+        title: 'Novi prijedlog za rezervaciju! 💡',
+        body: `${reservation.restaurant.name} vam je poslao novi prijedlog za rezervaciju`,
+        data: {
+          type: 'new_suggestion_from_restaurant',
+          reservationId: reservation.id,
+          restaurantId: reservation.restaurantId,
+          restaurantName: reservation.restaurant.name,
+          messageId: message.id,
+          suggestedDate,
+          suggestedTime,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'Error sending push notification for new suggestion:',
+        error,
+      );
+    }
 
     res.status(201).json(messageWithSender);
   } catch (error) {

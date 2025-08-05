@@ -12,6 +12,9 @@ const { Op } = require('sequelize');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { sendReservationSMS } = require('../../utils/smsService');
 const { DateTime } = require('luxon');
+const {
+  sendPushNotificationToUsers,
+} = require('../../utils/pushNotificationService');
 
 const now = DateTime.now().setZone('Europe/Zagreb');
 const nowTime = now.toFormat('HH:mm:ss');
@@ -167,11 +170,13 @@ const createReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['email', 'firstName', 'lastName'],
+          attributes: ['email', 'firstName', 'lastName', 'pushToken'],
         },
       ],
     });
-    // Pošalji email svakom adminu
+
+    // Pošalji email i push notifikaciju svakom adminu
+    const adminUserIds = [];
     for (const admin of admins) {
       // Ako je include, koristi admin.user.email, inače dohvatiti User ručno
       let adminEmail = admin.user?.email;
@@ -194,6 +199,31 @@ const createReservation = async (req, res) => {
             restaurant,
           },
         });
+      }
+      adminUserIds.push(admin.userId);
+    }
+
+    // Pošalji push notifikaciju adminima o novoj rezervaciji
+    if (adminUserIds.length > 0) {
+      try {
+        await sendPushNotificationToUsers(adminUserIds, {
+          title: 'Nova rezervacija! 📅',
+          body: `Nova rezervacija za ${guests} osoba dana ${date} u ${time}h`,
+          data: {
+            type: 'new_reservation',
+            reservationId: reservation.id,
+            restaurantId: restaurantId,
+            restaurantName: restaurant.name,
+            date,
+            time,
+            guests,
+          },
+        });
+      } catch (error) {
+        console.error(
+          'Error sending push notification for new reservation:',
+          error,
+        );
       }
     }
   } catch (error) {
@@ -415,6 +445,27 @@ const confirmReservation = async (req, res) => {
       });
     }
 
+    // Pošalji push notifikaciju korisniku o potvrdi rezervacije
+    try {
+      await sendPushNotificationToUsers([reservation.userId], {
+        title: 'Rezervacija potvrđena! ✅',
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je potvrđena`,
+        data: {
+          type: 'reservation_confirmed',
+          reservationId: reservation.id,
+          restaurantId: reservation.restaurantId,
+          restaurantName: reservation.restaurant.name,
+          date: reservation.date,
+          time: reservation.time,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'Error sending push notification for reservation confirmation:',
+        error,
+      );
+    }
+
     res.json(updatedReservation);
   } catch (error) {
     console.error('Error confirming reservation:', error);
@@ -520,6 +571,27 @@ const declineReservation = async (req, res) => {
         type: 'decline',
         reservation,
       });
+    }
+
+    // Pošalji push notifikaciju korisniku o odbijanju rezervacije
+    try {
+      await sendPushNotificationToUsers([reservation.userId], {
+        title: 'Rezervacija odbijena ❌',
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je odbijena`,
+        data: {
+          type: 'reservation_declined',
+          reservationId: reservation.id,
+          restaurantId: reservation.restaurantId,
+          restaurantName: reservation.restaurant.name,
+          date: reservation.date,
+          time: reservation.time,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'Error sending push notification for reservation decline:',
+        error,
+      );
     }
 
     res.json(reservation);
@@ -669,6 +741,27 @@ const suggestAlternativeTime = async (req, res) => {
         type: 'alternative',
         reservation,
       });
+    }
+
+    // Pošalji push notifikaciju korisniku o predloženom alternativnom terminu
+    try {
+      await sendPushNotificationToUsers([reservation.userId], {
+        title: 'Predložen alternativni termin! ⏰',
+        body: `${reservation.restaurant.name} je predložio alternativni termin za vašu rezervaciju`,
+        data: {
+          type: 'alternative_time_suggested',
+          reservationId: reservation.id,
+          restaurantId: reservation.restaurantId,
+          restaurantName: reservation.restaurant.name,
+          suggestedDate: suggestedDate,
+          suggestedTime: suggestedTime,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'Error sending push notification for alternative time suggestion:',
+        error,
+      );
     }
 
     res.json(reservation);
