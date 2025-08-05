@@ -546,6 +546,33 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+const updatePushToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      return res.status(400).json({ error: 'Push token is required' });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Ažuriraj push token
+    await user.update({ pushToken });
+
+    res.status(200).json({ 
+      message: 'Push token updated successfully',
+      pushToken 
+    });
+  } catch (error) {
+    console.error('Error updating push token:', error);
+    res.status(500).json({ error: 'Failed to update push token' });
+  }
+};
+
 module.exports = {
   updateUserLanguage,
   getUserLanguage,
@@ -558,4 +585,5 @@ module.exports = {
   changePassword,
   getOwnedRestaurants,
   deleteAccount,
+  updatePushToken,
 };

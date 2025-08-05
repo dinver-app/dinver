@@ -26,6 +26,9 @@ const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 const {
+  sendPushNotificationToAllUsers,
+} = require('../../utils/pushNotificationService');
+const {
   FoodType,
   EstablishmentType,
   EstablishmentPerk,
