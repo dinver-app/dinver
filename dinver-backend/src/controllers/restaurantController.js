@@ -2486,6 +2486,7 @@ const submitClaimForm = async (req, res) => {
       phone,
       workingHours,
       hasProfessionalPhotos,
+      hasMenuItemPhotos,
     } = req.body;
 
     if (!restaurantId || !restaurantName) {
@@ -2601,6 +2602,11 @@ ${formatWorkingHours(workingHours)}
 ───────────────────────────────────────────────────────────────
 • Ima profesionalne slike: ${hasProfessionalPhotos ? 'DA' : 'NE'}
 ${!hasProfessionalPhotos ? '• Plan: Mi ćemo uzeti profesionalne slike' : '• Plan: Javit ćemo im da pošalju postojeće slike'}
+
+🍽️ SLIKE ZA MENI
+───────────────────────────────────────────────────────────────
+• Ima slike hrane za meni: ${hasMenuItemPhotos ? 'DA' : 'NE'}
+${!hasMenuItemPhotos ? '• Plan: Mi ćemo uzeti slike hrane za meni' : '• Plan: Javit ćemo im da pošalju postojeće slike hrane'}
 
 🏷️ ODABRANI FILTERI
 ───────────────────────────────────────────────────────────────
