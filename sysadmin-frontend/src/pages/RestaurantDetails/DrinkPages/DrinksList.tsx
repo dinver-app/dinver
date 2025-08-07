@@ -202,7 +202,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                             />
                           </div>
                         ) : (
@@ -339,7 +339,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                             />
                           </div>
                         ) : (
