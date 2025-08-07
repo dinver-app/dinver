@@ -2081,7 +2081,7 @@ const getRestaurantMenu = async (req, res) => {
 
     // Get all menu items with their categories
     const menuItems = await MenuItem.findAll({
-      where: { restaurantId: id },
+      where: { restaurantId: id, isActive: true },
       include: [
         {
           model: MenuItemTranslation,
@@ -2106,7 +2106,7 @@ const getRestaurantMenu = async (req, res) => {
 
     // Get all drink items with their categories
     const drinkItems = await DrinkItem.findAll({
-      where: { restaurantId: id },
+      where: { restaurantId: id, isActive: true },
       include: [
         {
           model: DrinkItemTranslation,
@@ -2131,7 +2131,7 @@ const getRestaurantMenu = async (req, res) => {
 
     // Get all menu categories
     const menuCategories = await MenuCategory.findAll({
-      where: { restaurantId: id },
+      where: { restaurantId: id, isActive: true },
       include: [
         {
           model: MenuCategoryTranslation,
@@ -2143,7 +2143,7 @@ const getRestaurantMenu = async (req, res) => {
 
     // Get all drink categories
     const drinkCategories = await DrinkCategory.findAll({
-      where: { restaurantId: id },
+      where: { restaurantId: id, isActive: true },
       include: [
         {
           model: DrinkCategoryTranslation,
