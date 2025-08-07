@@ -4,12 +4,22 @@ const pushNotificationController = require('../../controllers/pushNotificationCo
 const {
   appApiKeyAuth,
   appAuthenticateToken,
+  appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
-// Register or update push token (public route - no auth required)
-router.post('/push/register', pushNotificationController.registerPushToken);
 
-// Unregister push token (public route - no auth required)
-router.post('/push/unregister', pushNotificationController.unregisterPushToken);
+// Register or update push token (optional auth - works with or without login)
+router.post(
+  '/push/register',
+  appOptionalAuth,
+  pushNotificationController.registerPushToken,
+);
+
+// Unregister push token (optional auth - works with or without login)
+router.post(
+  '/push/unregister',
+  appOptionalAuth,
+  pushNotificationController.unregisterPushToken,
+);
 
 // Get user's push tokens (requires auth)
 router.get(
