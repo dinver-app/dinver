@@ -17,7 +17,7 @@ const registerPushToken = async (req, res) => {
     const validPlatforms = ['ios', 'android', 'windows', 'macos', 'web'];
     if (!validPlatforms.includes(platform.toLowerCase())) {
       return res.status(400).json({
-        error: 'Invalid platform. Must be ios, android, or web',
+        error: 'Invalid platform. Must be ios, android, windows, macos, or web',
       });
     }
 

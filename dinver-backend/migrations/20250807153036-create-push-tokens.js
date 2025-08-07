@@ -30,7 +30,7 @@ module.exports = {
         allowNull: true,
       },
       platform: {
-        type: Sequelize.ENUM('iOS', 'Android', 'Web'),
+        type: Sequelize.ENUM('ios', 'android', 'windows', 'macos', 'web'),
         allowNull: false,
       },
       isActive: {
