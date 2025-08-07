@@ -996,7 +996,7 @@ const cancelReservationByRestaurant = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'address', 'place'],
+          attributes: ['id', 'name', 'address', 'place', 'phone'],
         },
         {
           model: ReservationMessage,
@@ -1033,6 +1033,28 @@ const cancelReservationByRestaurant = async (req, res) => {
           cancellationReason,
         },
       });
+    }
+
+    // Pošalji push notifikaciju korisniku o otkazivanju od strane restorana
+    try {
+      await sendPushNotificationToUsers([reservation.userId], {
+        title: 'Rezervacija otkazana od restorana ❌',
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je otkazana od strane restorana`,
+        data: {
+          type: 'reservation_cancelled_by_restaurant',
+          reservationId: reservation.id,
+          restaurantId: reservation.restaurantId,
+          restaurantName: reservation.restaurant.name,
+          date: reservation.date,
+          time: reservation.time,
+          cancellationReason,
+        },
+      });
+    } catch (error) {
+      console.error(
+        'Error sending push notification for reservation cancellation by restaurant:',
+        error,
+      );
     }
 
     res.json(updatedReservation);
@@ -1229,7 +1251,7 @@ const acceptSuggestedTime = async (req, res) => {
       ],
     });
 
-    // Pošalji email restoranu
+    // Pošalji email korisniku
     await sendReservationEmail({
       to: updatedReservation.user.email,
       type: 'accepted_alternative',
