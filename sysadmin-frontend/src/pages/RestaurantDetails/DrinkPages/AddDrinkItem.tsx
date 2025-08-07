@@ -288,7 +288,7 @@ const AddDrinkItem: React.FC<AddDrinkItemProps> = ({
               <img
                 src={URL.createObjectURL(itemImageFile)}
                 alt={itemImageFile.name}
-                className="w-10 h-10 object-cover rounded mr-2 flex-shrink-0"
+                className="w-10 h-10 object-contain rounded mr-2 flex-shrink-0"
               />
               <span className="text-xs truncate">{itemImageFile.name}</span>
             </div>

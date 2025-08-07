@@ -204,7 +204,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                             />
                           </div>
                         ) : (
@@ -366,7 +366,7 @@ const MenuList: React.FC<MenuListProps> = memo(
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-contain"
                             />
                           </div>
                         ) : (
