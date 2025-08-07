@@ -3,14 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // First, update any existing data to use lowercase
-    await queryInterface.sequelize.query(`
-      UPDATE "PushTokens" 
-      SET platform = LOWER(platform) 
-      WHERE platform IN ('iOS', 'Android', 'Web')
-    `);
-
-    // Drop the old enum type
+    // Drop the old enum type and recreate with new values
     await queryInterface.sequelize.query(`
       DROP TYPE IF EXISTS "enum_PushTokens_platform" CASCADE
     `);
