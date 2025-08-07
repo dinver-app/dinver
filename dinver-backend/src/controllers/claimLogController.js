@@ -71,9 +71,10 @@ const handleClaimStatus = async (req, res) => {
 
       // Pošalji push notifikaciju svim korisnicima o novom restoranu
       try {
+        const place = restaurant.place || 'Dinver aplikaciji';
         await sendPushNotificationToAllUsers({
-          title: `Novi restoran u ${restaurant.place || 'Dinver aplikaciji'}! 🍽️`,
-          body: `Restoran "${restaurant.name}" je sada dostupan u Dinver aplikaciji!`,
+          title: `Novi restoran u ${place}! 🍽️`,
+          body: `Restoran "${restaurant.name}" se pridružio Dinveru! Pogledaj što sve nudi!`,
           data: {
             type: 'new_restaurant',
             restaurantId: restaurant.id,

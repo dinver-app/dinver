@@ -23,6 +23,7 @@ const mailRoutes = require('./appRoutes/mailRoutes');
 const visitValidationRoutes = require('./appRoutes/visitValidationRoutes');
 const specialOfferRoutes = require('./appRoutes/specialOfferRoutes');
 const analyticsRoutes = require('./appRoutes/analyticsRoutes');
+const pushNotificationRoutes = require('./appRoutes/pushNotificationRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -49,5 +50,6 @@ router.use(mailRoutes);
 router.use(visitValidationRoutes);
 router.use(specialOfferRoutes);
 router.use(analyticsRoutes);
+router.use(pushNotificationRoutes);
 
 module.exports = router;
