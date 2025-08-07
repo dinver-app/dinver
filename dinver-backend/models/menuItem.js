@@ -71,6 +71,19 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: true,
       },
+      hasSizes: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      defaultSizeName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      sizes: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
     },
     {
       sequelize,

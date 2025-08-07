@@ -501,7 +501,7 @@ const createSuggestion = async (req, res) => {
       ],
     });
 
-    // Pošalji push notifikaciju korisniku o novom predlogu
+    // Pošalji push notifikaciju korisniku o novom prijedlogu
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Novi prijedlog za rezervaciju! 💡',
