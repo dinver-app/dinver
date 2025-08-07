@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const sharp = require('sharp');
 const {
   MenuItem,
   MenuCategory,
@@ -19,27 +20,29 @@ const openai = new OpenAI({
 // Function to analyze menu image with GPT Vision
 const analyzeMenuImageWithGPT = async (imageBuffer, menuType = 'food') => {
   try {
-    // Convert image to base64 and ensure it's in the correct format
-    let base64Image;
-
-    // Check if imageBuffer is a file object or buffer
+    // Optimize image with sharp before processing
+    let optimizedBuffer;
     if (imageBuffer.buffer) {
-      base64Image = imageBuffer.buffer.toString('base64');
+      optimizedBuffer = await sharp(imageBuffer.buffer)
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
     } else {
-      base64Image = imageBuffer.toString('base64');
+      optimizedBuffer = await sharp(imageBuffer)
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
     }
+
+    // Convert optimized image to base64
+    const base64Image = optimizedBuffer.toString('base64');
 
     console.log('Image buffer type:', typeof imageBuffer);
     console.log('Image buffer has buffer property:', !!imageBuffer.buffer);
     console.log('Base64 image length:', base64Image.length);
 
-    // Determine MIME type from the file
-    let mimeType = 'image/jpeg'; // default
-    if (imageBuffer.mimetype) {
-      mimeType = imageBuffer.mimetype;
-    } else if (imageBuffer.mimetype) {
-      mimeType = imageBuffer.mimetype;
-    }
+    // Use JPEG as optimized format
+    const mimeType = 'image/jpeg';
 
     console.log('Detected MIME type:', mimeType);
 
@@ -218,6 +221,7 @@ Examples:
           },
         ],
         max_tokens: 4000,
+        timeout: 25000, // 25 sekundi timeout
       });
 
       const content = response.choices[0]?.message?.content;
