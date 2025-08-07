@@ -10,6 +10,24 @@ const {
   sendPushNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 
+// Helpers: format for notification copy
+const formatDateDisplay = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    const dd = day.padStart(2, '0');
+    const mm = month.padStart(2, '0');
+    return `${dd}.${mm}.${year}.`;
+  }
+  return String(dateStr);
+};
+const formatTimeDisplay = (timeStr) => {
+  if (!timeStr) return '';
+  const hhmm = String(timeStr).slice(0, 5);
+  return `${hhmm}h`;
+};
+
 // Get all messages for a reservation
 const getReservationMessages = async (req, res) => {
   try {
@@ -205,7 +223,9 @@ const sendMessage = async (req, res) => {
           const adminUserIds = admins.map((admin) => admin.userId);
           await sendPushNotificationToUsers(adminUserIds, {
             title: 'Nova poruka od korisnika! 💬',
-            body: `Nova poruka u rezervaciji za ${reservation.date} u ${reservation.time}h`,
+            body: `Nova poruka u rezervaciji za ${formatDateDisplay(
+              reservation.date,
+            )} u ${formatTimeDisplay(reservation.time)}`,
             data: {
               type: 'new_message_from_user',
               reservationId: reservation.id,
@@ -218,7 +238,9 @@ const sendMessage = async (req, res) => {
         // Admin je poslao poruku - obavijesti korisnika
         await sendPushNotificationToUsers([reservation.userId], {
           title: 'Nova poruka od restorana! 💬',
-          body: `${reservation.restaurant.name} vam je poslao novu poruku`,
+          body: `${reservation.restaurant.name} vam je poslao novu poruku (rezervacija ${formatDateDisplay(
+            reservation.date,
+          )} u ${formatTimeDisplay(reservation.time)})`,
           data: {
             type: 'new_message_from_restaurant',
             reservationId: reservation.id,
@@ -505,7 +527,9 @@ const createSuggestion = async (req, res) => {
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Novi prijedlog za rezervaciju! 💡',
-        body: `${reservation.restaurant.name} vam je poslao novi prijedlog za rezervaciju`,
+        body: `${reservation.restaurant.name} vam je poslao prijedlog: ${formatDateDisplay(
+          suggestedDate,
+        )} u ${formatTimeDisplay(suggestedTime)}`,
         data: {
           type: 'new_suggestion_from_restaurant',
           reservationId: reservation.id,

@@ -16,6 +16,25 @@ const {
   sendPushNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 
+// Helpers: format dates/times for notification copy
+const formatDateDisplay = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    const dd = day.padStart(2, '0');
+    const mm = month.padStart(2, '0');
+    return `${dd}.${mm}.${year}.`;
+  }
+  return String(dateStr);
+};
+
+const formatTimeDisplay = (timeStr) => {
+  if (!timeStr) return '';
+  const hhmm = String(timeStr).slice(0, 5);
+  return `${hhmm}h`;
+};
+
 const now = DateTime.now().setZone('Europe/Zagreb');
 const nowTime = now.toFormat('HH:mm:ss');
 
@@ -208,7 +227,9 @@ const createReservation = async (req, res) => {
       try {
         await sendPushNotificationToUsers(adminUserIds, {
           title: 'Nova rezervacija! 📅',
-          body: `Nova rezervacija za ${guests} osoba dana ${date} u ${time}h`,
+          body: `Nova rezervacija za ${guests} osoba dana ${formatDateDisplay(
+            date,
+          )} u ${formatTimeDisplay(time)}`,
           data: {
             type: 'new_reservation',
             reservationId: reservation.id,
@@ -449,7 +470,9 @@ const confirmReservation = async (req, res) => {
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Rezervacija potvrđena! ✅',
-        body: `Vaša rezervacija u ${reservation.restaurant.name} je potvrđena`,
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je potvrđena (${formatDateDisplay(
+          reservation.date,
+        )}, ${formatTimeDisplay(reservation.time)})`,
         data: {
           type: 'reservation_confirmed',
           reservationId: reservation.id,
@@ -577,7 +600,9 @@ const declineReservation = async (req, res) => {
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Rezervacija odbijena ❌',
-        body: `Vaša rezervacija u ${reservation.restaurant.name} je odbijena`,
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je odbijena (${formatDateDisplay(
+          reservation.date,
+        )}, ${formatTimeDisplay(reservation.time)})`,
         data: {
           type: 'reservation_declined',
           reservationId: reservation.id,
@@ -747,7 +772,9 @@ const suggestAlternativeTime = async (req, res) => {
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Predložen alternativni termin! ⏰',
-        body: `${reservation.restaurant.name} je predložio alternativni termin za vašu rezervaciju`,
+        body: `${reservation.restaurant.name} je predložio alternativni termin (${formatDateDisplay(
+          suggestedDate,
+        )}, ${formatTimeDisplay(suggestedTime)})`,
         data: {
           type: 'alternative_time_suggested',
           reservationId: reservation.id,
@@ -1039,7 +1066,9 @@ const cancelReservationByRestaurant = async (req, res) => {
     try {
       await sendPushNotificationToUsers([reservation.userId], {
         title: 'Rezervacija otkazana od restorana ❌',
-        body: `Vaša rezervacija u ${reservation.restaurant.name} je otkazana od strane restorana`,
+        body: `Vaša rezervacija u ${reservation.restaurant.name} je otkazana od strane restorana (${formatDateDisplay(
+          reservation.date,
+        )}, ${formatTimeDisplay(reservation.time)})`,
         data: {
           type: 'reservation_cancelled_by_restaurant',
           reservationId: reservation.id,
