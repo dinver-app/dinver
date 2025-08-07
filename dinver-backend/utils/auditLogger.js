@@ -27,6 +27,8 @@ const Entities = {
     PRICE_CATEGORY: 'price_category',
   },
   SPECIAL_OFFER: 'special_offer',
+  PUSH_TOKEN: 'push_token',
+  PUSH_NOTIFICATION: 'push_notification',
 };
 
 function deepCompare(oldObj, newObj) {

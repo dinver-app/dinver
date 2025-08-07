@@ -1,4 +1,5 @@
 const { Expo } = require('expo-server-sdk');
+const { PushToken } = require('../models');
 
 // Kreiraj novu instancu Expo SDK
 const expo = new Expo();
@@ -92,25 +93,23 @@ const sendPushNotificationToUser = async (pushToken, message) => {
  */
 const sendPushNotificationToUsers = async (userIds, message) => {
   try {
-    const { User } = require('../models');
-
-    // Dohvati push tokene za korisnike
-    const users = await User.findAll({
+    // Dohvati push tokene za korisnike iz nove tablice
+    const pushTokens = await PushToken.findAll({
       where: {
-        id: userIds,
-        pushToken: { [require('sequelize').Op.ne]: null },
+        userId: userIds,
+        isActive: true,
       },
-      attributes: ['pushToken'],
+      attributes: ['token'],
     });
 
-    const pushTokens = users.map((user) => user.pushToken).filter(Boolean);
+    const tokenList = pushTokens.map((pt) => pt.token);
 
-    if (pushTokens.length === 0) {
+    if (tokenList.length === 0) {
       console.log('No push tokens found for the specified users');
       return { success: 0, failure: 0, errors: [] };
     }
 
-    return await sendPushNotification(pushTokens, message);
+    return await sendPushNotification(tokenList, message);
   } catch (error) {
     console.error('Error sending push notification to users:', error);
     throw error;
@@ -118,31 +117,58 @@ const sendPushNotificationToUsers = async (userIds, message) => {
 };
 
 /**
- * Slanje notifikacije svim korisnicima s push tokenom
+ * Slanje notifikacije svim korisnicima s aktivnim push tokenom
  * @param {Object} message - Poruka za slanje
  */
 const sendPushNotificationToAllUsers = async (message) => {
   try {
-    const { User } = require('../models');
-
-    // Dohvati sve push tokene
-    const users = await User.findAll({
+    // Dohvati sve aktivne push tokene iz nove tablice
+    const pushTokens = await PushToken.findAll({
       where: {
-        pushToken: { [require('sequelize').Op.ne]: null },
+        isActive: true,
       },
-      attributes: ['pushToken'],
+      attributes: ['token'],
     });
 
-    const pushTokens = users.map((user) => user.pushToken).filter(Boolean);
+    const tokenList = pushTokens.map((pt) => pt.token);
 
-    if (pushTokens.length === 0) {
-      console.log('No push tokens found in the database');
+    if (tokenList.length === 0) {
+      console.log('No active push tokens found in the database');
       return { success: 0, failure: 0, errors: [] };
     }
 
-    return await sendPushNotification(pushTokens, message);
+    return await sendPushNotification(tokenList, message);
   } catch (error) {
     console.error('Error sending push notification to all users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Slanje notifikacije samo logiranim korisnicima
+ * @param {Object} message - Poruka za slanje
+ */
+const sendPushNotificationToLoggedInUsers = async (message) => {
+  try {
+    // Dohvati push tokene samo za logirane korisnike
+    const pushTokens = await PushToken.findAll({
+      where: {
+        isActive: true,
+        userId: { [require('sequelize').Op.ne]: null },
+      },
+      attributes: ['token'],
+    });
+
+    const tokenList = pushTokens.map((pt) => pt.token);
+
+    if (tokenList.length === 0) {
+      console.log('No push tokens found for logged-in users');
+      return { success: 0, failure: 0, errors: [] };
+    }
+
+    return await sendPushNotification(tokenList, message);
+  } catch (error) {
+    console.error('Error sending push notification to logged-in users:', error);
     throw error;
   }
 };
@@ -152,4 +178,5 @@ module.exports = {
   sendPushNotificationToUser,
   sendPushNotificationToUsers,
   sendPushNotificationToAllUsers,
+  sendPushNotificationToLoggedInUsers,
 };
