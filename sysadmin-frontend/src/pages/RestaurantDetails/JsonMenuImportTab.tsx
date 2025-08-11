@@ -21,7 +21,6 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
   const { t } = useTranslation();
   const [files, setFiles] = useState<JsonMenuFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
@@ -201,11 +200,11 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-lg font-medium text-gray-800 mb-2">
-            JSON Menu Import
+            {t("json_menu_import")}
           </h2>
         </div>
         <button onClick={openCreateModal} className="primary-button">
-          Add JSON File
+          {t("add_json_file")}
         </button>
       </div>
 
@@ -213,13 +212,13 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">
-            <div className="text-lg">Loading files...</div>
+            <div className="text-lg">{t("loading_files")}</div>
           </div>
         ) : files.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            <div className="text-lg mb-2">No JSON menu files found.</div>
+            <div className="text-lg mb-2">{t("no_json_menu_files_found")}</div>
             <div className="text-sm">
-              Create your first file to get started.
+              {t("create_your_first_file_to_get_started")}
             </div>
           </div>
         ) : (
@@ -228,19 +227,19 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Filename
+                    {t("filename")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Menu Type
+                    {t("menu_type")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    {t("created")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t("status")}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {t("actions")}
                   </th>
                 </tr>
               </thead>
@@ -263,7 +262,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {file.menuType === "food" ? "Food" : "Drink"}
+                        {file.menuType === "food" ? t("food") : t("drink")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -277,7 +276,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {file.isActive ? "Active" : "Inactive"}
+                        {file.isActive ? t("active") : t("inactive")}
                       </span>
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap text-sm font-medium">
@@ -287,19 +286,21 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                           disabled={isImporting === file.id}
                           className="text-blue-600 hover:text-blue-900 disabled:opacity-50 font-medium px-3 py-1 rounded hover:bg-blue-50 transition-colors"
                         >
-                          {isImporting === file.id ? "Importing..." : "Import"}
+                          {isImporting === file.id
+                            ? t("importing")
+                            : t("import")}
                         </button>
                         <button
                           onClick={() => openEditModal(file)}
                           className="text-indigo-600 hover:text-indigo-900"
                         >
-                          Edit
+                          {t("edit")}
                         </button>
                         <button
                           onClick={() => openDeleteModal(file)}
                           className="text-red-600 hover:text-red-900 font-medium px-3 py-1 rounded hover:bg-red-50 transition-colors"
                         >
-                          Delete
+                          {t("delete")}
                         </button>
                       </div>
                     </td>
@@ -315,7 +316,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
       {importResult && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-8 shadow-sm">
           <h3 className="text-2xl font-bold text-green-800 mb-6 text-center">
-            ✅ Import Successful!
+            ✅ {t("import_successful")}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <div className="text-center">
@@ -323,7 +324,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 {importResult.results.categories.created}
               </div>
               <div className="text-base text-gray-700 font-medium">
-                Categories Created
+                {t("categories_created")}
               </div>
             </div>
             <div className="text-center">
@@ -331,7 +332,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 {importResult.results.categories.existing}
               </div>
               <div className="text-base text-gray-700 font-medium">
-                Categories Existing
+                {t("categories_existing")}
               </div>
             </div>
             <div className="text-center">
@@ -339,7 +340,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 {importResult.results.items.created}
               </div>
               <div className="text-base text-gray-700 font-medium">
-                Items Created
+                {t("items_created")}
               </div>
             </div>
             <div className="text-center">
@@ -347,13 +348,15 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 {importResult.results.items.errors}
               </div>
               <div className="text-base text-gray-700 font-medium">
-                Items Errors
+                {t("items_errors")}
               </div>
             </div>
           </div>
           {importResult.results.errors.length > 0 && (
             <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h5 className="font-semibold text-red-700 mb-3">Errors:</h5>
+              <h5 className="font-semibold text-red-700 mb-3">
+                {t("errors")}:
+              </h5>
               <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
                 {importResult.results.errors.map((error, index) => (
                   <li key={index}>{error}</li>
@@ -366,7 +369,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
               onClick={() => setImportResult(null)}
               className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
-              Close
+              {t("close")}
             </button>
           </div>
         </div>
@@ -378,7 +381,9 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
-                {showCreateModal ? "Create New JSON File" : "Edit JSON File"}
+                {showCreateModal
+                  ? t("create_new_json_file")
+                  : t("edit_json_file")}
               </h3>
               <button
                 onClick={() => {
@@ -395,7 +400,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filename
+                  {t("filename")}
                 </label>
                 <input
                   type="text"
@@ -410,7 +415,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Menu Type
+                  {t("menu_type")}
                 </label>
                 <select
                   value={formData.menuType}
@@ -422,14 +427,14 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                   }
                   className="w-full p-2 border border-gray-300 rounded outline-gray-300"
                 >
-                  <option value="food">Food Menu</option>
-                  <option value="drink">Drink Menu</option>
+                  <option value="food">{t("food")} Menu</option>
+                  <option value="drink">{t("drink")} Menu</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  JSON Content
+                  {t("json_content")}
                 </label>
                 <textarea
                   value={formData.jsonContent}
@@ -460,7 +465,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
 }`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter valid JSON content for your menu
+                  {t("enter_valid_json_content_for_your_menu")}
                 </p>
               </div>
             </div>
@@ -474,13 +479,13 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 }}
                 className="secondary-button"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={showCreateModal ? handleCreateFile : handleUpdateFile}
                 className="primary-button"
               >
-                {showCreateModal ? "Create File" : "Update File"}
+                {showCreateModal ? t("create_file") : t("update_file")}
               </button>
             </div>
           </div>
@@ -508,9 +513,12 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Delete File</h3>
+                <h3 className="text-xl font-bold text-gray-800">
+                  {t("delete_file")}
+                </h3>
                 <p className="text-base text-gray-600 mt-1">
-                  Are you sure you want to delete "{selectedFile.filename}"?
+                  {t("are_you_sure_you_want_to_delete")} "
+                  {selectedFile.filename}"?
                 </p>
               </div>
             </div>
@@ -545,13 +553,13 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 onClick={() => setShowDeleteModal(false)}
                 className="secondary-button px-6 py-3"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleDeleteFile}
                 className="delete-button px-6 py-3"
               >
-                Delete
+                {t("delete")}
               </button>
             </div>
           </div>
@@ -580,10 +588,11 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-800">
-                  Confirm Import
+                  {t("confirm_import")}
                 </h3>
                 <p className="text-gray-600">
-                  Are you sure you want to import "{selectedFile.filename}"?
+                  {t("are_you_sure_you_want_to_import")} "
+                  {selectedFile.filename}"?
                 </p>
               </div>
             </div>
@@ -591,11 +600,11 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               <div className="text-sm text-gray-700 space-y-2">
                 <div className="flex justify-between">
-                  <span className="font-medium">File:</span>
+                  <span className="font-medium">{t("file")}:</span>
                   <span>{selectedFile.filename}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium">Menu Type:</span>
+                  <span className="font-medium">{t("menu_type_label")}</span>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       selectedFile.menuType === "food"
@@ -603,11 +612,11 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                         : "bg-blue-100 text-blue-800"
                     }`}
                   >
-                    {selectedFile.menuType === "food" ? "Food" : "Drink"}
+                    {selectedFile.menuType === "food" ? t("food") : t("drink")}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium">Created:</span>
+                  <span className="font-medium">{t("created_label")}</span>
                   <span>{formatDate(selectedFile.createdAt)}</span>
                 </div>
               </div>
@@ -629,11 +638,10 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                   />
                 </svg>
                 <div>
-                  <p className="font-medium text-yellow-800 mb-1">Warning:</p>
-                  <p>
-                    This will create new categories and items in your menu.
-                    Existing items with the same name will be skipped.
+                  <p className="font-medium text-yellow-800 mb-1">
+                    {t("warning")}
                   </p>
+                  <p>{t("import_warning_message")}</p>
                 </div>
               </div>
             </div>
@@ -643,7 +651,7 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 onClick={() => setShowImportConfirmModal(false)}
                 className="secondary-button px-6 py-3"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleImport}
@@ -651,8 +659,8 @@ const JsonMenuImportTab = ({ restaurant }: JsonMenuImportTabProps) => {
                 className="primary-button px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isImporting === selectedFile.id
-                  ? "Importing..."
-                  : "Import Menu"}
+                  ? t("importing")
+                  : t("import_menu")}
               </button>
             </div>
           </div>
