@@ -41,16 +41,48 @@ export interface MenuAnalysisResult {
   }>;
   restaurantId: string;
   menuType: "food" | "drink";
+  existing?: {
+    categories: Array<{
+      id: string;
+      position: number;
+      isActive: boolean;
+      name: string;
+      translations: Array<{
+        language: string;
+        name: string;
+        description: string;
+      }>;
+    }>;
+    items: Array<{
+      id: string;
+      categoryId: string;
+      position: number;
+      isActive: boolean;
+      price: number;
+      hasSizes: boolean;
+      defaultSizeName: string | null;
+      sizes: Array<{ name: string; price: number }>;
+      name: string;
+      translations: Array<{
+        language: string;
+        name: string;
+        description: string;
+      }>;
+    }>;
+  };
+  accuracy?: boolean;
 }
 
 export const analyzeMenuImage = async (
   restaurantId: string,
   file: File,
-  menuType: "food" | "drink" = "food"
+  menuType: "food" | "drink" = "food",
+  accuracy: boolean = false
 ): Promise<MenuAnalysisResult> => {
   const formData = new FormData();
   formData.append("image", file);
   formData.append("menuType", menuType);
+  formData.append("accuracy", String(accuracy));
 
   const response = await apiClient.post(
     `/api/sysadmin/menu-import/${restaurantId}/analyze-single`,
@@ -103,6 +135,7 @@ export const importEditedMenu = async (
     description: { hr: string; en: string };
     price: number;
     categoryName: string;
+    categoryId?: string;
     hasSizes: boolean;
     defaultSizeName: string | null;
     sizes: Array<{ name: string; price: number }>;

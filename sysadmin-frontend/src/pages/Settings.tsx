@@ -29,7 +29,6 @@ import { getRestaurantsList } from "../services/restaurantService";
 import { getAuditLogs } from "../services/auditLogsService";
 import {
   analyzeMenuImage,
-  analyzeMultipleMenuImages,
   importEditedMenu,
   MenuAnalysisResult,
 } from "../services/menuImportService";
@@ -64,7 +63,7 @@ const Settings = () => {
   // Menu Importer states
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("");
   const [menuType, setMenuType] = useState<"food" | "drink">("food");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] =
     useState<MenuAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -302,7 +301,7 @@ const Settings = () => {
   // Menu Importer functions
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setSelectedFiles(files);
+    setSelectedFile(files[0] || null);
   };
 
   const handleRestaurantSelect = (
@@ -336,6 +335,17 @@ const Settings = () => {
           : cat
       )
     );
+
+    // Update items with the new category name
+    if (field === "name") {
+      setEditableItems((prev) =>
+        prev.map((item) =>
+          item.categoryName === prev.find((cat) => cat.id === id)?.name.hr
+            ? { ...item, categoryName: value }
+            : item
+        )
+      );
+    }
   };
 
   const handleItemChange = (
@@ -460,7 +470,7 @@ const Settings = () => {
   };
 
   const handleAnalyzeMenu = async () => {
-    if (!selectedRestaurant || selectedFiles.length === 0) {
+    if (!selectedRestaurant || !selectedFile) {
       toast.error("Please select a restaurant and at least one image");
       return;
     }
@@ -469,19 +479,11 @@ const Settings = () => {
     try {
       let result: MenuAnalysisResult;
 
-      if (selectedFiles.length === 1) {
-        result = await analyzeMenuImage(
-          selectedRestaurant,
-          selectedFiles[0],
-          menuType
-        );
-      } else {
-        result = await analyzeMultipleMenuImages(
-          selectedRestaurant,
-          selectedFiles,
-          menuType
-        );
-      }
+      result = await analyzeMenuImage(
+        selectedRestaurant,
+        selectedFile,
+        menuType
+      );
 
       if (result.success) {
         setAnalysisResult(result);
@@ -1023,16 +1025,14 @@ const Settings = () => {
               </label>
               <input
                 type="file"
-                multiple
                 accept="image/*"
                 onChange={handleFileSelect}
                 className="w-full p-2 border border-gray-300 rounded outline-gray-300"
               />
-              {selectedFiles.length > 0 && (
+              {selectedFile && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-600">
-                    Selected files:{" "}
-                    {selectedFiles.map((f) => f.name).join(", ")}
+                    Selected files: {selectedFile.name}
                   </p>
                 </div>
               )}
@@ -1042,11 +1042,7 @@ const Settings = () => {
             <div>
               <button
                 onClick={handleAnalyzeMenu}
-                disabled={
-                  !selectedRestaurant ||
-                  selectedFiles.length === 0 ||
-                  isAnalyzing
-                }
+                disabled={!selectedRestaurant || !selectedFile || isAnalyzing}
                 className="primary-button disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isAnalyzing ? "Analyzing..." : "Analyze Menu Images"}

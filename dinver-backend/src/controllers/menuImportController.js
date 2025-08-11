@@ -36,49 +36,43 @@ const withTimeout = (promise, ms, label = 'operation') =>
   });
 
 // Function to analyze menu image with GPT Vision
-const analyzeMenuImageWithGPT = async (imageBuffer, menuType = 'food') => {
+// options: { accuracy?: boolean }
+const analyzeMenuImageWithGPT = async (
+  imageBuffer,
+  menuType = 'food',
+  options = {},
+) => {
+  const { accuracy = false } = options;
   try {
     // Optimize image with sharp before processing
     let optimizedBuffer;
     if (imageBuffer.buffer) {
       optimizedBuffer = await sharp(imageBuffer.buffer)
-        .resize(768, 768, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 70 })
+        .resize(accuracy ? 1024 : 768, accuracy ? 1024 : 768, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: accuracy ? 80 : 70 })
         .toBuffer();
     } else {
       optimizedBuffer = await sharp(imageBuffer)
-        .resize(768, 768, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 70 })
+        .resize(accuracy ? 1024 : 768, accuracy ? 1024 : 768, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: accuracy ? 80 : 70 })
         .toBuffer();
     }
 
     // Convert optimized image to base64
     const base64Image = optimizedBuffer.toString('base64');
 
-    console.log('Image buffer type:', typeof imageBuffer);
-    console.log('Image buffer has buffer property:', !!imageBuffer.buffer);
-    console.log('Base64 image length:', base64Image.length);
-
     // Use JPEG as optimized format
     const mimeType = 'image/jpeg';
-
-    console.log('Detected MIME type:', mimeType);
 
     // Ensure the image is properly formatted for OpenAI
     const imageData = {
       url: `data:image/jpeg;base64,${base64Image}`,
-      detail: 'high',
-    };
-
-    // Alternative approach - try without data URL prefix
-    const imageDataAlt = {
-      url: base64Image,
-      detail: 'high',
-    };
-
-    // Use the data URL format as it's the standard for OpenAI
-    const finalImageData = {
-      url: `data:${mimeType};base64,${base64Image}`,
       detail: 'high',
     };
 
@@ -102,6 +96,12 @@ IMPORTANT FORMATTING RULES:
 - For food items: Use hasSizes, defaultSizeName, and sizes fields when multiple sizes are available for the same item
 
 CRITICAL: For food items, use hasSizes: true and populate sizes array when you see multiple size options for the same item (e.g., "Mala", "Velika" for pizza).
+
+DATA INTEGRITY RULES:
+- Do NOT fabricate or infer descriptions. Only include description text that is explicitly visible on the menu image. If no description is present, set description.hr and description.en to empty strings "".
+- Be exhaustive. Do not skip categories or items; include every visible item and price you can read from the image.
+- Do not merge different items. Treat each unique line/item on the menu as a separate item unless it is an exact duplicate.
+- Keep the Croatian (hr) names exactly as they appear on the menu (same spelling/capitalization, including diacritics). Provide English (en) as a translation, but do not change the hr text.
 
 Return the data in this exact JSON format:
 {
@@ -128,7 +128,7 @@ Examples:
 - For food: "Pizza Margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
 - For categories: "Glavna jela", "Predjela", "Deserti", "Pizza", "Pasta"
 `
-        : `Analyze this drink menu image and extract all drink categories and items. For each category, provide the name in Croatian (hr) and English (en). For each drink item, provide the name in Croatian (hr) and English (en), description in both languages, price (as a number), and the category name it belongs to. If an item has different sizes with different prices, include them in the sizes array.
+        : `Analyze this drink menu image and extract all drink categories and items. For each category, provide the name in Croatian (hr) and English (en). For each drink item, provide the name in Croatian (hr) and English (en), description in both languages, price (as a number), and the category name it belongs to.
 
 IMPORTANT FORMATTING RULES:
 - Remove all parentheses () from descriptions
@@ -138,7 +138,6 @@ IMPORTANT FORMATTING RULES:
 - Avoid special characters or formatting in descriptions
 - For drinks, if you see size information (like 0,75l, 0.5l, 330ml, etc.) that is separate from the name, include it in the item name. For example: "Mineralna voda 0,75l" instead of separate name and size
 - If size is clearly part of the item name, keep it as is
-- If you see multiple sizes for the same drink, use the sizes array instead of creating separate items
 - For categories, use simple, clear names without extra formatting or special characters
 - Keep category names short and descriptive (e.g., "Pića", "Alkoholna pića", "Bezalkoholna pića" for drinks)
 - Maintain consistent capitalization: if text appears in ALL CAPS on the menu, keep it in ALL CAPS; if it's in normal case, keep it in normal case
@@ -150,7 +149,6 @@ CRITICAL: For drink items, always set hasSizes: false, defaultSizeName: null, an
 Examples:
 - If you see "Mineralna voda" and separately "0,75l" → use "Mineralna voda 0,75l"
 - If you see "Coca Cola 0,5l" → keep as "Coca Cola 0,5l"
-- If you see "Pivo" with options "0,3l" and "0,5l" → use sizes array with separate entries
 
 Category examples:
 - For drinks: "Pića", "Alkoholna pića", "Bezalkoholna pića", "Kava", "Čaj"
@@ -159,6 +157,12 @@ Category examples:
 Drink vs Food examples:
 - For drinks: "Jana 0,33l" and "Jana 0,75l" should be TWO SEPARATE items (not one item with sizes)
 - For food: "Pizza Margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
+
+DATA INTEGRITY RULES:
+- Do NOT fabricate or infer descriptions. Only include description text that is explicitly visible on the menu image. If no description is present, set description.hr and description.en to empty strings "".
+- Be exhaustive. Do not skip categories or items; include every visible item and price you can read from the image.
+- Do not merge different items. Treat each unique line/item on the menu as a separate item unless it is an exact duplicate.
+- Keep the Croatian (hr) names exactly as they appear on the menu (same spelling/capitalization, including diacritics). Provide English (en) as a translation, but do not change the hr text.
 
 Return the data in this exact JSON format:
 {
@@ -186,110 +190,61 @@ Examples:
 - For categories: "Pića", "Alkoholna pića", "Bezalkoholna pića", "Kava", "Čaj"
 `;
 
-    console.log('Sending request to OpenAI with image data format:', {
-      hasUrl: !!finalImageData.url,
-      urlStartsWith: finalImageData.url.substring(0, 50) + '...',
-      detail: finalImageData.detail,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: prompt,
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`,
+                detail: accuracy ? 'high' : 'low',
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0,
     });
 
-    console.log(
-      'Final image URL format:',
-      `data:${mimeType};base64,${base64Image.substring(0, 50)}...`,
-    );
-    console.log('MIME type being used:', mimeType);
-    console.log('Base64 length:', base64Image.length);
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response content from OpenAI');
+    }
 
-    // Try to send the request with detailed logging
+    // Prefer strict JSON parsing (response_format: json_object). Fallback to regex extraction.
+    let menuData;
     try {
-      const imageUrl = `data:${mimeType};base64,${base64Image}`;
-      console.log(
-        'Sending image URL to OpenAI:',
-        imageUrl.substring(0, 100) + '...',
-      );
-      console.log('MIME type:', mimeType);
-      console.log('Base64 length:', base64Image.length);
-      console.log('Image buffer type:', typeof imageBuffer);
-      console.log('Image buffer keys:', Object.keys(imageBuffer));
-
-      // Log the exact message structure being sent
-      const messageContent = [
-        {
-          type: 'text',
-          text: prompt,
-        },
-        {
-          type: 'image_url',
-          image_url: {
-            url: imageUrl,
-            detail: 'low',
-          },
-        },
-      ];
-
-      console.log(
-        'Message content structure:',
-        JSON.stringify(messageContent, null, 2),
-      );
-
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: messageContent,
-          },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-      });
-
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response content from OpenAI');
+      menuData = JSON.parse(content);
+    } catch (_) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in OpenAI response');
       }
-
-      // Prefer strict JSON parsing (response_format: json_object). Fallback to regex extraction.
-      let menuData;
-      try {
-        menuData = JSON.parse(content);
-      } catch (_) {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('No JSON found in OpenAI response');
-        }
-        menuData = JSON.parse(jsonMatch[0]);
-      }
-
-      // Validate the structure
-      if (!menuData.categories || !menuData.items) {
-        throw new Error('Invalid menu data structure from OpenAI');
-      }
-
-      return menuData;
-    } catch (openaiError) {
-      console.error('OpenAI API error details:', {
-        code: openaiError.code,
-        message: openaiError.message,
-        param: openaiError.param,
-        type: openaiError.type,
-      });
-      throw openaiError;
+      menuData = JSON.parse(jsonMatch[0]);
     }
-  } catch (error) {
-    console.error('Error in analyzeMenuImageWithGPT:', error);
 
-    // Provide more specific error messages
-    if (error.code === 'missing_required_parameter') {
-      throw new Error(
-        `OpenAI API error: ${error.message}. This might be due to incorrect image format.`,
-      );
-    } else if (error.code === 'invalid_image_format') {
-      throw new Error(
-        `OpenAI API error: ${error.message}. Please ensure the image is in JPEG, PNG, GIF, or WebP format.`,
-      );
-    } else {
-      throw new Error(`Failed to analyze menu image: ${error.message}`);
+    // Validate the structure
+    if (!menuData.categories || !menuData.items) {
+      throw new Error('Invalid menu data structure from OpenAI');
     }
+
+    return menuData;
+  } catch (openaiError) {
+    console.error('OpenAI API error details:', {
+      code: openaiError.code,
+      message: openaiError.message,
+      param: openaiError.param,
+      type: openaiError.type,
+    });
+    throw openaiError;
   }
 };
 
@@ -297,7 +252,7 @@ Examples:
 const analyzeMenuImage = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-    const { menuType = 'food' } = req.body;
+    const { menuType = 'food', accuracy = false } = req.body;
     const imageFile = req.file;
 
     if (!imageFile) {
@@ -320,17 +275,78 @@ const analyzeMenuImage = async (req, res) => {
     }
 
     const menuData = await withTimeout(
-      analyzeMenuImageWithGPT(imageFile, menuType),
-      25000,
+      analyzeMenuImageWithGPT(imageFile, menuType, { accuracy }),
+      accuracy ? 35000 : 25000,
       'OpenAI menu analysis',
     );
+
+    // Fetch existing categories and items for dedupe/selection aid
+    const [existingCategories, existingItems] = await Promise.all([
+      (menuType === 'food' ? MenuCategory : DrinkCategory).findAll({
+        where: { restaurantId },
+        include: [
+          {
+            model:
+              menuType === 'food'
+                ? MenuCategoryTranslation
+                : DrinkCategoryTranslation,
+            as: 'translations',
+          },
+        ],
+        order: [['position', 'ASC']],
+      }),
+      (menuType === 'food' ? MenuItem : DrinkItem).findAll({
+        where: { restaurantId },
+        include: [
+          {
+            model:
+              menuType === 'food' ? MenuItemTranslation : DrinkItemTranslation,
+            as: 'translations',
+          },
+        ],
+        order: [['position', 'ASC']],
+      }),
+    ]);
+
+    // Shape lightweight existing data for the client
+    const existing = {
+      categories: existingCategories.map((c) => ({
+        id: c.id,
+        position: c.position,
+        isActive: c.isActive,
+        name: c.translations.find((t) => t.language === 'hr')?.name || '',
+        translations: c.translations.map((t) => ({
+          language: t.language,
+          name: t.name,
+          description: t.description || '',
+        })),
+      })),
+      items: existingItems.map((i) => ({
+        id: i.id,
+        categoryId: i.categoryId,
+        position: i.position,
+        isActive: i.isActive,
+        price: i.price,
+        hasSizes: i.hasSizes,
+        defaultSizeName: i.defaultSizeName,
+        sizes: i.sizes,
+        name: i.translations.find((t) => t.language === 'hr')?.name || '',
+        translations: i.translations.map((t) => ({
+          language: t.language,
+          name: t.name,
+          description: t.description || '',
+        })),
+      })),
+    };
 
     res.json({
       success: true,
       message: 'Menu analyzed successfully',
       data: menuData,
+      existing,
       restaurantId,
       menuType,
+      accuracy,
     });
   } catch (error) {
     console.error('Error analyzing menu image:', error);
@@ -566,7 +582,9 @@ const importEditedMenu = async (req, res) => {
     // Process items
     for (const itemData of items) {
       try {
-        const categoryId = categoryMap.get(itemData.categoryName);
+        // Prefer an explicit categoryId if supplied by the client to keep selections stable
+        const categoryId =
+          itemData.categoryId || categoryMap.get(itemData.categoryName);
         if (!categoryId) {
           results.errors.push(
             `Category not found for item: ${itemData.name.hr}`,
