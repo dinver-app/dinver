@@ -1,9 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import {
-  listSysadmins,
-  addSysadmin,
-  removeSysadmin,
-} from "../services/sysadminService";
+import { listSysadmins, removeSysadmin } from "../services/sysadminService";
 import {
   updateUserLanguage,
   getUserLanguage,
@@ -36,7 +32,6 @@ const Settings = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
-  const [newSysadminEmail, setNewSysadminEmail] = useState("");
   const [_, setModalOpen] = useState(false);
   const [selectedSysadmin, setSelectedSysadmin] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -116,19 +111,6 @@ const Settings = () => {
       console.error("Failed to fetch sysadmins", error);
     } finally {
       toast.dismiss(loadingToastId);
-    }
-  };
-
-  const handleAddSysadmin = async () => {
-    try {
-      await addSysadmin(newSysadminEmail);
-      setNewSysadminEmail("");
-      setModalOpen(false);
-      fetchSysadmins();
-      toast.success("Sysadmin added successfully");
-    } catch (error: any) {
-      toast.error(error.message);
-      console.error("Error object:", error.message);
     }
   };
 
@@ -579,6 +561,93 @@ const Settings = () => {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Log Details Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">
+                {t("log_details")}
+              </h3>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">
+                    {t("user")}
+                  </h4>
+                  <p className="text-gray-900">
+                    {getUserEmail(selectedLog.userId)}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">
+                    {t("restaurant")}
+                  </h4>
+                  <p className="text-gray-900">
+                    {getRestaurantName(selectedLog.restaurantId)}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">
+                    {t("action")}
+                  </h4>
+                  <p className="text-gray-900">{t(selectedLog.action)}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">
+                    {t("entity")}
+                  </h4>
+                  <p className="text-gray-900">{t(selectedLog.entity)}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">
+                    {t("date")}
+                  </h4>
+                  <p className="text-gray-900">
+                    {format(
+                      new Date(selectedLog.createdAt),
+                      "dd.MM.yyyy. HH:mm"
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Changes */}
+              {selectedLog.changes && (
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-3">
+                    {t("changes")}
+                  </h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <pre className="text-sm text-gray-800 whitespace-pre-wrap">
+                      {selectedLog.changes}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="secondary-button px-6 py-3"
+              >
+                {t("close")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
