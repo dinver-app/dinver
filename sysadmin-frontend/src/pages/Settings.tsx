@@ -32,6 +32,8 @@ import {
   importEditedMenu,
   MenuAnalysisResult,
 } from "../services/menuImportService";
+import { getCategoryItems } from "../services/menuService";
+import { getDrinkCategories } from "../services/drinkService";
 import ReactJson from "react-json-view";
 
 const getInitialLanguage = () => {
@@ -96,6 +98,16 @@ const Settings = () => {
   const [showEditMode, setShowEditMode] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // Existing categories from database
+  const [existingCategories, setExistingCategories] = useState<
+    Array<{
+      id: string;
+      name: string;
+      description: string;
+      isActive: boolean;
+    }>
+  >([]);
+
   useEffect(() => {
     const fetchAllData = async () => {
       const loadingToastId = toast.loading(t("loading"));
@@ -146,6 +158,13 @@ const Settings = () => {
       setFilteredRestaurants(filtered);
     }
   }, [restaurantSearchTerm, restaurants]);
+
+  // Fetch existing categories when menuType changes
+  useEffect(() => {
+    if (selectedRestaurant) {
+      fetchExistingCategories(selectedRestaurant);
+    }
+  }, [menuType, selectedRestaurant]);
 
   const fetchLogs = async () => {
     const loadingToastId = toast.loading(t("loading"));
@@ -304,13 +323,16 @@ const Settings = () => {
     setSelectedFile(files[0] || null);
   };
 
-  const handleRestaurantSelect = (
+  const handleRestaurantSelect = async (
     restaurantId: string,
     restaurantName: string
   ) => {
     setSelectedRestaurant(restaurantId);
     setRestaurantSearchTerm(restaurantName || "");
     setShowRestaurantDropdown(false);
+
+    // Fetch existing categories for this restaurant
+    await fetchExistingCategories(restaurantId);
   };
 
   const handleRestaurantSearchChange = (value: string) => {
@@ -318,6 +340,40 @@ const Settings = () => {
     setShowRestaurantDropdown(true);
     if (!value.trim()) {
       setSelectedRestaurant("");
+    }
+  };
+
+  // Fetch existing categories when restaurant is selected
+  const fetchExistingCategories = async (restaurantId: string) => {
+    try {
+      let categories = [];
+      if (menuType === "food") {
+        const response = await getCategoryItems(restaurantId);
+        categories = response.map((cat: any) => ({
+          id: cat.id,
+          name:
+            cat.translations.find((t: any) => t.language === "hr")?.name || "",
+          description:
+            cat.translations.find((t: any) => t.language === "hr")
+              ?.description || "",
+          isActive: cat.isActive,
+        }));
+      } else {
+        const response = await getDrinkCategories(restaurantId);
+        categories = response.map((cat: any) => ({
+          id: cat.id,
+          name:
+            cat.translations.find((t: any) => t.language === "hr")?.name || "",
+          description:
+            cat.translations.find((t: any) => t.language === "hr")
+              ?.description || "",
+          isActive: cat.isActive,
+        }));
+      }
+      setExistingCategories(categories);
+    } catch (error) {
+      console.error("Failed to fetch existing categories:", error);
+      setExistingCategories([]);
     }
   };
 
@@ -477,6 +533,11 @@ const Settings = () => {
 
     setIsAnalyzing(true);
     try {
+      // Fetch existing categories if not already fetched
+      if (existingCategories.length === 0) {
+        await fetchExistingCategories(selectedRestaurant);
+      }
+
       let result: MenuAnalysisResult;
 
       result = await analyzeMenuImage(
@@ -1074,6 +1135,32 @@ const Settings = () => {
                       + Add Category
                     </button>
                   </div>
+
+                  {/* Existing Categories Info */}
+                  {existingCategories.length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h5 className="text-sm font-medium text-blue-800 mb-2">
+                        Existing Categories (
+                        {
+                          existingCategories.filter((cat) => cat.isActive)
+                            .length
+                        }
+                        )
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {existingCategories
+                          .filter((cat) => cat.isActive)
+                          .map((cat) => (
+                            <span
+                              key={cat.id}
+                              className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                            >
+                              {cat.name}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <table className="min-w-full">
                       <thead className="bg-gray-50">
@@ -1269,9 +1356,23 @@ const Settings = () => {
                               className="w-full p-2 text-sm border border-gray-300 rounded"
                             >
                               <option value="">Select Category</option>
+
+                              {/* Existing categories from database */}
+                              {existingCategories
+                                .filter((cat) => cat.isActive)
+                                .map((cat) => (
+                                  <option
+                                    key={`existing-${cat.id}`}
+                                    value={cat.name}
+                                  >
+                                    {cat.name} (existing)
+                                  </option>
+                                ))}
+
+                              {/* New categories from analysis */}
                               {editableCategories.map((cat) => (
                                 <option key={cat.id} value={cat.name.hr}>
-                                  {cat.name.hr}
+                                  {cat.name.hr} (new)
                                 </option>
                               ))}
                             </select>

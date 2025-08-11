@@ -44,23 +44,23 @@ const analyzeMenuImageWithGPT = async (
 ) => {
   const { accuracy = false } = options;
   try {
-    // Optimize image with sharp before processing
+    // Optimize image with sharp before processing - smaller for faster processing
     let optimizedBuffer;
     if (imageBuffer.buffer) {
       optimizedBuffer = await sharp(imageBuffer.buffer)
-        .resize(accuracy ? 1024 : 768, accuracy ? 1024 : 768, {
+        .resize(accuracy ? 600 : 400, accuracy ? 600 : 400, {
           fit: 'inside',
           withoutEnlargement: true,
         })
-        .jpeg({ quality: accuracy ? 80 : 70 })
+        .jpeg({ quality: accuracy ? 60 : 50 })
         .toBuffer();
     } else {
       optimizedBuffer = await sharp(imageBuffer)
-        .resize(accuracy ? 1024 : 768, accuracy ? 1024 : 768, {
+        .resize(accuracy ? 600 : 400, accuracy ? 600 : 400, {
           fit: 'inside',
           withoutEnlargement: true,
         })
-        .jpeg({ quality: accuracy ? 80 : 70 })
+        .jpeg({ quality: accuracy ? 60 : 50 })
         .toBuffer();
     }
 
@@ -70,11 +70,8 @@ const analyzeMenuImageWithGPT = async (
     // Use JPEG as optimized format
     const mimeType = 'image/jpeg';
 
-    // Ensure the image is properly formatted for OpenAI
-    const imageData = {
-      url: `data:image/jpeg;base64,${base64Image}`,
-      detail: 'high',
-    };
+    // Use lower detail for faster processing
+    const imageDetail = accuracy ? 'low' : 'low';
 
     const prompt =
       menuType === 'food'
@@ -212,7 +209,7 @@ Examples:
               type: 'image_url',
               image_url: {
                 url: `data:${mimeType};base64,${base64Image}`,
-                detail: accuracy ? 'high' : 'low',
+                detail: imageDetail,
               },
             },
           ],
@@ -282,11 +279,28 @@ const analyzeMenuImage = async (req, res) => {
       });
     }
 
-    const menuData = await withTimeout(
-      analyzeMenuImageWithGPT(imageFile, menuType, { accuracy }),
-      accuracy ? 35000 : 25000,
-      'OpenAI menu analysis',
-    );
+    let menuData;
+    try {
+      menuData = await withTimeout(
+        analyzeMenuImageWithGPT(imageFile, menuType, { accuracy }),
+        accuracy ? 20000 : 15000,
+        'OpenAI menu analysis',
+      );
+    } catch (timeoutError) {
+      if (timeoutError.message.includes('timed out')) {
+        // Fallback to lower accuracy if timeout occurs
+        console.log(
+          'High accuracy analysis timed out, falling back to lower accuracy...',
+        );
+        menuData = await withTimeout(
+          analyzeMenuImageWithGPT(imageFile, menuType, { accuracy: false }),
+          10000,
+          'OpenAI menu analysis fallback',
+        );
+      } else {
+        throw timeoutError;
+      }
+    }
 
     // Fetch existing categories and items for dedupe/selection aid
     const [existingCategories, existingItems] = await Promise.all([
@@ -360,112 +374,6 @@ const analyzeMenuImage = async (req, res) => {
     console.error('Error analyzing menu image:', error);
     res.status(500).json({
       error: 'Failed to analyze menu image',
-      details: error.message,
-    });
-  }
-};
-
-// Analyze menu from multiple images
-const analyzeMultipleMenuImages = async (req, res) => {
-  try {
-    const { restaurantId } = req.params;
-    const { menuType = 'food' } = req.body;
-    const imageFiles = req.files;
-
-    if (!imageFiles || imageFiles.length === 0) {
-      return res.status(400).json({ error: 'No image files provided' });
-    }
-
-    // Validate image formats
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-    ];
-    for (const file of imageFiles) {
-      if (!allowedMimeTypes.includes(file.mimetype)) {
-        return res.status(400).json({
-          error: `Unsupported image format: ${file.originalname}. Please use JPEG, PNG, GIF, or WebP format.`,
-        });
-      }
-    }
-
-    const results = [];
-    let combinedMenuData = {
-      categories: [],
-      items: [],
-    };
-
-    // Process images in parallel with per-image timeouts to fit within platform limits
-    const perImageTimeoutMs = 25000;
-    const tasks = imageFiles.map((file) =>
-      withTimeout(
-        analyzeMenuImageWithGPT(file, menuType),
-        perImageTimeoutMs,
-        `OpenAI analysis for ${file.originalname}`,
-      )
-        .then((menuData) => ({ status: 'fulfilled', file, menuData }))
-        .catch((error) => ({ status: 'rejected', file, error })),
-    );
-
-    const settled = await Promise.all(tasks);
-
-    for (const result of settled) {
-      if (result.status === 'fulfilled') {
-        const { file, menuData } = result;
-        combinedMenuData.categories = [
-          ...combinedMenuData.categories,
-          ...menuData.categories,
-        ];
-        combinedMenuData.items = [...combinedMenuData.items, ...menuData.items];
-        results.push({ filename: file.originalname, data: menuData });
-      } else {
-        const { file, error } = result;
-        console.error(`Error processing file ${file.originalname}:`, error);
-        results.push({ filename: file.originalname, error: error.message });
-      }
-    }
-
-    // Remove duplicates based on name
-    const uniqueCategories = [];
-    const seenCategories = new Set();
-
-    for (const category of combinedMenuData.categories) {
-      const key = category.name.hr;
-      if (!seenCategories.has(key)) {
-        seenCategories.add(key);
-        uniqueCategories.push(category);
-      }
-    }
-
-    const uniqueItems = [];
-    const seenItems = new Set();
-
-    for (const item of combinedMenuData.items) {
-      const key = `${item.name.hr}-${item.categoryName}`;
-      if (!seenItems.has(key)) {
-        seenItems.add(key);
-        uniqueItems.push(item);
-      }
-    }
-
-    res.json({
-      success: true,
-      message: 'Menu analyzed successfully',
-      data: {
-        categories: uniqueCategories,
-        items: uniqueItems,
-      },
-      results,
-      restaurantId,
-      menuType,
-    });
-  } catch (error) {
-    console.error('Error analyzing multiple menu images:', error);
-    res.status(500).json({
-      error: 'Failed to analyze menu images',
       details: error.message,
     });
   }
@@ -716,6 +624,5 @@ const importEditedMenu = async (req, res) => {
 
 module.exports = {
   analyzeMenuImage,
-  analyzeMultipleMenuImages,
   importEditedMenu,
 };
