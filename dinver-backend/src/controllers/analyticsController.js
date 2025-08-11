@@ -842,6 +842,20 @@ const getPopularRestaurants = async (req, res) => {
     const restaurantIds = clicks.map((c) => c.restaurant_id);
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
+      attributes: [
+        'id',
+        'name',
+        'description',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'priceLevel',
+        'thumbnailUrl',
+        'isClaimed',
+      ],
     });
 
     const withDistance = clicks
@@ -870,6 +884,7 @@ const getPopularRestaurants = async (req, res) => {
                 rating: r.rating,
                 priceLevel: r.priceLevel,
                 thumbnailUrl: r.thumbnailUrl,
+                isClaimed: r.isClaimed,
                 distance,
               }
             : null,
