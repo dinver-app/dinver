@@ -1,0 +1,200 @@
+{
+  "categories": [
+    {
+      "name": { "hr": "Novo u ponudi", "en": "New in offer" }
+    },
+    {
+      "name": { "hr": "Doručak", "en": "Breakfast" }
+    },
+    {
+      "name": { "hr": "Hladna predjela", "en": "Cold appetizers" }
+    }
+  ],
+  "items": [
+    {
+      "name": { "hr": "Kebab pinsa", "en": "Kebab pinsa" },
+      "description": {
+        "hr": "pileće meso, gauda, mozzarela, bijeli umak, kukuruz, kiseli krastavci",
+        "en": "chicken, gouda, mozzarella, white sauce, corn, pickles"
+      },
+      "price": 10.5,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Pesto pinsa", "en": "Pesto pinsa" },
+      "description": {
+        "hr": "umak od bosiljka, češnjak, mileram, gauda, mozzarela, sušene rajčice, buratta, mortadela",
+        "en": "basil sauce, garlic, sour cream, gouda, mozzarella, dried tomatoes, burrata, mortadella"
+      },
+      "price": 12.3,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Mozarela pinsa", "en": "Mozzarella pinsa" },
+      "description": {
+        "hr": "pelat, mozzarela, cherry rajčica, bosiljak",
+        "en": "tomato passata, mozzarella, cherry tomato, basil"
+      },
+      "price": 9.5,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Focaccia parmezano", "en": "Focaccia parmesan" },
+      "description": {
+        "hr": "maslinovo ulje, parmezan, češnjak",
+        "en": "olive oil, parmesan, garlic"
+      },
+      "price": 6.0,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Biftek sa žara", "en": "Grilled beefsteak" },
+      "description": {
+        "hr": "odležen u marinadi, julienne povrće, pekarski krumpir, pogačice",
+        "en": "aged in marinade, julienne vegetables, baked potatoes, flatbread"
+      },
+      "price": 26.0,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Top piletina", "en": "Top chicken" },
+      "description": {
+        "hr": "pileći file u marinadi od soje, basmati riža, pogačice",
+        "en": "chicken fillet marinated in soy, basmati rice, flatbread"
+      },
+      "price": 10.5,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Pesto piletina", "en": "Pesto chicken" },
+      "description": {
+        "hr": "pileći file u pršutu, pesto od bosiljka, sušena rajčica, mozzarela, basmati riža, pogačice",
+        "en": "chicken fillet wrapped in prosciutto, basil pesto, dried tomato, mozzarella, basmati rice, flatbread"
+      },
+      "price": 11.3,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Tony's doručak", "en": "Tony's breakfast" },
+      "description": {
+        "hr": "omlet u tortilji, sir, kulen, svježa paprika, umak",
+        "en": "omelet in tortilla, cheese, kulen, fresh pepper, sauce"
+      },
+      "price": 7.4,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Wok deluxe", "en": "Wok deluxe" },
+      "description": {
+        "hr": "stakleni rezanci, piletina, mix povrća, soya sos, kukuruz, kikiriki",
+        "en": "glass noodles, chicken, mixed vegetables, soy sauce, corn, peanuts"
+      },
+      "price": 9.5,
+      "categoryName": "Novo u ponudi",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Seljački doručak", "en": "Farmer's breakfast" },
+      "description": {
+        "hr": "pohani kruh, pečena slanina, jaja, kobasica",
+        "en": "fried bread, grilled bacon, eggs, sausage"
+      },
+      "price": 6.2,
+      "categoryName": "Doručak",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": {
+        "hr": "Omlet sa sirom i pogačicama",
+        "en": "Omelet with cheese and flatbread"
+      },
+      "description": { "hr": "sir, pogačice", "en": "cheese, flatbread" },
+      "price": 5.3,
+      "categoryName": "Doručak",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": {
+        "hr": "Omlet s povrćem, sirom i pogačicama",
+        "en": "Omelet with vegetables, cheese and flatbread"
+      },
+      "description": {
+        "hr": "povrće, sir, pogačice",
+        "en": "vegetables, cheese, flatbread"
+      },
+      "price": 5.9,
+      "categoryName": "Doručak",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": {
+        "hr": "Kajgana sa sirom i kobasicom",
+        "en": "Scrambled eggs with cheese and sausage"
+      },
+      "description": {
+        "hr": "2 roštilj kobasice, kajgana sa sirom, cherry rajčice, pogačice",
+        "en": "2 grilled sausages, scrambled eggs with cheese, cherry tomatoes, flatbread"
+      },
+      "price": 6.0,
+      "categoryName": "Doručak",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": {
+        "hr": "Tom-tom sendvič dupli",
+        "en": "Tom-tom double sandwich"
+      },
+      "description": {
+        "hr": "piletina, zelena salata, rajčice, krastavci, jaje, sweet chilli umak, pomfri",
+        "en": "chicken, lettuce, tomatoes, cucumbers, egg, sweet chili sauce, fries"
+      },
+      "price": 7.2,
+      "categoryName": "Doručak",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Plata taverna", "en": "Taverna platter" },
+      "description": {
+        "hr": "za 2 osobe; kulen, kobasica, šunka, sir, pogačice, feta sir, cherry rajčice",
+        "en": "for 2 people; kulen, sausage, ham, cheese, flatbread, feta, cherry tomatoes"
+      },
+      "price": 16.0,
+      "categoryName": "Hladna predjela",
+      "hasSizes": false,
+      "sizes": []
+    },
+    {
+      "name": { "hr": "Šokačka zakuska", "en": "Šokac snack" },
+      "description": {
+        "hr": "1 osoba; kulen, kobasica, šunka, sir, pogačice, cherry rajčice",
+        "en": "for 1 person; kulen, sausage, ham, cheese, flatbread, cherry tomatoes"
+      },
+      "price": 8.0,
+      "categoryName": "Hladna predjela",
+      "hasSizes": false,
+      "sizes": []
+    }
+  ]
+}

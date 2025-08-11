@@ -1,5 +1,6 @@
 const express = require('express');
 const sysadminController = require('../../controllers/sysadminController');
+const jsonMenuFileController = require('../../controllers/jsonMenuFileController');
 const {
   checkSysadmin,
   sysadminAuthenticateToken,
@@ -124,6 +125,42 @@ router.get(
   sysadminAuthenticateToken,
   checkSysadmin,
   sysadminController.getAllReviewsForClaimedRestaurants,
+);
+
+// JSON Menu File Management Routes
+router.get(
+  '/restaurants/:restaurantId/json-files',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  jsonMenuFileController.getRestaurantJsonFiles,
+);
+
+router.post(
+  '/restaurants/:restaurantId/json-files',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  jsonMenuFileController.createJsonMenuFile,
+);
+
+router.put(
+  '/json-files/:id',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  jsonMenuFileController.updateJsonMenuFile,
+);
+
+router.delete(
+  '/json-files/:id',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  jsonMenuFileController.deleteJsonMenuFile,
+);
+
+router.post(
+  '/json-files/:id/import',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  jsonMenuFileController.importMenuFromJsonFile,
 );
 
 module.exports = router;

@@ -8,6 +8,7 @@ import MenuTab from "./MenuTab";
 import DrinkTab from "./DrinkTab";
 import WorkingHoursTab from "./WorkingHoursTab";
 import FiltersTab from "./FiltersTab";
+import JsonMenuImportTab from "./JsonMenuImportTab";
 import { useTranslation } from "react-i18next";
 import Images from "./Images";
 
@@ -79,6 +80,8 @@ const RestaurantDetails = () => {
         );
       case "Images":
         return <Images restaurant={restaurant} onUpdate={handleUpdate} />;
+      case "JSON Menu Import":
+        return <JsonMenuImportTab restaurant={restaurant} />;
       default:
         return null;
     }
@@ -150,6 +153,14 @@ const RestaurantDetails = () => {
           onClick={() => handleTabChange("Images")}
         >
           {t("images")}
+        </button>
+        <button
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "JSON Menu Import" ? "border-b-2 border-black" : "text-gray-500"
+          }`}
+          onClick={() => handleTabChange("JSON Menu Import")}
+        >
+          JSON Menu Import
         </button>
       </div>
       <div className="tab-content">{renderTabContent()}</div>
