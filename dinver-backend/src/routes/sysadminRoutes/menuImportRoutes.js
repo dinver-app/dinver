@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const {
   analyzeMenuImage,
-  analyzeMultipleMenuImages,
   importEditedMenu,
 } = require('../../controllers/menuImportController');
 const {
@@ -45,15 +44,6 @@ router.post(
   checkSysadmin,
   upload.single('image'),
   analyzeMenuImage,
-);
-
-// Analyze menu from multiple images
-router.post(
-  '/:restaurantId/analyze-multiple',
-  sysadminAuthenticateToken,
-  checkSysadmin,
-  upload.array('images', 10), // Max 10 images
-  analyzeMultipleMenuImages,
 );
 
 // Import edited menu data to system
