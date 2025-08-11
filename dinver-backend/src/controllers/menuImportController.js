@@ -17,6 +17,24 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Utility: per-operation timeout wrapper
+const withTimeout = (promise, ms, label = 'operation') =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+
 // Function to analyze menu image with GPT Vision
 const analyzeMenuImageWithGPT = async (imageBuffer, menuType = 'food') => {
   try {
@@ -24,13 +42,13 @@ const analyzeMenuImageWithGPT = async (imageBuffer, menuType = 'food') => {
     let optimizedBuffer;
     if (imageBuffer.buffer) {
       optimizedBuffer = await sharp(imageBuffer.buffer)
-        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 85 })
+        .resize(768, 768, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 70 })
         .toBuffer();
     } else {
       optimizedBuffer = await sharp(imageBuffer)
-        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 85 })
+        .resize(768, 768, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 70 })
         .toBuffer();
     }
 
@@ -203,6 +221,7 @@ Examples:
           type: 'image_url',
           image_url: {
             url: imageUrl,
+            detail: 'low',
           },
         },
       ];
@@ -220,8 +239,8 @@ Examples:
             content: messageContent,
           },
         ],
-        max_tokens: 4000,
-        timeout: 25000, // 25 sekundi timeout
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
       });
 
       const content = response.choices[0]?.message?.content;
@@ -229,13 +248,17 @@ Examples:
         throw new Error('No response content from OpenAI');
       }
 
-      // Try to extract JSON from the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in OpenAI response');
+      // Prefer strict JSON parsing (response_format: json_object). Fallback to regex extraction.
+      let menuData;
+      try {
+        menuData = JSON.parse(content);
+      } catch (_) {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No JSON found in OpenAI response');
+        }
+        menuData = JSON.parse(jsonMatch[0]);
       }
-
-      const menuData = JSON.parse(jsonMatch[0]);
 
       // Validate the structure
       if (!menuData.categories || !menuData.items) {
@@ -296,7 +319,11 @@ const analyzeMenuImage = async (req, res) => {
       });
     }
 
-    const menuData = await analyzeMenuImageWithGPT(imageFile, menuType);
+    const menuData = await withTimeout(
+      analyzeMenuImageWithGPT(imageFile, menuType),
+      25000,
+      'OpenAI menu analysis',
+    );
 
     res.json({
       success: true,
@@ -347,27 +374,33 @@ const analyzeMultipleMenuImages = async (req, res) => {
       items: [],
     };
 
-    for (const file of imageFiles) {
-      try {
-        const menuData = await analyzeMenuImageWithGPT(file, menuType);
+    // Process images in parallel with per-image timeouts to fit within platform limits
+    const perImageTimeoutMs = 25000;
+    const tasks = imageFiles.map((file) =>
+      withTimeout(
+        analyzeMenuImageWithGPT(file, menuType),
+        perImageTimeoutMs,
+        `OpenAI analysis for ${file.originalname}`,
+      )
+        .then((menuData) => ({ status: 'fulfilled', file, menuData }))
+        .catch((error) => ({ status: 'rejected', file, error })),
+    );
 
-        // Merge categories and items
+    const settled = await Promise.all(tasks);
+
+    for (const result of settled) {
+      if (result.status === 'fulfilled') {
+        const { file, menuData } = result;
         combinedMenuData.categories = [
           ...combinedMenuData.categories,
           ...menuData.categories,
         ];
         combinedMenuData.items = [...combinedMenuData.items, ...menuData.items];
-
-        results.push({
-          filename: file.originalname,
-          data: menuData,
-        });
-      } catch (error) {
+        results.push({ filename: file.originalname, data: menuData });
+      } else {
+        const { file, error } = result;
         console.error(`Error processing file ${file.originalname}:`, error);
-        results.push({
-          filename: file.originalname,
-          error: error.message,
-        });
+        results.push({ filename: file.originalname, error: error.message });
       }
     }
 
