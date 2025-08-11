@@ -27,14 +27,6 @@ import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import { getRestaurantsList } from "../services/restaurantService";
 import { getAuditLogs } from "../services/auditLogsService";
-import {
-  analyzeMenuImage,
-  importEditedMenu,
-  MenuAnalysisResult,
-} from "../services/menuImportService";
-import { getCategoryItems } from "../services/menuService";
-import { getDrinkCategories } from "../services/drinkService";
-import ReactJson from "react-json-view";
 
 const getInitialLanguage = () => {
   return i18n.language || localStorage.getItem("language") || "en";
@@ -45,7 +37,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
   const [newSysadminEmail, setNewSysadminEmail] = useState("");
-  const [isModalOpen, setModalOpen] = useState(false);
+  const [_, setModalOpen] = useState(false);
   const [selectedSysadmin, setSelectedSysadmin] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState(
@@ -61,52 +53,6 @@ const Settings = () => {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [actionFilter, setActionFilter] = useState("ALL");
   const [logsSearchTerm, setLogsSearchTerm] = useState("");
-
-  // Menu Importer states
-  const [selectedRestaurant, setSelectedRestaurant] = useState<string>("");
-  const [menuType, setMenuType] = useState<"food" | "drink">("food");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [analysisResult, setAnalysisResult] =
-    useState<MenuAnalysisResult | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [restaurantSearchTerm, setRestaurantSearchTerm] = useState("");
-  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>(
-    []
-  );
-  const [showRestaurantDropdown, setShowRestaurantDropdown] = useState(false);
-
-  // Editable menu data
-  const [editableCategories, setEditableCategories] = useState<
-    Array<{
-      id: string;
-      name: { hr: string; en: string };
-      description: { hr: string; en: string };
-    }>
-  >([]);
-  const [editableItems, setEditableItems] = useState<
-    Array<{
-      id: string;
-      name: { hr: string; en: string };
-      description: { hr: string; en: string };
-      price: number;
-      categoryName: string;
-      hasSizes: boolean;
-      defaultSizeName: string | null;
-      sizes: Array<{ name: string; price: number }>;
-    }>
-  >([]);
-  const [showEditMode, setShowEditMode] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  // Existing categories from database
-  const [existingCategories, setExistingCategories] = useState<
-    Array<{
-      id: string;
-      name: string;
-      description: string;
-      isActive: boolean;
-    }>
-  >([]);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -142,29 +88,6 @@ const Settings = () => {
       fetchLogs();
     }
   }, [currentPage, logsSearchTerm, actionFilter, activeTab]);
-
-  // Filter restaurants based on search term
-  useEffect(() => {
-    if (restaurantSearchTerm.trim() === "") {
-      setFilteredRestaurants(restaurants.slice(0, 50)); // Show first 50 by default
-    } else {
-      const filtered = restaurants
-        .filter((restaurant) =>
-          restaurant.name
-            .toLowerCase()
-            .includes(restaurantSearchTerm.toLowerCase())
-        )
-        .slice(0, 20); // Limit to 20 results for performance
-      setFilteredRestaurants(filtered);
-    }
-  }, [restaurantSearchTerm, restaurants]);
-
-  // Fetch existing categories when menuType changes
-  useEffect(() => {
-    if (selectedRestaurant) {
-      fetchExistingCategories(selectedRestaurant);
-    }
-  }, [menuType, selectedRestaurant]);
 
   const fetchLogs = async () => {
     const loadingToastId = toast.loading(t("loading"));
@@ -239,21 +162,6 @@ const Settings = () => {
     };
   }, []);
 
-  // Add click outside handler for restaurant dropdown
-  useEffect(() => {
-    const handleClickOutsideRestaurant = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest(".restaurant-dropdown-container")) {
-        setShowRestaurantDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutsideRestaurant);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutsideRestaurant);
-    };
-  }, []);
-
   const handleLanguageChange = async (language: string) => {
     try {
       await updateUserLanguage(language);
@@ -313,323 +221,6 @@ const Settings = () => {
     setSelectedLog(log);
   };
 
-  const handleCloseModal = () => {
-    setSelectedLog(null);
-  };
-
-  // Menu Importer functions
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setSelectedFile(files[0] || null);
-  };
-
-  const handleRestaurantSelect = async (
-    restaurantId: string,
-    restaurantName: string
-  ) => {
-    setSelectedRestaurant(restaurantId);
-    setRestaurantSearchTerm(restaurantName || "");
-    setShowRestaurantDropdown(false);
-
-    // Fetch existing categories for this restaurant
-    await fetchExistingCategories(restaurantId);
-  };
-
-  const handleRestaurantSearchChange = (value: string) => {
-    setRestaurantSearchTerm(value);
-    setShowRestaurantDropdown(true);
-    if (!value.trim()) {
-      setSelectedRestaurant("");
-    }
-  };
-
-  // Fetch existing categories when restaurant is selected
-  const fetchExistingCategories = async (restaurantId: string) => {
-    try {
-      let categories = [];
-      if (menuType === "food") {
-        const response = await getCategoryItems(restaurantId);
-        categories = response.map((cat: any) => ({
-          id: cat.id,
-          name:
-            cat.translations.find((t: any) => t.language === "hr")?.name || "",
-          description:
-            cat.translations.find((t: any) => t.language === "hr")
-              ?.description || "",
-          isActive: cat.isActive,
-        }));
-      } else {
-        const response = await getDrinkCategories(restaurantId);
-        categories = response.map((cat: any) => ({
-          id: cat.id,
-          name:
-            cat.translations.find((t: any) => t.language === "hr")?.name || "",
-          description:
-            cat.translations.find((t: any) => t.language === "hr")
-              ?.description || "",
-          isActive: cat.isActive,
-        }));
-      }
-      setExistingCategories(categories);
-    } catch (error) {
-      console.error("Failed to fetch existing categories:", error);
-      setExistingCategories([]);
-    }
-  };
-
-  // Edit functions
-  const handleCategoryChange = (
-    id: string,
-    field: "name" | "description",
-    language: "hr" | "en",
-    value: string
-  ) => {
-    setEditableCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === id
-          ? { ...cat, [field]: { ...cat[field], [language]: value } }
-          : cat
-      )
-    );
-
-    // Update items with the new category name
-    if (field === "name") {
-      setEditableItems((prev) =>
-        prev.map((item) =>
-          item.categoryName === prev.find((cat) => cat.id === id)?.name.hr
-            ? { ...item, categoryName: value }
-            : item
-        )
-      );
-    }
-  };
-
-  const handleItemChange = (
-    id: string,
-    field:
-      | "name"
-      | "description"
-      | "price"
-      | "categoryName"
-      | "hasSizes"
-      | "defaultSizeName"
-      | "sizes",
-    language?: "hr" | "en",
-    value?: string | number | boolean | Array<{ name: string; price: number }>
-  ) => {
-    setEditableItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          if (field === "price") {
-            return { ...item, price: value as number };
-          } else if (field === "categoryName") {
-            return { ...item, categoryName: value as string };
-          } else if (field === "hasSizes") {
-            return { ...item, hasSizes: value as boolean };
-          } else if (field === "defaultSizeName") {
-            return { ...item, defaultSizeName: value as string | null };
-          } else if (field === "sizes") {
-            return {
-              ...item,
-              sizes: value as Array<{ name: string; price: number }>,
-            };
-          } else {
-            return {
-              ...item,
-              [field]: { ...item[field], [language!]: value as string },
-            };
-          }
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    setEditableCategories((prev) => prev.filter((cat) => cat.id !== id));
-    // Also remove items from this category
-    setEditableItems((prev) =>
-      prev.filter((item) => {
-        const category = editableCategories.find((cat) => cat.id === id);
-        return item.categoryName !== category?.name.hr;
-      })
-    );
-  };
-
-  const handleDeleteItem = (id: string) => {
-    setEditableItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const handleAddCategory = () => {
-    const newId = `cat-${Date.now()}`;
-    setEditableCategories((prev) => [
-      ...prev,
-      {
-        id: newId,
-        name: { hr: "", en: "" },
-        description: { hr: "", en: "" },
-      },
-    ]);
-  };
-
-  const handleAddItem = () => {
-    const newId = `item-${Date.now()}`;
-    setEditableItems((prev) => [
-      ...prev,
-      {
-        id: newId,
-        name: { hr: "", en: "" },
-        description: { hr: "", en: "" },
-        price: 0,
-        categoryName: "",
-        hasSizes: false,
-        defaultSizeName: null,
-        sizes: [],
-      },
-    ]);
-  };
-
-  const handleImportToSystem = async () => {
-    if (!selectedRestaurant) {
-      toast.error("Please select a restaurant");
-      return;
-    }
-
-    setIsImporting(true);
-    try {
-      const result = await importEditedMenu(
-        selectedRestaurant,
-        menuType,
-        editableCategories,
-        editableItems
-      );
-
-      if (result.success) {
-        toast.success(
-          `Import successful! Created ${result.results.categories.created} categories and ${result.results.items.created} items.`
-        );
-
-        // Reset after successful import
-        setShowEditMode(false);
-        setEditableCategories([]);
-        setEditableItems([]);
-        setAnalysisResult(null);
-      } else {
-        toast.error("Failed to import menu to system");
-      }
-    } catch (error) {
-      console.error("Error importing to system:", error);
-      toast.error("Failed to import menu to system");
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleAnalyzeMenu = async () => {
-    if (!selectedRestaurant || !selectedFile) {
-      toast.error("Please select a restaurant and at least one image");
-      return;
-    }
-
-    setIsAnalyzing(true);
-    try {
-      // Fetch existing categories if not already fetched
-      if (existingCategories.length === 0) {
-        await fetchExistingCategories(selectedRestaurant);
-      }
-
-      let result: MenuAnalysisResult;
-
-      result = await analyzeMenuImage(
-        selectedRestaurant,
-        selectedFile,
-        menuType
-      );
-
-      if (result.success) {
-        setAnalysisResult(result);
-
-        // Populate editable data
-        if (result.data) {
-          setEditableCategories(
-            result.data.categories.map((cat, index) => ({
-              id: `cat-${index}`,
-              name: cat.name,
-              description: cat.description || { hr: "", en: "" },
-            }))
-          );
-          setEditableItems(
-            result.data.items.map((item, index) => ({
-              id: `item-${index}`,
-              name: item.name,
-              description: item.description || { hr: "", en: "" },
-              price: item.price,
-              categoryName: item.categoryName,
-              hasSizes: item.hasSizes || false,
-              defaultSizeName: item.defaultSizeName || null,
-              sizes: item.sizes || [],
-            }))
-          );
-          setShowEditMode(true);
-        }
-
-        toast.success("Menu analyzed successfully!");
-      } else {
-        toast.error(result.error || "Failed to analyze menu images");
-      }
-    } catch (error: any) {
-      console.error("Error analyzing menu:", error);
-      const errorMessage =
-        error.response?.data?.error ||
-        error.message ||
-        "Failed to analyze menu images";
-      toast.error(errorMessage);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleAddSize = (itemId: string) => {
-    setEditableItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? { ...item, sizes: [...item.sizes, { name: "", price: 0 }] }
-          : item
-      )
-    );
-  };
-
-  const handleRemoveSize = (itemId: string, sizeIndex: number) => {
-    setEditableItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              sizes: item.sizes.filter((_, index) => index !== sizeIndex),
-            }
-          : item
-      )
-    );
-  };
-
-  const handleSizeChange = (
-    itemId: string,
-    sizeIndex: number,
-    field: "name" | "price",
-    value: string | number
-  ) => {
-    setEditableItems((prev) =>
-      prev.map((item) => {
-        if (item.id === itemId) {
-          const newSizes = [...item.sizes];
-          newSizes[sizeIndex] = { ...newSizes[sizeIndex], [field]: value };
-          return { ...item, sizes: newSizes };
-        }
-        return item;
-      })
-    );
-  };
-
   return (
     <div className="mx-auto p-4">
       <div className="flex flex-col justify-between items-start mb-4">
@@ -675,16 +266,6 @@ const Settings = () => {
           }`}
         >
           {t("logs")}
-        </button>
-        <button
-          onClick={() => handleTabChange("menuImporter")}
-          className={`py-2 px-4 border-b-2 text-sm ${
-            activeTab === "menuImporter"
-              ? "border-b-2 border-black"
-              : "text-gray-500"
-          }`}
-        >
-          Menu Importer
         </button>
       </div>
 
@@ -1001,682 +582,339 @@ const Settings = () => {
         </div>
       )}
 
-      {activeTab === "menuImporter" && (
+      {activeTab === "jsonMenuImport" && (
         <div>
           <div className="flex flex-col gap-1 mb-6">
-            <h2 className="section-title">Menu Importer</h2>
+            <h2 className="section-title">JSON Menu Import</h2>
             <h3 className="section-subtitle">
-              Upload menu images to analyze with AI, then edit and import to
-              system
+              Import menus from JSON files stored in the data/menus folder
             </h3>
           </div>
 
+          {/* Progress Steps */}
+          <div className="mb-6">
+            <div className="flex items-center space-x-4">
+              <div
+                className={`flex items-center ${
+                  selectedRestaurantSlug ? "text-blue-600" : "text-gray-400"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    selectedRestaurantSlug
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  1
+                </div>
+                <span className="ml-2 text-sm font-medium">
+                  Select Restaurant
+                </span>
+              </div>
+
+              <div className="w-8 h-1 bg-gray-200"></div>
+
+              <div
+                className={`flex items-center ${
+                  selectedFilename ? "text-blue-600" : "text-gray-400"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    selectedFilename
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  2
+                </div>
+                <span className="ml-2 text-sm font-medium">Select File</span>
+              </div>
+
+              <div className="w-8 h-1 bg-gray-200"></div>
+
+              <div
+                className={`flex items-center ${
+                  selectedRestaurantSlug && selectedFilename
+                    ? "text-blue-600"
+                    : "text-gray-400"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    selectedRestaurantSlug && selectedFilename
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  3
+                </div>
+                <span className="ml-2 text-sm font-medium">Import</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-6">
-            {/* Restaurant Selection */}
-            <div className="restaurant-dropdown-container">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Restaurant
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search restaurants..."
-                  value={restaurantSearchTerm}
-                  onChange={(e) => handleRestaurantSearchChange(e.target.value)}
-                  onFocus={() => setShowRestaurantDropdown(true)}
-                  className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-                />
-                {showRestaurantDropdown && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredRestaurants.length === 0 ? (
-                      <div className="p-2 text-sm text-gray-500">
-                        No restaurants found
+            {/* Step 1: Select Restaurant */}
+            <div>
+              <h4 className="text-md font-semibold mb-4">
+                Step 1: Select Restaurant
+              </h4>
+              <button
+                onClick={fetchAvailableMenus}
+                disabled={isLoadingMenus}
+                className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingMenus
+                  ? "Loading..."
+                  : "Refresh Available Restaurants"}
+              </button>
+
+              {isLoadingMenus ? (
+                <div className="text-gray-500 text-sm">
+                  Loading available restaurants...
+                </div>
+              ) : availableMenus.length === 0 ? (
+                <div className="text-gray-500 text-sm">
+                  No restaurants found. Create folders in data/menus/ with
+                  restaurant slugs.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availableMenus.map((menu) => (
+                    <div
+                      key={menu.slug}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        selectedRestaurantSlug === menu.slug
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      onClick={() => {
+                        setSelectedRestaurantSlug(menu.slug);
+                        setSelectedFilename(""); // Reset filename when changing restaurant
+                      }}
+                    >
+                      <h5 className="font-medium text-gray-900">
+                        {menu.restaurantName}
+                      </h5>
+                      <p className="text-sm text-gray-600">Slug: {menu.slug}</p>
+                      <p className="text-sm text-gray-600">
+                        Available files: {menu.fileCount}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Select File (only if restaurant is selected) */}
+            {selectedRestaurantSlug && (
+              <div>
+                <h4 className="text-md font-semibold mb-4">
+                  Step 2: Select File for{" "}
+                  {
+                    availableMenus.find(
+                      (m) => m.slug === selectedRestaurantSlug
+                    )?.restaurantName
+                  }
+                </h4>
+
+                {(() => {
+                  const selectedMenu = availableMenus.find(
+                    (m) => m.slug === selectedRestaurantSlug
+                  );
+                  if (!selectedMenu) {
+                    return (
+                      <div className="text-gray-500 text-sm">
+                        Loading restaurant data...
                       </div>
-                    ) : (
-                      filteredRestaurants.map((restaurant) => (
-                        <button
-                          key={restaurant.id}
-                          onClick={() =>
-                            handleRestaurantSelect(
-                              restaurant.id || "",
-                              restaurant.name || ""
-                            )
-                          }
-                          className="w-full text-left p-2 hover:bg-gray-100 text-sm border-b border-gray-100 last:border-b-0"
+                    );
+                  }
+
+                  if (
+                    !selectedMenu.jsonFiles ||
+                    selectedMenu.jsonFiles.length === 0
+                  ) {
+                    return (
+                      <div className="text-gray-500 text-sm">
+                        No JSON files found for this restaurant.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedMenu.jsonFiles.map((file: string) => (
+                        <div
+                          key={file}
+                          className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                            selectedFilename === file
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => setSelectedFilename(file)}
                         >
-                          {restaurant.name}
-                        </button>
-                      ))
-                    )}
+                          <h5 className="font-medium text-gray-900">{file}</h5>
+                          <p className="text-sm text-gray-600">JSON file</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Step 3: Import Settings (only if both restaurant and file are selected) */}
+            {selectedRestaurantSlug && selectedFilename && (
+              <div>
+                <h4 className="text-md font-semibold mb-4">
+                  Step 3: Import Settings
+                </h4>
+
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <div className="mb-4">
+                    <h5 className="font-medium text-gray-900 mb-2">
+                      Selected:
+                    </h5>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>
+                        <strong>Restaurant:</strong>{" "}
+                        {
+                          availableMenus.find(
+                            (m) => m.slug === selectedRestaurantSlug
+                          )?.restaurantName
+                        }
+                      </p>
+                      <p>
+                        <strong>File:</strong> {selectedFilename}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Menu Type
+                      </label>
+                      <select
+                        value={selectedMenuType}
+                        onChange={(e) =>
+                          setSelectedMenuType(
+                            e.target.value as "food" | "drink"
+                          )
+                        }
+                        className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                      >
+                        <option value="food">Food Menu</option>
+                        <option value="drink">Drink Menu</option>
+                      </select>
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={handleImportMenu}
+                        disabled={isImportingMenu}
+                        className="primary-button disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isImportingMenu
+                          ? "Importing..."
+                          : `Import ${selectedFilename}`}
+                      </button>
+                      <button
+                        onClick={clearSelections}
+                        className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                      >
+                        Start Over
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Import Results */}
+            {importResult && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="text-md font-semibold mb-4 text-green-800">
+                  ✅ Import Successful!
+                </h4>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {importResult.results.categories.created}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Categories Created
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {importResult.results.categories.existing}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Categories Existing
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {importResult.results.items.created}
+                    </div>
+                    <div className="text-sm text-gray-600">Items Created</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">
+                      {importResult.results.items.errors}
+                    </div>
+                    <div className="text-sm text-gray-600">Items Errors</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h5 className="font-medium">Files Processed:</h5>
+                  {importResult.results.files.map(
+                    (file: any, index: number) => (
+                      <div key={index} className="text-sm">
+                        <span className="font-medium">{file.filename}:</span>
+                        {file.error ? (
+                          <span className="text-red-600 ml-2">
+                            Error: {file.error}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 ml-2">
+                            {file.categories.created} categories,{" "}
+                            {file.items.created} items
+                          </span>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {importResult.results.errors.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="font-medium text-red-600">Errors:</h5>
+                    <ul className="text-sm text-red-600 list-disc list-inside">
+                      {importResult.results.errors.map(
+                        (error: string, index: number) => (
+                          <li key={index}>{error}</li>
+                        )
+                      )}
+                    </ul>
                   </div>
                 )}
-              </div>
-              {selectedRestaurant && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">
-                    Selected:{" "}
-                    {restaurants.find((r) => r.id === selectedRestaurant)
-                      ?.name || "Unknown"}
-                  </p>
-                </div>
-              )}
-            </div>
 
-            {/* Menu Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Menu Type
-              </label>
-              <select
-                value={menuType}
-                onChange={(e) =>
-                  setMenuType(e.target.value as "food" | "drink")
-                }
-                className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-              >
-                <option value="food">Food Menu</option>
-                <option value="drink">Drink Menu</option>
-              </select>
-            </div>
-
-            {/* File Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Menu Images
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-              />
-              {selectedFile && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">
-                    Selected files: {selectedFile.name}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Analyze Button */}
-            <div>
-              <button
-                onClick={handleAnalyzeMenu}
-                disabled={!selectedRestaurant || !selectedFile || isAnalyzing}
-                className="primary-button disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAnalyzing ? "Analyzing..." : "Analyze Menu Images"}
-              </button>
-            </div>
-
-            {/* Results */}
-            {showEditMode && (
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-semibold">Edit Menu Data</h3>
+                <div className="mt-6 pt-4 border-t border-green-200">
                   <button
-                    onClick={handleImportToSystem}
-                    disabled={isImporting}
-                    className="primary-button disabled:opacity-50"
+                    onClick={clearSelections}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                   >
-                    {isImporting ? "Importing..." : "Import to System"}
+                    Import Another Menu
                   </button>
                 </div>
-
-                {/* Categories Table */}
-                <div className="mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-md font-semibold">Categories</h4>
-                    <button
-                      onClick={handleAddCategory}
-                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      + Add Category
-                    </button>
-                  </div>
-
-                  {/* Existing Categories Info */}
-                  {existingCategories.length > 0 && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h5 className="text-sm font-medium text-blue-800 mb-2">
-                        Existing Categories (
-                        {
-                          existingCategories.filter((cat) => cat.isActive)
-                            .length
-                        }
-                        )
-                      </h5>
-                      <div className="flex flex-wrap gap-2">
-                        {existingCategories
-                          .filter((cat) => cat.isActive)
-                          .map((cat) => (
-                            <span
-                              key={cat.id}
-                              className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                            >
-                              {cat.name}
-                            </span>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                            Name (HR)
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                            Name (EN)
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                            Description (HR)
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                            Description (EN)
-                          </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {editableCategories.map((category) => (
-                          <tr
-                            key={category.id}
-                            className="border-t border-gray-200 hover:bg-gray-50"
-                          >
-                            <td className="px-4 py-3">
-                              <input
-                                type="text"
-                                value={category.name.hr}
-                                onChange={(e) =>
-                                  handleCategoryChange(
-                                    category.id,
-                                    "name",
-                                    "hr",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 text-sm border border-gray-300 rounded"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="text"
-                                value={category.name.en}
-                                onChange={(e) =>
-                                  handleCategoryChange(
-                                    category.id,
-                                    "name",
-                                    "en",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 text-sm border border-gray-300 rounded"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="text"
-                                value={category.description.hr}
-                                onChange={(e) =>
-                                  handleCategoryChange(
-                                    category.id,
-                                    "description",
-                                    "hr",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 text-sm border border-gray-300 rounded"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="text"
-                                value={category.description.en}
-                                onChange={(e) =>
-                                  handleCategoryChange(
-                                    category.id,
-                                    "description",
-                                    "en",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 text-sm border border-gray-300 rounded"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() =>
-                                  handleDeleteCategory(category.id)
-                                }
-                                className="text-red-500 hover:text-red-700 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-md font-semibold">Items</h4>
-                    <button
-                      onClick={handleAddItem}
-                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      + Add Item
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {editableItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {/* Basic Info */}
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Name (HR)
-                            </label>
-                            <input
-                              type="text"
-                              value={item.name.hr}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "name",
-                                  "hr",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Name (EN)
-                            </label>
-                            <input
-                              type="text"
-                              value={item.name.en}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "name",
-                                  "en",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Price
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.price}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "price",
-                                  undefined,
-                                  parseFloat(e.target.value)
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Category
-                            </label>
-                            <select
-                              value={item.categoryName}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "categoryName",
-                                  undefined,
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                            >
-                              <option value="">Select Category</option>
-
-                              {/* Existing categories from database */}
-                              {existingCategories
-                                .filter((cat) => cat.isActive)
-                                .map((cat) => (
-                                  <option
-                                    key={`existing-${cat.id}`}
-                                    value={cat.name}
-                                  >
-                                    {cat.name} (existing)
-                                  </option>
-                                ))}
-
-                              {/* New categories from analysis */}
-                              {editableCategories.map((cat) => (
-                                <option key={cat.id} value={cat.name.hr}>
-                                  {cat.name.hr} (new)
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Has Sizes
-                            </label>
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={item.hasSizes}
-                                onChange={(e) =>
-                                  handleItemChange(
-                                    item.id,
-                                    "hasSizes",
-                                    undefined,
-                                    e.target.checked
-                                  )
-                                }
-                                className="mr-2"
-                              />
-                              <span className="text-sm text-gray-600">
-                                Enable multiple sizes
-                              </span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Default Size Name
-                            </label>
-                            <input
-                              type="text"
-                              value={item.defaultSizeName || ""}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "defaultSizeName",
-                                  undefined,
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                              placeholder="e.g., Mala, Standardna"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Description */}
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Description (HR)
-                            </label>
-                            <textarea
-                              value={item.description.hr}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "description",
-                                  "hr",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                              rows={2}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Description (EN)
-                            </label>
-                            <textarea
-                              value={item.description.en}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "description",
-                                  "en",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full p-2 text-sm border border-gray-300 rounded"
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Sizes Section */}
-                        {item.hasSizes && (
-                          <div className="mt-6">
-                            <div className="flex justify-between items-center mb-3">
-                              <label className="block text-sm font-medium text-gray-700">
-                                Sizes
-                              </label>
-                              <button
-                                onClick={() => handleAddSize(item.id)}
-                                className="text-sm bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-                              >
-                                + Add Size
-                              </button>
-                            </div>
-                            <div className="space-y-2">
-                              {item.sizes.map((size, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
-                                >
-                                  <input
-                                    type="text"
-                                    value={size.name}
-                                    onChange={(e) =>
-                                      handleSizeChange(
-                                        item.id,
-                                        index,
-                                        "name",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Size name"
-                                    className="flex-1 p-2 text-sm border border-gray-300 rounded"
-                                  />
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={size.price}
-                                    onChange={(e) =>
-                                      handleSizeChange(
-                                        item.id,
-                                        index,
-                                        "price",
-                                        parseFloat(e.target.value)
-                                      )
-                                    }
-                                    placeholder="Price"
-                                    className="w-28 p-2 text-sm border border-gray-300 rounded"
-                                  />
-                                  <button
-                                    onClick={() =>
-                                      handleRemoveSize(item.id, index)
-                                    }
-                                    className="text-red-500 hover:text-red-700 text-sm px-3 py-2 border border-red-300 rounded hover:bg-red-50"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="mt-6 flex justify-end pt-4 border-t border-gray-200">
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-red-500 hover:text-red-700 text-sm px-4 py-2 border border-red-300 rounded hover:bg-red-50 transition-colors"
-                          >
-                            Delete Item
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
-
-            {/* Original JSON Results (hidden when in edit mode) */}
-            {analysisResult && !showEditMode && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <ReactJson
-                    src={analysisResult}
-                    name={false}
-                    collapsed={false}
-                    displayDataTypes={false}
-                    displayObjectSize={false}
-                    enableClipboard={true}
-                    style={{ backgroundColor: "transparent" }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            >
-              &times;
-            </button>
-            <div className="flex items-center mb-4 gap-1">
-              <img
-                src="/images/sysadmin_icon.svg"
-                alt="Sysadmin Icon"
-                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
-              />
-              <div>
-                <h2 className="text-lg font-semibold">{t("add_sysadmin")}</h2>
-                <p className="text-sm text-gray-500">
-                  {t("add_sysadmin_description")}
-                </p>
-              </div>
-            </div>
-            <div className="h-line"></div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                value={newSysadminEmail}
-                onChange={(e) => setNewSysadminEmail(e.target.value)}
-                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
-              />
-            </div>
-            <div className="h-line" />
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="secondary-button"
-              >
-                {t("cancel")}
-              </button>
-              <button onClick={handleAddSysadmin} className="primary-button">
-                {t("add_sysadmin")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative overflow-y-auto max-h-full">
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            >
-              &times;
-            </button>
-            <div className="flex items-center mb-4 gap-1">
-              <img
-                src="/images/log_details.svg"
-                alt="Log Details Icon"
-                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
-              />
-              <div>
-                <h2 className="text-lg font-semibold">{t("log_details")}</h2>
-                <p className="text-sm text-gray-500">{t("view_log_details")}</p>
-              </div>
-            </div>
-            <div className="h-line mb-4"></div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("userId")}</h3>
-              <p className="text-xs text-gray-600">{selectedLog.userId}</p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("userEmail")}</h3>
-              <p className="text-xs text-gray-600">
-                {getUserEmail(selectedLog.userId)}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("action")}</h3>
-              <p className="text-xs text-gray-600">{t(selectedLog.action)}</p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("entity")}</h3>
-              <p className="text-xs text-gray-600">{t(selectedLog.entity)}</p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("restaurantId")}</h3>
-              <p className="text-xs text-gray-600">
-                {selectedLog.restaurantId}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("restaurantName")}</h3>
-              <p className="text-xs text-gray-600">
-                {getRestaurantName(selectedLog.restaurantId)}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("date")}</h3>
-              <p className="text-xs text-gray-600">
-                {format(new Date(selectedLog.createdAt), "dd.MM.yyyy. HH:mm")}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("changes")}</h3>
-              <ReactJson
-                src={JSON.parse(selectedLog.changes)}
-                name={false}
-                collapsed={true}
-              />
-            </div>
           </div>
         </div>
       )}
