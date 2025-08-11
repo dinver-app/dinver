@@ -92,7 +92,11 @@ IMPORTANT FORMATTING RULES:
 - Keep descriptions under 100 characters when possible
 - For categories, use simple, clear names without extra formatting or special characters
 - Keep category names short and descriptive (e.g., "Glavna jela", "Predjela", "Deserti" for food)
-- Maintain consistent capitalization: if text appears in ALL CAPS on the menu, keep it in ALL CAPS; if it's in normal case, keep it in normal case
+- NEVER use ALL CAPS. Always convert text to proper case formatting:
+  * If you see "ŠPAGETE CARBONARA" on the image, write "Špagete carbonara"
+  * If you see "PIZZA MARGHERITA" on the image, write "Pizza margherita"
+  * If you see "GLAVNA JELA" on the image, write "Glavna jela"
+  * Always use proper capitalization: first letter capitalized, rest in lowercase
 - For food items: Use hasSizes, defaultSizeName, and sizes fields when multiple sizes are available for the same item
 
 CRITICAL: For food items, use hasSizes: true and populate sizes array when you see multiple size options for the same item (e.g., "Mala", "Velika" for pizza).
@@ -125,7 +129,7 @@ Return the data in this exact JSON format:
 }
 
 Examples:
-- For food: "Pizza Margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
+- For food: "Pizza margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
 - For categories: "Glavna jela", "Predjela", "Deserti", "Pizza", "Pasta"
 `
         : `Analyze this drink menu image and extract all drink categories and items. For each category, provide the name in Croatian (hr) and English (en). For each drink item, provide the name in Croatian (hr) and English (en), description in both languages, price (as a number), and the category name it belongs to.
@@ -140,7 +144,11 @@ IMPORTANT FORMATTING RULES:
 - If size is clearly part of the item name, keep it as is
 - For categories, use simple, clear names without extra formatting or special characters
 - Keep category names short and descriptive (e.g., "Pića", "Alkoholna pića", "Bezalkoholna pića" for drinks)
-- Maintain consistent capitalization: if text appears in ALL CAPS on the menu, keep it in ALL CAPS; if it's in normal case, keep it in normal case
+- NEVER use ALL CAPS. Always convert text to proper case formatting:
+  * If you see "COCA COLA 0,5L" on the image, write "Coca cola 0,5l"
+  * If you see "PIĆA" on the image, write "Pića"
+  * If you see "ALKOHOLNA PIĆA" on the image, write "Alkoholna pića"
+  * Always use proper capitalization: first letter capitalized, rest in lowercase
 - For drink items: NEVER use hasSizes, defaultSizeName, or sizes fields. Always include size information in the item name (e.g., "Jana 0,33l", "Jana 0,75l" as separate items)
 - For food items: Use hasSizes, defaultSizeName, and sizes fields when multiple sizes are available for the same item
 
@@ -156,7 +164,7 @@ Category examples:
 
 Drink vs Food examples:
 - For drinks: "Jana 0,33l" and "Jana 0,75l" should be TWO SEPARATE items (not one item with sizes)
-- For food: "Pizza Margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
+- For food: "Pizza margherita" with "Mala" and "Velika" sizes should be ONE item with hasSizes: true and sizes array
 
 DATA INTEGRITY RULES:
 - Do NOT fabricate or infer descriptions. Only include description text that is explicitly visible on the menu image. If no description is present, set description.hr and description.en to empty strings "".
