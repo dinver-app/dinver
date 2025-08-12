@@ -2473,6 +2473,342 @@ const getClaimRestaurantWorkingHours = async (req, res) => {
   }
 };
 
+// New function for map mode - returns lean GeoJSON
+const getRestaurantsMap = async (req, res) => {
+  try {
+    const { lat, lng, radiusKm = 10, limit = 3000, fields = 'min' } = req.query;
+
+    if (!lat || !lng) {
+      return res
+        .status(400)
+        .json({ error: 'Latitude and longitude are required' });
+    }
+
+    const userLat = parseFloat(lat);
+    const userLon = parseFloat(lng);
+    const radiusMeters = parseFloat(radiusKm) * 1000;
+    const maxLimit = Math.min(parseInt(limit) || 3000, 3000);
+
+    // Validate coordinates
+    if (userLat < -90 || userLat > 90 || userLon < -180 || userLon > 180) {
+      return res.status(400).json({ error: 'Invalid coordinates provided' });
+    }
+
+    // Get all restaurants with coordinates
+    const restaurants = await Restaurant.findAll({
+      where: {
+        latitude: { [Op.not]: null },
+        longitude: { [Op.not]: null },
+      },
+      attributes: ['id', 'name', 'latitude', 'longitude'],
+      order: [['name', 'ASC']],
+    });
+
+    // Calculate distances and filter by radius
+    const restaurantsWithDistance = restaurants
+      .map((restaurant) => {
+        const distance = calculateDistance(
+          userLat,
+          userLon,
+          restaurant.latitude,
+          restaurant.longitude,
+        );
+        return {
+          ...restaurant.get(),
+          distance,
+        };
+      })
+      .filter((restaurant) => restaurant.distance <= radiusMeters / 1000) // Convert back to km for comparison
+      .sort((a, b) => {
+        // Sort by distance first, then by name
+        if (a.distance !== b.distance) {
+          return a.distance - b.distance;
+        }
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, maxLimit);
+
+    // Create GeoJSON response
+    const geojson = {
+      type: 'FeatureCollection',
+      features: restaurantsWithDistance.map((restaurant) => ({
+        type: 'Feature',
+        id: restaurant.id,
+        properties:
+          fields === 'min'
+            ? { id: restaurant.id }
+            : {
+                id: restaurant.id,
+                name: restaurant.name,
+              },
+        geometry: {
+          type: 'Point',
+          coordinates: [restaurant.longitude, restaurant.latitude], // GeoJSON uses [lng, lat]
+        },
+      })),
+    };
+
+    // Extract IDs in the same order for sync with list/carousel
+    const ids = restaurantsWithDistance.map((restaurant) => restaurant.id);
+
+    const response = {
+      geojson,
+      ids,
+      meta: {
+        count: restaurantsWithDistance.length,
+        truncated: restaurantsWithDistance.length >= maxLimit,
+        radiusKm: parseFloat(radiusKm),
+        source: 'near-you',
+      },
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching restaurants map:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurants map' });
+  }
+};
+
+// New function for fetching detailed restaurant data by IDs
+const getRestaurantsByIds = async (req, res) => {
+  try {
+    const { ids, page = 1, pageSize = 20 } = req.query;
+    const userId = req.user?.id;
+
+    if (!ids) {
+      return res.status(400).json({ error: 'Restaurant IDs are required' });
+    }
+
+    // Parse IDs - support both comma-separated and array
+    let restaurantIds;
+    if (typeof ids === 'string') {
+      restaurantIds = ids.split(',').filter((id) => id.trim());
+    } else if (Array.isArray(ids)) {
+      restaurantIds = ids;
+    } else {
+      return res.status(400).json({ error: 'Invalid restaurant IDs format' });
+    }
+
+    if (restaurantIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'At least one restaurant ID is required' });
+    }
+
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const invalidIds = restaurantIds.filter((id) => !uuidRegex.test(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid UUID format for restaurant IDs',
+        invalidIds,
+      });
+    }
+
+    // Get user favorites if authenticated
+    let userFavorites = new Set();
+    if (userId) {
+      const favorites = await UserFavorite.findAll({
+        where: { userId },
+        attributes: ['restaurantId'],
+      });
+      userFavorites = new Set(favorites.map((f) => f.restaurantId));
+    }
+
+    // Fetch restaurants with all necessary details
+    const restaurants = await Restaurant.findAll({
+      where: { id: { [Op.in]: restaurantIds } },
+      attributes: [
+        'id',
+        'name',
+        'latitude',
+        'longitude',
+        'rating',
+        'thumbnailUrl',
+        'isClaimed',
+      ],
+      order: sequelize.literal(
+        `CASE WHEN id IN (${restaurantIds.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${restaurantIds.map(() => '?').join(',')}], id)`,
+      ),
+      replacements: [...restaurantIds, ...restaurantIds], // For both CASE and array_position
+    });
+
+    // Add additional data and maintain order
+    const restaurantsWithDetails = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        // Get reviews for rating calculation
+        const reviews = await Review.findAll({
+          where: { restaurantId: restaurant.id },
+          attributes: ['rating'],
+        });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
+        return {
+          ...restaurant.get(),
+          rating: reviewRating || restaurant.rating || 0,
+          isFavorite: userFavorites.has(restaurant.id),
+        };
+      }),
+    );
+
+    // Transform thumbnail URLs
+    const restaurantsWithUrls = restaurantsWithDetails.map((restaurant) => {
+      const transformed = { ...restaurant };
+      if (transformed.thumbnailUrl) {
+        transformed.thumbnailUrl = getMediaUrl(
+          transformed.thumbnailUrl,
+          'image',
+        );
+      }
+      return transformed;
+    });
+
+    // Implement pagination
+    const pageNum = parseInt(page);
+    const pageSizeNum = parseInt(pageSize);
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const endIndex = startIndex + pageSizeNum;
+    const paginatedRestaurants = restaurantsWithUrls.slice(
+      startIndex,
+      endIndex,
+    );
+    const totalPages = Math.ceil(restaurantsWithUrls.length / pageSizeNum);
+
+    res.json({
+      items: paginatedRestaurants,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total: restaurantsWithUrls.length,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching restaurants by IDs:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurants by IDs' });
+  }
+};
+
+// POST variant for getRestaurantsByIds (for larger number of IDs)
+const getRestaurantsByIdsPost = async (req, res) => {
+  try {
+    const { ids, page = 1, pageSize = 20 } = req.body;
+    const userId = req.user?.id;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'Restaurant IDs array is required' });
+    }
+
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const invalidIds = ids.filter((id) => !uuidRegex.test(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid UUID format for restaurant IDs',
+        invalidIds,
+      });
+    }
+
+    // Get user favorites if authenticated
+    let userFavorites = new Set();
+    if (userId) {
+      const favorites = await UserFavorite.findAll({
+        where: { userId },
+        attributes: ['restaurantId'],
+      });
+      userFavorites = new Set(favorites.map((f) => f.restaurantId));
+    }
+
+    // Fetch restaurants with all necessary details
+    const restaurants = await Restaurant.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: [
+        'id',
+        'name',
+        'latitude',
+        'longitude',
+        'rating',
+        'thumbnailUrl',
+        'isClaimed',
+      ],
+      order: sequelize.literal(
+        `CASE WHEN id IN (${ids.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${ids.map(() => '?').join(',')}], id)`,
+      ),
+      replacements: [...ids, ...ids], // For both CASE and array_position
+    });
+
+    // Add additional data and maintain order
+    const restaurantsWithDetails = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        // Get reviews for rating calculation
+        const reviews = await Review.findAll({
+          where: { restaurantId: restaurant.id },
+          attributes: ['rating'],
+        });
+
+        const totalRatings = reviews.reduce(
+          (sum, review) => sum + review.rating,
+          0,
+        );
+        const reviewRating =
+          reviews.length > 0 ? totalRatings / reviews.length : null;
+
+        return {
+          ...restaurant.get(),
+          rating: reviewRating || restaurant.rating || 0,
+          isFavorite: userFavorites.has(restaurant.id),
+        };
+      }),
+    );
+
+    // Transform thumbnail URLs
+    const restaurantsWithUrls = restaurantsWithDetails.map((restaurant) => {
+      const transformed = { ...restaurant };
+      if (transformed.thumbnailUrl) {
+        transformed.thumbnailUrl = getMediaUrl(
+          transformed.thumbnailUrl,
+          'image',
+        );
+      }
+      return transformed;
+    });
+
+    // Implement pagination
+    const pageNum = parseInt(page);
+    const pageSizeNum = parseInt(pageSize);
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const endIndex = startIndex + pageSizeNum;
+    const paginatedRestaurants = restaurantsWithUrls.slice(
+      startIndex,
+      endIndex,
+    );
+    const totalPages = Math.ceil(restaurantsWithUrls.length / pageSizeNum);
+
+    res.json({
+      items: paginatedRestaurants,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total: restaurantsWithUrls.length,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching restaurants by IDs (POST):', error);
+    res.status(500).json({ error: 'Failed to fetch restaurants by IDs' });
+  }
+};
+
 const submitClaimForm = async (req, res) => {
   try {
     const {
@@ -2698,4 +3034,7 @@ module.exports = {
   getClaimRestaurantInfo,
   getClaimRestaurantWorkingHours,
   submitClaimForm,
+  getRestaurantsMap,
+  getRestaurantsByIds,
+  getRestaurantsByIdsPost,
 };
