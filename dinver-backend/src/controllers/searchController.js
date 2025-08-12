@@ -7,6 +7,7 @@ const {
   DrinkItemTranslation,
   PriceCategory,
 } = require('../../models');
+const { calculateDistance } = require('../../utils/distance');
 
 module.exports = {
   async globalSearch(req, res) {
@@ -23,6 +24,9 @@ module.exports = {
       dietaryTypeIds,
       minRating,
       onlyClaimedRestaurants,
+      mode,
+      radiusKm = 10,
+      fields = 'min',
     } = req.query;
 
     const searchTerms = query
@@ -89,7 +93,7 @@ module.exports = {
             ratingThreshold = 3.0;
             break;
           case '4':
-            ratingThreshold = 4.0;
+            ratingThreshold = 4.5;
             break;
           case '4.5':
             ratingThreshold = 4.5;
@@ -300,7 +304,52 @@ module.exports = {
             restaurantsWithMetrics.sort((a, b) => a.distance - b.distance);
         }
 
-        // Implement pagination
+        // If map mode, return GeoJSON format
+        if (mode === 'map') {
+          const radiusMeters = parseFloat(radiusKm) * 1000;
+          const maxLimit = Math.min(parseInt(limit) || 3000, 3000);
+
+          // Filter by radius and apply limit
+          const filteredRestaurants = restaurantsWithMetrics
+            .filter((restaurant) => restaurant.distance <= radiusMeters / 1000)
+            .slice(0, maxLimit);
+
+          // Create GeoJSON response
+          const geojson = {
+            type: 'FeatureCollection',
+            features: filteredRestaurants.map((restaurant) => ({
+              type: 'Feature',
+              id: restaurant.id,
+              properties:
+                fields === 'min'
+                  ? { id: restaurant.id }
+                  : {
+                      id: restaurant.id,
+                      name: restaurant.name,
+                    },
+              geometry: {
+                type: 'Point',
+                coordinates: [restaurant.longitude, restaurant.latitude], // GeoJSON uses [lng, lat]
+              },
+            })),
+          };
+
+          // Extract IDs in the same order for sync with list/carousel
+          const ids = filteredRestaurants.map((restaurant) => restaurant.id);
+
+          return res.json({
+            geojson,
+            ids,
+            meta: {
+              count: filteredRestaurants.length,
+              truncated: filteredRestaurants.length >= maxLimit,
+              radiusKm: parseFloat(radiusKm),
+              source: 'search',
+            },
+          });
+        }
+
+        // Implement pagination for regular mode
         const page = parseInt(req.query.page) || 1;
         const limit = 20;
         const startIndex = (page - 1) * limit;
@@ -357,7 +406,52 @@ module.exports = {
           restaurantsWithDistance.sort((a, b) => a.distance - b.distance);
       }
 
-      // Implement pagination
+      // If map mode, return GeoJSON format
+      if (mode === 'map') {
+        const radiusMeters = parseFloat(radiusKm) * 1000;
+        const maxLimit = Math.min(parseInt(limit) || 3000, 3000);
+
+        // Filter by radius and apply limit
+        const filteredRestaurants = restaurantsWithDistance
+          .filter((restaurant) => restaurant.distance <= radiusMeters / 1000)
+          .slice(0, maxLimit);
+
+        // Create GeoJSON response
+        const geojson = {
+          type: 'FeatureCollection',
+          features: filteredRestaurants.map((restaurant) => ({
+            type: 'Feature',
+            id: restaurant.id,
+            properties:
+              fields === 'min'
+                ? { id: restaurant.id }
+                : {
+                    id: restaurant.id,
+                    name: restaurant.name,
+                  },
+            geometry: {
+              type: 'Point',
+              coordinates: [restaurant.longitude, restaurant.latitude], // GeoJSON uses [lng, lat]
+            },
+          })),
+        };
+
+        // Extract IDs in the same order for sync with list/carousel
+        const ids = filteredRestaurants.map((restaurant) => restaurant.id);
+
+        return res.json({
+          geojson,
+          ids,
+          meta: {
+            count: filteredRestaurants.length,
+            truncated: filteredRestaurants.length >= maxLimit,
+            radiusKm: parseFloat(radiusKm),
+            source: 'search',
+          },
+        });
+      }
+
+      // Implement pagination for regular mode
       const page = parseInt(req.query.page) || 1;
       const limit = 20;
       const startIndex = (page - 1) * limit;
@@ -385,19 +479,3 @@ module.exports = {
     }
   },
 };
-
-// Helper function to calculate distance between coordinates
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371; // Radius of the Earth in km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}

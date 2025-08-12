@@ -42,6 +42,26 @@ router.get(
   restaurantController.nearYou,
 );
 
+// New map endpoint for lean GeoJSON
+router.get(
+  '/restaurants/map',
+  appApiKeyAuth,
+  restaurantController.getRestaurantsMap,
+);
+
+// New endpoints for fetching detailed data by IDs
+router.get(
+  '/restaurants/by-ids',
+  appApiKeyAuth,
+  restaurantController.getRestaurantsByIds,
+);
+
+router.post(
+  '/restaurants/by-ids',
+  appApiKeyAuth,
+  restaurantController.getRestaurantsByIdsPost,
+);
+
 router.get(
   '/details/:id',
   appApiKeyAuth,
