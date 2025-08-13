@@ -1793,7 +1793,7 @@ const getPartners = async (req, res) => {
         'slug',
         'rating',
       ],
-      order: Sequelize.random(),
+      order: [Sequelize.fn('RANDOM')],
     });
 
     res.json({
