@@ -2695,15 +2695,21 @@ const getRestaurantsByIds = async (req, res) => {
         'userRatingsTotal',
         'createdAt',
       ],
-      order: Sequelize.literal(
-        `CASE WHEN id IN (${restaurantIds.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${restaurantIds.map(() => '?').join(',')}], id)`,
-      ),
-      replacements: [...restaurantIds, ...restaurantIds], // For both CASE and array_position
     });
+
+    // Sort restaurants to maintain the order from the input IDs
+    const restaurantMap = new Map();
+    restaurants.forEach((restaurant) => {
+      restaurantMap.set(restaurant.id, restaurant);
+    });
+
+    const sortedRestaurants = restaurantIds
+      .map((id) => restaurantMap.get(id))
+      .filter(Boolean); // Remove any undefined entries
 
     // Add additional data and maintain order
     const restaurantsWithDetails = await Promise.all(
-      restaurants.map(async (restaurant) => {
+      sortedRestaurants.map(async (restaurant) => {
         // Get reviews for rating calculation
         const reviews = await Review.findAll({
           where: { restaurantId: restaurant.id },
@@ -2721,16 +2727,27 @@ const getRestaurantsByIds = async (req, res) => {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
 
-        const viewCount = await AnalyticsEvent.count({
+        // Get unique session count for popularity calculation
+        const viewCountResult = await AnalyticsEvent.findAll({
           where: {
             restaurant_id: restaurant.id,
             event_type: 'restaurant_view',
             session_id: { [Op.ne]: null },
             timestamp: { [Op.gte]: weekAgo },
           },
-          distinct: true,
-          col: 'session_id',
+          attributes: [
+            [
+              Sequelize.fn(
+                'COUNT',
+                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+              ),
+              'viewCount',
+            ],
+          ],
+          raw: true,
         });
+
+        const viewCount = parseInt(viewCountResult[0]?.viewCount || 0, 10);
 
         const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
         const isNew =
@@ -2833,15 +2850,21 @@ const getRestaurantsByIdsPost = async (req, res) => {
         'userRatingsTotal',
         'createdAt',
       ],
-      order: Sequelize.literal(
-        `CASE WHEN id IN (${ids.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${ids.map(() => '?').join(',')}], id)`,
-      ),
-      replacements: [...ids, ...ids], // For both CASE and array_position
     });
+
+    // Sort restaurants to maintain the order from the input IDs
+    const restaurantMap = new Map();
+    restaurants.forEach((restaurant) => {
+      restaurantMap.set(restaurant.id, restaurant);
+    });
+
+    const sortedRestaurants = ids
+      .map((id) => restaurantMap.get(id))
+      .filter(Boolean); // Remove any undefined entries
 
     // Add additional data and maintain order
     const restaurantsWithDetails = await Promise.all(
-      restaurants.map(async (restaurant) => {
+      sortedRestaurants.map(async (restaurant) => {
         // Get reviews for rating calculation
         const reviews = await Review.findAll({
           where: { restaurantId: restaurant.id },
@@ -2859,16 +2882,27 @@ const getRestaurantsByIdsPost = async (req, res) => {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
 
-        const viewCount = await AnalyticsEvent.count({
+        // Get unique session count for popularity calculation
+        const viewCountResult = await AnalyticsEvent.findAll({
           where: {
             restaurant_id: restaurant.id,
             event_type: 'restaurant_view',
             session_id: { [Op.ne]: null },
             timestamp: { [Op.gte]: weekAgo },
           },
-          distinct: true,
-          col: 'session_id',
+          attributes: [
+            [
+              Sequelize.fn(
+                'COUNT',
+                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+              ),
+              'viewCount',
+            ],
+          ],
+          raw: true,
         });
+
+        const viewCount = parseInt(viewCountResult[0]?.viewCount || 0, 10);
 
         const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
         const isNew =
