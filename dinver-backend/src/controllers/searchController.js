@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const {
   MenuItem,
   DrinkItem,
@@ -6,6 +6,7 @@ const {
   MenuItemTranslation,
   DrinkItemTranslation,
   PriceCategory,
+  AnalyticsEvent,
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
 
@@ -26,6 +27,7 @@ module.exports = {
       onlyClaimedRestaurants,
       mode,
       radiusKm = 10,
+      limit = 3000,
       fields = 'min',
     } = req.query;
 
@@ -259,6 +261,47 @@ module.exports = {
         // Get final restaurants with all data
         const finalRestaurants = await Restaurant.findAll(restaurantQuery);
 
+        // Get restaurant view counts from AnalyticsEvent for popularity calculation
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        const viewCounts = await AnalyticsEvent.findAll({
+          attributes: [
+            'restaurant_id',
+            [
+              Sequelize.fn(
+                'COUNT',
+                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+              ),
+              'userCount',
+            ],
+          ],
+          where: {
+            event_type: 'restaurant_view',
+            session_id: { [Op.ne]: null },
+            timestamp: { [Op.gte]: weekAgo },
+          },
+          group: ['restaurant_id'],
+          order: [
+            [
+              Sequelize.fn(
+                'COUNT',
+                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+              ),
+              'DESC',
+            ],
+          ],
+        });
+
+        // Create a map of restaurant_id to view count
+        const viewCountMap = new Map();
+        viewCounts.forEach((item) => {
+          viewCountMap.set(
+            item.restaurant_id,
+            parseInt(item.get('userCount'), 10),
+          );
+        });
+
         // Calculate distance and prepare final response
         const restaurantsWithMetrics = finalRestaurants.map((restaurant) => {
           const distance = calculateDistance(
@@ -273,12 +316,23 @@ module.exports = {
             matchedTerms: [],
           };
 
+          // Calculate isPopular based on AnalyticsEvent data
+          const viewCount = viewCountMap.get(restaurant.id) || 0;
+          const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
+
+          const isNew =
+            restaurant.isClaimed &&
+            restaurant.createdAt >=
+              new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
           return {
             ...restaurant.toJSON(),
             distance,
             matchScore: matches.matchCount / searchTerms.length,
             matchedTerms: matches.matchedTerms,
             totalSearchTerms: searchTerms.length,
+            isPopular,
+            isNew,
           };
         });
 
@@ -322,10 +376,18 @@ module.exports = {
               id: restaurant.id,
               properties:
                 fields === 'min'
-                  ? { id: restaurant.id }
+                  ? {
+                      id: restaurant.id,
+                      isPopular: restaurant.isPopular,
+                      isNew: restaurant.isNew,
+                      isClaimed: restaurant.isClaimed,
+                    }
                   : {
                       id: restaurant.id,
                       name: restaurant.name,
+                      isPopular: restaurant.isPopular,
+                      isNew: restaurant.isNew,
+                      isClaimed: restaurant.isClaimed,
                     },
               geometry: {
                 type: 'Point',
@@ -351,15 +413,15 @@ module.exports = {
 
         // Implement pagination for regular mode
         const page = parseInt(req.query.page) || 1;
-        const limit = 20;
-        const startIndex = (page - 1) * limit;
-        const endIndex = page * limit;
+        const pageLimit = 20;
+        const startIndex = (page - 1) * pageLimit;
+        const endIndex = page * pageLimit;
 
         const paginatedRestaurants = restaurantsWithMetrics.slice(
           startIndex,
           endIndex,
         );
-        const totalPages = Math.ceil(restaurantsWithMetrics.length / limit);
+        const totalPages = Math.ceil(restaurantsWithMetrics.length / pageLimit);
 
         return res.json({
           restaurants: paginatedRestaurants,
@@ -373,6 +435,48 @@ module.exports = {
 
       // If no search terms, just return filtered restaurants
       const restaurants = await Restaurant.findAll(restaurantQuery);
+
+      // Get restaurant view counts from AnalyticsEvent for popularity calculation
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const viewCounts = await AnalyticsEvent.findAll({
+        attributes: [
+          'restaurant_id',
+          [
+            Sequelize.fn(
+              'COUNT',
+              Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+            ),
+            'userCount',
+          ],
+        ],
+        where: {
+          event_type: 'restaurant_view',
+          session_id: { [Op.ne]: null },
+          timestamp: { [Op.gte]: weekAgo },
+        },
+        group: ['restaurant_id'],
+        order: [
+          [
+            Sequelize.fn(
+              'COUNT',
+              Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+            ),
+            'DESC',
+          ],
+        ],
+      });
+
+      // Create a map of restaurant_id to view count
+      const viewCountMap = new Map();
+      viewCounts.forEach((item) => {
+        viewCountMap.set(
+          item.restaurant_id,
+          parseInt(item.get('userCount'), 10),
+        );
+      });
+
       const restaurantsWithDistance = restaurants.map((restaurant) => {
         const distance = calculateDistance(
           parseFloat(latitude),
@@ -381,9 +485,20 @@ module.exports = {
           restaurant.longitude,
         );
 
+        // Calculate isPopular based on AnalyticsEvent data
+        const viewCount = viewCountMap.get(restaurant.id) || 0;
+        const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
+
+        const isNew =
+          restaurant.isClaimed &&
+          restaurant.createdAt >=
+            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
         return {
           ...restaurant.toJSON(),
           distance,
+          isPopular,
+          isNew,
         };
       });
 
@@ -424,10 +539,18 @@ module.exports = {
             id: restaurant.id,
             properties:
               fields === 'min'
-                ? { id: restaurant.id }
+                ? {
+                    id: restaurant.id,
+                    isPopular: restaurant.isPopular,
+                    isNew: restaurant.isNew,
+                    isClaimed: restaurant.isClaimed,
+                  }
                 : {
                     id: restaurant.id,
                     name: restaurant.name,
+                    isPopular: restaurant.isPopular,
+                    isNew: restaurant.isNew,
+                    isClaimed: restaurant.isClaimed,
                   },
             geometry: {
               type: 'Point',
@@ -453,15 +576,15 @@ module.exports = {
 
       // Implement pagination for regular mode
       const page = parseInt(req.query.page) || 1;
-      const limit = 20;
-      const startIndex = (page - 1) * limit;
-      const endIndex = page * limit;
+      const pageLimit = 20;
+      const startIndex = (page - 1) * pageLimit;
+      const endIndex = page * pageLimit;
 
       const paginatedRestaurants = restaurantsWithDistance.slice(
         startIndex,
         endIndex,
       );
-      const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
+      const totalPages = Math.ceil(restaurantsWithDistance.length / pageLimit);
 
       return res.json({
         restaurants: paginatedRestaurants,
