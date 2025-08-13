@@ -14,20 +14,19 @@ const {
   DrinkCategoryTranslation,
   Allergen,
   PriceCategory,
+  AnalyticsEvent,
 } = require('../../models');
 const {
   updateFoodExplorerProgress,
   updateCityHopperProgress,
   updateWorldCuisineProgress,
 } = require('./achievementController');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
-const {
-  sendPushNotificationToAllUsers,
-} = require('../../utils/pushNotificationService');
+
 const {
   FoodType,
   EstablishmentType,
@@ -35,7 +34,6 @@ const {
   MealType,
   DietaryType,
 } = require('../../models');
-const { sequelize } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const crypto = require('crypto');
 
@@ -1795,7 +1793,7 @@ const getPartners = async (req, res) => {
         'slug',
         'rating',
       ],
-      order: sequelize.random(),
+      order: Sequelize.random(),
     });
 
     res.json({
@@ -2500,8 +2498,55 @@ const getRestaurantsMap = async (req, res) => {
         latitude: { [Op.not]: null },
         longitude: { [Op.not]: null },
       },
-      attributes: ['id', 'name', 'latitude', 'longitude'],
+      attributes: [
+        'id',
+        'name',
+        'latitude',
+        'longitude',
+        'rating',
+        'userRatingsTotal',
+        'isClaimed',
+        'createdAt',
+      ],
       order: [['name', 'ASC']],
+    });
+
+    // Get restaurant view counts from AnalyticsEvent for popularity calculation
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const viewCounts = await AnalyticsEvent.findAll({
+      attributes: [
+        'restaurant_id',
+        [
+          Sequelize.fn(
+            'COUNT',
+            Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+          ),
+          'userCount',
+        ],
+      ],
+      where: {
+        event_type: 'restaurant_view',
+        session_id: { [Op.ne]: null },
+        timestamp: { [Op.gte]: weekAgo },
+      },
+      group: ['restaurant_id'],
+      order: [
+        [
+          Sequelize.fn(
+            'COUNT',
+            Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+          ),
+          'DESC',
+        ],
+      ],
+    });
+
+    // Create a map of restaurant_id to view count
+    const viewCountMap = new Map();
+    viewCounts.forEach((item) => {
+      viewCountMap.set(item.restaurant_id, parseInt(item.get('userCount'), 10));
     });
 
     // Calculate distances and filter by radius
@@ -2513,9 +2558,21 @@ const getRestaurantsMap = async (req, res) => {
           restaurant.latitude,
           restaurant.longitude,
         );
+
+        // Calculate isPopular based on AnalyticsEvent data
+        const viewCount = viewCountMap.get(restaurant.id) || 0;
+        const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
+
+        const isNew =
+          restaurant.isClaimed &&
+          restaurant.createdAt >=
+            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
+
         return {
           ...restaurant.get(),
           distance,
+          isPopular,
+          isNew,
         };
       })
       .filter((restaurant) => restaurant.distance <= radiusMeters / 1000) // Convert back to km for comparison
@@ -2536,10 +2593,18 @@ const getRestaurantsMap = async (req, res) => {
         id: restaurant.id,
         properties:
           fields === 'min'
-            ? { id: restaurant.id }
+            ? {
+                id: restaurant.id,
+                isPopular: restaurant.isPopular,
+                isNew: restaurant.isNew,
+                isClaimed: restaurant.isClaimed,
+              }
             : {
                 id: restaurant.id,
                 name: restaurant.name,
+                isPopular: restaurant.isPopular,
+                isNew: restaurant.isNew,
+                isClaimed: restaurant.isClaimed,
               },
         geometry: {
           type: 'Point',
@@ -2627,8 +2692,10 @@ const getRestaurantsByIds = async (req, res) => {
         'rating',
         'thumbnailUrl',
         'isClaimed',
+        'userRatingsTotal',
+        'createdAt',
       ],
-      order: sequelize.literal(
+      order: Sequelize.literal(
         `CASE WHEN id IN (${restaurantIds.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${restaurantIds.map(() => '?').join(',')}], id)`,
       ),
       replacements: [...restaurantIds, ...restaurantIds], // For both CASE and array_position
@@ -2650,10 +2717,33 @@ const getRestaurantsByIds = async (req, res) => {
         const reviewRating =
           reviews.length > 0 ? totalRatings / reviews.length : null;
 
+        // Calculate isPopular based on AnalyticsEvent data
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        const viewCount = await AnalyticsEvent.count({
+          where: {
+            restaurant_id: restaurant.id,
+            event_type: 'restaurant_view',
+            session_id: { [Op.ne]: null },
+            timestamp: { [Op.gte]: weekAgo },
+          },
+          distinct: true,
+          col: 'session_id',
+        });
+
+        const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
+        const isNew =
+          restaurant.isClaimed &&
+          restaurant.createdAt >=
+            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
         return {
           ...restaurant.get(),
           rating: reviewRating || restaurant.rating || 0,
           isFavorite: userFavorites.has(restaurant.id),
+          isPopular,
+          isNew,
         };
       }),
     );
@@ -2740,8 +2830,10 @@ const getRestaurantsByIdsPost = async (req, res) => {
         'rating',
         'thumbnailUrl',
         'isClaimed',
+        'userRatingsTotal',
+        'createdAt',
       ],
-      order: sequelize.literal(
+      order: Sequelize.literal(
         `CASE WHEN id IN (${ids.map(() => '?').join(',')}) THEN 0 ELSE 1 END, array_position(ARRAY[${ids.map(() => '?').join(',')}], id)`,
       ),
       replacements: [...ids, ...ids], // For both CASE and array_position
@@ -2763,10 +2855,33 @@ const getRestaurantsByIdsPost = async (req, res) => {
         const reviewRating =
           reviews.length > 0 ? totalRatings / reviews.length : null;
 
+        // Calculate isPopular based on AnalyticsEvent data
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        const viewCount = await AnalyticsEvent.count({
+          where: {
+            restaurant_id: restaurant.id,
+            event_type: 'restaurant_view',
+            session_id: { [Op.ne]: null },
+            timestamp: { [Op.gte]: weekAgo },
+          },
+          distinct: true,
+          col: 'session_id',
+        });
+
+        const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
+        const isNew =
+          restaurant.isClaimed &&
+          restaurant.createdAt >=
+            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
         return {
           ...restaurant.get(),
           rating: reviewRating || restaurant.rating || 0,
           isFavorite: userFavorites.has(restaurant.id),
+          isPopular,
+          isNew,
         };
       }),
     );
