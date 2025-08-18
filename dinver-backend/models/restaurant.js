@@ -262,6 +262,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         unique: true,
       },
+      virtualTourUrl: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'URL for virtual tour iframe (e.g., Kuula.co embed URL)',
+      },
     },
     {
       sequelize,

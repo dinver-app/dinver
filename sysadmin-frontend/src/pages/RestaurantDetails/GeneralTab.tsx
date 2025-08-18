@@ -39,6 +39,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     showWifiCredentials: restaurant.showWifiCredentials || false,
     reservationEnabled: restaurant.reservationEnabled || false,
     subdomain: restaurant.subdomain || "",
+    virtualTourUrl: restaurant.virtualTourUrl || "",
   });
 
   const [translations, setTranslations] = useState<Translation[]>([
@@ -188,6 +189,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         formData.reservationEnabled.toString()
       );
       formDataToSend.append("subdomain", formData.subdomain);
+      formDataToSend.append("virtualTourUrl", formData.virtualTourUrl);
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -641,6 +643,24 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           />
           <p className="text-xs text-gray-500 mt-1">
             npr. tavernaalinea &rarr; https://tavernaalinea.dinver.eu
+          </p>
+        </div>
+
+        {/* Virtual Tour URL */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Virtual Tour URL
+          </label>
+          <input
+            type="text"
+            name="virtualTourUrl"
+            value={formData.virtualTourUrl}
+            onChange={handleInputChange}
+            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+            placeholder="https://www.google.com/maps/embed?pb=..."
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {t("virtual_tour_url_info")}
           </p>
         </div>
 
