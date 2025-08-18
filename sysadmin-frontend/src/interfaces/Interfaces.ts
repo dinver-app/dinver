@@ -73,6 +73,7 @@ export interface Restaurant {
   showWifiCredentials?: boolean;
   reservationEnabled?: boolean;
   subdomain?: string;
+  virtualTourUrl?: string;
 }
 
 export interface FoodType {

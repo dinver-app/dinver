@@ -37,6 +37,17 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'settings',
       });
+      
+      // Referral associations
+      User.hasMany(models.User, {
+        foreignKey: 'referredBy',
+        as: 'referrals',
+      });
+      
+      User.belongsTo(models.User, {
+        foreignKey: 'referredBy',
+        as: 'referredByUser',
+      });
     }
   }
 
@@ -109,6 +120,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
         unique: true,
+      },
+      referralCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+      },
+      referredBy: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
       },
     },
     {

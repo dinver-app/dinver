@@ -339,6 +339,7 @@ const getRestaurantDetails = async (req, res) => {
         'priceCategoryId',
         'reservationEnabled',
         'subdomain',
+        'virtualTourUrl',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),
@@ -493,6 +494,7 @@ async function updateRestaurant(req, res) {
       showWifiCredentials,
       reservationEnabled,
       subdomain,
+      virtualTourUrl,
     } = req.body;
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -561,6 +563,7 @@ async function updateRestaurant(req, res) {
       wifiPassword,
       showWifiCredentials,
       reservationEnabled,
+      virtualTourUrl,
     });
 
     // Upsert translations if provided
@@ -1027,6 +1030,7 @@ const getRestaurantById = async (req, res) => {
         'priceCategoryId',
         'reservationEnabled',
         'subdomain',
+        'virtualTourUrl',
       ],
     });
     if (!restaurant) {
@@ -1855,6 +1859,7 @@ const getFullRestaurantDetails = async (req, res) => {
         'openingHours',
         'customWorkingDays',
         'subdomain',
+        'virtualTourUrl',
         ...(includeWifi
           ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
           : []),
