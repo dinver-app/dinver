@@ -7,6 +7,7 @@ const {
   DrinkItemTranslation,
   PriceCategory,
   AnalyticsEvent,
+  UserFavorite,
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
 
@@ -31,6 +32,8 @@ module.exports = {
       fields = 'min',
     } = req.query;
 
+    const userId = req.user?.id;
+
     const searchTerms = query
       ? query
           .split(',')
@@ -39,6 +42,16 @@ module.exports = {
       : [];
 
     try {
+      // Get user favorites if authenticated
+      let userFavorites = new Set();
+      if (userId) {
+        const favorites = await UserFavorite.findAll({
+          where: { userId },
+          attributes: ['restaurantId'],
+        });
+        userFavorites = new Set(favorites.map((f) => f.restaurantId));
+      }
+
       // Base restaurant query - maknuti sve include-ove osim PriceCategory
       let restaurantQuery = {
         attributes: [
@@ -333,6 +346,7 @@ module.exports = {
             totalSearchTerms: searchTerms.length,
             isPopular,
             isNew,
+            isFavorite: userFavorites.has(restaurant.id),
           };
         });
 
@@ -381,6 +395,7 @@ module.exports = {
                       isPopular: restaurant.isPopular,
                       isNew: restaurant.isNew,
                       isClaimed: restaurant.isClaimed,
+                      isFavorite: restaurant.isFavorite,
                     }
                   : {
                       id: restaurant.id,
@@ -388,6 +403,7 @@ module.exports = {
                       isPopular: restaurant.isPopular,
                       isNew: restaurant.isNew,
                       isClaimed: restaurant.isClaimed,
+                      isFavorite: restaurant.isFavorite,
                     },
               geometry: {
                 type: 'Point',
@@ -499,6 +515,7 @@ module.exports = {
           distance,
           isPopular,
           isNew,
+          isFavorite: userFavorites.has(restaurant.id),
         };
       });
 
@@ -544,6 +561,7 @@ module.exports = {
                     isPopular: restaurant.isPopular,
                     isNew: restaurant.isNew,
                     isClaimed: restaurant.isClaimed,
+                    isFavorite: restaurant.isFavorite,
                   }
                 : {
                     id: restaurant.id,
@@ -551,6 +569,7 @@ module.exports = {
                     isPopular: restaurant.isPopular,
                     isNew: restaurant.isNew,
                     isClaimed: restaurant.isClaimed,
+                    isFavorite: restaurant.isFavorite,
                   },
             geometry: {
               type: 'Point',

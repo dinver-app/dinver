@@ -2480,6 +2480,7 @@ const getClaimRestaurantWorkingHours = async (req, res) => {
 const getRestaurantsMap = async (req, res) => {
   try {
     const { lat, lng, radiusKm = 10, limit = 3000, fields = 'min' } = req.query;
+    const userId = req.user?.id;
 
     if (!lat || !lng) {
       return res
@@ -2515,6 +2516,16 @@ const getRestaurantsMap = async (req, res) => {
       ],
       order: [['name', 'ASC']],
     });
+
+    // Get user favorites if authenticated
+    let userFavorites = new Set();
+    if (userId) {
+      const favorites = await UserFavorite.findAll({
+        where: { userId },
+        attributes: ['restaurantId'],
+      });
+      userFavorites = new Set(favorites.map((f) => f.restaurantId));
+    }
 
     // Get restaurant view counts from AnalyticsEvent for popularity calculation
     const weekAgo = new Date();
@@ -2578,6 +2589,7 @@ const getRestaurantsMap = async (req, res) => {
           distance,
           isPopular,
           isNew,
+          isFavorite: userFavorites.has(restaurant.id),
         };
       })
       .filter((restaurant) => restaurant.distance <= radiusMeters / 1000) // Convert back to km for comparison
@@ -2603,6 +2615,7 @@ const getRestaurantsMap = async (req, res) => {
                 isPopular: restaurant.isPopular,
                 isNew: restaurant.isNew,
                 isClaimed: restaurant.isClaimed,
+                isFavorite: restaurant.isFavorite,
               }
             : {
                 id: restaurant.id,
@@ -2610,6 +2623,7 @@ const getRestaurantsMap = async (req, res) => {
                 isPopular: restaurant.isPopular,
                 isNew: restaurant.isNew,
                 isClaimed: restaurant.isClaimed,
+                isFavorite: restaurant.isFavorite,
               },
         geometry: {
           type: 'Point',
@@ -2692,6 +2706,7 @@ const getRestaurantsByIds = async (req, res) => {
       attributes: [
         'id',
         'name',
+        'address',
         'latitude',
         'longitude',
         'rating',
@@ -2847,6 +2862,7 @@ const getRestaurantsByIdsPost = async (req, res) => {
       attributes: [
         'id',
         'name',
+        'address',
         'latitude',
         'longitude',
         'rating',
