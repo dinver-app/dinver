@@ -66,7 +66,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'When this user coupon expires (1 year from claim)',
       },
       status: {
-        type: DataTypes.ENUM('CLAIMED', 'REDEEMED', 'EXPIRED', 'CANCELLED'),
+        type: DataTypes.ENUM('CLAIMED', 'REDEEMED', 'EXPIRED'),
         allowNull: false,
         defaultValue: 'CLAIMED',
         comment: 'Current status of this user coupon',
@@ -76,11 +76,27 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'Hash for short-lived QR token',
       },
+      deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Soft delete timestamp',
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
     },
     {
       sequelize,
       modelName: 'UserCoupon',
       tableName: 'UserCoupons',
+      paranoid: true, // Enable soft deletes
       indexes: [
         {
           fields: ['userId', 'status'],

@@ -74,11 +74,27 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'Additional metadata about the redemption',
       },
+      deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Soft delete timestamp',
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
     },
     {
       sequelize,
       modelName: 'CouponRedemption',
       tableName: 'CouponRedemptions',
+      paranoid: true, // Enable soft deletes
       indexes: [
         {
           fields: ['restaurantId', 'redeemedAt'],
