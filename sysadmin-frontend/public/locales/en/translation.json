@@ -756,10 +756,13 @@
   "image_position_vertical": "Image position (vertical)",
   "coupon_status_updated": "Coupon status updated",
   "status_description": "Set the status of the coupon (e.g., Active, Paused, Expired, Draft)",
-  "coupons_success_updated": "Coupons updated successfully",
+  "coupons_success_updated": "Coupon updated successfully",
   "coupons_error_creating": "Error creating coupon",
   "no_expiration": "No expiration",
   "all_sources": "All sources",
   "system_coupons": "System coupons",
-  "restaurant_coupons": "Restaurant coupons"
+  "restaurant_coupons": "Restaurant coupons",
+  "percent_off_info": "Enter percentage (0-100)",
+  "fixed_off_info": "Enter fixed amount",
+  "coupons_success_created": "Coupon created successfully"
 }
