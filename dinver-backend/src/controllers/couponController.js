@@ -4,6 +4,12 @@ const {
   CouponRedemption,
   MenuItem,
   MenuItemTranslation,
+  MenuCategory,
+  MenuCategoryTranslation,
+  DrinkItem,
+  DrinkItemTranslation,
+  DrinkCategory,
+  DrinkCategoryTranslation,
   Restaurant,
   User,
   UserPoints,
@@ -14,27 +20,60 @@ const { getMediaUrl } = require('../../config/cdn');
 const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
 const crypto = require('crypto');
-const { uploadToS3 } = require('../../utils/s3Upload');
 
 // Get all system-wide coupons (for sysadmin)
 const getSystemCoupons = async (req, res) => {
   try {
+    const { includeDeleted } = req.query;
+
     const coupons = await Coupon.findAll({
       where: { source: 'DINVER' },
       include: [
         {
           model: MenuItem,
           as: 'menuItem',
+          required: false,
           include: [
             {
               model: MenuItemTranslation,
               as: 'translations',
             },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
           ],
         },
       ],
       order: [['createdAt', 'DESC']],
-      paranoid: false, // Include soft-deleted coupons for sysadmin view
+      paranoid: includeDeleted === 'true', // Include soft-deleted coupons only if explicitly requested
     });
 
     const formattedCoupons = coupons.map((coupon) => {
@@ -43,7 +82,6 @@ const getSystemCoupons = async (req, res) => {
 
       return {
         ...couponData,
-        imageUrl: getMediaUrl(couponData.imageUrl, 'image'), // Convert key to CloudFront URL
         condition: couponData.conditionKind
           ? {
               kind: couponData.conditionKind,
@@ -85,10 +123,42 @@ const getRestaurantCoupons = async (req, res) => {
         {
           model: MenuItem,
           as: 'menuItem',
+          required: false,
           include: [
             {
               model: MenuItemTranslation,
               as: 'translations',
+            },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
             },
           ],
         },
@@ -103,7 +173,6 @@ const getRestaurantCoupons = async (req, res) => {
 
       return {
         ...couponData,
-        imageUrl: getMediaUrl(couponData.imageUrl, 'image'), // Convert key to CloudFront URL
         condition: couponData.conditionKind
           ? {
               kind: couponData.conditionKind,
@@ -175,10 +244,42 @@ const getAvailableCoupons = async (req, res) => {
       {
         model: MenuItem,
         as: 'menuItem',
+        required: false,
         include: [
           {
             model: MenuItemTranslation,
             as: 'translations',
+          },
+          {
+            model: MenuCategory,
+            as: 'category',
+            include: [
+              {
+                model: MenuCategoryTranslation,
+                as: 'translations',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: DrinkItem,
+        as: 'drinkItem',
+        required: false,
+        include: [
+          {
+            model: DrinkItemTranslation,
+            as: 'translations',
+          },
+          {
+            model: DrinkCategory,
+            as: 'category',
+            include: [
+              {
+                model: DrinkCategoryTranslation,
+                as: 'translations',
+              },
+            ],
           },
         ],
       },
@@ -212,8 +313,8 @@ const getAvailableCoupons = async (req, res) => {
     });
 
     // Filter and format coupons
-    const formattedCoupons = coupons
-      .map((coupon) => {
+    const formattedCoupons = await Promise.all(
+      coupons.map(async (coupon) => {
         const couponData = coupon.toJSON();
         const menuItem = couponData.menuItem;
         const restaurant = couponData.restaurant;
@@ -238,9 +339,24 @@ const getAvailableCoupons = async (req, res) => {
           }
         }
 
+        // Check user progress for this coupon if user is authenticated
+        let userProgress = null;
+        if (req.user && couponData.conditionKind) {
+          const condition = {
+            kind: couponData.conditionKind,
+            valueInt: couponData.conditionValue,
+            restaurantScopeId: couponData.conditionRestaurantScopeId,
+          };
+          const { progress } = await checkCouponConditions(
+            req.user.id,
+            condition,
+            couponData.createdAt,
+          );
+          userProgress = progress;
+        }
+
         return {
           ...couponData,
-          imageUrl: getMediaUrl(couponData.imageUrl, 'image'), // Convert key to CloudFront URL
           condition: couponData.conditionKind
             ? {
                 kind: couponData.conditionKind,
@@ -248,6 +364,7 @@ const getAvailableCoupons = async (req, res) => {
                 restaurantScopeId: couponData.conditionRestaurantScopeId,
               }
             : null,
+          userProgress, // Add user progress to response
           menuItem: menuItem
             ? {
                 ...menuItem,
@@ -268,8 +385,10 @@ const getAvailableCoupons = async (req, res) => {
               }
             : null,
         };
-      })
-      .filter(Boolean);
+      }),
+    );
+
+    const filteredCoupons = formattedCoupons.filter(Boolean);
 
     res.json({
       coupons: formattedCoupons,
@@ -288,8 +407,6 @@ const createCoupon = async (req, res) => {
     const {
       source,
       restaurantId,
-      title,
-      description,
       type,
       rewardItemId,
       percentOff,
@@ -327,27 +444,10 @@ const createCoupon = async (req, res) => {
       finalExpiresAt = null;
     }
 
-    // Handle image upload
-    let imageKey = null;
-    if (req.file) {
-      const folder = 'coupons';
-      try {
-        imageKey = await uploadToS3(req.file, folder);
-      } catch (uploadError) {
-        console.error('Error uploading to S3:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload image' });
-      }
-    } else {
-      return res.status(400).json({ error: 'Image is required' });
-    }
-
     // Create coupon
     const coupon = await Coupon.create({
       source,
       restaurantId,
-      title,
-      description,
-      imageUrl: imageKey, // Store only the key
       type,
       rewardItemId,
       percentOff,
@@ -371,10 +471,42 @@ const createCoupon = async (req, res) => {
         {
           model: MenuItem,
           as: 'menuItem',
+          required: false,
           include: [
             {
               model: MenuItemTranslation,
               as: 'translations',
+            },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
             },
           ],
         },
@@ -383,7 +515,6 @@ const createCoupon = async (req, res) => {
 
     const result = {
       ...createdCoupon.get(),
-      imageUrl: getMediaUrl(createdCoupon.imageUrl, 'image'), // Convert key to CloudFront URL
       // Format conditions as array for backward compatibility
       condition: createdCoupon.conditionKind
         ? {
@@ -427,8 +558,6 @@ const updateCoupon = async (req, res) => {
     const {
       source,
       restaurantId,
-      title,
-      description,
       type,
       rewardItemId,
       percentOff,
@@ -471,25 +600,10 @@ const updateCoupon = async (req, res) => {
       return res.status(404).json({ error: 'Coupon not found' });
     }
 
-    // Handle image upload
-    let imageKey = coupon.imageUrl; // Keep existing key if no new image
-    if (req.file) {
-      const folder = 'coupons';
-      try {
-        imageKey = await uploadToS3(req.file, folder);
-      } catch (uploadError) {
-        console.error('Error uploading to S3:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload image' });
-      }
-    }
-
     // Update coupon
     await coupon.update({
       source,
       restaurantId,
-      title,
-      description,
-      imageUrl: imageKey, // Store only the key
       type,
       rewardItemId,
       percentOff,
@@ -510,10 +624,42 @@ const updateCoupon = async (req, res) => {
         {
           model: MenuItem,
           as: 'menuItem',
+          required: false,
           include: [
             {
               model: MenuItemTranslation,
               as: 'translations',
+            },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
             },
           ],
         },
@@ -522,7 +668,6 @@ const updateCoupon = async (req, res) => {
 
     const result = {
       ...updatedCoupon.get(),
-      imageUrl: getMediaUrl(updatedCoupon.imageUrl, 'image'), // Convert key to CloudFront URL
       condition: updatedCoupon.conditionKind
         ? {
             kind: updatedCoupon.conditionKind,
@@ -558,28 +703,46 @@ const updateCoupon = async (req, res) => {
   }
 };
 
-// Delete a coupon (soft delete)
+// Delete a coupon (soft delete or permanent delete)
 const deleteCoupon = async (req, res) => {
   try {
     const { id } = req.params;
-    const coupon = await Coupon.findByPk(id);
+    const { permanent } = req.query;
+    const coupon = await Coupon.findByPk(id, { paranoid: false }); // Include soft-deleted coupons
 
     if (!coupon) {
       return res.status(404).json({ error: 'Coupon not found' });
     }
 
-    await logAudit({
-      userId: req.user.id,
-      action: ActionTypes.DELETE,
-      entity: Entities.COUPON,
-      entityId: coupon.id,
-      restaurantId: coupon.restaurantId,
-      changes: { old: coupon.get() },
-    });
+    if (permanent === 'true') {
+      // Permanent delete
+      await logAudit({
+        userId: req.user.id,
+        action: ActionTypes.DELETE,
+        entity: Entities.COUPON,
+        entityId: coupon.id,
+        restaurantId: coupon.restaurantId,
+        changes: { old: coupon.get(), permanent: true },
+      });
 
-    // Soft delete the coupon
-    await coupon.destroy();
-    res.status(204).send();
+      // Hard delete the coupon
+      await coupon.destroy({ force: true });
+      res.status(204).send();
+    } else {
+      // Soft delete
+      await logAudit({
+        userId: req.user.id,
+        action: ActionTypes.DELETE,
+        entity: Entities.COUPON,
+        entityId: coupon.id,
+        restaurantId: coupon.restaurantId,
+        changes: { old: coupon.get() },
+      });
+
+      // Soft delete the coupon
+      await coupon.destroy();
+      res.status(204).send();
+    }
   } catch (error) {
     console.error('Error deleting coupon:', error);
     res.status(500).json({ error: 'Failed to delete coupon' });
@@ -598,6 +761,36 @@ const claimCoupon = async (req, res) => {
         {
           model: MenuItem,
           as: 'menuItem',
+          required: false,
+          include: [
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
         },
         {
           model: Restaurant,
@@ -651,7 +844,11 @@ const claimCoupon = async (req, res) => {
       : null;
 
     if (condition) {
-      const canClaim = await checkCouponConditions(userId, condition);
+      const canClaim = await checkCouponConditions(
+        userId,
+        condition,
+        coupon.createdAt,
+      );
       if (!canClaim.allowed) {
         return res.status(400).json({
           error: 'You do not meet the requirements for this coupon',
@@ -701,7 +898,6 @@ const claimCoupon = async (req, res) => {
       },
       coupon: {
         id: coupon.id,
-        title: coupon.title,
         type: coupon.type,
         menuItem: coupon.menuItem,
         restaurant: coupon.restaurant,
@@ -729,10 +925,42 @@ const getUserCoupons = async (req, res) => {
             {
               model: MenuItem,
               as: 'menuItem',
+              required: false,
               include: [
                 {
                   model: MenuItemTranslation,
                   as: 'translations',
+                },
+                {
+                  model: MenuCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: MenuCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              model: DrinkItem,
+              as: 'drinkItem',
+              required: false,
+              include: [
+                {
+                  model: DrinkItemTranslation,
+                  as: 'translations',
+                },
+                {
+                  model: DrinkCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: DrinkCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
                 },
               ],
             },
@@ -794,6 +1022,36 @@ const generateCouponQR = async (req, res) => {
             {
               model: MenuItem,
               as: 'menuItem',
+              required: false,
+              include: [
+                {
+                  model: MenuCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: MenuCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              model: DrinkItem,
+              as: 'drinkItem',
+              required: false,
+              include: [
+                {
+                  model: DrinkCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: DrinkCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
+                },
+              ],
             },
             {
               model: Restaurant,
@@ -830,7 +1088,6 @@ const generateCouponQR = async (req, res) => {
       },
       coupon: {
         id: userCoupon.coupon.id,
-        title: userCoupon.coupon.title,
         type: userCoupon.coupon.type,
         menuItem: userCoupon.coupon.menuItem,
         restaurant: userCoupon.coupon.restaurant,
@@ -860,6 +1117,42 @@ const redeemUserCoupon = async (req, res) => {
           model: Coupon,
           as: 'coupon',
           paranoid: false, // Include soft-deleted coupons so staff can still redeem them
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              required: false,
+              include: [
+                {
+                  model: MenuCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: MenuCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              model: DrinkItem,
+              as: 'drinkItem',
+              required: false,
+              include: [
+                {
+                  model: DrinkCategory,
+                  as: 'category',
+                  include: [
+                    {
+                      model: DrinkCategoryTranslation,
+                      as: 'translations',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         },
       ],
     });
@@ -884,7 +1177,6 @@ const redeemUserCoupon = async (req, res) => {
       redeemedBy: staffUserId,
       meta: {
         couponType: userCoupon.coupon.type,
-        couponTitle: userCoupon.coupon.title,
       },
     });
 
@@ -911,7 +1203,6 @@ const redeemUserCoupon = async (req, res) => {
       },
       coupon: {
         id: userCoupon.coupon.id,
-        title: userCoupon.coupon.title,
         type: userCoupon.coupon.type,
       },
     });
@@ -921,32 +1212,56 @@ const redeemUserCoupon = async (req, res) => {
   }
 };
 
-// Helper function to check coupon conditions
-const checkCouponConditions = async (userId, condition) => {
+// Helper function to check coupon conditions and return progress
+const checkCouponConditions = async (
+  userId,
+  condition,
+  couponCreatedAt = null,
+) => {
   const reasons = [];
   let allowed = true;
+  let progress = null;
 
   if (!condition) {
-    return { allowed: true, reasons: [] };
+    return { allowed: true, reasons: [], progress: null };
   }
+
   switch (condition.kind) {
     case 'POINTS_AT_LEAST':
       const userPoints = await UserPoints.findOne({ where: { userId } });
-      if (!userPoints || userPoints.totalPoints < condition.valueInt) {
+      const currentPoints = userPoints ? userPoints.totalPoints : 0;
+      if (currentPoints < condition.valueInt) {
         allowed = false;
         reasons.push(`Need at least ${condition.valueInt} points`);
+        progress = {
+          current: currentPoints,
+          required: condition.valueInt,
+          type: 'points',
+          message: `Imate ${currentPoints} od ${condition.valueInt} potrebnih bodova. Potrebno vam je još ${condition.valueInt - currentPoints} bodova.`,
+        };
       }
       break;
 
     case 'REFERRALS_AT_LEAST':
-      const referralCount = await User.count({
-        where: { referredBy: userId },
-      });
+      let referralQuery = { where: { referredBy: userId } };
+
+      // If coupon has creation date, only count referrals after that date
+      if (couponCreatedAt) {
+        referralQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
+      }
+
+      const referralCount = await User.count(referralQuery);
       if (referralCount < condition.valueInt) {
         allowed = false;
         reasons.push(
           `Need at least ${condition.valueInt} referrals (you have ${referralCount})`,
         );
+        progress = {
+          current: referralCount,
+          required: condition.valueInt,
+          type: 'referrals',
+          message: `Imate ${referralCount} od ${condition.valueInt} potrebnih preporuka. Potrebno vam je još ${condition.valueInt - referralCount} preporuka.`,
+        };
       }
       break;
 
@@ -956,40 +1271,71 @@ const checkCouponConditions = async (userId, condition) => {
         reasons.push('Restaurant scope is required for this condition');
         break;
       }
-      const sameRestaurantVisits = await UserRestaurantVisit.count({
+      let sameRestaurantQuery = {
         where: {
           userId,
           restaurantId: condition.restaurantScopeId,
           validated: true,
         },
-      });
+      };
+
+      // If coupon has creation date, only count visits after that date
+      if (couponCreatedAt) {
+        sameRestaurantQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
+      }
+
+      const sameRestaurantVisits =
+        await UserRestaurantVisit.count(sameRestaurantQuery);
       if (sameRestaurantVisits < condition.valueInt) {
         allowed = false;
         reasons.push(
           `Need at least ${condition.valueInt} visits to this restaurant (you have ${sameRestaurantVisits})`,
         );
+        progress = {
+          current: sameRestaurantVisits,
+          required: condition.valueInt,
+          type: 'same_restaurant_visits',
+          message: `Posjetili ste ${sameRestaurantVisits} od ${condition.valueInt} puta ovaj restoran. Posjetite još ${condition.valueInt - sameRestaurantVisits} puta.`,
+        };
       }
       break;
 
     case 'VISITS_DIFFERENT_RESTAURANTS_AT_LEAST':
-      const differentRestaurantVisits = await UserRestaurantVisit.count({
+      let differentRestaurantQuery = {
         where: {
           userId,
           validated: true,
         },
         distinct: true,
         col: 'restaurantId',
-      });
+      };
+
+      // If coupon has creation date, only count visits after that date
+      if (couponCreatedAt) {
+        differentRestaurantQuery.where.createdAt = {
+          [Op.gte]: couponCreatedAt,
+        };
+      }
+
+      const differentRestaurantVisits = await UserRestaurantVisit.count(
+        differentRestaurantQuery,
+      );
       if (differentRestaurantVisits < condition.valueInt) {
         allowed = false;
         reasons.push(
           `Need at least ${condition.valueInt} visits to different restaurants (you have ${differentRestaurantVisits})`,
         );
+        progress = {
+          current: differentRestaurantVisits,
+          required: condition.valueInt,
+          type: 'different_restaurant_visits',
+          message: `Posjetili ste ${differentRestaurantVisits} od ${condition.valueInt} različitih restorana. Posjetite još ${condition.valueInt - differentRestaurantVisits} različitih restorana.`,
+        };
       }
       break;
 
     case 'VISITS_CITIES_AT_LEAST':
-      const cityVisits = await UserRestaurantVisit.findAll({
+      let cityVisitsQuery = {
         where: {
           userId,
           validated: true,
@@ -1001,7 +1347,14 @@ const checkCouponConditions = async (userId, condition) => {
             attributes: ['city'],
           },
         ],
-      });
+      };
+
+      // If coupon has creation date, only count visits after that date
+      if (couponCreatedAt) {
+        cityVisitsQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
+      }
+
+      const cityVisits = await UserRestaurantVisit.findAll(cityVisitsQuery);
       const uniqueCities = new Set(
         cityVisits.map((visit) => visit.restaurant.city).filter(Boolean),
       );
@@ -1010,6 +1363,12 @@ const checkCouponConditions = async (userId, condition) => {
         reasons.push(
           `Need at least ${condition.valueInt} visits to different cities (you have visited ${uniqueCities.size} cities)`,
         );
+        progress = {
+          current: uniqueCities.size,
+          required: condition.valueInt,
+          type: 'city_visits',
+          message: `Posjetili ste ${uniqueCities.size} od ${condition.valueInt} različitih gradova. Posjetite još ${condition.valueInt - uniqueCities.size} grad.`,
+        };
       }
       break;
 
@@ -1018,7 +1377,371 @@ const checkCouponConditions = async (userId, condition) => {
       reasons.push('Unknown condition type');
   }
 
-  return { allowed, reasons };
+  return { allowed, reasons, progress };
+};
+
+// Create restaurant coupon (limited conditions)
+const createRestaurantCoupon = async (req, res) => {
+  try {
+    const {
+      restaurantId,
+      type,
+      rewardItemId,
+      percentOff,
+      fixedOff,
+      totalLimit,
+      startsAt,
+      expiresAt,
+      status,
+      conditionKind,
+      conditionValue,
+    } = req.body;
+
+    // Validation: Restaurant can only use limited conditions
+    if (
+      conditionKind &&
+      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
+        conditionKind,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
+      });
+    }
+
+    // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
+    if (!totalLimit && (!startsAt || !expiresAt)) {
+      return res.status(400).json({
+        error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
+      });
+    }
+
+    // If only totalLimit is provided, set startsAt and expiresAt to null
+    let finalStartsAt = startsAt;
+    let finalExpiresAt = expiresAt;
+    if (totalLimit && (!startsAt || !expiresAt)) {
+      finalStartsAt = null;
+      finalExpiresAt = null;
+    }
+
+    // Create coupon
+    const coupon = await Coupon.create({
+      source: 'RESTAURANT',
+      restaurantId,
+      type,
+      rewardItemId,
+      percentOff,
+      fixedOff,
+      totalLimit,
+      startsAt: finalStartsAt,
+      expiresAt: finalExpiresAt,
+      status: status || 'DRAFT',
+      claimedCount: 0,
+      createdBy: req.user.id,
+      perUserLimit: 1, // Hardcoded as requested
+      conditionKind: conditionKind || null,
+      conditionValue: conditionValue || null,
+      conditionRestaurantScopeId: restaurantId, // Always set to restaurant ID for restaurant coupons
+    });
+
+    // Fetch created coupon with all details
+    const createdCoupon = await Coupon.findByPk(coupon.id, {
+      include: [
+        {
+          model: MenuItem,
+          as: 'menuItem',
+          required: false,
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = {
+      ...createdCoupon.get(),
+      condition: createdCoupon.conditionKind
+        ? {
+            kind: createdCoupon.conditionKind,
+            valueInt: createdCoupon.conditionValue,
+            restaurantScopeId: createdCoupon.conditionRestaurantScopeId,
+          }
+        : null,
+      menuItem: createdCoupon.menuItem
+        ? {
+            ...createdCoupon.menuItem.get(),
+            translations: createdCoupon.menuItem.translations,
+            price: parseFloat(createdCoupon.menuItem.price).toFixed(2),
+            imageUrl: createdCoupon.menuItem.imageUrl
+              ? getMediaUrl(createdCoupon.menuItem.imageUrl, 'image')
+              : null,
+          }
+        : null,
+    };
+
+    await logAudit({
+      userId: req.user.id,
+      action: ActionTypes.CREATE,
+      entity: Entities.COUPON,
+      entityId: result.id,
+      restaurantId: restaurantId || null,
+      changes: { new: result },
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error creating restaurant coupon:', error);
+    res.status(500).json({ error: 'Failed to create restaurant coupon' });
+  }
+};
+
+// Update restaurant coupon (limited conditions)
+const updateRestaurantCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      restaurantId,
+      type,
+      rewardItemId,
+      percentOff,
+      fixedOff,
+      totalLimit,
+      startsAt,
+      expiresAt,
+      status,
+      conditionKind,
+      conditionValue,
+    } = req.body;
+
+    // Validation: Restaurant can only use limited conditions
+    if (
+      conditionKind &&
+      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
+        conditionKind,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
+      });
+    }
+
+    // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
+    if (!totalLimit && (!startsAt || !expiresAt)) {
+      return res.status(400).json({
+        error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
+      });
+    }
+
+    // If only totalLimit is provided, set startsAt and expiresAt to null
+    let finalStartsAt = startsAt;
+    let finalExpiresAt = expiresAt;
+    if (totalLimit && (!startsAt || !expiresAt)) {
+      finalStartsAt = null;
+      finalExpiresAt = null;
+    }
+
+    const coupon = await Coupon.findByPk(id);
+    if (!coupon) {
+      return res.status(404).json({ error: 'Coupon not found' });
+    }
+
+    // Ensure restaurant can only update their own coupons
+    if (
+      coupon.source !== 'RESTAURANT' ||
+      coupon.restaurantId !== restaurantId
+    ) {
+      return res
+        .status(403)
+        .json({ error: 'Not authorized to update this coupon' });
+    }
+
+    // Update coupon
+    await coupon.update({
+      restaurantId,
+      type,
+      rewardItemId,
+      percentOff,
+      fixedOff,
+      totalLimit,
+      startsAt: finalStartsAt,
+      expiresAt: finalExpiresAt,
+      status,
+      perUserLimit: 1, // Hardcoded as requested
+      conditionKind: conditionKind || null,
+      conditionValue: conditionValue || null,
+      conditionRestaurantScopeId: restaurantId, // Always set to restaurant ID
+    });
+
+    // Fetch updated coupon
+    const updatedCoupon = await Coupon.findByPk(id, {
+      include: [
+        {
+          model: MenuItem,
+          as: 'menuItem',
+          required: false,
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: MenuCategory,
+              as: 'category',
+              include: [
+                {
+                  model: MenuCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: DrinkItem,
+          as: 'drinkItem',
+          required: false,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+            },
+            {
+              model: DrinkCategory,
+              as: 'category',
+              include: [
+                {
+                  model: DrinkCategoryTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = {
+      ...updatedCoupon.get(),
+      condition: updatedCoupon.conditionKind
+        ? {
+            kind: updatedCoupon.conditionKind,
+            valueInt: updatedCoupon.conditionValue,
+            restaurantScopeId: updatedCoupon.conditionRestaurantScopeId,
+          }
+        : null,
+      menuItem: updatedCoupon.menuItem
+        ? {
+            ...updatedCoupon.menuItem.get(),
+            translations: updatedCoupon.menuItem.translations,
+            price: parseFloat(updatedCoupon.menuItem.price).toFixed(2),
+            imageUrl: updatedCoupon.menuItem.imageUrl
+              ? getMediaUrl(updatedCoupon.menuItem.imageUrl, 'image')
+              : null,
+          }
+        : null,
+    };
+
+    await logAudit({
+      userId: req.user.id,
+      action: ActionTypes.UPDATE,
+      entity: Entities.COUPON,
+      entityId: result.id,
+      restaurantId: coupon.restaurantId,
+      changes: { new: result },
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating restaurant coupon:', error);
+    res.status(500).json({ error: 'Failed to update restaurant coupon' });
+  }
+};
+
+// Delete restaurant coupon
+const deleteRestaurantCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permanent } = req.query;
+    const coupon = await Coupon.findByPk(id, { paranoid: false });
+
+    if (!coupon) {
+      return res.status(404).json({ error: 'Coupon not found' });
+    }
+
+    // Ensure restaurant can only delete their own coupons
+    if (coupon.source !== 'RESTAURANT') {
+      return res
+        .status(403)
+        .json({ error: 'Not authorized to delete this coupon' });
+    }
+
+    if (permanent === 'true') {
+      // Permanent delete
+      await logAudit({
+        userId: req.user.id,
+        action: ActionTypes.DELETE,
+        entity: Entities.COUPON,
+        entityId: coupon.id,
+        restaurantId: coupon.restaurantId,
+        changes: { old: coupon.get(), permanent: true },
+      });
+
+      await coupon.destroy({ force: true });
+      res.status(204).send();
+    } else {
+      // Soft delete
+      await logAudit({
+        userId: req.user.id,
+        action: ActionTypes.DELETE,
+        entity: Entities.COUPON,
+        entityId: coupon.id,
+        restaurantId: coupon.restaurantId,
+        changes: { old: coupon.get() },
+      });
+
+      await coupon.destroy();
+      res.status(204).send();
+    }
+  } catch (error) {
+    console.error('Error deleting restaurant coupon:', error);
+    res.status(500).json({ error: 'Failed to delete restaurant coupon' });
+  }
 };
 
 // Get coupon statistics for sysadmin
@@ -1046,6 +1769,42 @@ const getCouponStats = async (req, res) => {
                   as: 'coupon',
                   where: { source: 'DINVER' },
                   paranoid: false, // Include soft-deleted
+                  include: [
+                    {
+                      model: MenuItem,
+                      as: 'menuItem',
+                      required: false,
+                      include: [
+                        {
+                          model: MenuCategory,
+                          as: 'category',
+                          include: [
+                            {
+                              model: MenuCategoryTranslation,
+                              as: 'translations',
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      model: DrinkItem,
+                      as: 'drinkItem',
+                      required: false,
+                      include: [
+                        {
+                          model: DrinkCategory,
+                          as: 'category',
+                          include: [
+                            {
+                              model: DrinkCategoryTranslation,
+                              as: 'translations',
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
                 },
               ],
             },
@@ -1072,6 +1831,9 @@ module.exports = {
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  createRestaurantCoupon,
+  updateRestaurantCoupon,
+  deleteRestaurantCoupon,
   claimCoupon,
   getUserCoupons,
   generateCouponQR,

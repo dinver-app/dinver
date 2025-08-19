@@ -19,10 +19,11 @@ import { getDrinkItems } from "../services/drinkService";
 import { getDrinkCategories } from "../services/drinkService";
 
 const Coupons = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponStats, setCouponStats] = useState<CouponStats | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
+  const [includeDeleted, setIncludeDeleted] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -34,14 +35,55 @@ const Coupons = () => {
     []
   );
   const [restaurantSearchTerm, setRestaurantSearchTerm] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Function to generate coupon text dynamically
+  const generateCouponText = (coupon: Coupon) => {
+    switch (coupon.type) {
+      case "REWARD_ITEM":
+        if (coupon.menuItem?.translations) {
+          const translation = coupon.menuItem.translations.find(
+            (t) => t.language === i18n.language
+          );
+          if (translation?.name) {
+            return `${translation.name} potpuno besplatno!`;
+          }
+        }
+        if (coupon.drinkItem?.translations) {
+          const translation = coupon.drinkItem.translations.find(
+            (t) => t.language === i18n.language
+          );
+          if (translation?.name) {
+            return `${translation.name} potpuno besplatno!`;
+          }
+        }
+        return i18n.language === "hr"
+          ? "Item potpuno besplatno!"
+          : "Item completely free!";
+      case "PERCENT_DISCOUNT":
+        if (coupon.percentOff) {
+          return i18n.language === "hr"
+            ? `${coupon.percentOff}% popusta na račun`
+            : `${coupon.percentOff}% discount on bill`;
+        }
+        return i18n.language === "hr"
+          ? "Postotak popusta"
+          : "Percentage discount";
+      case "FIXED_DISCOUNT":
+        if (coupon.fixedOff) {
+          return i18n.language === "hr"
+            ? `${coupon.fixedOff}€ popusta na račun`
+            : `${coupon.fixedOff}€ discount on bill`;
+        }
+        return i18n.language === "hr"
+          ? "Iznos popusta"
+          : "Fixed amount discount";
+      default:
+        return i18n.language === "hr" ? "Kupon" : "Coupon";
+    }
+  };
 
   const [couponFormData, setCouponFormData] = useState<CreateCouponData>({
     source: "DINVER",
     restaurantId: "",
-    title: "",
-    description: "",
     type: "REWARD_ITEM",
     rewardItemId: "",
     percentOff: undefined,
@@ -61,9 +103,13 @@ const Coupons = () => {
     fetchRestaurants();
   }, []);
 
+  useEffect(() => {
+    fetchCoupons();
+  }, [includeDeleted]);
+
   const fetchCoupons = async () => {
     try {
-      const couponsData = await getSystemCoupons();
+      const couponsData = await getSystemCoupons(includeDeleted);
       setCoupons(couponsData);
     } catch (error) {
       console.error("Error fetching coupons:", error);
@@ -105,16 +151,30 @@ const Coupons = () => {
         ...(menuItems || []).map((item: any) => ({
           ...item,
           categoryName:
-            categories?.find((cat: any) => cat.id === item.categoryId)
-              ?.translations?.[0]?.name || "Unknown",
+            categories
+              ?.find((cat: any) => cat.id === item.categoryId)
+              ?.translations?.find((t: any) => t.language === i18n.language)
+              ?.name || "Unknown",
           type: "menu",
+          name:
+            item.translations?.find((t: any) => t.language === i18n.language)
+              ?.name ||
+            item.name ||
+            "Unknown",
         })),
         ...(drinkItems || []).map((item: any) => ({
           ...item,
           categoryName:
-            drinkCategories?.find((cat: any) => cat.id === item.categoryId)
-              ?.translations?.[0]?.name || "Unknown",
+            drinkCategories
+              ?.find((cat: any) => cat.id === item.categoryId)
+              ?.translations?.find((t: any) => t.language === i18n.language)
+              ?.name || "Unknown",
           type: "drink",
+          name:
+            item.translations?.find((t: any) => t.language === i18n.language)
+              ?.name ||
+            item.name ||
+            "Unknown",
         })),
       ];
 
@@ -139,16 +199,30 @@ const Coupons = () => {
         ...(menuItems || []).map((item: any) => ({
           ...item,
           categoryName:
-            categories?.find((cat: any) => cat.id === item.categoryId)
-              ?.translations?.[0]?.name || "Unknown",
+            categories
+              ?.find((cat: any) => cat.id === item.categoryId)
+              ?.translations?.find((t: any) => t.language === i18n.language)
+              ?.name || "Unknown",
           type: "menu",
+          name:
+            item.translations?.find((t: any) => t.language === i18n.language)
+              ?.name ||
+            item.name ||
+            "Unknown",
         })),
         ...(drinkItems || []).map((item: any) => ({
           ...item,
           categoryName:
-            drinkCategories?.find((cat: any) => cat.id === item.categoryId)
-              ?.translations?.[0]?.name || "Unknown",
+            drinkCategories
+              ?.find((cat: any) => cat.id === item.categoryId)
+              ?.translations?.find((t: any) => t.language === i18n.language)
+              ?.name || "Unknown",
           type: "drink",
+          name:
+            item.translations?.find((t: any) => t.language === i18n.language)
+              ?.name ||
+            item.name ||
+            "Unknown",
         })),
       ];
 
@@ -172,12 +246,25 @@ const Coupons = () => {
   const canGoToNextStep = () => {
     switch (currentStep) {
       case 1:
-        return couponFormData.title.trim() !== "";
-      case 2:
         return couponFormData.restaurantId !== "";
-      case 3:
+      case 2:
         return couponFormData.type !== undefined;
-      case 4:
+      case 3:
+        // Check if at least one limit is set (totalLimit OR both startsAt and expiresAt)
+        const hasTotalLimit =
+          couponFormData.totalLimit !== undefined &&
+          couponFormData.totalLimit > 0;
+        const hasTimeLimit =
+          couponFormData.startsAt &&
+          couponFormData.expiresAt &&
+          couponFormData.startsAt.trim() !== "" &&
+          couponFormData.expiresAt.trim() !== "";
+
+        if (!hasTotalLimit && !hasTimeLimit) {
+          return false;
+        }
+
+        // Additional validation based on coupon type
         if (couponFormData.type === "REWARD_ITEM") {
           return couponFormData.rewardItemId !== "";
         }
@@ -193,6 +280,8 @@ const Coupons = () => {
           );
         }
         return true;
+      case 4:
+        return true; // Conditions step - all validations passed in previous steps
       default:
         return true;
     }
@@ -202,8 +291,6 @@ const Coupons = () => {
     setCouponFormData({
       source: "DINVER",
       restaurantId: "",
-      title: "",
-      description: "",
       type: "REWARD_ITEM",
       rewardItemId: "",
       percentOff: undefined,
@@ -221,8 +308,6 @@ const Coupons = () => {
     setRewardOptions([]);
     setFilteredRewardOptions([]);
     setRewardItemsSearchTerm("");
-    setSelectedImage(null);
-    setImagePreview(null);
     setFilteredRestaurants(restaurants);
     setRestaurantSearchTerm("");
     setSourceFilter("ALL");
@@ -244,8 +329,6 @@ const Coupons = () => {
     setCouponFormData({
       source: coupon.source,
       restaurantId: coupon.restaurantId,
-      title: coupon.title,
-      description: coupon.description || "",
       type: coupon.type,
       rewardItemId: coupon.rewardItemId || "",
       percentOff: coupon.percentOff || undefined,
@@ -278,13 +361,28 @@ const Coupons = () => {
     if (window.confirm(t("coupons.confirm.delete"))) {
       try {
         await deleteCoupon(id);
-        toast.success(t("coupons.success.deleted"));
+        toast.success(t("coupons_success_deleted"));
         fetchCoupons();
         fetchCouponStats();
         setSourceFilter("ALL");
       } catch (error) {
         console.error("Failed to delete coupon:", error);
-        toast.error(t("coupons.error.deleting"));
+        toast.error(t("coupons_error_deleting"));
+      }
+    }
+  };
+
+  const handlePermanentDeleteCoupon = async (id: string) => {
+    if (window.confirm(t("coupons.confirm.permanent_delete"))) {
+      try {
+        await deleteCoupon(id, true); // true for permanent delete
+        toast.success(t("coupons_success_permanently_deleted"));
+        fetchCoupons();
+        fetchCouponStats();
+        setSourceFilter("ALL");
+      } catch (error) {
+        console.error("Failed to permanently delete coupon:", error);
+        toast.error(t("coupons.error.permanently_deleting"));
       }
     }
   };
@@ -294,8 +392,6 @@ const Coupons = () => {
       const createData: CreateCouponData = {
         source: couponFormData.source,
         restaurantId: couponFormData.restaurantId,
-        title: couponFormData.title,
-        description: couponFormData.description,
         type: couponFormData.type,
         rewardItemId: couponFormData.rewardItemId || undefined,
         percentOff: couponFormData.percentOff,
@@ -310,7 +406,6 @@ const Coupons = () => {
             ? couponFormData.expiresAt
             : null,
         status: couponFormData.status,
-        imageFile: selectedImage || undefined,
         conditionKind: couponFormData.conditionKind,
         conditionValue: couponFormData.conditionValue,
         conditionRestaurantScopeId: couponFormData.conditionRestaurantScopeId,
@@ -336,8 +431,6 @@ const Coupons = () => {
       const updateData: UpdateCouponData = {
         source: couponFormData.source,
         restaurantId: couponFormData.restaurantId,
-        title: couponFormData.title,
-        description: couponFormData.description,
         type: couponFormData.type,
         rewardItemId: couponFormData.rewardItemId || undefined,
         percentOff: couponFormData.percentOff,
@@ -352,7 +445,6 @@ const Coupons = () => {
             ? couponFormData.expiresAt
             : null,
         status: couponFormData.status,
-        imageFile: selectedImage || undefined,
         conditionKind: couponFormData.conditionKind,
         conditionValue: couponFormData.conditionValue,
         conditionRestaurantScopeId: couponFormData.conditionRestaurantScopeId,
@@ -628,6 +720,16 @@ const Coupons = () => {
                 <option value="DINVER">{t("system_coupons")}</option>
                 <option value="RESTAURANT">{t("restaurant_coupons")}</option>
               </select>
+
+              <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={includeDeleted}
+                  onChange={(e) => setIncludeDeleted(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{t("show_deleted")}</span>
+              </label>
             </div>
           </div>
         </div>
@@ -691,11 +793,39 @@ const Coupons = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {coupon.title}
+                          {generateCouponText(coupon)}
                         </div>
-                        {coupon.description && (
-                          <div className="text-sm text-gray-500">
-                            {coupon.description}
+                        {coupon.type === "REWARD_ITEM" && (
+                          <>
+                            {coupon.menuItem && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                [
+                                {coupon.menuItem.category?.translations?.find(
+                                  (t) => t.language === i18n.language
+                                )?.name || "Unknown"}
+                                ]{" "}
+                                {coupon.menuItem.translations?.find(
+                                  (t) => t.language === i18n.language
+                                )?.name || "Unknown item"}
+                              </div>
+                            )}
+                            {coupon.drinkItem && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                [
+                                {coupon.drinkItem.category?.translations?.find(
+                                  (t) => t.language === i18n.language
+                                )?.name || "Unknown"}
+                                ]{" "}
+                                {coupon.drinkItem.translations?.find(
+                                  (t) => t.language === i18n.language
+                                )?.name || "Unknown item"}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {coupon.deletedAt && (
+                          <div className="text-xs text-red-600 font-medium mt-1">
+                            🗑️ {t("soft_deleted")}
                           </div>
                         )}
                       </div>
@@ -716,24 +846,6 @@ const Coupons = () => {
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 mb-1">
                           {t(coupon.type.toLowerCase())}
                         </span>
-                        {coupon.type === "PERCENT_DISCOUNT" &&
-                          coupon.percentOff && (
-                            <div className="text-xs text-gray-600">
-                              {coupon.percentOff}% {t("off")}
-                            </div>
-                          )}
-                        {coupon.type === "FIXED_DISCOUNT" &&
-                          coupon.fixedOff && (
-                            <div className="text-xs text-gray-600">
-                              {coupon.fixedOff}€ {t("off")}
-                            </div>
-                          )}
-                        {coupon.type === "REWARD_ITEM" && coupon.menuItem && (
-                          <div className="text-xs text-gray-600">
-                            {coupon.menuItem.translations?.[0]?.name ||
-                              "Unknown item"}
-                          </div>
-                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -749,8 +861,6 @@ const Coupons = () => {
                             await updateCoupon(coupon.id, {
                               source: coupon.source,
                               restaurantId: coupon.restaurantId,
-                              title: coupon.title,
-                              description: coupon.description,
                               type: coupon.type,
                               rewardItemId: coupon.rewardItemId,
                               percentOff: coupon.percentOff,
@@ -822,12 +932,24 @@ const Coupons = () => {
                         >
                           {t("edit")}
                         </button>
-                        <button
-                          onClick={() => handleDeleteCoupon(coupon.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          {t("delete")}
-                        </button>
+                        {coupon.deletedAt ? (
+                          <button
+                            onClick={() =>
+                              handlePermanentDeleteCoupon(coupon.id)
+                            }
+                            className="text-red-800 hover:text-red-900 font-semibold"
+                            title={t("permanently_delete_coupon")}
+                          >
+                            {t("permanently_remove")}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteCoupon(coupon.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            {t("delete")}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -861,7 +983,7 @@ const Coupons = () => {
             {/* Step Progress */}
             <div className="mb-8">
               <div className="flex items-center justify-between">
-                {[1, 2, 3, 4, 5].map((step) => (
+                {[1, 2, 3, 4].map((step) => (
                   <div key={step} className="flex items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -872,7 +994,7 @@ const Coupons = () => {
                     >
                       {step}
                     </div>
-                    {step < 5 && (
+                    {step < 4 && (
                       <div
                         className={`w-16 h-1 mx-2 ${
                           step < currentStep ? "bg-blue-600" : "bg-gray-200"
@@ -883,7 +1005,6 @@ const Coupons = () => {
                 ))}
               </div>
               <div className="flex justify-between mt-2 text-xs text-gray-600">
-                <span>{t("coupon_title")}</span>
                 <span>{t("restaurant")}</span>
                 <span>{t("coupon_type")}</span>
                 <span>{t("coupon_details")}</span>
@@ -894,64 +1015,18 @@ const Coupons = () => {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (currentStep < 5) {
+                if (currentStep < 4) {
                   nextStep();
                 } else {
                   editingCoupon ? handleUpdateCoupon() : handleCreateCoupon();
                 }
               }}
             >
-              {/* Step 1: Title and Description */}
+              {/* Step 1: Restaurant Selection */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
                     {t("step_1_title")}
-                  </h4>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mt-4">
-                      {t("coupon_title")} *
-                    </label>
-                    <input
-                      type="text"
-                      value={couponFormData.title}
-                      onChange={(e) =>
-                        setCouponFormData((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                      className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-                      placeholder={t("enter_coupon_title")}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mt-4">
-                      {t("coupon_description")}
-                    </label>
-                    <textarea
-                      value={couponFormData.description || ""}
-                      onChange={(e) =>
-                        setCouponFormData((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                      className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-                      rows={3}
-                      placeholder={t("enter_coupon_description")}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Restaurant Selection */}
-              {currentStep === 2 && (
-                <div className="space-y-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                    {t("step_2_title")}
                   </h4>
 
                   <div>
@@ -1034,11 +1109,11 @@ const Coupons = () => {
                 </div>
               )}
 
-              {/* Step 3: Coupon Type Selection */}
-              {currentStep === 3 && (
+              {/* Step 2: Coupon Type Selection */}
+              {currentStep === 2 && (
                 <div className="space-y-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                    {t("step_3_title")}
+                    {t("step_2_title")}
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1111,8 +1186,8 @@ const Coupons = () => {
                 </div>
               )}
 
-              {/* Step 4: Coupon Details */}
-              {currentStep === 4 && (
+              {/* Step 3: Coupon Details */}
+              {currentStep === 3 && (
                 <div className="space-y-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
                     {t("step_4_title")}
@@ -1130,6 +1205,7 @@ const Coupons = () => {
                           type="text"
                           value={rewardItemsSearchTerm}
                           placeholder={t("search_reward_items_placeholder")}
+                          title={t("search_reward_items_tooltip")}
                           onChange={(e) => {
                             const term = e.target.value;
                             setRewardItemsSearchTerm(term);
@@ -1139,6 +1215,12 @@ const Coupons = () => {
                               const filtered = (rewardOptions || []).filter(
                                 (opt) =>
                                   opt.name
+                                    .toLowerCase()
+                                    .includes(term.toLowerCase()) ||
+                                  opt.categoryName
+                                    .toLowerCase()
+                                    .includes(term.toLowerCase()) ||
+                                  `[${opt.categoryName}] ${opt.name}`
                                     .toLowerCase()
                                     .includes(term.toLowerCase())
                               );
@@ -1165,6 +1247,16 @@ const Coupons = () => {
                               const filtered = (rewardOptions || []).filter(
                                 (opt) =>
                                   opt.name
+                                    .toLowerCase()
+                                    .includes(
+                                      rewardItemsSearchTerm.toLowerCase()
+                                    ) ||
+                                  opt.categoryName
+                                    .toLowerCase()
+                                    .includes(
+                                      rewardItemsSearchTerm.toLowerCase()
+                                    ) ||
+                                  `[${opt.categoryName}] ${opt.name}`
                                     .toLowerCase()
                                     .includes(
                                       rewardItemsSearchTerm.toLowerCase()
@@ -1272,7 +1364,8 @@ const Coupons = () => {
                     {/* Total Limit Section */}
                     <div>
                       <h5 className="text-sm font-semibold text-gray-800 mt-4">
-                        {t("total_limit")}
+                        {t("total_limit")}{" "}
+                        <span className="text-red-500">*</span>
                       </h5>
                       <input
                         type="number"
@@ -1284,7 +1377,13 @@ const Coupons = () => {
                             totalLimit: parseInt(e.target.value) || undefined,
                           }))
                         }
-                        className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                        className={`w-full p-2 border rounded outline-gray-300 ${
+                          !couponFormData.totalLimit &&
+                          !couponFormData.startsAt &&
+                          !couponFormData.expiresAt
+                            ? "border-red-300 bg-red-50"
+                            : "border-gray-300"
+                        }`}
                         placeholder={t("enter_total_limit")}
                       />
                       <p className="text-xs text-gray-600 mt-2">
@@ -1295,7 +1394,8 @@ const Coupons = () => {
                     {/* Time Window Section */}
                     <div>
                       <h5 className="text-sm font-semibold text-gray-800 mt-4">
-                        {t("time_window")}
+                        {t("time_window")}{" "}
+                        <span className="text-red-500">*</span>
                       </h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -1311,7 +1411,13 @@ const Coupons = () => {
                                 startsAt: e.target.value || undefined,
                               }))
                             }
-                            className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                            className={`w-full p-2 border rounded outline-gray-300 ${
+                              !couponFormData.totalLimit &&
+                              !couponFormData.startsAt &&
+                              !couponFormData.expiresAt
+                                ? "border-red-300 bg-red-50"
+                                : "border-gray-300"
+                            }`}
                           />
                         </div>
                         <div>
@@ -1327,7 +1433,13 @@ const Coupons = () => {
                                 expiresAt: e.target.value || undefined,
                               }))
                             }
-                            className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                            className={`w-full p-2 border border-gray-300 rounded outline-gray-300 ${
+                              !couponFormData.totalLimit &&
+                              !couponFormData.startsAt &&
+                              !couponFormData.expiresAt
+                                ? "border-red-300 bg-red-50"
+                                : "border-gray-300"
+                            }`}
                           />
                         </div>
                       </div>
@@ -1339,65 +1451,26 @@ const Coupons = () => {
                         {t("validation_info")}
                       </p>
                     </div>
-                  </div>
 
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      {t("image")} *
-                    </label>
-                    <div className="space-y-4">
-                      {/* Image Preview */}
-                      {(imagePreview ||
-                        (editingCoupon?.imageUrl && !selectedImage)) && (
-                        <div className="w-full flex justify-center">
-                          <div className="h-40 w-40 overflow-hidden rounded-lg border bg-gray-50">
-                            <img
-                              src={imagePreview || editingCoupon?.imageUrl}
-                              alt="Preview"
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
+                    {/* Error Message for Missing Limits */}
+                    {!couponFormData.totalLimit &&
+                      !couponFormData.startsAt &&
+                      !couponFormData.expiresAt && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                          <p className="text-sm text-red-800 font-medium">
+                            ⚠️ {t("limit_required_error")}
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            {t("limit_required_description")}
+                          </p>
                         </div>
                       )}
-
-                      {/* File Input */}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setSelectedImage(file);
-                            setCouponFormData((prev) => ({
-                              ...prev,
-                              imageFile: file,
-                            }));
-                            // Create preview URL
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                              setImagePreview(e.target?.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded outline-gray-300"
-                        required={!editingCoupon}
-                      />
-
-                      {/* Help Text */}
-                      <p className="text-sm text-gray-500">
-                        {editingCoupon
-                          ? t("upload_new_image_to_replace_current")
-                          : t("select_image_for_coupon")}
-                      </p>
-                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 5: Conditions */}
-              {currentStep === 5 && (
+              {/* Step 4: Conditions */}
+              {currentStep === 4 && (
                 <div className="space-y-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">
                     {t("step_5_title")}

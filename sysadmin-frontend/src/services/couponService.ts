@@ -6,6 +6,10 @@ export interface MenuItem {
   price: string;
   imageUrl?: string;
   translations?: any[];
+  category?: {
+    id: string;
+    translations?: any[];
+  };
 }
 
 export interface Restaurant {
@@ -18,8 +22,6 @@ export interface Restaurant {
 export interface CreateCouponData {
   source: "DINVER" | "RESTAURANT";
   restaurantId: string;
-  title: string;
-  description?: string;
   type: "REWARD_ITEM" | "PERCENT_DISCOUNT" | "FIXED_DISCOUNT";
   rewardItemId?: string;
   percentOff?: number;
@@ -28,7 +30,6 @@ export interface CreateCouponData {
   startsAt?: string | null;
   expiresAt?: string | null;
   status: "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
-  imageFile?: File;
   conditionKind?:
     | "POINTS_AT_LEAST"
     | "REFERRALS_AT_LEAST"
@@ -41,8 +42,6 @@ export interface CreateCouponData {
 export interface UpdateCouponData {
   source: "DINVER" | "RESTAURANT";
   restaurantId: string;
-  title: string;
-  description?: string;
   type: "REWARD_ITEM" | "PERCENT_DISCOUNT" | "FIXED_DISCOUNT";
   rewardItemId?: string;
   percentOff?: number;
@@ -51,7 +50,6 @@ export interface UpdateCouponData {
   startsAt?: string | null;
   expiresAt?: string | null;
   status: "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
-  imageFile?: File;
   conditionKind?:
     | "POINTS_AT_LEAST"
     | "REFERRALS_AT_LEAST"
@@ -65,9 +63,6 @@ export interface Coupon {
   id: string;
   source: "DINVER" | "RESTAURANT";
   restaurantId: string;
-  title: string;
-  description?: string;
-  imageUrl: string;
   type: "REWARD_ITEM" | "PERCENT_DISCOUNT" | "FIXED_DISCOUNT";
   rewardItemId?: string;
   percentOff?: number;
@@ -88,7 +83,9 @@ export interface Coupon {
   conditionRestaurantScopeId?: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
   menuItem?: MenuItem;
+  drinkItem?: MenuItem; // Using MenuItem interface for both
   restaurant?: Restaurant;
 }
 
@@ -100,8 +97,12 @@ export interface CouponStats {
 }
 
 // Get all system coupons
-export const getSystemCoupons = async (): Promise<Coupon[]> => {
-  const response = await apiClient.get("/api/sysadmin/coupons");
+export const getSystemCoupons = async (
+  includeDeleted: boolean = false
+): Promise<Coupon[]> => {
+  const response = await apiClient.get(
+    `/api/sysadmin/coupons?includeDeleted=${includeDeleted}`
+  );
   return response.data;
 };
 
@@ -123,13 +124,6 @@ export const createCoupon = async (data: CreateCouponData): Promise<Coupon> => {
 
   formData.append("source", data.source);
   formData.append("restaurantId", data.restaurantId);
-  formData.append("title", data.title);
-  if (data.description) {
-    formData.append("description", data.description);
-  }
-  if (data.imageFile) {
-    formData.append("imageFile", data.imageFile);
-  }
   formData.append("type", data.type);
   if (data.rewardItemId) {
     formData.append("rewardItemId", data.rewardItemId);
@@ -182,13 +176,6 @@ export const updateCoupon = async (
 
   formData.append("source", data.source);
   formData.append("restaurantId", data.restaurantId);
-  formData.append("title", data.title);
-  if (data.description) {
-    formData.append("description", data.description);
-  }
-  if (data.imageFile) {
-    formData.append("imageFile", data.imageFile);
-  }
   formData.append("type", data.type);
   if (data.rewardItemId) {
     formData.append("rewardItemId", data.rewardItemId);
@@ -237,7 +224,12 @@ export const updateCoupon = async (
 };
 
 // Delete system-wide coupon
-export const deleteCoupon = async (id: string): Promise<void> => {
-  const response = await apiClient.delete(`/api/sysadmin/coupons/${id}`);
+export const deleteCoupon = async (
+  id: string,
+  permanent: boolean = false
+): Promise<void> => {
+  const response = await apiClient.delete(
+    `/api/sysadmin/coupons/${id}?permanent=${permanent}`
+  );
   return response.data;
 };

@@ -706,6 +706,12 @@
   "enter_total_limit": "Enter total limit",
   "total_limit_info": "Leave empty for unlimited coupons",
   "validation_info": "Note: You must provide either a total limit OR start/expiry dates. Both are recommended for better control.",
+  "limit_required_error": "At least one limit is required",
+  "limit_required_description": "You must set either a quantity limit (Total Limit) or a time limit (Starts At and Expires At). Both are recommended for better control.",
+  "show_deleted": "Show Deleted",
+  "permanently_remove": "Permanently Remove",
+  "search_reward_items_tooltip": "You can search by item name or by category (e.g., 'Pizza' or 'Bećarska')",
+  "soft_deleted": "Soft Deleted",
   "no_conditions_added": "No conditions added yet. Conditions are optional but help control who can claim the coupon.",
   "select_start_date": "Select start date",
   "select_expiry_date": "Select expiry date",
@@ -764,5 +770,8 @@
   "restaurant_coupons": "Restaurant coupons",
   "percent_off_info": "Enter percentage (0-100)",
   "fixed_off_info": "Enter fixed amount",
-  "coupons_success_created": "Coupon created successfully"
+  "coupons_success_created": "Coupon created successfully",
+  "coupons_success_deleted": "Coupon deleted successfully",
+  "coupons_error_deleting": "Error deleting coupon",
+  "coupons_success_permanently_deleted": "Coupon permanently deleted successfully"
 }

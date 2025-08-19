@@ -65,6 +65,39 @@ router.delete(
   couponController.deleteCoupon,
 );
 
+// Restaurant coupon management (limited conditions)
+router.post(
+  '/restaurant/coupons',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  couponController.createRestaurantCoupon,
+);
+
+router.get(
+  '/restaurant/coupons/:restaurantId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  couponController.getRestaurantCoupons,
+);
+
+router.put(
+  '/restaurant/coupons/:id',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  couponController.updateRestaurantCoupon,
+);
+
+router.delete(
+  '/restaurant/coupons/:id',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  couponController.deleteRestaurantCoupon,
+);
+
 // Restaurant staff routes for redeeming coupons
 router.post(
   '/admin/restaurants/:restaurantId/coupons/redeem',

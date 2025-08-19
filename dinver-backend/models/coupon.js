@@ -20,6 +20,14 @@ module.exports = (sequelize, DataTypes) => {
         onUpdate: 'CASCADE',
       });
 
+      // Coupon belongs to DrinkItem (optional - for reward drink coupons)
+      Coupon.belongsTo(models.DrinkItem, {
+        foreignKey: 'rewardItemId',
+        as: 'drinkItem',
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
+      });
+
       // Coupon belongs to User (who created it)
       Coupon.belongsTo(models.User, {
         foreignKey: 'createdBy',
@@ -59,21 +67,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         comment: 'Restaurant ID for restaurant-specific coupons',
       },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        comment: 'Coupon title',
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Coupon description',
-      },
-      imageUrl: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        comment: 'Coupon image URL',
-      },
+
       type: {
         type: DataTypes.ENUM(
           'REWARD_ITEM',
