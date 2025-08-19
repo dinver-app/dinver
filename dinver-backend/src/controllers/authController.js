@@ -12,13 +12,58 @@ const { sendPasswordResetEmail } = require('../../utils/emailService');
 
 const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone } = req.body;
+    const { firstName, lastName, email, password, phone, referralCode } =
+      req.body;
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already exists' });
     }
 
+    // Validate referral code BEFORE creating user
+    let referralApplied = false;
+    let referralCodeData = null;
+    let referrerData = null;
+
+    if (referralCode) {
+      try {
+        // Validate referral code directly without creating referral
+        const { ReferralCode, Referral } = require('../../models');
+
+        // Find the referral code
+        const refCode = await ReferralCode.findOne({
+          where: { code: referralCode.toUpperCase(), isActive: true },
+        });
+
+        if (!refCode) {
+          return res.status(400).json({ error: 'Invalid referral code' });
+        }
+
+        // Check if user is trying to use their own code (we'll check this later with real user ID)
+        // For now, just validate the code exists and is active
+
+        referralApplied = true;
+        referralCodeData = referralCode;
+
+        // Get referrer information
+        const referrer = await User.findByPk(refCode.userId);
+        if (referrer) {
+          referrerData = {
+            firstName: referrer.firstName,
+            lastName: referrer.lastName,
+            email: referrer.email,
+          };
+        }
+      } catch (referralError) {
+        console.error(
+          'Referral validation error during registration:',
+          referralError,
+        );
+        return res.status(400).json({ error: 'Invalid referral code' });
+      }
+    }
+
+    // Only create user if referral validation passed (or no referral code provided)
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       firstName: firstName,
@@ -40,6 +85,67 @@ const register = async (req, res) => {
       isEmailVerified: false,
       isPhoneVerified: false,
     });
+
+    // Now apply the referral code for real and do additional validations
+    if (referralApplied) {
+      try {
+        const { ReferralCode, Referral } = require('../../models');
+
+        // Get the referral code again
+        const refCode = await ReferralCode.findOne({
+          where: { code: referralCode.toUpperCase(), isActive: true },
+        });
+
+        if (!refCode) {
+          throw new Error('Referral code no longer valid');
+        }
+
+        // Check if user is trying to use their own code
+        if (refCode.userId === user.id) {
+          throw new Error('Cannot use your own referral code');
+        }
+
+        // Check if this user was already referred
+        const existingReferral = await Referral.findOne({
+          where: { referredUserId: user.id },
+        });
+
+        if (existingReferral) {
+          throw new Error('User already has a referral');
+        }
+
+        // Now apply the referral using the controller
+        const { applyReferralCode } = require('./referralController');
+        await applyReferralCode(user.id, referralCode);
+      } catch (referralError) {
+        console.error(
+          'Error applying referral code after user creation:',
+          referralError,
+        );
+
+        // If referral fails, we need to handle the error properly
+        if (referralError.message === 'Cannot use your own referral code') {
+          // Delete the user and return error
+          await User.destroy({ where: { id: user.id } });
+          await UserSettings.destroy({ where: { userId: user.id } });
+          return res
+            .status(400)
+            .json({ error: 'Cannot use your own referral code' });
+        }
+
+        if (referralError.message === 'User already has a referral') {
+          // Delete the user and return error
+          await User.destroy({ where: { id: user.id } });
+          await UserSettings.destroy({ where: { userId: user.id } });
+          return res.status(400).json({ error: 'User already has a referral' });
+        }
+
+        // For other errors, we still have a valid user, just without referral
+        referralApplied = false;
+        referralCodeData = null;
+        referrerData = null;
+      }
+    }
 
     const { accessToken, refreshToken } = generateTokens(user);
 
@@ -69,12 +175,23 @@ const register = async (req, res) => {
       banned: user.banned,
     };
 
-    res.status(201).json({
+    const responseData = {
       message: 'User registered successfully',
       user: userData,
       token: accessToken,
       refreshToken: refreshToken,
-    });
+      referralApplied: referralApplied, // Always include this field
+    };
+
+    // Add additional referral information if applicable
+    if (referralApplied) {
+      responseData.referralCode = referralCodeData;
+      if (referrerData) {
+        responseData.referrer = referrerData;
+      }
+    }
+
+    res.status(201).json(responseData);
   } catch (error) {
     console.error('Registration error:', error);
 

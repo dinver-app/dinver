@@ -1338,24 +1338,31 @@ const checkCouponConditions = async (
       break;
 
     case 'REFERRALS_AT_LEAST':
-      let referralQuery = { where: { referredBy: userId } };
+      // Use new referral system - count completed referrals
+      const { Referral } = require('../../models');
+      let referralQuery = {
+        where: {
+          referrerId: userId,
+          status: 'COMPLETED', // Only count completed referrals
+        },
+      };
 
       // If coupon has creation date, only count referrals after that date
       if (couponCreatedAt) {
-        referralQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
+        referralQuery.where.completedAt = { [Op.gte]: couponCreatedAt };
       }
 
-      const referralCount = await User.count(referralQuery);
+      const referralCount = await Referral.count(referralQuery);
       if (referralCount < condition.valueInt) {
         allowed = false;
         reasons.push(
-          `Need at least ${condition.valueInt} referrals (you have ${referralCount})`,
+          `Need at least ${condition.valueInt} completed referrals (you have ${referralCount})`,
         );
         progress = {
           current: referralCount,
           required: condition.valueInt,
           type: 'referrals',
-          message: `Imate ${referralCount} od ${condition.valueInt} potrebnih preporuka. Potrebno vam je još ${condition.valueInt - referralCount} preporuka.`,
+          message: `Imate ${referralCount} od ${condition.valueInt} potrebnih završenih preporuka. Potrebno vam je još ${condition.valueInt - referralCount} preporuka.`,
         };
       }
       break;
