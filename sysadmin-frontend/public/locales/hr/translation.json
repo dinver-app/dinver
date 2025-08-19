@@ -643,5 +643,14 @@
   "restaurant_coupons": "Restoran kuponi",
   "percent_off_info": "Unesi postotak (0-100)",
   "fixed_off_info": "Unesi fiksni iznos",
-  "coupons_success_created": "Kupon je uspješno kreiran"
+  "coupons_success_created": "Kupon je uspješno kreiran",
+  "coupons_success_deleted": "Kupon je uspješno izbrisan",
+  "coupons_error_deleting": "Greška pri brisanju kupona",
+  "soft_deleted": "Soft izbrisan",
+  "coupons_success_permanently_deleted": "Kupon je trajno izbrisan",
+  "limit_required_error": "Potreban je barem jedan limit",
+  "limit_required_description": "Morate postaviti ili količinski limit (Total Limit) ili vremenski limit (Starts At i Expires At). Oba su preporučena za bolju kontrolu.",
+  "show_deleted": "Prikaži obrisane",
+  "permanently_remove": "Trajno ukloni",
+  "search_reward_items_tooltip": "Možete pretraživati po nazivu itema ili po kategoriji (npr. 'Pizza' ili 'Bećarska')"
 }
