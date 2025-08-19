@@ -185,6 +185,15 @@ const validateVisit = async (req, res) => {
       isReservationValid,
     );
 
+    // Handle referral progression (first visit)
+    try {
+      const { handleFirstVisit } = require('./referralController');
+      await handleFirstVisit(userId, validation.restaurantId);
+    } catch (referralError) {
+      console.error('Referral error during visit validation:', referralError);
+      // Don't fail visit validation if referral fails, just log it
+    }
+
     res.json({
       message: 'visit_validated',
       canLeaveReviewUntil: reviewExpiration,

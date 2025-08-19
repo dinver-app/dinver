@@ -15,6 +15,7 @@ import Claim from "./pages/Claim";
 import Reviews from "./pages/Reviews";
 import BlogPage from "./pages/Blog/BlogPage";
 import Coupons from "./pages/Coupons";
+import Referrals from "./pages/Referrals";
 import QRPrintRequests from "./pages/QRPrintRequests";
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/coupons" element={<Coupons />} />
+            <Route path="/referrals" element={<Referrals />} />
             <Route path="/qr-print-requests" element={<QRPrintRequests />} />
           </Route>
         </Routes>

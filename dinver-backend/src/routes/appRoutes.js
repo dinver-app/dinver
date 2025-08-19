@@ -25,6 +25,7 @@ const specialOfferRoutes = require('./appRoutes/specialOfferRoutes');
 const couponRoutes = require('./appRoutes/couponRoutes');
 const analyticsRoutes = require('./appRoutes/analyticsRoutes');
 const pushNotificationRoutes = require('./appRoutes/pushNotificationRoutes');
+const referralRoutes = require('./appRoutes/referralRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -53,5 +54,6 @@ router.use(specialOfferRoutes);
 router.use(couponRoutes);
 router.use(analyticsRoutes);
 router.use(pushNotificationRoutes);
+router.use(referralRoutes);
 
 module.exports = router;

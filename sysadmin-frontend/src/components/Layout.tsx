@@ -80,6 +80,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       icon: <FaTicketAlt className="h-4 w-4 mr-3" />,
     },
     {
+      name: "Referrals",
+      path: "/referrals",
+      icon: <FaUser className="h-4 w-4 mr-3" />,
+    },
+    {
       name: t("qr_print_requests"),
       path: "/qr-print-requests",
       icon: <QrCodeIcon className="h-4 w-4 mr-3" />,

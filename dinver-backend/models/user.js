@@ -37,16 +37,37 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'settings',
       });
-      
+
       // Referral associations
       User.hasMany(models.User, {
         foreignKey: 'referredBy',
         as: 'referrals',
       });
-      
+
       User.belongsTo(models.User, {
         foreignKey: 'referredBy',
         as: 'referredByUser',
+      });
+
+      // New referral system associations
+      User.hasOne(models.ReferralCode, {
+        foreignKey: 'userId',
+        as: 'referralCodeModel',
+      });
+
+      User.hasMany(models.Referral, {
+        foreignKey: 'referrerId',
+        as: 'sentReferrals',
+      });
+
+      User.hasMany(models.Referral, {
+        foreignKey: 'referredUserId',
+        as: 'receivedReferrals',
+      });
+
+      User.hasMany(models.ReferralReward, {
+        foreignKey: 'userId',
+        as: 'referralRewards',
       });
     }
   }

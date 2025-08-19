@@ -16,6 +16,7 @@ const analyticsRoutes = require('./sysadminRoutes/analyticsRoutes');
 const qrPrintRequestRoutes = require('./sysadminRoutes/qrPrintRequestRoutes');
 const couponRoutes = require('./sysadminRoutes/couponRoutes');
 const jsonMenuImportRoutes = require('./sysadminRoutes/jsonMenuImportRoutes');
+const referralRoutes = require('./sysadminRoutes/referralRoutes');
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -36,4 +37,5 @@ router.use(analyticsRoutes);
 router.use(qrPrintRequestRoutes);
 router.use(couponRoutes);
 router.use('/json-menu-import', jsonMenuImportRoutes);
+router.use(referralRoutes);
 module.exports = router;
