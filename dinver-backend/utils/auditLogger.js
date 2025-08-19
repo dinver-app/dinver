@@ -5,6 +5,7 @@ const ActionTypes = {
   UPDATE: 'updated',
   DELETE: 'deleted',
   REDEEM: 'redeemed',
+  CLAIM: 'claimed',
 };
 
 const Entities = {
@@ -27,6 +28,10 @@ const Entities = {
     PRICE_CATEGORY: 'price_category',
   },
   SPECIAL_OFFER: 'special_offer',
+  COUPON: 'coupon',
+  COUPON_CONDITION: 'coupon_condition',
+  USER_COUPON: 'user_coupon',
+  COUPON_REDEMPTION: 'coupon_redemption',
   PUSH_TOKEN: 'push_token',
   PUSH_NOTIFICATION: 'push_notification',
 };

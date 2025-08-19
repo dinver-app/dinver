@@ -8,6 +8,7 @@ import {
   FaSignOutAlt,
   FaShieldAlt,
   FaComments,
+  FaTicketAlt,
 } from "react-icons/fa";
 import { TfiWrite } from "react-icons/tfi";
 import { IoRestaurant } from "react-icons/io5";
@@ -72,6 +73,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("reviews"),
       path: "/reviews",
       icon: <FaComments className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("coupons"),
+      path: "/coupons",
+      icon: <FaTicketAlt className="h-4 w-4 mr-3" />,
     },
     {
       name: t("qr_print_requests"),

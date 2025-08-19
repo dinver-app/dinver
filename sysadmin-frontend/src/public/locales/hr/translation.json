@@ -1,0 +1,10 @@
+{
+  "status": "Status",
+  "draft": "Skica",
+  "active": "Aktivan",
+  "paused": "Pauziran",
+  "expired": "Istekao",
+  "status_description": "Postavite trenutni status ovog kupona",
+  "coupon_status_updated": "Status kupona uspješno ažuriran",
+  "failed_to_update_coupon_status": "Greška pri ažuriranju statusa kupona"
+}

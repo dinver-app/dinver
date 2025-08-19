@@ -1,0 +1,10 @@
+{
+  "status": "Status",
+  "draft": "Draft",
+  "active": "Active",
+  "paused": "Paused",
+  "expired": "Expired",
+  "status_description": "Set the current status of this coupon",
+  "coupon_status_updated": "Coupon status updated successfully",
+  "failed_to_update_coupon_status": "Failed to update coupon status"
+}
