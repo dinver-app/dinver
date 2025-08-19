@@ -22,6 +22,7 @@ const restaurantDetailsRoutes = require('./appRoutes/restaurantDetailsRoutes');
 const mailRoutes = require('./appRoutes/mailRoutes');
 const visitValidationRoutes = require('./appRoutes/visitValidationRoutes');
 const specialOfferRoutes = require('./appRoutes/specialOfferRoutes');
+const couponRoutes = require('./appRoutes/couponRoutes');
 const analyticsRoutes = require('./appRoutes/analyticsRoutes');
 const pushNotificationRoutes = require('./appRoutes/pushNotificationRoutes');
 const router = express.Router();
@@ -49,6 +50,7 @@ router.use(restaurantDetailsRoutes);
 router.use(mailRoutes);
 router.use(visitValidationRoutes);
 router.use(specialOfferRoutes);
+router.use(couponRoutes);
 router.use(analyticsRoutes);
 router.use(pushNotificationRoutes);
 

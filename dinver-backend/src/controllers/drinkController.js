@@ -32,6 +32,16 @@ const getDrinkItems = async (req, res) => {
           model: DrinkItemTranslation,
           as: 'translations',
         },
+        {
+          model: DrinkCategory,
+          as: 'category',
+          include: [
+            {
+              model: DrinkCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
       ],
     });
 

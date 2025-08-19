@@ -33,6 +33,16 @@ const getMenuItems = async (req, res) => {
           model: MenuItemTranslation,
           as: 'translations',
         },
+        {
+          model: MenuCategory,
+          as: 'category',
+          include: [
+            {
+              model: MenuCategoryTranslation,
+              as: 'translations',
+            },
+          ],
+        },
       ],
     });
 
