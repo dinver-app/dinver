@@ -9,7 +9,12 @@ const {
 const router = express.Router();
 
 // Public routes for customers
-router.get('/coupons', appApiKeyAuth, couponController.getAvailableCoupons);
+router.get(
+  '/coupons',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  couponController.getAvailableCoupons,
+);
 
 router.post(
   '/coupons/claim',
@@ -63,39 +68,6 @@ router.delete(
   appAuthenticateToken,
   checkAdmin,
   couponController.deleteCoupon,
-);
-
-// Restaurant coupon management (limited conditions)
-router.post(
-  '/restaurant/coupons',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  couponController.createRestaurantCoupon,
-);
-
-router.get(
-  '/restaurant/coupons/:restaurantId',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  couponController.getRestaurantCoupons,
-);
-
-router.put(
-  '/restaurant/coupons/:id',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  couponController.updateRestaurantCoupon,
-);
-
-router.delete(
-  '/restaurant/coupons/:id',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  couponController.deleteRestaurantCoupon,
 );
 
 // Restaurant staff routes for redeeming coupons
