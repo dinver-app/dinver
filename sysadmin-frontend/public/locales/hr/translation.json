@@ -635,10 +635,13 @@
   "image_position_vertical": "Pozicija slike (okomito)",
   "coupon_status_updated": "Status kupona ažuriran",
   "status_description": "Postavite status kupona (npr. Aktivno, Pauzirano, Isteklo, Skica)",
-  "coupons_success_updated": "Kuponi su uspješno ažurirani",
+  "coupons_success_updated": "Kupon je uspješno ažuriran",
   "coupons_error_creating": "Greška pri kreiranju kupona",
   "no_expiration": "Nema isteka",
   "all_sources": "Svi izvori",
   "system_coupons": "Sistemski kuponi",
-  "restaurant_coupons": "Restoran kuponi"
+  "restaurant_coupons": "Restoran kuponi",
+  "percent_off_info": "Unesi postotak (0-100)",
+  "fixed_off_info": "Unesi fiksni iznos",
+  "coupons_success_created": "Kupon je uspješno kreiran"
 }

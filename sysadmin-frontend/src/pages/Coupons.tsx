@@ -181,6 +181,17 @@ const Coupons = () => {
         if (couponFormData.type === "REWARD_ITEM") {
           return couponFormData.rewardItemId !== "";
         }
+        if (couponFormData.type === "PERCENT_DISCOUNT") {
+          return (
+            couponFormData.percentOff !== undefined &&
+            couponFormData.percentOff > 0
+          );
+        }
+        if (couponFormData.type === "FIXED_DISCOUNT") {
+          return (
+            couponFormData.fixedOff !== undefined && couponFormData.fixedOff > 0
+          );
+        }
         return true;
       default:
         return true;
@@ -306,7 +317,7 @@ const Coupons = () => {
       };
 
       await createCoupon(createData);
-      toast.success(t("coupons.success.created"));
+      toast.success(t("coupons_success_created"));
       setShowAddModal(false);
       fetchCoupons();
       fetchCouponStats();
@@ -701,9 +712,29 @@ const Coupons = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {t(coupon.type.toLowerCase())}
-                      </span>
+                      <div>
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 mb-1">
+                          {t(coupon.type.toLowerCase())}
+                        </span>
+                        {coupon.type === "PERCENT_DISCOUNT" &&
+                          coupon.percentOff && (
+                            <div className="text-xs text-gray-600">
+                              {coupon.percentOff}% {t("off")}
+                            </div>
+                          )}
+                        {coupon.type === "FIXED_DISCOUNT" &&
+                          coupon.fixedOff && (
+                            <div className="text-xs text-gray-600">
+                              {coupon.fixedOff}€ {t("off")}
+                            </div>
+                          )}
+                        {coupon.type === "REWARD_ITEM" && coupon.menuItem && (
+                          <div className="text-xs text-gray-600">
+                            {coupon.menuItem.translations?.[0]?.name ||
+                              "Unknown item"}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
@@ -1169,6 +1200,70 @@ const Coupons = () => {
                             </div>
                           )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Percent Discount fields */}
+                  {couponFormData.type === "PERCENT_DISCOUNT" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mt-4">
+                        {t("percent_off")} *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={couponFormData.percentOff || ""}
+                          onChange={(e) =>
+                            setCouponFormData((prev) => ({
+                              ...prev,
+                              percentOff: parseInt(e.target.value) || undefined,
+                            }))
+                          }
+                          className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                          placeholder={t("enter_percent_off")}
+                          required
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">%</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        {t("percent_off_info")}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Fixed Discount fields */}
+                  {couponFormData.type === "FIXED_DISCOUNT" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mt-4">
+                        {t("fixed_off")} *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={couponFormData.fixedOff || ""}
+                          onChange={(e) =>
+                            setCouponFormData((prev) => ({
+                              ...prev,
+                              fixedOff: parseFloat(e.target.value) || undefined,
+                            }))
+                          }
+                          className="w-full p-2 border border-gray-300 rounded outline-gray-300"
+                          placeholder={t("enter_fixed_off")}
+                          required
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">€</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        {t("fixed_off_info")}
+                      </p>
                     </div>
                   )}
 
