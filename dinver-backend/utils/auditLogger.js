@@ -32,6 +32,7 @@ const Entities = {
   COUPON_CONDITION: 'coupon_condition',
   USER_COUPON: 'user_coupon',
   COUPON_REDEMPTION: 'coupon_redemption',
+  USER_POINTS: 'user_points',
   PUSH_TOKEN: 'push_token',
   PUSH_NOTIFICATION: 'push_notification',
 };

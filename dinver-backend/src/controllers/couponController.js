@@ -212,6 +212,7 @@ const getAvailableCoupons = async (req, res) => {
     } = req.query;
 
     const now = new Date();
+    const user = req.user;
     const maxDistance =
       distanceFilter === 'ALL' ? Infinity : parseInt(distanceFilter);
 
@@ -401,7 +402,7 @@ const getAvailableCoupons = async (req, res) => {
   }
 };
 
-// Create a new coupon (system-wide or restaurant-specific)
+// Create a new coupon (for both system and restaurant owners)
 const createCoupon = async (req, res) => {
   try {
     const {
@@ -415,6 +416,7 @@ const createCoupon = async (req, res) => {
       startsAt,
       expiresAt,
       status,
+      perUserLimit,
       conditionKind,
       conditionValue,
       conditionRestaurantScopeId,
@@ -427,8 +429,27 @@ const createCoupon = async (req, res) => {
         .json({ error: 'restaurantId is required for QR scanning' });
     }
 
+    // Determine source based on route or body
+    const isSystemRoute =
+      req.route?.path?.includes('/sysadmin') ||
+      req.originalUrl?.includes('/sysadmin');
+    const finalSource = source || (isSystemRoute ? 'DINVER' : 'RESTAURANT');
+
+    // Validation: Restaurant can only use limited conditions
+    if (
+      finalSource === 'RESTAURANT' &&
+      conditionKind &&
+      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
+        conditionKind,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
+      });
+    }
+
     // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
-    // totalLimit can be used alone, or both startsAt and expiresAt must be provided
     if (!totalLimit && (!startsAt || !expiresAt)) {
       return res.status(400).json({
         error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
@@ -436,7 +457,6 @@ const createCoupon = async (req, res) => {
     }
 
     // If only totalLimit is provided, set startsAt and expiresAt to null
-    // This allows coupons with only quantity limits
     let finalStartsAt = startsAt;
     let finalExpiresAt = expiresAt;
     if (totalLimit && (!startsAt || !expiresAt)) {
@@ -446,7 +466,7 @@ const createCoupon = async (req, res) => {
 
     // Create coupon
     const coupon = await Coupon.create({
-      source,
+      source: finalSource,
       restaurantId,
       type,
       rewardItemId,
@@ -458,11 +478,13 @@ const createCoupon = async (req, res) => {
       status: status || 'DRAFT',
       claimedCount: 0,
       createdBy: req.user.id,
-      perUserLimit: 1, // Hardcoded as requested
-      // Condition fields directly in the table
+      perUserLimit: perUserLimit || 1,
       conditionKind: conditionKind || null,
       conditionValue: conditionValue || null,
-      conditionRestaurantScopeId: conditionRestaurantScopeId || null,
+      conditionRestaurantScopeId:
+        finalSource === 'RESTAURANT'
+          ? restaurantId
+          : conditionRestaurantScopeId,
     });
 
     // Fetch created coupon with all details
@@ -551,7 +573,7 @@ const createCoupon = async (req, res) => {
   }
 };
 
-// Update an existing coupon
+// Update an existing coupon (for both system and restaurant owners)
 const updateCoupon = async (req, res) => {
   try {
     const { id } = req.params;
@@ -566,6 +588,7 @@ const updateCoupon = async (req, res) => {
       startsAt,
       expiresAt,
       status,
+      perUserLimit,
       conditionKind,
       conditionValue,
       conditionRestaurantScopeId,
@@ -578,8 +601,27 @@ const updateCoupon = async (req, res) => {
         .json({ error: 'restaurantId is required for QR scanning' });
     }
 
+    // Determine source based on route or body
+    const isSystemRoute =
+      req.route?.path?.includes('/sysadmin') ||
+      req.originalUrl?.includes('/sysadmin');
+    const finalSource = source || (isSystemRoute ? 'DINVER' : 'RESTAURANT');
+
+    // Validation: Restaurant can only use limited conditions
+    if (
+      finalSource === 'RESTAURANT' &&
+      conditionKind &&
+      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
+        conditionKind,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
+      });
+    }
+
     // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
-    // totalLimit can be used alone, or both startsAt and expiresAt must be provided
     if (!totalLimit && (!startsAt || !expiresAt)) {
       return res.status(400).json({
         error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
@@ -587,7 +629,6 @@ const updateCoupon = async (req, res) => {
     }
 
     // If only totalLimit is provided, set startsAt and expiresAt to null
-    // This allows coupons with only quantity limits
     let finalStartsAt = startsAt;
     let finalExpiresAt = expiresAt;
     if (totalLimit && (!startsAt || !expiresAt)) {
@@ -600,9 +641,18 @@ const updateCoupon = async (req, res) => {
       return res.status(404).json({ error: 'Coupon not found' });
     }
 
+    // Ensure restaurant can only update their own coupons, or sysadmin can update any
+    if (
+      finalSource === 'RESTAURANT' &&
+      (coupon.source !== 'RESTAURANT' || coupon.restaurantId !== restaurantId)
+    ) {
+      return res
+        .status(403)
+        .json({ error: 'Not authorized to update this coupon' });
+    }
+
     // Update coupon
     await coupon.update({
-      source,
       restaurantId,
       type,
       rewardItemId,
@@ -612,10 +662,13 @@ const updateCoupon = async (req, res) => {
       startsAt: finalStartsAt,
       expiresAt: finalExpiresAt,
       status,
-      perUserLimit: 1, // Hardcoded as requested
+      perUserLimit: perUserLimit || 1,
       conditionKind: conditionKind || null,
       conditionValue: conditionValue || null,
-      conditionRestaurantScopeId: conditionRestaurantScopeId || null,
+      conditionRestaurantScopeId:
+        finalSource === 'RESTAURANT'
+          ? restaurantId
+          : conditionRestaurantScopeId,
     });
 
     // Fetch updated coupon
@@ -703,7 +756,7 @@ const updateCoupon = async (req, res) => {
   }
 };
 
-// Delete a coupon (soft delete or permanent delete)
+// Delete a coupon (for both system and restaurant owners)
 const deleteCoupon = async (req, res) => {
   try {
     const { id } = req.params;
@@ -712,6 +765,19 @@ const deleteCoupon = async (req, res) => {
 
     if (!coupon) {
       return res.status(404).json({ error: 'Coupon not found' });
+    }
+
+    // Determine source based on route or body
+    const isSystemRoute =
+      req.route?.path?.includes('/sysadmin') ||
+      req.originalUrl?.includes('/sysadmin');
+    const finalSource = isSystemRoute ? 'DINVER' : 'RESTAURANT';
+
+    // Ensure restaurant can only delete their own coupons, or sysadmin can delete any
+    if (finalSource === 'RESTAURANT' && coupon.source !== 'RESTAURANT') {
+      return res
+        .status(403)
+        .json({ error: 'Not authorized to delete this coupon' });
     }
 
     if (permanent === 'true') {
@@ -871,6 +937,35 @@ const claimCoupon = async (req, res) => {
 
     // Increment claimed count
     await coupon.increment('claimedCount');
+
+    // Deduct points for coupons with POINTS_AT_LEAST condition (both DINVER and RESTAURANT)
+    if (coupon.conditionKind === 'POINTS_AT_LEAST') {
+      const userPoints = await UserPoints.findOne({ where: { userId } });
+      if (userPoints) {
+        const pointsToDeduct = coupon.conditionValue;
+        const oldPoints = userPoints.totalPoints;
+        const newPoints = oldPoints - pointsToDeduct;
+
+        await userPoints.update({
+          totalPoints: newPoints,
+        });
+
+        // Log points deduction
+        await logAudit({
+          userId: userId,
+          action: ActionTypes.UPDATE,
+          entity: 'user_points',
+          entityId: userPoints.id,
+          changes: {
+            old: { totalPoints: oldPoints },
+            new: { totalPoints: newPoints },
+            reason: `Points deducted for claiming coupon ${coupon.id}`,
+            couponId: coupon.id,
+            pointsDeducted: pointsToDeduct,
+          },
+        });
+      }
+    }
 
     // Generate QR token hash
     const qrTokenHash = crypto.randomBytes(16).toString('hex');
@@ -1380,370 +1475,6 @@ const checkCouponConditions = async (
   return { allowed, reasons, progress };
 };
 
-// Create restaurant coupon (limited conditions)
-const createRestaurantCoupon = async (req, res) => {
-  try {
-    const {
-      restaurantId,
-      type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
-      totalLimit,
-      startsAt,
-      expiresAt,
-      status,
-      conditionKind,
-      conditionValue,
-    } = req.body;
-
-    // Validation: Restaurant can only use limited conditions
-    if (
-      conditionKind &&
-      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
-        conditionKind,
-      )
-    ) {
-      return res.status(400).json({
-        error:
-          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
-      });
-    }
-
-    // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
-    if (!totalLimit && (!startsAt || !expiresAt)) {
-      return res.status(400).json({
-        error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
-      });
-    }
-
-    // If only totalLimit is provided, set startsAt and expiresAt to null
-    let finalStartsAt = startsAt;
-    let finalExpiresAt = expiresAt;
-    if (totalLimit && (!startsAt || !expiresAt)) {
-      finalStartsAt = null;
-      finalExpiresAt = null;
-    }
-
-    // Create coupon
-    const coupon = await Coupon.create({
-      source: 'RESTAURANT',
-      restaurantId,
-      type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
-      totalLimit,
-      startsAt: finalStartsAt,
-      expiresAt: finalExpiresAt,
-      status: status || 'DRAFT',
-      claimedCount: 0,
-      createdBy: req.user.id,
-      perUserLimit: 1, // Hardcoded as requested
-      conditionKind: conditionKind || null,
-      conditionValue: conditionValue || null,
-      conditionRestaurantScopeId: restaurantId, // Always set to restaurant ID for restaurant coupons
-    });
-
-    // Fetch created coupon with all details
-    const createdCoupon = await Coupon.findByPk(coupon.id, {
-      include: [
-        {
-          model: MenuItem,
-          as: 'menuItem',
-          required: false,
-          include: [
-            {
-              model: MenuItemTranslation,
-              as: 'translations',
-            },
-            {
-              model: MenuCategory,
-              as: 'category',
-              include: [
-                {
-                  model: MenuCategoryTranslation,
-                  as: 'translations',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          model: DrinkItem,
-          as: 'drinkItem',
-          required: false,
-          include: [
-            {
-              model: DrinkItemTranslation,
-              as: 'translations',
-            },
-            {
-              model: DrinkCategory,
-              as: 'category',
-              include: [
-                {
-                  model: DrinkCategoryTranslation,
-                  as: 'translations',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const result = {
-      ...createdCoupon.get(),
-      condition: createdCoupon.conditionKind
-        ? {
-            kind: createdCoupon.conditionKind,
-            valueInt: createdCoupon.conditionValue,
-            restaurantScopeId: createdCoupon.conditionRestaurantScopeId,
-          }
-        : null,
-      menuItem: createdCoupon.menuItem
-        ? {
-            ...createdCoupon.menuItem.get(),
-            translations: createdCoupon.menuItem.translations,
-            price: parseFloat(createdCoupon.menuItem.price).toFixed(2),
-            imageUrl: createdCoupon.menuItem.imageUrl
-              ? getMediaUrl(createdCoupon.menuItem.imageUrl, 'image')
-              : null,
-          }
-        : null,
-    };
-
-    await logAudit({
-      userId: req.user.id,
-      action: ActionTypes.CREATE,
-      entity: Entities.COUPON,
-      entityId: result.id,
-      restaurantId: restaurantId || null,
-      changes: { new: result },
-    });
-
-    res.status(201).json(result);
-  } catch (error) {
-    console.error('Error creating restaurant coupon:', error);
-    res.status(500).json({ error: 'Failed to create restaurant coupon' });
-  }
-};
-
-// Update restaurant coupon (limited conditions)
-const updateRestaurantCoupon = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      restaurantId,
-      type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
-      totalLimit,
-      startsAt,
-      expiresAt,
-      status,
-      conditionKind,
-      conditionValue,
-    } = req.body;
-
-    // Validation: Restaurant can only use limited conditions
-    if (
-      conditionKind &&
-      !['POINTS_AT_LEAST', 'VISITS_SAME_RESTAURANT_AT_LEAST'].includes(
-        conditionKind,
-      )
-    ) {
-      return res.status(400).json({
-        error:
-          'Restaurant coupons can only use POINTS_AT_LEAST or VISITS_SAME_RESTAURANT_AT_LEAST conditions',
-      });
-    }
-
-    // Validation: Either totalLimit OR (startsAt AND expiresAt) must be provided
-    if (!totalLimit && (!startsAt || !expiresAt)) {
-      return res.status(400).json({
-        error: 'Either totalLimit OR (startsAt AND expiresAt) must be provided',
-      });
-    }
-
-    // If only totalLimit is provided, set startsAt and expiresAt to null
-    let finalStartsAt = startsAt;
-    let finalExpiresAt = expiresAt;
-    if (totalLimit && (!startsAt || !expiresAt)) {
-      finalStartsAt = null;
-      finalExpiresAt = null;
-    }
-
-    const coupon = await Coupon.findByPk(id);
-    if (!coupon) {
-      return res.status(404).json({ error: 'Coupon not found' });
-    }
-
-    // Ensure restaurant can only update their own coupons
-    if (
-      coupon.source !== 'RESTAURANT' ||
-      coupon.restaurantId !== restaurantId
-    ) {
-      return res
-        .status(403)
-        .json({ error: 'Not authorized to update this coupon' });
-    }
-
-    // Update coupon
-    await coupon.update({
-      restaurantId,
-      type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
-      totalLimit,
-      startsAt: finalStartsAt,
-      expiresAt: finalExpiresAt,
-      status,
-      perUserLimit: 1, // Hardcoded as requested
-      conditionKind: conditionKind || null,
-      conditionValue: conditionValue || null,
-      conditionRestaurantScopeId: restaurantId, // Always set to restaurant ID
-    });
-
-    // Fetch updated coupon
-    const updatedCoupon = await Coupon.findByPk(id, {
-      include: [
-        {
-          model: MenuItem,
-          as: 'menuItem',
-          required: false,
-          include: [
-            {
-              model: MenuItemTranslation,
-              as: 'translations',
-            },
-            {
-              model: MenuCategory,
-              as: 'category',
-              include: [
-                {
-                  model: MenuCategoryTranslation,
-                  as: 'translations',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          model: DrinkItem,
-          as: 'drinkItem',
-          required: false,
-          include: [
-            {
-              model: DrinkItemTranslation,
-              as: 'translations',
-            },
-            {
-              model: DrinkCategory,
-              as: 'category',
-              include: [
-                {
-                  model: DrinkCategoryTranslation,
-                  as: 'translations',
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const result = {
-      ...updatedCoupon.get(),
-      condition: updatedCoupon.conditionKind
-        ? {
-            kind: updatedCoupon.conditionKind,
-            valueInt: updatedCoupon.conditionValue,
-            restaurantScopeId: updatedCoupon.conditionRestaurantScopeId,
-          }
-        : null,
-      menuItem: updatedCoupon.menuItem
-        ? {
-            ...updatedCoupon.menuItem.get(),
-            translations: updatedCoupon.menuItem.translations,
-            price: parseFloat(updatedCoupon.menuItem.price).toFixed(2),
-            imageUrl: updatedCoupon.menuItem.imageUrl
-              ? getMediaUrl(updatedCoupon.menuItem.imageUrl, 'image')
-              : null,
-          }
-        : null,
-    };
-
-    await logAudit({
-      userId: req.user.id,
-      action: ActionTypes.UPDATE,
-      entity: Entities.COUPON,
-      entityId: result.id,
-      restaurantId: coupon.restaurantId,
-      changes: { new: result },
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error updating restaurant coupon:', error);
-    res.status(500).json({ error: 'Failed to update restaurant coupon' });
-  }
-};
-
-// Delete restaurant coupon
-const deleteRestaurantCoupon = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { permanent } = req.query;
-    const coupon = await Coupon.findByPk(id, { paranoid: false });
-
-    if (!coupon) {
-      return res.status(404).json({ error: 'Coupon not found' });
-    }
-
-    // Ensure restaurant can only delete their own coupons
-    if (coupon.source !== 'RESTAURANT') {
-      return res
-        .status(403)
-        .json({ error: 'Not authorized to delete this coupon' });
-    }
-
-    if (permanent === 'true') {
-      // Permanent delete
-      await logAudit({
-        userId: req.user.id,
-        action: ActionTypes.DELETE,
-        entity: Entities.COUPON,
-        entityId: coupon.id,
-        restaurantId: coupon.restaurantId,
-        changes: { old: coupon.get(), permanent: true },
-      });
-
-      await coupon.destroy({ force: true });
-      res.status(204).send();
-    } else {
-      // Soft delete
-      await logAudit({
-        userId: req.user.id,
-        action: ActionTypes.DELETE,
-        entity: Entities.COUPON,
-        entityId: coupon.id,
-        restaurantId: coupon.restaurantId,
-        changes: { old: coupon.get() },
-      });
-
-      await coupon.destroy();
-      res.status(204).send();
-    }
-  } catch (error) {
-    console.error('Error deleting restaurant coupon:', error);
-    res.status(500).json({ error: 'Failed to delete restaurant coupon' });
-  }
-};
-
 // Get coupon statistics for sysadmin
 const getCouponStats = async (req, res) => {
   try {
@@ -1831,9 +1562,6 @@ module.exports = {
   createCoupon,
   updateCoupon,
   deleteCoupon,
-  createRestaurantCoupon,
-  updateRestaurantCoupon,
-  deleteRestaurantCoupon,
   claimCoupon,
   getUserCoupons,
   generateCouponQR,
