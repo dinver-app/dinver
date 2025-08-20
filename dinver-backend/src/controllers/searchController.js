@@ -29,6 +29,36 @@ function computeTokenSimilarity(term, token) {
   return 0;
 }
 
+// Lightweight Levenshtein (at most 1) for fuzzy matching
+function isLevenshteinAtMostOne(a, b) {
+  if (a === b) return true;
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < la && j < lb) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (edits === 1) return false;
+    edits++;
+    if (la > lb) {
+      i++;
+    } else if (lb > la) {
+      j++;
+    } else {
+      i++;
+      j++;
+    }
+  }
+  if (i < la || j < lb) edits++;
+  return edits <= 1;
+}
+
 function computeSimilarity(termRaw, textRaw) {
   const term = normalizeText(termRaw);
   const text = normalizeText(textRaw);
@@ -38,7 +68,15 @@ function computeSimilarity(termRaw, textRaw) {
   const tokens = text.split(/[^a-z0-9]+/g).filter(Boolean);
   let best = 0;
   for (const token of tokens) {
-    best = Math.max(best, computeTokenSimilarity(term, token));
+    let sim = computeTokenSimilarity(term, token);
+    // fuzzy prefix (Levenshtein <= 1) for tokens length >= 5
+    if (sim < 0.92 && term.length >= 5 && token.length >= term.length) {
+      const tokenPrefix = token.slice(0, term.length);
+      if (isLevenshteinAtMostOne(term, tokenPrefix)) {
+        sim = Math.max(sim, 0.85);
+      }
+    }
+    best = Math.max(best, sim);
     if (best === 1) break;
   }
   // exact word presence via helper provides a strong boost when not already exact
@@ -89,6 +127,8 @@ module.exports = {
           .filter((term) => term && term.length > 0) // Filter out empty strings, spaces, and undefined
       : [];
     const hasComma = !!(query && query.includes(','));
+    const computedSortBy =
+      searchTerms.length > 0 ? req.query.sortBy || 'match_score' : sortBy;
 
     try {
       // Get user favorites if authenticated
@@ -434,15 +474,17 @@ module.exports = {
                 : menuSim >= nameSim
                   ? 'menu'
                   : 'name';
-
-            const core =
-              Math.max(menuSim, nameSim) + 0.15 * Math.min(menuSim, nameSim);
+            // Penalize missing dimension by averaging both signals
+            const core = (menuSim + nameSim) / 2;
             smartScore =
               core * 100 +
               distanceWeight * 8 +
               popularityBoost * 4 +
               ratingBoost * 4 +
               (userFavorites.has(restaurant.id) ? 2 : 0);
+
+            // Attach core to the restaurant object for FE visibility
+            restaurant._singleTermCore = core;
           }
 
           return {
@@ -458,6 +500,9 @@ module.exports = {
               totalTerms: searchTerms.length,
             },
             perTerm: { nameSims, menuBestSims },
+            ...(searchTerms.length === 1
+              ? { core: restaurant._singleTermCore }
+              : {}),
           };
         });
 
@@ -471,7 +516,7 @@ module.exports = {
             return b.smartScore - a.smartScore;
           });
         } else {
-          switch (sortBy) {
+          switch (computedSortBy) {
             case 'rating':
               restaurantsWithMetrics.sort((a, b) => b.rating - a.rating);
               break;
@@ -484,6 +529,11 @@ module.exports = {
                 const scoreB = (b.rating * 5) / (b.distance + 1);
                 return scoreB - scoreA;
               });
+              break;
+            case 'core':
+              restaurantsWithMetrics.sort(
+                (a, b) => (b.core || 0) - (a.core || 0),
+              );
               break;
             case 'match_score':
             default:
