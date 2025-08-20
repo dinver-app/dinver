@@ -11,6 +11,54 @@ const {
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
 
+// ----------------- Helpers for matching & scoring -----------------
+function normalizeText(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function computeTokenSimilarity(term, token) {
+  if (!term || !token) return 0;
+  if (term === token) return 1.0; // exact token match
+  if (token.startsWith(term)) return 0.92; // prefix match
+  if (token.includes(term)) return 0.75; // substring match
+  return 0;
+}
+
+function computeSimilarity(termRaw, textRaw) {
+  const term = normalizeText(termRaw);
+  const text = normalizeText(textRaw);
+  if (!term || !text) return 0;
+
+  // token-based similarity first for exact/prefix/substring evaluation
+  const tokens = text.split(/[^a-z0-9]+/g).filter(Boolean);
+  let best = 0;
+  for (const token of tokens) {
+    best = Math.max(best, computeTokenSimilarity(term, token));
+    if (best === 1) break;
+  }
+  // exact word presence via helper provides a strong boost when not already exact
+  if (best < 1 && isExactWordMatch(termRaw, textRaw)) {
+    best = Math.max(best, 0.95);
+  }
+  return best;
+}
+
+function isExactWordMatch(termRaw, textRaw) {
+  const term = normalizeText(termRaw);
+  const text = normalizeText(textRaw);
+  if (!term || !text) return false;
+  const wordBoundary = new RegExp(
+    `\\b${term.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`,
+    'i',
+  );
+  return wordBoundary.test(text);
+}
+
 module.exports = {
   async globalSearch(req, res) {
     const {
@@ -40,6 +88,7 @@ module.exports = {
           .map((term) => term.trim())
           .filter((term) => term && term.length > 0) // Filter out empty strings, spaces, and undefined
       : [];
+    const hasComma = !!(query && query.includes(','));
 
     try {
       // Get user favorites if authenticated
@@ -69,6 +118,7 @@ module.exports = {
           'slug',
           'isClaimed',
           'priceCategoryId',
+          'createdAt',
         ],
         where: {},
         include: [
@@ -222,56 +272,21 @@ module.exports = {
           },
         ];
 
-        // Calculate matching terms for each restaurant
-        const restaurantMatches = new Map();
-
-        // Check name matches
-        const restaurants = await Restaurant.findAll(restaurantQuery);
-        restaurants.forEach((restaurant) => {
-          const matches = searchTerms.filter((term) =>
-            restaurant.name.toLowerCase().includes(term.toLowerCase()),
-          );
-          restaurantMatches.set(restaurant.id, {
-            matchCount: matches.length,
-            matchedTerms: matches,
-          });
+        // Build fast lookup for menu/drink items by restaurant
+        const menuByRestaurant = new Map();
+        menuItems.forEach((mi) => {
+          const rid = mi.menuItem.restaurantId;
+          if (!menuByRestaurant.has(rid)) menuByRestaurant.set(rid, []);
+          menuByRestaurant.get(rid).push(mi);
+        });
+        const drinkByRestaurant = new Map();
+        drinkItems.forEach((di) => {
+          const rid = di.drinkItem.restaurantId;
+          if (!drinkByRestaurant.has(rid)) drinkByRestaurant.set(rid, []);
+          drinkByRestaurant.get(rid).push(di);
         });
 
-        // Add menu item matches
-        menuItems.forEach((item) => {
-          const restaurantId = item.menuItem.restaurantId;
-          const currentMatch = restaurantMatches.get(restaurantId) || {
-            matchCount: 0,
-            matchedTerms: [],
-          };
-          const term = searchTerms.find((t) =>
-            item.name.toLowerCase().includes(t.toLowerCase()),
-          );
-          if (term && !currentMatch.matchedTerms.includes(term)) {
-            currentMatch.matchCount++;
-            currentMatch.matchedTerms.push(term);
-            restaurantMatches.set(restaurantId, currentMatch);
-          }
-        });
-
-        // Add drink item matches
-        drinkItems.forEach((item) => {
-          const restaurantId = item.drinkItem.restaurantId;
-          const currentMatch = restaurantMatches.get(restaurantId) || {
-            matchCount: 0,
-            matchedTerms: [],
-          };
-          const term = searchTerms.find((t) =>
-            item.name.toLowerCase().includes(t.toLowerCase()),
-          );
-          if (term && !currentMatch.matchedTerms.includes(term)) {
-            currentMatch.matchCount++;
-            currentMatch.matchedTerms.push(term);
-            restaurantMatches.set(restaurantId, currentMatch);
-          }
-        });
-
-        // Get final restaurants with all data
+        // Get candidate restaurants with all data
         const finalRestaurants = await Restaurant.findAll(restaurantQuery);
 
         // Get restaurant view counts from AnalyticsEvent for popularity calculation
@@ -315,7 +330,7 @@ module.exports = {
           );
         });
 
-        // Calculate distance and prepare final response
+        // Calculate distance and prepare final response with smart scoring
         const restaurantsWithMetrics = finalRestaurants.map((restaurant) => {
           const distance = calculateDistance(
             parseFloat(latitude),
@@ -324,52 +339,158 @@ module.exports = {
             restaurant.longitude,
           );
 
-          const matches = restaurantMatches.get(restaurant.id) || {
-            matchCount: 0,
-            matchedTerms: [],
-          };
-
-          // Calculate isPopular based on AnalyticsEvent data
           const viewCount = viewCountMap.get(restaurant.id) || 0;
-          const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
-
+          const isPopular = viewCount >= 5;
           const isNew =
             restaurant.isClaimed &&
             restaurant.createdAt >=
               new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+          // Per-term similarities
+          const nameSims = {};
+          const menuBestSims = {};
+          let menuCoverageMatched = 0;
+          const MENU_COVERAGE_THRESHOLD = 0.8; // require strong menu match
+          const NAME_STRICT_THRESHOLD = 0.8;
+          const tokensName = normalizeText(restaurant.name);
+
+          for (const term of searchTerms) {
+            const nameSim = computeSimilarity(term, tokensName);
+            nameSims[term] = nameSim;
+
+            // Best menu similarity for this restaurant and term
+            let bestMenuSim = 0;
+            const listA = menuByRestaurant.get(restaurant.id) || [];
+            const listB = drinkByRestaurant.get(restaurant.id) || [];
+            for (const mi of listA) {
+              bestMenuSim = Math.max(
+                bestMenuSim,
+                computeSimilarity(term, mi.name),
+              );
+              if (bestMenuSim === 1) break;
+            }
+            if (bestMenuSim < 1) {
+              for (const di of listB) {
+                bestMenuSim = Math.max(
+                  bestMenuSim,
+                  computeSimilarity(term, di.name),
+                );
+                if (bestMenuSim === 1) break;
+              }
+            }
+            menuBestSims[term] = bestMenuSim;
+            if (bestMenuSim >= MENU_COVERAGE_THRESHOLD)
+              menuCoverageMatched += 1;
+          }
+
+          // Determine matchType and smartScore
+          let matchType = 'none';
+          const distanceWeight = 1 / (1 + (isFinite(distance) ? distance : 0)); // 0..1
+          const popularityBoost = Math.log1p(viewCount) / 5; // ~0..small
+          const ratingBoost = (restaurant.rating || 0) / 5; // 0..1
+
+          let smartScore = 0;
+          if (hasComma && searchTerms.length > 1) {
+            // Multi-term: prioritize menu coverage strictly
+            const coverage = menuCoverageMatched;
+            const coverageScore =
+              searchTerms.length > 0
+                ? searchTerms.reduce(
+                    (acc, t) => acc + (menuBestSims[t] || 0),
+                    0,
+                  ) / searchTerms.length
+                : 0;
+            const nameAvg =
+              searchTerms.length > 0
+                ? searchTerms.reduce((acc, t) => acc + (nameSims[t] || 0), 0) /
+                  searchTerms.length
+                : 0;
+            matchType =
+              coverage > 0 && nameAvg > 0
+                ? 'mixed'
+                : coverage > 0
+                  ? 'menu'
+                  : nameAvg > 0
+                    ? 'name'
+                    : 'none';
+            smartScore =
+              coverage * 1000 + // hard group separation 2/2 > 1/2 > 0/2
+              coverageScore * 100 +
+              nameAvg * 50 +
+              distanceWeight * 5 +
+              popularityBoost * 3 +
+              ratingBoost * 3 +
+              (userFavorites.has(restaurant.id) ? 1 : 0);
+          } else {
+            // Single-term: fair comparison between menu and name
+            const term = searchTerms[0];
+            const menuSim = menuBestSims[term] || 0;
+            const nameSim = nameSims[term] || 0;
+            const isMenuStrong = menuSim >= NAME_STRICT_THRESHOLD;
+            const isNameStrong = nameSim >= NAME_STRICT_THRESHOLD;
+            matchType =
+              isMenuStrong && isNameStrong
+                ? 'mixed'
+                : menuSim >= nameSim
+                  ? 'menu'
+                  : 'name';
+
+            const core =
+              Math.max(menuSim, nameSim) + 0.15 * Math.min(menuSim, nameSim);
+            smartScore =
+              core * 100 +
+              distanceWeight * 8 +
+              popularityBoost * 4 +
+              ratingBoost * 4 +
+              (userFavorites.has(restaurant.id) ? 2 : 0);
+          }
+
           return {
             ...restaurant.toJSON(),
             distance,
-            matchScore: matches.matchCount / searchTerms.length,
-            matchedTerms: matches.matchedTerms,
-            totalSearchTerms: searchTerms.length,
             isPopular,
             isNew,
             isFavorite: userFavorites.has(restaurant.id),
+            smartScore,
+            matchType,
+            menuCoverage: {
+              matchedCount: menuCoverageMatched,
+              totalTerms: searchTerms.length,
+            },
+            perTerm: { nameSims, menuBestSims },
           };
         });
 
-        // Sort results based on sortBy parameter
-        switch (sortBy) {
-          case 'rating':
-            restaurantsWithMetrics.sort((a, b) => b.rating - a.rating);
-            break;
-          case 'distance':
-            restaurantsWithMetrics.sort((a, b) => a.distance - b.distance);
-            break;
-          case 'distance_rating':
-            restaurantsWithMetrics.sort((a, b) => {
-              const scoreA = (a.rating * 5) / (a.distance + 1); // +1 to avoid division by zero
-              const scoreB = (b.rating * 5) / (b.distance + 1);
-              return scoreB - scoreA;
-            });
-            break;
-          case 'match_score':
-            restaurantsWithMetrics.sort((a, b) => b.matchScore - a.matchScore);
-            break;
-          default:
-            restaurantsWithMetrics.sort((a, b) => a.distance - b.distance);
+        // Sort results: smart by default when searching, support existing sortBy
+        if (hasComma && searchTerms.length > 1) {
+          // First by menu coverage group, then by smartScore desc
+          restaurantsWithMetrics.sort((a, b) => {
+            const covA = a.menuCoverage?.matchedCount || 0;
+            const covB = b.menuCoverage?.matchedCount || 0;
+            if (covB !== covA) return covB - covA;
+            return b.smartScore - a.smartScore;
+          });
+        } else {
+          switch (sortBy) {
+            case 'rating':
+              restaurantsWithMetrics.sort((a, b) => b.rating - a.rating);
+              break;
+            case 'distance':
+              restaurantsWithMetrics.sort((a, b) => a.distance - b.distance);
+              break;
+            case 'distance_rating':
+              restaurantsWithMetrics.sort((a, b) => {
+                const scoreA = (a.rating * 5) / (a.distance + 1); // +1 to avoid division by zero
+                const scoreB = (b.rating * 5) / (b.distance + 1);
+                return scoreB - scoreA;
+              });
+              break;
+            case 'match_score':
+            default:
+              restaurantsWithMetrics.sort(
+                (a, b) => b.smartScore - a.smartScore,
+              );
+          }
         }
 
         // If map mode, return GeoJSON format
