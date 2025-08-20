@@ -1796,6 +1796,7 @@ const getPartners = async (req, res) => {
         'thumbnailUrl',
         'slug',
         'rating',
+        'virtualTourUrl',
       ],
       order: [Sequelize.fn('RANDOM')],
     });
