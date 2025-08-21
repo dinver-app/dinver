@@ -11,9 +11,8 @@ const {
   DrinkCategory,
   DrinkCategoryTranslation,
   Restaurant,
-  User,
   UserPoints,
-  UserRestaurantVisit,
+  VisitValidation,
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
@@ -1463,104 +1462,138 @@ const checkCouponConditions = async (
         reasons.push('Restaurant scope is required for this condition');
         break;
       }
-      let sameRestaurantQuery = {
-        where: {
-          userId,
-          restaurantId: condition.restaurantScopeId,
-          validated: true,
-        },
-      };
-
-      // If coupon has creation date, only count visits after that date
-      if (couponCreatedAt) {
-        sameRestaurantQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
-      }
-
-      const sameRestaurantVisits =
-        await UserRestaurantVisit.count(sameRestaurantQuery);
-      if (sameRestaurantVisits < condition.valueInt) {
+      if (!userId) {
+        // Public user, cannot compute yet
         allowed = false;
-        reasons.push(
-          `Need at least ${condition.valueInt} visits to this restaurant (you have ${sameRestaurantVisits})`,
-        );
         progress = {
-          current: sameRestaurantVisits,
+          current: 0,
           required: condition.valueInt,
           type: 'same_restaurant_visits',
-          message: `Posjetili ste ${sameRestaurantVisits} od ${condition.valueInt} puta ovaj restoran. Posjetite još ${condition.valueInt - sameRestaurantVisits} puta.`,
         };
+        reasons.push('Login required to evaluate restaurant visits');
+        break;
+      }
+      {
+        let sameRestaurantQuery = {
+          where: {
+            userId,
+            restaurantId: condition.restaurantScopeId,
+            usedAt: { [Op.ne]: null },
+          },
+        };
+
+        if (couponCreatedAt) {
+          sameRestaurantQuery.where.usedAt = { [Op.gte]: couponCreatedAt };
+        }
+
+        const sameRestaurantVisits =
+          await VisitValidation.count(sameRestaurantQuery);
+        if (sameRestaurantVisits < condition.valueInt) {
+          allowed = false;
+          reasons.push(
+            `Need at least ${condition.valueInt} visits to this restaurant (you have ${sameRestaurantVisits})`,
+          );
+          progress = {
+            current: sameRestaurantVisits,
+            required: condition.valueInt,
+            type: 'same_restaurant_visits',
+            message: `Posjetili ste ${sameRestaurantVisits} od ${condition.valueInt} puta ovaj restoran. Posjetite još ${condition.valueInt - sameRestaurantVisits} puta.`,
+          };
+        }
       }
       break;
 
     case 'VISITS_DIFFERENT_RESTAURANTS_AT_LEAST':
-      let differentRestaurantQuery = {
-        where: {
-          userId,
-          validated: true,
-        },
-        distinct: true,
-        col: 'restaurantId',
-      };
-
-      // If coupon has creation date, only count visits after that date
-      if (couponCreatedAt) {
-        differentRestaurantQuery.where.createdAt = {
-          [Op.gte]: couponCreatedAt,
-        };
-      }
-
-      const differentRestaurantVisits = await UserRestaurantVisit.count(
-        differentRestaurantQuery,
-      );
-      if (differentRestaurantVisits < condition.valueInt) {
+      if (!userId) {
         allowed = false;
-        reasons.push(
-          `Need at least ${condition.valueInt} visits to different restaurants (you have ${differentRestaurantVisits})`,
-        );
         progress = {
-          current: differentRestaurantVisits,
+          current: 0,
           required: condition.valueInt,
           type: 'different_restaurant_visits',
-          message: `Posjetili ste ${differentRestaurantVisits} od ${condition.valueInt} različitih restorana. Posjetite još ${condition.valueInt - differentRestaurantVisits} različitih restorana.`,
         };
+        reasons.push(
+          'Login required to evaluate visits to different restaurants',
+        );
+        break;
+      }
+      {
+        let differentRestaurantQuery = {
+          where: {
+            userId,
+            usedAt: { [Op.ne]: null },
+          },
+          distinct: true,
+          col: 'restaurantId',
+        };
+
+        if (couponCreatedAt) {
+          differentRestaurantQuery.where.usedAt = { [Op.gte]: couponCreatedAt };
+        }
+
+        const differentRestaurantVisits = await VisitValidation.count(
+          differentRestaurantQuery,
+        );
+        if (differentRestaurantVisits < condition.valueInt) {
+          allowed = false;
+          reasons.push(
+            `Need at least ${condition.valueInt} visits to different restaurants (you have ${differentRestaurantVisits})`,
+          );
+          progress = {
+            current: differentRestaurantVisits,
+            required: condition.valueInt,
+            type: 'different_restaurant_visits',
+            message: `Posjetili ste ${differentRestaurantVisits} od ${condition.valueInt} različitih restorana. Posjetite još ${condition.valueInt - differentRestaurantVisits} različitih restorana.`,
+          };
+        }
       }
       break;
 
     case 'VISITS_CITIES_AT_LEAST':
-      let cityVisitsQuery = {
-        where: {
-          userId,
-          validated: true,
-        },
-        include: [
-          {
-            model: Restaurant,
-            as: 'restaurant',
-            attributes: ['place'],
-          },
-        ],
-      };
-
-      // If coupon has creation date, only count visits after that date
-      if (couponCreatedAt) {
-        cityVisitsQuery.where.createdAt = { [Op.gte]: couponCreatedAt };
-      }
-
-      const cityVisits = await UserRestaurantVisit.findAll(cityVisitsQuery);
-      const uniqueCities = new Set(
-        cityVisits.map((visit) => visit.restaurant.place).filter(Boolean),
-      );
-      if (uniqueCities.size < condition.valueInt) {
+      if (!userId) {
         allowed = false;
-        reasons.push(
-          `Need at least ${condition.valueInt} visits to different cities (you have visited ${uniqueCities.size} cities)`,
-        );
         progress = {
-          current: uniqueCities.size,
+          current: 0,
           required: condition.valueInt,
           type: 'city_visits',
-          message: `Posjetili ste ${uniqueCities.size} od ${condition.valueInt} različitih gradova. Posjetite još ${condition.valueInt - uniqueCities.size} grad.`,
         };
+        reasons.push('Login required to evaluate visits across cities');
+        break;
+      }
+      {
+        let cityVisitsQuery = {
+          where: {
+            userId,
+            usedAt: { [Op.ne]: null },
+          },
+          include: [
+            {
+              model: Restaurant,
+              as: 'restaurant',
+              attributes: ['place'],
+            },
+          ],
+        };
+
+        if (couponCreatedAt) {
+          cityVisitsQuery.where.usedAt = { [Op.gte]: couponCreatedAt };
+        }
+
+        const cityVisits = await VisitValidation.findAll(cityVisitsQuery);
+        const uniqueCities = new Set(
+          cityVisits.map((visit) => visit.restaurant?.place).filter(Boolean),
+        );
+        if (uniqueCities.size < condition.valueInt) {
+          allowed = false;
+          reasons.push(
+            `Need at least ${condition.valueInt} visits to different cities (you have visited ${uniqueCities.size} cities)`,
+          );
+          progress = {
+            current: uniqueCities.size,
+            required: condition.valueInt,
+            type: 'city_visits',
+            message: `Posjetili ste ${uniqueCities.size} od ${condition.valueInt} različitih gradova. Posjetite još ${condition.valueInt - uniqueCities.size} grad.`,
+          };
+        }
       }
       break;
 
