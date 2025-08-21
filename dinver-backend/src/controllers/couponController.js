@@ -1566,7 +1566,7 @@ const checkCouponConditions = async (
           {
             model: Restaurant,
             as: 'restaurant',
-            attributes: ['city'],
+            attributes: ['place'],
           },
         ],
       };
@@ -1578,7 +1578,7 @@ const checkCouponConditions = async (
 
       const cityVisits = await UserRestaurantVisit.findAll(cityVisitsQuery);
       const uniqueCities = new Set(
-        cityVisits.map((visit) => visit.restaurant.city).filter(Boolean),
+        cityVisits.map((visit) => visit.restaurant.place).filter(Boolean),
       );
       if (uniqueCities.size < condition.valueInt) {
         allowed = false;
