@@ -28,8 +28,8 @@ function computeCouponPrices(couponData) {
     const menuItem = couponData.menuItem;
     const drinkItem = couponData.drinkItem;
 
-    // Only expose prices for FREE_ITEM coupons
-    if (type !== 'FREE_ITEM') {
+    // Only expose prices for REWARD_ITEM coupons (free item)
+    if (type !== 'REWARD_ITEM') {
       return { regularPrice: null, newPrice: null };
     }
 
@@ -51,6 +51,20 @@ function computeCouponPrices(couponData) {
   } catch (e) {
     return { regularPrice: null, newPrice: null };
   }
+}
+
+function hasExplicitTimezone(dateStr) {
+  return /([zZ]|[+-]\d{2}:?\d{2})$/.test(dateStr);
+}
+
+// Treat naive datetime strings as Europe/Zagreb (UTC+02:00 during summer, simplified)
+function normalizeToUTC(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return dateInput;
+  if (typeof dateInput !== 'string') return new Date(dateInput);
+  if (hasExplicitTimezone(dateInput)) return new Date(dateInput);
+  // Assume HR local (UTC+02:00). Append offset to parse as UTC-aware
+  return new Date(`${dateInput}+02:00`);
 }
 
 // Get all system-wide coupons (for sysadmin)
@@ -500,17 +514,39 @@ const createCoupon = async (req, res) => {
       finalExpiresAt = null;
     }
 
+    // Normalize datetimes to UTC if they come without timezone
+    const normStartsAt = normalizeToUTC(finalStartsAt);
+    const normExpiresAt = normalizeToUTC(finalExpiresAt);
+
+    // Sanitize fields by type
+    const typeSafe = type;
+    const payloadByType = {
+      REWARD_ITEM: {
+        rewardItemId,
+        percentOff: null,
+        fixedOff: null,
+      },
+      PERCENT_DISCOUNT: {
+        rewardItemId: null,
+        percentOff,
+        fixedOff: null,
+      },
+      FIXED_DISCOUNT: {
+        rewardItemId: null,
+        percentOff: null,
+        fixedOff,
+      },
+    }[typeSafe] || { rewardItemId: null, percentOff: null, fixedOff: null };
+
     // Create coupon
     const coupon = await Coupon.create({
       source: finalSource,
       restaurantId,
-      type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
+      type: typeSafe,
+      ...payloadByType,
       totalLimit,
-      startsAt: finalStartsAt,
-      expiresAt: finalExpiresAt,
+      startsAt: normStartsAt,
+      expiresAt: normExpiresAt,
       status: status || 'DRAFT',
       claimedCount: 0,
       createdBy: req.user.id,
@@ -691,16 +727,35 @@ const updateCoupon = async (req, res) => {
         .json({ error: 'Not authorized to update this coupon' });
     }
 
+    // Normalize datetimes and sanitize by type
+    const updStartsAt = normalizeToUTC(finalStartsAt);
+    const updExpiresAt = normalizeToUTC(finalExpiresAt);
+    const updatePayloadByType = {
+      REWARD_ITEM: {
+        rewardItemId,
+        percentOff: null,
+        fixedOff: null,
+      },
+      PERCENT_DISCOUNT: {
+        rewardItemId: null,
+        percentOff,
+        fixedOff: null,
+      },
+      FIXED_DISCOUNT: {
+        rewardItemId: null,
+        percentOff: null,
+        fixedOff,
+      },
+    }[type] || { rewardItemId: null, percentOff: null, fixedOff: null };
+
     // Update coupon
     await coupon.update({
       restaurantId,
       type,
-      rewardItemId,
-      percentOff,
-      fixedOff,
+      ...updatePayloadByType,
       totalLimit,
-      startsAt: finalStartsAt,
-      expiresAt: finalExpiresAt,
+      startsAt: updStartsAt,
+      expiresAt: updExpiresAt,
       status,
       perUserLimit: perUserLimit || 1,
       conditionKind: conditionKind || null,
