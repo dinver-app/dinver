@@ -1414,14 +1414,23 @@ const checkCouponConditions = async (
     case 'POINTS_AT_LEAST':
       const userPoints = await UserPoints.findOne({ where: { userId } });
       const currentPoints = userPoints ? userPoints.totalPoints : 0;
-      if (currentPoints < condition.valueInt) {
-        allowed = false;
-        reasons.push(`Need at least ${condition.valueInt} points`);
+      {
+        const required = condition.valueInt;
+        const remaining = Math.max(0, required - currentPoints);
+        allowed = currentPoints >= required;
+        if (!allowed) {
+          reasons.push(`Need at least ${required} points`);
+        }
         progress = {
           current: currentPoints,
-          required: condition.valueInt,
+          required,
           type: 'points',
-          message: `Imate ${currentPoints} od ${condition.valueInt} potrebnih bodova. Potrebno vam je još ${condition.valueInt - currentPoints} bodova.`,
+          met: allowed,
+          code: 'points_at_least',
+          params: { current: currentPoints, required, remaining },
+          message: !allowed
+            ? `Imate ${currentPoints} od ${required} potrebnih bodova. Potrebno vam je još ${remaining} bodova.`
+            : `Uvjet ispunjen: imate ${currentPoints} bodova (min ${required}).`,
         };
       }
       break;
@@ -1442,16 +1451,25 @@ const checkCouponConditions = async (
       }
 
       const referralCount = await Referral.count(referralQuery);
-      if (referralCount < condition.valueInt) {
-        allowed = false;
-        reasons.push(
-          `Need at least ${condition.valueInt} completed referrals (you have ${referralCount})`,
-        );
+      {
+        const required = condition.valueInt;
+        const remaining = Math.max(0, required - referralCount);
+        allowed = referralCount >= required;
+        if (!allowed) {
+          reasons.push(
+            `Need at least ${required} completed referrals (you have ${referralCount})`,
+          );
+        }
         progress = {
           current: referralCount,
-          required: condition.valueInt,
+          required,
           type: 'referrals',
-          message: `Imate ${referralCount} od ${condition.valueInt} potrebnih završenih preporuka. Potrebno vam je još ${condition.valueInt - referralCount} preporuka.`,
+          met: allowed,
+          code: 'referrals_at_least',
+          params: { current: referralCount, required, remaining },
+          message: !allowed
+            ? `Imate ${referralCount} od ${required} potrebnih završenih preporuka. Potrebno vam je još ${remaining} preporuka.`
+            : `Uvjet ispunjen: imate ${referralCount} završenih preporuka (min ${required}).`,
         };
       }
       break;
@@ -1460,6 +1478,18 @@ const checkCouponConditions = async (
       if (!condition.restaurantScopeId) {
         allowed = false;
         reasons.push('Restaurant scope is required for this condition');
+        progress = {
+          current: 0,
+          required: condition.valueInt,
+          type: 'same_restaurant_visits',
+          met: false,
+          code: 'visits_same_restaurant',
+          params: {
+            current: 0,
+            required: condition.valueInt,
+            remaining: condition.valueInt,
+          },
+        };
         break;
       }
       if (!userId) {
@@ -1469,6 +1499,9 @@ const checkCouponConditions = async (
           current: 0,
           required: condition.valueInt,
           type: 'same_restaurant_visits',
+          met: false,
+          code: 'login_required',
+          params: {},
         };
         reasons.push('Login required to evaluate restaurant visits');
         break;
@@ -1488,18 +1521,25 @@ const checkCouponConditions = async (
 
         const sameRestaurantVisits =
           await VisitValidation.count(sameRestaurantQuery);
-        if (sameRestaurantVisits < condition.valueInt) {
-          allowed = false;
+        const required = condition.valueInt;
+        const remaining = Math.max(0, required - sameRestaurantVisits);
+        allowed = sameRestaurantVisits >= required;
+        if (!allowed) {
           reasons.push(
-            `Need at least ${condition.valueInt} visits to this restaurant (you have ${sameRestaurantVisits})`,
+            `Need at least ${required} visits to this restaurant (you have ${sameRestaurantVisits})`,
           );
-          progress = {
-            current: sameRestaurantVisits,
-            required: condition.valueInt,
-            type: 'same_restaurant_visits',
-            message: `Posjetili ste ${sameRestaurantVisits} od ${condition.valueInt} puta ovaj restoran. Posjetite još ${condition.valueInt - sameRestaurantVisits} puta.`,
-          };
         }
+        progress = {
+          current: sameRestaurantVisits,
+          required,
+          type: 'same_restaurant_visits',
+          met: allowed,
+          code: 'visits_same_restaurant',
+          params: { current: sameRestaurantVisits, required, remaining },
+          message: !allowed
+            ? `Posjetili ste ${sameRestaurantVisits} od ${required} puta ovaj restoran. Posjetite još ${remaining} puta.`
+            : `Uvjet ispunjen: posjete ${sameRestaurantVisits}/${required}.`,
+        };
       }
       break;
 
@@ -1510,6 +1550,9 @@ const checkCouponConditions = async (
           current: 0,
           required: condition.valueInt,
           type: 'different_restaurant_visits',
+          met: false,
+          code: 'login_required',
+          params: {},
         };
         reasons.push(
           'Login required to evaluate visits to different restaurants',
@@ -1533,18 +1576,25 @@ const checkCouponConditions = async (
         const differentRestaurantVisits = await VisitValidation.count(
           differentRestaurantQuery,
         );
-        if (differentRestaurantVisits < condition.valueInt) {
-          allowed = false;
+        const required = condition.valueInt;
+        const remaining = Math.max(0, required - differentRestaurantVisits);
+        allowed = differentRestaurantVisits >= required;
+        if (!allowed) {
           reasons.push(
-            `Need at least ${condition.valueInt} visits to different restaurants (you have ${differentRestaurantVisits})`,
+            `Need at least ${required} visits to different restaurants (you have ${differentRestaurantVisits})`,
           );
-          progress = {
-            current: differentRestaurantVisits,
-            required: condition.valueInt,
-            type: 'different_restaurant_visits',
-            message: `Posjetili ste ${differentRestaurantVisits} od ${condition.valueInt} različitih restorana. Posjetite još ${condition.valueInt - differentRestaurantVisits} različitih restorana.`,
-          };
         }
+        progress = {
+          current: differentRestaurantVisits,
+          required,
+          type: 'different_restaurant_visits',
+          met: allowed,
+          code: 'visits_different_restaurants',
+          params: { current: differentRestaurantVisits, required, remaining },
+          message: !allowed
+            ? `Posjetili ste ${differentRestaurantVisits} od ${required} različitih restorana. Posjetite još ${remaining} različitih restorana.`
+            : `Uvjet ispunjen: različiti restorani ${differentRestaurantVisits}/${required}.`,
+        };
       }
       break;
 
@@ -1555,6 +1605,9 @@ const checkCouponConditions = async (
           current: 0,
           required: condition.valueInt,
           type: 'city_visits',
+          met: false,
+          code: 'login_required',
+          params: {},
         };
         reasons.push('Login required to evaluate visits across cities');
         break;
@@ -1582,18 +1635,26 @@ const checkCouponConditions = async (
         const uniqueCities = new Set(
           cityVisits.map((visit) => visit.restaurant?.place).filter(Boolean),
         );
-        if (uniqueCities.size < condition.valueInt) {
-          allowed = false;
+        const required = condition.valueInt;
+        const current = uniqueCities.size;
+        const remaining = Math.max(0, required - current);
+        allowed = current >= required;
+        if (!allowed) {
           reasons.push(
-            `Need at least ${condition.valueInt} visits to different cities (you have visited ${uniqueCities.size} cities)`,
+            `Need at least ${required} visits to different cities (you have visited ${current} cities)`,
           );
-          progress = {
-            current: uniqueCities.size,
-            required: condition.valueInt,
-            type: 'city_visits',
-            message: `Posjetili ste ${uniqueCities.size} od ${condition.valueInt} različitih gradova. Posjetite još ${condition.valueInt - uniqueCities.size} grad.`,
-          };
         }
+        progress = {
+          current,
+          required,
+          type: 'city_visits',
+          met: allowed,
+          code: 'visits_cities',
+          params: { current, required, remaining },
+          message: !allowed
+            ? `Posjetili ste ${current} od ${required} različitih gradova. Posjetite još ${remaining} grad.`
+            : `Uvjet ispunjen: gradovi ${current}/${required}.`,
+        };
       }
       break;
 
