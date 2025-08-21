@@ -16,7 +16,6 @@ const {
   UserRestaurantVisit,
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { getMediaUrl } = require('../../config/cdn');
 const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
 const crypto = require('crypto');
@@ -141,9 +140,6 @@ const getSystemCoupons = async (req, res) => {
               ...menuItem,
               translations: menuItem.translations,
               price: parseFloat(menuItem.price).toFixed(2),
-              imageUrl: menuItem.imageUrl
-                ? getMediaUrl(menuItem.imageUrl, 'image')
-                : null,
             }
           : null,
         regularPrice: priceInfo.regularPrice,
@@ -235,9 +231,6 @@ const getRestaurantCoupons = async (req, res) => {
               ...menuItem,
               translations: menuItem.translations,
               price: parseFloat(menuItem.price).toFixed(2),
-              imageUrl: menuItem.imageUrl
-                ? getMediaUrl(menuItem.imageUrl, 'image')
-                : null,
             }
           : null,
         regularPrice: priceInfo.regularPrice,
@@ -340,15 +333,7 @@ const getAvailableCoupons = async (req, res) => {
       includeClause.push({
         model: Restaurant,
         as: 'restaurant',
-        attributes: [
-          'id',
-          'name',
-          'address',
-          'place',
-          'thumbnailUrl',
-          'latitude',
-          'longitude',
-        ],
+        attributes: ['id', 'name', 'address', 'place', 'latitude', 'longitude'],
         ...(city ? { where: { place: city } } : {}),
       });
     }
@@ -419,17 +404,11 @@ const getAvailableCoupons = async (req, res) => {
                 ...menuItem,
                 translations: menuItem.translations,
                 price: parseFloat(menuItem.price).toFixed(2),
-                imageUrl: menuItem.imageUrl
-                  ? getMediaUrl(menuItem.imageUrl, 'image')
-                  : null,
               }
             : null,
           restaurant: restaurant
             ? {
                 ...restaurant,
-                thumbnailUrl: restaurant.thumbnailUrl
-                  ? getMediaUrl(restaurant.thumbnailUrl, 'image')
-                  : null,
                 distance,
               }
             : null,
@@ -622,9 +601,6 @@ const createCoupon = async (req, res) => {
             ...createdCoupon.menuItem.get(),
             translations: createdCoupon.menuItem.translations,
             price: parseFloat(createdCoupon.menuItem.price).toFixed(2),
-            imageUrl: createdCoupon.menuItem.imageUrl
-              ? getMediaUrl(createdCoupon.menuItem.imageUrl, 'image')
-              : null,
           }
         : null,
     };
@@ -828,9 +804,6 @@ const updateCoupon = async (req, res) => {
             ...updatedCoupon.menuItem.get(),
             translations: updatedCoupon.menuItem.translations,
             price: parseFloat(updatedCoupon.menuItem.price).toFixed(2),
-            imageUrl: updatedCoupon.menuItem.imageUrl
-              ? getMediaUrl(updatedCoupon.menuItem.imageUrl, 'image')
-              : null,
           }
         : null,
     };
@@ -1190,9 +1163,6 @@ const getUserCoupons = async (req, res) => {
                 ...menuItem,
                 translations: menuItem.translations,
                 price: parseFloat(menuItem.price).toFixed(2),
-                imageUrl: menuItem.imageUrl
-                  ? getMediaUrl(menuItem.imageUrl, 'image')
-                  : null,
               }
             : null,
         },
