@@ -21,6 +21,38 @@ const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
 const crypto = require('crypto');
 
+// ---- Helpers ----
+function computeCouponPrices(couponData) {
+  try {
+    const type = couponData.type;
+    const menuItem = couponData.menuItem;
+    const drinkItem = couponData.drinkItem;
+
+    // Only expose prices for FREE_ITEM coupons
+    if (type !== 'FREE_ITEM') {
+      return { regularPrice: null, newPrice: null };
+    }
+
+    // Prefer menu item price if present, fallback to drink item
+    const rawPrice =
+      (menuItem && menuItem.price != null
+        ? parseFloat(menuItem.price)
+        : null) ??
+      (drinkItem && drinkItem.price != null
+        ? parseFloat(drinkItem.price)
+        : null);
+
+    if (rawPrice == null || isNaN(rawPrice)) {
+      return { regularPrice: null, newPrice: null };
+    }
+
+    const regularPrice = Number(rawPrice.toFixed(2));
+    return { regularPrice, newPrice: 0 };
+  } catch (e) {
+    return { regularPrice: null, newPrice: null };
+  }
+}
+
 // Get all system-wide coupons (for sysadmin)
 const getSystemCoupons = async (req, res) => {
   try {
@@ -79,6 +111,7 @@ const getSystemCoupons = async (req, res) => {
     const formattedCoupons = coupons.map((coupon) => {
       const couponData = coupon.toJSON();
       const menuItem = couponData.menuItem;
+      const priceInfo = computeCouponPrices(couponData);
 
       return {
         ...couponData,
@@ -99,6 +132,8 @@ const getSystemCoupons = async (req, res) => {
                 : null,
             }
           : null,
+        regularPrice: priceInfo.regularPrice,
+        newPrice: priceInfo.newPrice,
       };
     });
 
@@ -170,6 +205,7 @@ const getRestaurantCoupons = async (req, res) => {
     const formattedCoupons = coupons.map((coupon) => {
       const couponData = coupon.toJSON();
       const menuItem = couponData.menuItem;
+      const priceInfo = computeCouponPrices(couponData);
 
       return {
         ...couponData,
@@ -190,6 +226,8 @@ const getRestaurantCoupons = async (req, res) => {
                 : null,
             }
           : null,
+        regularPrice: priceInfo.regularPrice,
+        newPrice: priceInfo.newPrice,
       };
     });
 
@@ -356,6 +394,7 @@ const getAvailableCoupons = async (req, res) => {
           userProgress = progress;
         }
 
+        const priceInfo = computeCouponPrices(couponData);
         return {
           ...couponData,
           condition: couponData.conditionKind
@@ -385,6 +424,8 @@ const getAvailableCoupons = async (req, res) => {
                 distance,
               }
             : null,
+          regularPrice: priceInfo.regularPrice,
+          newPrice: priceInfo.newPrice,
         };
       }),
     );
@@ -556,6 +597,10 @@ const createCoupon = async (req, res) => {
           }
         : null,
     };
+
+    const priceInfo = computeCouponPrices(result);
+    result.regularPrice = priceInfo.regularPrice;
+    result.newPrice = priceInfo.newPrice;
 
     await logAudit({
       userId: req.user.id,
@@ -739,6 +784,10 @@ const updateCoupon = async (req, res) => {
           }
         : null,
     };
+
+    const priceInfo = computeCouponPrices(result);
+    result.regularPrice = priceInfo.regularPrice;
+    result.newPrice = priceInfo.newPrice;
 
     await logAudit({
       userId: req.user.id,
@@ -996,6 +1045,13 @@ const claimCoupon = async (req, res) => {
         type: coupon.type,
         menuItem: coupon.menuItem,
         restaurant: coupon.restaurant,
+        ...computeCouponPrices({
+          type: coupon.type,
+          percentOff: coupon.percentOff,
+          fixedOff: coupon.fixedOff,
+          menuItem: coupon.menuItem,
+          drinkItem: coupon.drinkItem,
+        }),
       },
     });
   } catch (error) {
@@ -1186,6 +1242,13 @@ const generateCouponQR = async (req, res) => {
         type: userCoupon.coupon.type,
         menuItem: userCoupon.coupon.menuItem,
         restaurant: userCoupon.coupon.restaurant,
+        ...computeCouponPrices({
+          type: userCoupon.coupon.type,
+          percentOff: userCoupon.coupon.percentOff,
+          fixedOff: userCoupon.coupon.fixedOff,
+          menuItem: userCoupon.coupon.menuItem,
+          drinkItem: userCoupon.coupon.drinkItem,
+        }),
       },
     });
   } catch (error) {
@@ -1299,6 +1362,13 @@ const redeemUserCoupon = async (req, res) => {
       coupon: {
         id: userCoupon.coupon.id,
         type: userCoupon.coupon.type,
+        ...computeCouponPrices({
+          type: userCoupon.coupon.type,
+          percentOff: userCoupon.coupon.percentOff,
+          fixedOff: userCoupon.coupon.fixedOff,
+          menuItem: userCoupon.coupon.menuItem,
+          drinkItem: userCoupon.coupon.drinkItem,
+        }),
       },
     });
   } catch (error) {
