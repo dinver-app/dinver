@@ -254,19 +254,17 @@ const getAvailableCoupons = async (req, res) => {
     const maxDistance =
       distanceFilter === 'ALL' ? Infinity : parseInt(distanceFilter);
 
+    // Active coupons: valid by date window OR no dates; AND not exhausted by quantity (if set)
     let whereClause = {
       status: 'ACTIVE',
-      [Op.or]: [
-        // Coupons with date restrictions
+      [Op.and]: [
         {
-          startsAt: { [Op.lte]: now },
-          expiresAt: { [Op.gt]: now },
-          totalLimit: null,
+          [Op.or]: [
+            { startsAt: { [Op.lte]: now }, expiresAt: { [Op.gt]: now } },
+            { startsAt: null, expiresAt: null },
+          ],
         },
-        // Coupons with only quantity limits (no date restrictions)
         {
-          startsAt: null,
-          expiresAt: null,
           [Op.or]: [
             { totalLimit: null },
             literal('"claimedCount" < "totalLimit"'),
@@ -337,11 +335,8 @@ const getAvailableCoupons = async (req, res) => {
           'latitude',
           'longitude',
         ],
+        ...(city ? { where: { place: city } } : {}),
       });
-
-      if (city) {
-        includeClause[1].where = { place: city };
-      }
     }
 
     const coupons = await Coupon.findAll({
@@ -433,7 +428,7 @@ const getAvailableCoupons = async (req, res) => {
     const filteredCoupons = formattedCoupons.filter(Boolean);
 
     res.json({
-      coupons: formattedCoupons,
+      coupons: filteredCoupons,
       distanceFilter,
       hasDistanceFilter: distanceFilter !== 'ALL',
     });
