@@ -257,7 +257,6 @@ const getAvailableCoupons = async (req, res) => {
     } = req.query;
 
     const now = new Date();
-    const user = req.user;
     const maxDistance =
       distanceFilter === 'ALL' ? Infinity : parseInt(distanceFilter);
 
