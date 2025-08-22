@@ -148,6 +148,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM(
           'POINTS_AT_LEAST',
           'REFERRALS_AT_LEAST',
+          'VISITS_SAME_RESTAURANT_AT_LEAST',
           'VISITS_DIFFERENT_RESTAURANTS_AT_LEAST',
           'VISITS_CITIES_AT_LEAST',
         ),
