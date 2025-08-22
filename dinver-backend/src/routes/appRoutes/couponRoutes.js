@@ -4,12 +4,18 @@ const {
   appApiKeyAuth,
   appAuthenticateToken,
   checkAdmin,
+  appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
 // Public routes for customers
-router.get('/coupons', appApiKeyAuth, couponController.getAvailableCoupons);
+router.get(
+  '/coupons',
+  appApiKeyAuth,
+  appOptionalAuth,
+  couponController.getAvailableCoupons,
+);
 
 router.post(
   '/coupons/claim',
