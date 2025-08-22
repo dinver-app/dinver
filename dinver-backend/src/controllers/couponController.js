@@ -1087,9 +1087,35 @@ const claimCoupon = async (req, res) => {
 const getUserCoupons = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { status } = req.query;
+    const now = new Date();
+
+    // Build where clause based on requested status
+    let whereClause = { userId };
+    if (status === 'EXPIRED') {
+      // Include explicitly expired, or claimed but past expiresAt (in case status wasn't updated)
+      whereClause = {
+        userId,
+        [Op.or]: [
+          { status: 'EXPIRED' },
+          {
+            [Op.and]: [{ status: 'CLAIMED' }, { expiresAt: { [Op.lt]: now } }],
+          },
+        ],
+      };
+    } else if (status === 'CLAIMED') {
+      // Claimed and still valid
+      whereClause = {
+        userId,
+        status: 'CLAIMED',
+        expiresAt: { [Op.gte]: now },
+      };
+    } else if (status === 'REDEEMED') {
+      whereClause = { userId, status: 'REDEEMED' };
+    }
 
     const userCoupons = await UserCoupon.findAll({
-      where: { userId },
+      where: whereClause,
       include: [
         {
           model: Coupon,
