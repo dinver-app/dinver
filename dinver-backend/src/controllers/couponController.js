@@ -13,6 +13,7 @@ const {
   Restaurant,
   UserPoints,
   VisitValidation,
+  Referral,
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
@@ -360,10 +361,10 @@ const getAvailableCoupons = async (req, res) => {
           restaurant?.longitude
         ) {
           distance = calculateDistance(
-            userLat,
-            userLng,
-            restaurant.latitude,
-            restaurant.longitude,
+            Number(userLat),
+            Number(userLng),
+            Number(restaurant.latitude),
+            Number(restaurant.longitude),
           );
 
           if (distance > maxDistance) {
@@ -1437,7 +1438,6 @@ const checkCouponConditions = async (
 
     case 'REFERRALS_AT_LEAST':
       // Use new referral system - count completed referrals
-      const { Referral } = require('../../models');
       let referralQuery = {
         where: {
           referrerId: userId,

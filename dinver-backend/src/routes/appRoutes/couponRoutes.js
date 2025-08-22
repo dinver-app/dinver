@@ -9,12 +9,7 @@ const {
 const router = express.Router();
 
 // Public routes for customers
-router.get(
-  '/coupons',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  couponController.getAvailableCoupons,
-);
+router.get('/coupons', appApiKeyAuth, couponController.getAvailableCoupons);
 
 router.post(
   '/coupons/claim',
