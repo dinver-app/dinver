@@ -1066,20 +1066,22 @@ const getUpcomingCustomWorkingDays = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    const now = new Date();
-    const twoWeeksLater = new Date();
-    twoWeeksLater.setDate(now.getDate() + 14);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const twoWeeksStr = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
 
-    const customWorkingDays = (restaurant.customWorkingDays || []).filter(
-      (day) => {
-        const date = new Date(day.date);
-        return date >= now && date <= twoWeeksLater;
-      },
-    );
+    const customWorkingDays = (
+      restaurant.customWorkingDays || { customWorkingDays: [] }
+    ).customWorkingDays
+      ? restaurant.customWorkingDays.customWorkingDays
+      : restaurant.customWorkingDays || [];
 
-    customWorkingDays.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const upcoming = customWorkingDays
+      .filter((day) => day.date >= todayStr && day.date <= twoWeeksStr)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-    res.json(customWorkingDays);
+    res.json(upcoming);
   } catch (error) {
     res
       .status(500)
@@ -1096,10 +1098,8 @@ const addCustomWorkingDay = async (req, res) => {
       return res.status(400).json({ error: 'maximum_two_time_periods' });
     }
 
-    const dateObj = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (dateObj < today) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (date < todayStr) {
       return res.status(400).json({ error: 'cannot_add_date_in_the_past' });
     }
 
@@ -1155,10 +1155,8 @@ const updateCustomWorkingDay = async (req, res) => {
       return res.status(400).json({ error: 'maximum_two_time_periods' });
     }
 
-    const dateObj = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (dateObj < today) {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (date < todayStr) {
       return res.status(400).json({ error: 'cannot_update_to_past_date' });
     }
 
