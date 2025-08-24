@@ -633,7 +633,20 @@ function isRestaurantOpen(openingHours, timeZone = 'Europe/Zagreb') {
     hour12: false,
   });
   const [hour, minute] = formatter.format(now).split(':');
-  const currentDay = new Date().getDay() - 1;
+  const weekdayShort = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+  }).format(now);
+  const weekdayToIndex = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  const currentDay = weekdayToIndex[weekdayShort];
   const currentTime = parseInt(hour, 10) * 100 + parseInt(minute, 10);
 
   if (!openingHours || !openingHours.periods) {
