@@ -18,6 +18,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import { hr, enUS } from "date-fns/locale";
 import { useAdmin } from "../../context/AdminContext";
 
+type TimePoint = { day: number; time: string };
+type Shift = { open: TimePoint; close: TimePoint };
+type DaySchedule = { open: TimePoint; close: TimePoint; shifts: Shift[] };
+
 const formatTime = (time: string) => {
   if (time.length === 4) {
     return `${time.slice(0, 2)}:${time.slice(2)}`;
@@ -45,19 +49,25 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     t("sunday"),
   ];
 
-  const [workingHours, setWorkingHours] = useState(() => {
-    const initialHours = Array(7).fill({
-      open: { day: 0, time: "" },
-      close: { day: 0, time: "" },
-      shifts: [],
-    });
+  const [workingHours, setWorkingHours] = useState<DaySchedule[]>(() => {
+    const initialHours: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
+      open: { day: i, time: "" },
+      close: { day: i, time: "" },
+      shifts: [] as Shift[],
+    }));
 
     if (restaurant.openingHours?.periods) {
       JSON.parse(JSON.stringify(restaurant.openingHours.periods)).forEach(
         (period: any) => {
-          initialHours[period.open.day] = {
-            ...period,
-            shifts: period.shifts || [],
+          const p = period as {
+            open: TimePoint;
+            close: TimePoint;
+            shifts?: Shift[];
+          };
+          initialHours[p.open.day] = {
+            open: p.open,
+            close: p.close,
+            shifts: (p.shifts || []) as Shift[],
           };
         }
       );
@@ -122,11 +132,11 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       Object.keys(restaurant.openingHours).length === 0
     ) {
       setWorkingHours(
-        Array(7).fill({
-          open: { day: 0, time: "" },
-          close: { day: 0, time: "" },
-          shifts: [],
-        })
+        Array.from({ length: 7 }, (_, i) => ({
+          open: { day: i, time: "" },
+          close: { day: i, time: "" },
+          shifts: [] as Shift[],
+        }))
       );
     }
   }, [restaurant]);
@@ -185,6 +195,9 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       const formattedTime = unformatTime(time);
       if (shiftIndex === 0) {
         updated[dayIndex][type].time = formattedTime;
+        if (type === "open") {
+          updated[dayIndex].open.day = dayIndex;
+        }
         if (type === "close") {
           const openTime = parseInt(updated[dayIndex].open.time, 10);
           if (parseInt(formattedTime, 10) < openTime) {
@@ -198,9 +211,12 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
           updated[dayIndex].shifts[shiftIndex - 1] = {
             open: { day: dayIndex, time: "" },
             close: { day: dayIndex, time: "" },
-          };
+          } as Shift;
         }
         updated[dayIndex].shifts[shiftIndex - 1][type].time = formattedTime;
+        if (type === "open") {
+          updated[dayIndex].shifts[shiftIndex - 1].open.day = dayIndex;
+        }
         if (type === "close") {
           const openTime = parseInt(
             updated[dayIndex].shifts[shiftIndex - 1].open.time,
@@ -513,7 +529,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
                                 {
                                   open: { day: index, time: "" },
                                   close: { day: index, time: "" },
-                                },
+                                } as Shift,
                               ];
                             }
                             return updated;
