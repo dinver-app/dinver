@@ -2657,8 +2657,32 @@ const getRestaurantsMap = async (req, res) => {
 // New function for fetching detailed restaurant data by IDs
 const getRestaurantsByIds = async (req, res) => {
   try {
-    const { ids, page = 1, pageSize = 20 } = req.query;
+    const { ids, page = 1, pageSize = 20, latitude, longitude } = req.query;
     const userId = req.user?.id;
+
+    // Validate coordinates if provided
+    if ((latitude && !longitude) || (!latitude && longitude)) {
+      return res.status(400).json({
+        error: 'Both latitude and longitude must be provided together',
+      });
+    }
+
+    const hasCoordinates = latitude && longitude;
+    let userLat, userLon;
+    if (hasCoordinates) {
+      userLat = parseFloat(latitude);
+      userLon = parseFloat(longitude);
+      if (
+        Number.isNaN(userLat) ||
+        Number.isNaN(userLon) ||
+        userLat < -90 ||
+        userLat > 90 ||
+        userLon < -180 ||
+        userLon > 180
+      ) {
+        return res.status(400).json({ error: 'Invalid coordinates provided' });
+      }
+    }
 
     if (!ids) {
       return res.status(400).json({ error: 'Restaurant IDs are required' });
@@ -2776,12 +2800,22 @@ const getRestaurantsByIds = async (req, res) => {
           restaurant.createdAt >=
             new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+        const distance = hasCoordinates
+          ? calculateDistance(
+              userLat,
+              userLon,
+              restaurant.latitude,
+              restaurant.longitude,
+            )
+          : null;
+
         return {
           ...restaurant.get(),
           rating: reviewRating || restaurant.rating || 0,
           isFavorite: userFavorites.has(restaurant.id),
           isPopular,
           isNew,
+          distance,
         };
       }),
     );
@@ -2827,8 +2861,32 @@ const getRestaurantsByIds = async (req, res) => {
 // POST variant for getRestaurantsByIds (for larger number of IDs)
 const getRestaurantsByIdsPost = async (req, res) => {
   try {
-    const { ids, page = 1, pageSize = 20 } = req.body;
+    const { ids, page = 1, pageSize = 20, lat, lng } = req.body;
     const userId = req.user?.id;
+
+    // Validate coordinates if provided
+    if ((lat && !lng) || (!lat && lng)) {
+      return res.status(400).json({
+        error: 'Both latitude and longitude must be provided together',
+      });
+    }
+
+    const hasCoordinates = lat && lng;
+    let userLat, userLon;
+    if (hasCoordinates) {
+      userLat = parseFloat(lat);
+      userLon = parseFloat(lng);
+      if (
+        Number.isNaN(userLat) ||
+        Number.isNaN(userLon) ||
+        userLat < -90 ||
+        userLat > 90 ||
+        userLon < -180 ||
+        userLon > 180
+      ) {
+        return res.status(400).json({ error: 'Invalid coordinates provided' });
+      }
+    }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res
@@ -2932,12 +2990,22 @@ const getRestaurantsByIdsPost = async (req, res) => {
           restaurant.createdAt >=
             new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+        const distance = hasCoordinates
+          ? calculateDistance(
+              userLat,
+              userLon,
+              restaurant.latitude,
+              restaurant.longitude,
+            )
+          : null;
+
         return {
           ...restaurant.get(),
           rating: reviewRating || restaurant.rating || 0,
           isFavorite: userFavorites.has(restaurant.id),
           isPopular,
           isNew,
+          distance,
         };
       }),
     );
