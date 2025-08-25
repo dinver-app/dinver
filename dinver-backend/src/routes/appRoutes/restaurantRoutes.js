@@ -1,6 +1,9 @@
 const express = require('express');
 const restaurantController = require('../../controllers/restaurantController');
-const { appApiKeyAuth } = require('../../middleware/roleMiddleware');
+const {
+  appApiKeyAuth,
+  appOptionalAuth,
+} = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
 
@@ -46,6 +49,7 @@ router.get(
 router.get(
   '/restaurants/map',
   appApiKeyAuth,
+  appOptionalAuth,
   restaurantController.getRestaurantsMap,
 );
 
