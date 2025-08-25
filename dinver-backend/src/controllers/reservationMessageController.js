@@ -523,29 +523,29 @@ const createSuggestion = async (req, res) => {
       ],
     });
 
-    // Pošalji push notifikaciju korisniku o novom prijedlogu
-    try {
-      await sendPushNotificationToUsers([reservation.userId], {
-        title: 'Novi prijedlog za rezervaciju! 💡',
-        body: `${reservation.restaurant.name} vam je poslao prijedlog: ${formatDateDisplay(
-          suggestedDate,
-        )} u ${formatTimeDisplay(suggestedTime)}`,
-        data: {
-          type: 'new_suggestion_from_restaurant',
-          reservationId: reservation.id,
-          restaurantId: reservation.restaurantId,
-          restaurantName: reservation.restaurant.name,
-          messageId: message.id,
-          suggestedDate,
-          suggestedTime,
-        },
-      });
-    } catch (error) {
-      console.error(
-        'Error sending push notification for new suggestion:',
-        error,
-      );
-    }
+    // // Pošalji push notifikaciju korisniku o novom prijedlogu
+    // try {
+    //   await sendPushNotificationToUsers([reservation.userId], {
+    //     title: 'Novi prijedlog za rezervaciju! 💡',
+    //     body: `${reservation.restaurant.name} vam je poslao prijedlog: ${formatDateDisplay(
+    //       suggestedDate,
+    //     )} u ${formatTimeDisplay(suggestedTime)}`,
+    //     data: {
+    //       type: 'new_suggestion_from_restaurant',
+    //       reservationId: reservation.id,
+    //       restaurantId: reservation.restaurantId,
+    //       restaurantName: reservation.restaurant.name,
+    //       messageId: message.id,
+    //       suggestedDate,
+    //       suggestedTime,
+    //     },
+    //   });
+    // } catch (error) {
+    //   console.error(
+    //     'Error sending push notification for new suggestion:',
+    //     error,
+    //   );
+    // }
 
     res.status(201).json(messageWithSender);
   } catch (error) {
