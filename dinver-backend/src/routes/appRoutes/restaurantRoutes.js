@@ -54,12 +54,6 @@ router.get(
 );
 
 // New endpoints for fetching detailed data by IDs
-router.get(
-  '/restaurants/by-ids',
-  appApiKeyAuth,
-  restaurantController.getRestaurantsByIds,
-);
-
 router.post(
   '/restaurants/by-ids',
   appApiKeyAuth,

@@ -2665,10 +2665,10 @@ const getRestaurantsMap = async (req, res) => {
   }
 };
 
-// New function for fetching detailed restaurant data by IDs
-const getRestaurantsByIds = async (req, res) => {
+// POST variant for getRestaurantsByIds (for larger number of IDs)
+const getRestaurantsByIdsPost = async (req, res) => {
   try {
-    const { ids, page = 1, pageSize = 20, latitude, longitude } = req.query;
+    const { ids, page = 1, pageSize = 20, latitude, longitude } = req.body;
     const userId = req.user?.id;
 
     // Validate coordinates if provided
@@ -2683,210 +2683,6 @@ const getRestaurantsByIds = async (req, res) => {
     if (hasCoordinates) {
       userLat = parseFloat(latitude);
       userLon = parseFloat(longitude);
-      if (
-        Number.isNaN(userLat) ||
-        Number.isNaN(userLon) ||
-        userLat < -90 ||
-        userLat > 90 ||
-        userLon < -180 ||
-        userLon > 180
-      ) {
-        return res.status(400).json({ error: 'Invalid coordinates provided' });
-      }
-    }
-
-    if (!ids) {
-      return res.status(400).json({ error: 'Restaurant IDs are required' });
-    }
-
-    // Parse IDs - support both comma-separated and array
-    let restaurantIds;
-    if (typeof ids === 'string') {
-      restaurantIds = ids.split(',').filter((id) => id.trim());
-    } else if (Array.isArray(ids)) {
-      restaurantIds = ids;
-    } else {
-      return res.status(400).json({ error: 'Invalid restaurant IDs format' });
-    }
-
-    if (restaurantIds.length === 0) {
-      return res
-        .status(400)
-        .json({ error: 'At least one restaurant ID is required' });
-    }
-
-    // Validate UUID format
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const invalidIds = restaurantIds.filter((id) => !uuidRegex.test(id));
-    if (invalidIds.length > 0) {
-      return res.status(400).json({
-        error: 'Invalid UUID format for restaurant IDs',
-        invalidIds,
-      });
-    }
-
-    // Get user favorites if authenticated
-    let userFavorites = new Set();
-    if (userId) {
-      const favorites = await UserFavorite.findAll({
-        where: { userId },
-        attributes: ['restaurantId'],
-      });
-      userFavorites = new Set(favorites.map((f) => f.restaurantId));
-    }
-
-    // Fetch restaurants with all necessary details
-    const restaurants = await Restaurant.findAll({
-      where: { id: { [Op.in]: restaurantIds } },
-      attributes: [
-        'id',
-        'name',
-        'address',
-        'latitude',
-        'longitude',
-        'rating',
-        'thumbnailUrl',
-        'isClaimed',
-        'userRatingsTotal',
-        'createdAt',
-      ],
-    });
-
-    // Sort restaurants to maintain the order from the input IDs
-    const restaurantMap = new Map();
-    restaurants.forEach((restaurant) => {
-      restaurantMap.set(restaurant.id, restaurant);
-    });
-
-    const sortedRestaurants = restaurantIds
-      .map((id) => restaurantMap.get(id))
-      .filter(Boolean); // Remove any undefined entries
-
-    // Add additional data and maintain order
-    const restaurantsWithDetails = await Promise.all(
-      sortedRestaurants.map(async (restaurant) => {
-        // Get reviews for rating calculation
-        const reviews = await Review.findAll({
-          where: { restaurantId: restaurant.id },
-          attributes: ['rating'],
-        });
-
-        const totalRatings = reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0,
-        );
-        const reviewRating =
-          reviews.length > 0 ? totalRatings / reviews.length : null;
-
-        // Calculate isPopular based on AnalyticsEvent data
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-
-        // Get unique session count for popularity calculation
-        const viewCountResult = await AnalyticsEvent.findAll({
-          where: {
-            restaurant_id: restaurant.id,
-            event_type: 'restaurant_view',
-            session_id: { [Op.ne]: null },
-            timestamp: { [Op.gte]: weekAgo },
-          },
-          attributes: [
-            [
-              Sequelize.fn(
-                'COUNT',
-                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
-              ),
-              'viewCount',
-            ],
-          ],
-          raw: true,
-        });
-
-        const viewCount = parseInt(viewCountResult[0]?.viewCount || 0, 10);
-
-        const isPopular = viewCount >= 5; // Restoran je popularan ako je imao 5+ unique posjeta u zadnjih 7 dana
-        const isNew =
-          restaurant.isClaimed &&
-          restaurant.createdAt >=
-            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-        const distance = hasCoordinates
-          ? calculateDistance(
-              userLat,
-              userLon,
-              restaurant.latitude,
-              restaurant.longitude,
-            )
-          : null;
-
-        return {
-          ...restaurant.get(),
-          rating: reviewRating || restaurant.rating || 0,
-          isFavorite: userFavorites.has(restaurant.id),
-          isPopular,
-          isNew,
-          distance,
-        };
-      }),
-    );
-
-    // Transform thumbnail URLs
-    const restaurantsWithUrls = restaurantsWithDetails.map((restaurant) => {
-      const transformed = { ...restaurant };
-      if (transformed.thumbnailUrl) {
-        transformed.thumbnailUrl = getMediaUrl(
-          transformed.thumbnailUrl,
-          'image',
-        );
-      }
-      return transformed;
-    });
-
-    // Implement pagination
-    const pageNum = parseInt(page);
-    const pageSizeNum = parseInt(pageSize);
-    const startIndex = (pageNum - 1) * pageSizeNum;
-    const endIndex = startIndex + pageSizeNum;
-    const paginatedRestaurants = restaurantsWithUrls.slice(
-      startIndex,
-      endIndex,
-    );
-    const totalPages = Math.ceil(restaurantsWithUrls.length / pageSizeNum);
-
-    res.json({
-      items: paginatedRestaurants,
-      pagination: {
-        page: pageNum,
-        pageSize: pageSizeNum,
-        total: restaurantsWithUrls.length,
-        totalPages,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching restaurants by IDs:', error);
-    res.status(500).json({ error: 'Failed to fetch restaurants by IDs' });
-  }
-};
-
-// POST variant for getRestaurantsByIds (for larger number of IDs)
-const getRestaurantsByIdsPost = async (req, res) => {
-  try {
-    const { ids, page = 1, pageSize = 20, lat, lng } = req.body;
-    const userId = req.user?.id;
-
-    // Validate coordinates if provided
-    if ((lat && !lng) || (!lat && lng)) {
-      return res.status(400).json({
-        error: 'Both latitude and longitude must be provided together',
-      });
-    }
-
-    const hasCoordinates = lat && lng;
-    let userLat, userLon;
-    if (hasCoordinates) {
-      userLat = parseFloat(lat);
-      userLon = parseFloat(lng);
       if (
         Number.isNaN(userLat) ||
         Number.isNaN(userLon) ||
@@ -3285,6 +3081,5 @@ module.exports = {
   getClaimRestaurantWorkingHours,
   submitClaimForm,
   getRestaurantsMap,
-  getRestaurantsByIds,
   getRestaurantsByIdsPost,
 };
