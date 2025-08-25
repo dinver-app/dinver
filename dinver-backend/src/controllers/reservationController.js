@@ -226,7 +226,7 @@ const createReservation = async (req, res) => {
     if (adminUserIds.length > 0) {
       try {
         await sendPushNotificationToUsers(adminUserIds, {
-          title: 'Nova rezervacija! 📅',
+          title: 'Nova rezervacija u tvojem restoranu! 📅',
           body: `Nova rezervacija za ${guests} osoba dana ${formatDateDisplay(
             date,
           )} u ${formatTimeDisplay(time)}`,
