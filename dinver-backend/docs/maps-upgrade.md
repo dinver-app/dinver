@@ -85,15 +85,7 @@ The maps upgrade optimizes performance by:
 
 ### 3. Restaurants by IDs (Detailed Data)
 
-**GET** `/app/restaurants/by-ids?ids=uuid1,uuid2,...`
-
 **POST** `/app/restaurants/by-ids`
-
-**Query Parameters (GET):**
-
-- `ids` (required): Comma-separated restaurant UUIDs
-- `page` (optional): Page number (default: 1)
-- `pageSize` (optional): Items per page (default: 20)
 
 **Request Body (POST):**
 
@@ -101,7 +93,9 @@ The maps upgrade optimizes performance by:
 {
   "ids": ["uuid1", "uuid2", "..."],
   "page": 1,
-  "pageSize": 20
+  "pageSize": 20,
+  "latitude": 45.813,
+  "longitude": 15.977
 }
 ```
 
@@ -143,9 +137,8 @@ The maps upgrade optimizes performance by:
 ### Controller Functions
 
 1. **`getRestaurantsMap`** - Main map endpoint
-2. **`getRestaurantsByIds`** - GET endpoint for fetching by IDs
-3. **`getRestaurantsByIdsPost`** - POST endpoint for larger ID lists
-4. **Global search map mode** - Extended existing search controller
+2. **`getRestaurantsByIdsPost`** - POST endpoint for fetching by IDs (preferred)
+3. **Global search map mode** - Extended existing search controller
 
 ### Key Optimizations
 
