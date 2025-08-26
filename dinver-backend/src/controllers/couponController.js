@@ -1309,12 +1309,19 @@ const redeemUserCoupon = async (req, res) => {
     const staffUserId = req.user.id;
     const { restaurantId } = req.params;
 
+    // Validate input: allow redeeming by either qrTokenHash or userCouponId
+    if (!qrTokenHash && !userCouponId) {
+      return res
+        .status(400)
+        .json({ error: 'Provide either qrTokenHash or userCouponId' });
+    }
+
+    const whereClause = { status: 'CLAIMED' };
+    if (qrTokenHash) whereClause.qrTokenHash = qrTokenHash;
+    if (userCouponId) whereClause.id = userCouponId;
+
     const userCoupon = await UserCoupon.findOne({
-      where: {
-        id: userCouponId,
-        qrTokenHash,
-        status: 'CLAIMED',
-      },
+      where: whereClause,
       include: [
         {
           model: Coupon,
@@ -1364,6 +1371,18 @@ const redeemUserCoupon = async (req, res) => {
       return res.status(404).json({ error: 'Invalid coupon or QR code' });
     }
 
+    // Optional safety: ensure coupon belongs to the restaurant making the redemption (if applicable)
+    if (
+      restaurantId &&
+      userCoupon.coupon &&
+      userCoupon.coupon.restaurantId &&
+      String(userCoupon.coupon.restaurantId) !== String(restaurantId)
+    ) {
+      return res
+        .status(403)
+        .json({ error: 'Coupon does not belong to this restaurant' });
+    }
+
     const now = new Date();
     if (now > userCoupon.expiresAt) {
       return res.status(400).json({ error: 'Coupon has expired' });
@@ -1374,7 +1393,7 @@ const redeemUserCoupon = async (req, res) => {
 
     // Create redemption record
     const redemption = await CouponRedemption.create({
-      userCouponId,
+      userCouponId: userCoupon.id,
       restaurantId,
       redeemedAt: now,
       redeemedBy: staffUserId,
