@@ -65,34 +65,64 @@ const getMyReferrals = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const referralCode = await ReferralCode.findOne({
-      where: { userId },
-    });
+    const { page = 1, limit = 20, status } = req.query;
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    const offset = (pageNum - 1) * limitNum;
 
-    if (!referralCode) {
-      return res.json({
-        stats: {
-          total: 0,
-          pending: 0,
-          registered: 0,
-          firstVisit: 0,
-          completed: 0,
-          totalRewards: 0,
-        },
-        referrals: [],
-      });
+    // Optionally fetch code (not required for filtering/pagination)
+    const referralCode = await ReferralCode.findOne({ where: { userId } });
+
+    // Stats (independent of filters/pagination)
+    let stats = {
+      total: 0,
+      pending: 0,
+      registered: 0,
+      firstVisit: 0,
+      completed: 0,
+      totalRewards: 0,
+    };
+    if (referralCode && typeof referralCode.getStatistics === 'function') {
+      try {
+        const statsPayload = await referralCode.getStatistics();
+        if (statsPayload && statsPayload.stats) {
+          stats = statsPayload.stats;
+        }
+      } catch (_) {}
     }
 
-    // Get detailed statistics using the model method
-    const { stats, referrals } = await referralCode.getStatistics();
+    // Build where clause with optional status filter
+    const whereClause = { referrerId: userId };
+    if (status) {
+      whereClause.status = status;
+    }
 
-    // Format referrals with progress and timeline
-    const formattedReferrals = referrals.map((referral) => ({
+    const { count, rows } = await Referral.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'referredUser',
+          attributes: ['firstName', 'lastName', 'email'],
+        },
+        {
+          model: Restaurant,
+          as: 'firstVisitRestaurant',
+          attributes: ['name'],
+          required: false,
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: limitNum,
+      offset,
+    });
+
+    const formattedReferrals = rows.map((referral) => ({
       id: referral.id,
       referredUser: referral.referredUser,
       status: referral.status,
-      progress: referral.getProgress(),
-      timeline: referral.getTimeline(),
+      progress: referral.getProgress?.(),
+      timeline: referral.getTimeline?.(),
       createdAt: referral.createdAt,
       registeredAt: referral.registeredAt,
       firstVisitAt: referral.firstVisitAt,
@@ -104,7 +134,13 @@ const getMyReferrals = async (req, res) => {
     res.json({
       stats,
       referrals: formattedReferrals,
-      code: referralCode.code,
+      code: referralCode?.code || null,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: count,
+        totalPages: Math.ceil(count / limitNum),
+      },
     });
   } catch (error) {
     console.error('Error getting referral statistics:', error);
@@ -357,9 +393,18 @@ const completeReferral = async (referralId) => {
 const getMyRewards = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page = 1, limit = 20, status } = req.query;
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    const offset = (pageNum - 1) * limitNum;
 
-    const rewards = await ReferralReward.findAll({
-      where: { userId },
+    const whereClause = { userId };
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const { count, rows } = await ReferralReward.findAndCountAll({
+      where: whereClause,
       include: [
         {
           model: Referral,
@@ -379,9 +424,11 @@ const getMyRewards = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
+      limit: limitNum,
+      offset,
     });
 
-    const formattedRewards = rewards.map((reward) => ({
+    const formattedRewards = rows.map((reward) => ({
       id: reward.id,
       ...reward.getDisplayInfo(),
       amount: reward.amount,
@@ -391,7 +438,15 @@ const getMyRewards = async (req, res) => {
       coupon: reward.coupon,
     }));
 
-    res.json(formattedRewards);
+    res.json({
+      rewards: formattedRewards,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: count,
+        totalPages: Math.ceil(count / limitNum),
+      },
+    });
   } catch (error) {
     console.error('Error getting referral rewards:', error);
     res.status(500).json({ error: 'Failed to get referral rewards' });
