@@ -8,6 +8,14 @@ const pointsController = require('../../controllers/pointsController');
 
 const router = express.Router();
 
+// Paginated user transactions (earn and spend)
+router.get(
+  '/points/transactions',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  pointsController.getUserPointsTransactions,
+);
+
 // Dohvati povijest bodova korisnika
 router.get(
   '/points/history',
