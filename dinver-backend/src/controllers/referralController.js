@@ -78,9 +78,7 @@ const getMyReferrals = async (req, res) => {
     // Stats (independent of filters/pagination)
     let stats = {
       total: 0,
-      pending: 0,
       registered: 0,
-      firstVisit: 0,
       completed: 0,
       totalRewards: 0,
     };
@@ -127,7 +125,6 @@ const getMyReferrals = async (req, res) => {
       timeline: referral.getTimeline?.(),
       createdAt: referral.createdAt,
       registeredAt: referral.registeredAt,
-      firstVisitAt: referral.firstVisitAt,
       completedAt: referral.completedAt,
       rewardAmount: referral.rewardAmount,
       rewardType: referral.rewardType,
@@ -176,16 +173,14 @@ const applyReferralCode = async (userId, referralCode) => {
       throw new Error('User already has a referral');
     }
 
-    // Create the referral record
+    // Create the referral record directly in REGISTERED state
     const referral = await Referral.create({
       referrerId: refCode.userId,
       referredUserId: userId,
       referralCodeId: refCode.id,
-      status: 'PENDING',
+      status: 'REGISTERED',
+      registeredAt: new Date(),
     });
-
-    // Update status to REGISTERED immediately since user just registered
-    await referral.updateStatus('REGISTERED');
 
     // Update referral code statistics
     await refCode.increment('totalReferrals');
@@ -277,7 +272,7 @@ const handleFirstVisit = async (userId, restaurantId) => {
       return null; // User wasn't referred or already completed first visit
     }
 
-    // Update referral status directly to COMPLETED (no intermediate FIRST_VISIT)
+    // Update referral status directly to COMPLETED
     await referral.updateStatus('COMPLETED', {
       restaurantId,
       rewardAmount: 20, // Total earned: 10 (registration) + 10 (first visit) = 20
@@ -548,17 +543,13 @@ const getReferralStats = async (req, res) => {
   try {
     const [
       totalReferrals,
-      pendingReferrals,
       registeredReferrals,
-      firstVisitReferrals,
       completedReferrals,
       totalRewards,
       activeCodes,
     ] = await Promise.all([
       Referral.count(),
-      Referral.count({ where: { status: 'PENDING' } }),
       Referral.count({ where: { status: 'REGISTERED' } }),
-      Referral.count({ where: { status: 'FIRST_VISIT' } }),
       Referral.count({ where: { status: 'COMPLETED' } }),
       ReferralReward.sum('amount'),
       ReferralCode.count({ where: { isActive: true } }),
@@ -567,9 +558,7 @@ const getReferralStats = async (req, res) => {
     res.json({
       totalReferrals,
       statusBreakdown: {
-        pending: pendingReferrals,
         registered: registeredReferrals,
-        firstVisit: firstVisitReferrals,
         completed: completedReferrals,
       },
       totalRewardsPaid: parseFloat(totalRewards) || 0,

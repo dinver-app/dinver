@@ -54,12 +54,6 @@ module.exports = (sequelize, DataTypes) => {
         case 'REGISTERED':
           updateData.registeredAt = now;
           break;
-        case 'FIRST_VISIT':
-          updateData.firstVisitAt = now;
-          if (additionalData.restaurantId) {
-            updateData.firstVisitRestaurantId = additionalData.restaurantId;
-          }
-          break;
         case 'COMPLETED':
           updateData.completedAt = now;
           if (additionalData.rewardAmount) {
@@ -74,97 +68,50 @@ module.exports = (sequelize, DataTypes) => {
       return await this.update(updateData);
     }
 
-    // Helper method to get progress information
+    // Helper method to get progress information (i18n-ready, no hardcoded text)
     getProgress() {
-      const progress = {
-        step: 1,
-        stepName: 'Pending',
-        nextStep: 'Registration',
-        completedSteps: 0,
-        totalSteps: 2,
-        percentComplete: 0,
-      };
-
-      switch (this.status) {
-        case 'PENDING':
-          progress.step = 1;
-          progress.stepName = 'Pozvan';
-          progress.nextStep = 'Registracija';
-          progress.completedSteps = 0;
-          progress.percentComplete = 0;
-          break;
-        case 'REGISTERED':
-          progress.step = 2;
-          progress.stepName = 'Registriran';
-          progress.nextStep = 'Prvi posjet restorana';
-          progress.completedSteps = 1;
-          progress.percentComplete = 50;
-          break;
-        case 'COMPLETED':
-          progress.step = 2;
-          progress.stepName = 'Završeno';
-          progress.nextStep = null;
-          progress.completedSteps = 2;
-          progress.percentComplete = 100;
-          break;
+      const totalSteps = 2;
+      if (this.status === 'COMPLETED') {
+        return {
+          status: 'COMPLETED',
+          step: 2,
+          totalSteps,
+          completedSteps: 2,
+          percentComplete: 100,
+          stepCode: 'completed',
+          nextStepCode: null,
+        };
       }
-
-      return progress;
+      // Default: REGISTERED
+      return {
+        status: 'REGISTERED',
+        step: 1,
+        totalSteps,
+        completedSteps: 1,
+        percentComplete: 50,
+        stepCode: 'registered',
+        nextStepCode: 'first_visit',
+      };
     }
 
-    // Helper method to format timeline
+    // Helper method to format timeline (i18n-ready, codes only)
     getTimeline() {
       const timeline = [];
 
-      // Referral created
+      // Registration event (we create referral on registration, so always present)
       timeline.push({
-        step: 1,
-        title: 'Poziv poslan',
-        description: 'Korisnik je pozvan',
-        date: this.createdAt,
-        completed: true,
-        icon: '📧',
+        code: 'registered',
+        date: this.registeredAt || this.createdAt,
+        completed: !!(this.registeredAt || this.createdAt),
       });
 
-      // Registration
-      if (this.registeredAt) {
-        timeline.push({
-          step: 2,
-          title: 'Registracija završena',
-          description: 'Korisnik je kreirao račun',
-          date: this.registeredAt,
-          completed: true,
-          icon: '✅',
-        });
-      } else {
-        timeline.push({
-          step: 2,
-          title: 'Čeka registraciju',
-          description: 'Korisnik još nije kreirao račun',
-          date: null,
-          completed: false,
-          icon: '⏳',
-        });
-      }
-
-      // First visit (now combined with completion)
+      // Completion event (first visit confirmed and rewards granted)
       if (this.completedAt) {
         timeline.push({
-          step: 2,
-          title: 'Prvi posjet i nagrada',
-          description: 'Korisnik je posjetio restoran i dobio nagradu',
+          code: 'completed',
           date: this.completedAt,
           completed: true,
-          icon: '🎁',
-        });
-      } else if (this.registeredAt) {
-        timeline.push({
-          step: 2,
-          title: 'Čeka posjet restorana',
-          description: 'Korisnik još nije posjetio restoran',
-          date: null,
-          completed: false,
-          icon: '⏳',
+          restaurantId: this.firstVisitRestaurantId || null,
         });
       }
 
@@ -192,9 +139,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('PENDING', 'REGISTERED', 'COMPLETED'),
+        type: DataTypes.ENUM('REGISTERED', 'COMPLETED'),
         allowNull: false,
-        defaultValue: 'PENDING',
+        defaultValue: 'REGISTERED',
       },
       registeredAt: {
         type: DataTypes.DATE,
