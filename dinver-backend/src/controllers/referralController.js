@@ -391,11 +391,6 @@ const getMyRewards = async (req, res) => {
             },
           ],
         },
-        {
-          model: Coupon,
-          as: 'coupon',
-          required: false,
-        },
       ],
       order: [['createdAt', 'DESC']],
       limit: limitNum,
@@ -409,7 +404,6 @@ const getMyRewards = async (req, res) => {
       claimedAt: reward.claimedAt,
       referredUser: reward.referral?.referredUser,
       metadata: reward.metadata,
-      coupon: reward.coupon,
     }));
 
     res.json({
