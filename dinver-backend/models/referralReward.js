@@ -29,23 +29,8 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
 
-    // Helper method to claim the reward
+    // Claim flow removed as rewards are auto-claimed in current design
     async claim() {
-      if (this.status !== 'PENDING') {
-        throw new Error('Reward already claimed or expired');
-      }
-
-      const now = new Date();
-      if (this.expiresAt && now > this.expiresAt) {
-        await this.update({ status: 'EXPIRED' });
-        throw new Error('Reward has expired');
-      }
-
-      await this.update({
-        status: 'CLAIMED',
-        claimedAt: now,
-      });
-
       return this;
     }
 
@@ -54,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
       return this.expiresAt && new Date() > this.expiresAt;
     }
 
-    // Helper method to get reward display information
+    // Helper method to get reward display information (i18n-ready codes)
     getDisplayInfo() {
       const info = {
         type: this.rewardType,
@@ -64,18 +49,18 @@ module.exports = (sequelize, DataTypes) => {
 
       switch (this.rewardType) {
         case 'POINTS':
-          info.title = `${this.amount} bodova`;
-          info.description = 'Bodovi su dodani na vaš račun';
+          info.titleCode = 'points_reward';
+          info.descriptionCode = 'points_added_to_account';
           info.icon = '⭐';
           break;
         case 'COUPON':
-          info.title = 'Kupon nagrada';
-          info.description = 'Ekskluzivni kupon je dodan u vaše kupone';
+          info.titleCode = 'coupon_reward';
+          info.descriptionCode = 'coupon_added_to_wallet';
           info.icon = '🎫';
           break;
         case 'CASH':
-          info.title = `${this.amount}€`;
-          info.description = 'Novčana nagrada';
+          info.titleCode = 'cash_reward';
+          info.descriptionCode = 'cash_reward_received';
           info.icon = '💰';
           break;
       }
@@ -112,9 +97,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       status: {
-        type: DataTypes.ENUM('PENDING', 'CLAIMED', 'EXPIRED'),
+        type: DataTypes.ENUM('CLAIMED'),
         allowNull: false,
-        defaultValue: 'PENDING',
+        defaultValue: 'CLAIMED',
       },
       claimedAt: {
         type: DataTypes.DATE,
