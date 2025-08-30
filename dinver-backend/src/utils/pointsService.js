@@ -8,6 +8,10 @@ const POINTS_CONFIG = {
   VISIT_QR: 20, // Skeniranje QR koda u restoranu
   RESERVATION_VISIT: 5, // Bonus bodovi za dolazak preko rezervacije
   ACHIEVEMENT_UNLOCKED: 5, // Otključano postignuće
+  REFERRAL_REGISTRATION_REFERRER: 10, // Referrer dobije bodove kada se prijatelj registrira preko koda
+  REFERRAL_REGISTRATION_REFERRED: 10, // Novi korisnik dobije bodove jer se registrirao preko koda
+  REFERRAL_FIRST_VISIT_REFERRER: 10, // Referrer dobije bodove kada prijatelj potvrdi prvu posjetu
+  POINTS_SPENT_COUPON: -1, // Zamjenska vrijednost; stvarni iznos potrošenih bodova je dinamičan (negativan)
 };
 
 // Definicija tipova akcija (mora odgovarati ENUM vrijednostima u bazi)
@@ -18,6 +22,10 @@ const ACTION_TYPES = {
   VISIT_QR: 'visit_qr',
   RESERVATION_VISIT: 'reservation_visit',
   ACHIEVEMENT_UNLOCKED: 'achievement_unlocked',
+  REFERRAL_REGISTRATION_REFERRER: 'referral_registration_referrer',
+  REFERRAL_REGISTRATION_REFERRED: 'referral_registration_referred',
+  REFERRAL_FIRST_VISIT_REFERRER: 'referral_visit_referrer',
+  POINTS_SPENT_COUPON: 'points_spent_coupon',
 };
 
 class PointsService {
@@ -119,6 +127,55 @@ class PointsService {
     }
   }
 
+  // Dodavanje bodova za registraciju preko referral koda (obje strane)
+  async addReferralRegistrationPoints(referrerId, referredUserId, referralId) {
+    try {
+      // Referrer dobije bodove
+      await this.UserPointsHistory.logPoints({
+        userId: referrerId,
+        actionType: ACTION_TYPES.REFERRAL_REGISTRATION_REFERRER,
+        points: POINTS_CONFIG.REFERRAL_REGISTRATION_REFERRER,
+        referenceId: referralId,
+        description: 'Referral: bonus bodovi za registraciju prijatelja',
+      });
+
+      // Referred user dobije bodove
+      await this.UserPointsHistory.logPoints({
+        userId: referredUserId,
+        actionType: ACTION_TYPES.REFERRAL_REGISTRATION_REFERRED,
+        points: POINTS_CONFIG.REFERRAL_REGISTRATION_REFERRED,
+        referenceId: referralId,
+        description: 'Referral: registracija preko koda (bonus bodovi)',
+      });
+    } catch (error) {
+      console.error('Error in addReferralRegistrationPoints:', error);
+      throw error;
+    }
+  }
+
+  // Dodavanje bodova za prvu posjetu (referrer dobije bodove)
+  async addReferralFirstVisitBonus(
+    referrerId,
+    referredUserId,
+    referralId,
+    restaurantId,
+  ) {
+    try {
+      await this.UserPointsHistory.logPoints({
+        userId: referrerId,
+        actionType: ACTION_TYPES.REFERRAL_FIRST_VISIT_REFERRER,
+        points: POINTS_CONFIG.REFERRAL_FIRST_VISIT_REFERRER,
+        referenceId: referralId,
+        restaurantId,
+        description:
+          'Referral: bonus bodovi za prvu posjetu prijatelja (potvrđena dolaznost)',
+      });
+    } catch (error) {
+      console.error('Error in addReferralFirstVisitBonus:', error);
+      throw error;
+    }
+  }
+
   // Dodavanje bodova za postignuće
   async addAchievementPoints(userId, achievementId, achievementName) {
     try {
@@ -132,6 +189,28 @@ class PointsService {
     } catch (error) {
       console.error('Error adding achievement points:', error);
       // Don't throw the error - we don't want to break achievement unlocking if points fail
+    }
+  }
+
+  // Oduzimanje bodova za "kupnju" kupona (bilježi transakciju)
+  async spendPointsForCoupon(userId, couponId, pointsToSpend, restaurantId) {
+    try {
+      if (!Number.isInteger(pointsToSpend) || pointsToSpend <= 0) {
+        throw new Error('pointsToSpend must be positive integer');
+      }
+
+      // Log as negative points in history; UserPoints.logPoints will handle updating total
+      await this.UserPointsHistory.logPoints({
+        userId,
+        actionType: ACTION_TYPES.POINTS_SPENT_COUPON,
+        points: -pointsToSpend,
+        referenceId: couponId,
+        restaurantId: restaurantId || null,
+        description: `Potrošeno ${pointsToSpend} bodova za kupon`,
+      });
+    } catch (error) {
+      console.error('Error in spendPointsForCoupon:', error);
+      throw error;
     }
   }
 

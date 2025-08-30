@@ -8,6 +8,8 @@ const {
   Coupon,
   UserRestaurantVisit,
 } = require('../../models');
+const { sequelize } = require('../../models');
+const PointsService = require('../utils/pointsService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { Op } = require('sequelize');
 
@@ -210,49 +212,28 @@ const applyReferralCode = async (userId, referralCode) => {
   }
 };
 
-// Give registration bonus to both users
+// Give registration bonus to both users (points via PointsService, rewards recorded here)
 const giveRegistrationBonus = async (
   referrerId,
   referredUserId,
   referralId,
 ) => {
   try {
-    const REGISTRATION_BONUS = 10; // Points for registration
+    const pointsService = new PointsService(sequelize);
 
-    // Give points to referrer
-    let referrerPoints = await UserPoints.findOne({
-      where: { userId: referrerId },
-    });
-    if (!referrerPoints) {
-      referrerPoints = await UserPoints.create({
-        userId: referrerId,
-        totalPoints: 0,
-      });
-    }
-    await referrerPoints.update({
-      totalPoints: referrerPoints.totalPoints + REGISTRATION_BONUS,
-    });
+    // Award points through PointsService (both users)
+    await pointsService.addReferralRegistrationPoints(
+      referrerId,
+      referredUserId,
+      referralId,
+    );
 
-    // Give points to referred user
-    let referredPoints = await UserPoints.findOne({
-      where: { userId: referredUserId },
-    });
-    if (!referredPoints) {
-      referredPoints = await UserPoints.create({
-        userId: referredUserId,
-        totalPoints: 0,
-      });
-    }
-    await referredPoints.update({
-      totalPoints: referredPoints.totalPoints + REGISTRATION_BONUS,
-    });
-
-    // Create reward records
+    // Create reward records (remain as business artifacts)
     await ReferralReward.create({
       referralId,
       userId: referrerId,
       rewardType: 'POINTS',
-      amount: REGISTRATION_BONUS,
+      amount: 10,
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {
@@ -265,7 +246,7 @@ const giveRegistrationBonus = async (
       referralId,
       userId: referredUserId,
       rewardType: 'POINTS',
-      amount: REGISTRATION_BONUS,
+      amount: 10,
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {
@@ -338,7 +319,7 @@ const handleFirstVisit = async (userId, restaurantId) => {
   }
 };
 
-// Give visit bonus
+// Give visit bonus (points via PointsService, reward recorded here)
 const giveVisitBonus = async (
   referrerId,
   referredUserId,
@@ -346,24 +327,22 @@ const giveVisitBonus = async (
   restaurantId,
 ) => {
   try {
-    const VISIT_BONUS = 10; // Points for first visit
+    const pointsService = new PointsService(sequelize);
 
-    // Give points to referrer
-    const referrerPoints = await UserPoints.findOne({
-      where: { userId: referrerId },
-    });
-    if (referrerPoints) {
-      await referrerPoints.update({
-        totalPoints: referrerPoints.totalPoints + VISIT_BONUS,
-      });
-    }
+    // Award points to referrer for first visit
+    await pointsService.addReferralFirstVisitBonus(
+      referrerId,
+      referredUserId,
+      referralId,
+      restaurantId,
+    );
 
     // Create reward record
     await ReferralReward.create({
       referralId,
       userId: referrerId,
       rewardType: 'POINTS',
-      amount: VISIT_BONUS,
+      amount: 10,
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {

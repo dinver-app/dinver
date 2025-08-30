@@ -15,6 +15,8 @@ const {
   VisitValidation,
   Referral,
 } = require('../../models');
+const { sequelize } = require('../../models');
+const PointsService = require('../utils/pointsService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
@@ -1011,31 +1013,27 @@ const claimCoupon = async (req, res) => {
 
     // Deduct points for coupons with POINTS_AT_LEAST condition (both DINVER and RESTAURANT)
     if (coupon.conditionKind === 'POINTS_AT_LEAST') {
+      const pointsService = new PointsService(sequelize);
+      const pointsToDeduct = coupon.conditionValue;
+      await pointsService.spendPointsForCoupon(
+        userId,
+        coupon.id,
+        pointsToDeduct,
+        coupon.restaurantId || null,
+      );
+      // Keep audit for transparency (optional in addition to history log)
       const userPoints = await UserPoints.findOne({ where: { userId } });
-      if (userPoints) {
-        const pointsToDeduct = coupon.conditionValue;
-        const oldPoints = userPoints.totalPoints;
-        const newPoints = oldPoints - pointsToDeduct;
-
-        await userPoints.update({
-          totalPoints: newPoints,
-        });
-
-        // Log points deduction
-        await logAudit({
-          userId: userId,
-          action: ActionTypes.UPDATE,
-          entity: 'user_points',
-          entityId: userPoints.id,
-          changes: {
-            old: { totalPoints: oldPoints },
-            new: { totalPoints: newPoints },
-            reason: `Points deducted for claiming coupon ${coupon.id}`,
-            couponId: coupon.id,
-            pointsDeducted: pointsToDeduct,
-          },
-        });
-      }
+      await logAudit({
+        userId: userId,
+        action: ActionTypes.UPDATE,
+        entity: 'user_points',
+        entityId: userPoints?.id || null,
+        changes: {
+          reason: `Points deducted for claiming coupon ${coupon.id}`,
+          couponId: coupon.id,
+          pointsDeducted: pointsToDeduct,
+        },
+      });
     }
 
     // Generate QR token hash
