@@ -232,7 +232,7 @@ const giveRegistrationBonus = async (
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {
-        reason: 'Registration bonus for referrer',
+        reason: 'referral_registration_referrer',
         bonusType: 'registration',
       },
     });
@@ -245,7 +245,7 @@ const giveRegistrationBonus = async (
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {
-        reason: 'Registration bonus for referred user',
+        reason: 'referral_registration_referred',
         bonusType: 'registration',
       },
     });
@@ -341,7 +341,7 @@ const giveVisitBonus = async (
       status: 'CLAIMED',
       claimedAt: new Date(),
       metadata: {
-        reason: 'Visit bonus for referrer',
+        reason: 'referral_first_visit_referrer',
         bonusType: 'visit',
         restaurantId,
       },
