@@ -111,7 +111,6 @@ module.exports = {
       establishmentPerkIds,
       dietaryTypeIds,
       minRating,
-      onlyClaimedRestaurants,
       mode,
       radiusKm = 10,
       limit = 3000,
@@ -160,7 +159,10 @@ module.exports = {
           'priceCategoryId',
           'createdAt',
         ],
-        where: {},
+        where: {
+          // Uvijek vraćamo samo claimane (partnerske) restorane
+          isClaimed: true,
+        },
         include: [
           {
             model: PriceCategory,
@@ -170,11 +172,6 @@ module.exports = {
           },
         ],
       };
-
-      // Filter for claimed restaurants
-      if (onlyClaimedRestaurants === 'true') {
-        restaurantQuery.where.isClaimed = true;
-      }
 
       // Dodaj filter za ocjene
       if (minRating) {
@@ -279,7 +276,21 @@ module.exports = {
               name: { [Op.iLike]: `%${term}%` },
             })),
           },
-          include: [{ model: MenuItem, as: 'menuItem' }],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              required: true,
+              where: { isActive: true },
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name', 'description'],
+                },
+              ],
+            },
+          ],
         });
 
         // Search in drink items
@@ -289,7 +300,21 @@ module.exports = {
               name: { [Op.iLike]: `%${term}%` },
             })),
           },
-          include: [{ model: DrinkItem, as: 'drinkItem' }],
+          include: [
+            {
+              model: DrinkItem,
+              as: 'drinkItem',
+              required: true,
+              where: { isActive: true },
+              include: [
+                {
+                  model: DrinkItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name', 'description'],
+                },
+              ],
+            },
+          ],
         });
 
         // Get restaurant IDs from menu and drink items
@@ -423,6 +448,117 @@ module.exports = {
               menuCoverageMatched += 1;
           }
 
+          // Build matchedItems chips (aggregate by item, attach both translations)
+          const groupedByItem = new Map();
+          const listA = menuByRestaurant.get(restaurant.id) || [];
+          const listB = drinkByRestaurant.get(restaurant.id) || [];
+
+          const computeItemMaxSim = (translations, fallbackName) => {
+            let s = 0;
+            const pool =
+              translations && translations.length
+                ? translations
+                : [{ name: fallbackName }];
+            for (const tr of pool) {
+              for (const term of searchTerms) {
+                s = Math.max(s, computeSimilarity(term, tr.name));
+                if (s === 1) break;
+              }
+              if (s === 1) break;
+            }
+            return s;
+          };
+
+          for (const mi of listA) {
+            const itemId = mi.menuItem.id;
+            const allTr = mi.menuItem.translations || [];
+            const sim = computeItemMaxSim(allTr, mi.name);
+            if (sim >= 0.6) {
+              const priceVal =
+                mi.menuItem.price != null
+                  ? parseFloat(mi.menuItem.price)
+                  : null;
+              const trMap = {};
+              (allTr.length
+                ? allTr
+                : [
+                    {
+                      language: mi.language,
+                      name: mi.name,
+                      description: mi.description,
+                    },
+                  ]
+              ).forEach((t) => {
+                if (t.language)
+                  trMap[t.language] = {
+                    name: t.name,
+                    description: t.description || null,
+                  };
+              });
+              const existing = groupedByItem.get(itemId);
+              if (!existing || sim > existing.sim) {
+                groupedByItem.set(itemId, {
+                  id: itemId,
+                  type: 'food',
+                  price: priceVal,
+                  translations: trMap,
+                  sim,
+                });
+              } else {
+                existing.translations = { ...existing.translations, ...trMap };
+              }
+            }
+          }
+          for (const di of listB) {
+            const itemId = di.drinkItem.id;
+            const allTr = di.drinkItem.translations || [];
+            const sim = computeItemMaxSim(allTr, di.name);
+            if (sim >= 0.6) {
+              const priceVal =
+                di.drinkItem.price != null
+                  ? parseFloat(di.drinkItem.price)
+                  : null;
+              const trMap = {};
+              (allTr.length
+                ? allTr
+                : [
+                    {
+                      language: di.language,
+                      name: di.name,
+                      description: di.description,
+                    },
+                  ]
+              ).forEach((t) => {
+                if (t.language)
+                  trMap[t.language] = {
+                    name: t.name,
+                    description: t.description || null,
+                  };
+              });
+              const existing = groupedByItem.get(itemId);
+              if (!existing || sim > existing.sim) {
+                groupedByItem.set(itemId, {
+                  id: itemId,
+                  type: 'drink',
+                  price: priceVal,
+                  translations: trMap,
+                  sim,
+                });
+              } else {
+                existing.translations = { ...existing.translations, ...trMap };
+              }
+            }
+          }
+
+          const itemCandidates = Array.from(groupedByItem.values());
+          itemCandidates.sort((a, b) => b.sim - a.sim);
+          const matchedItems = itemCandidates.slice(0, 3).map((it) => ({
+            id: it.id,
+            price: it.price != null ? Number(it.price.toFixed(2)) : null,
+            type: it.type,
+            translations: it.translations,
+          }));
+
           // Determine matchType and smartScore
           let matchType = 'none';
           const distanceWeight = 1 / (1 + (isFinite(distance) ? distance : 0)); // 0..1
@@ -453,6 +589,9 @@ module.exports = {
                   : nameAvg > 0
                     ? 'name'
                     : 'none';
+            const topItemBoost = matchedItems.length
+              ? itemCandidates[0].sim * 25
+              : 0;
             smartScore =
               coverage * 1000 + // hard group separation 2/2 > 1/2 > 0/2
               coverageScore * 100 +
@@ -460,6 +599,7 @@ module.exports = {
               distanceWeight * 5 +
               popularityBoost * 3 +
               ratingBoost * 3 +
+              topItemBoost +
               (userFavorites.has(restaurant.id) ? 1 : 0);
           } else {
             // Single-term: fair comparison between menu and name
@@ -476,11 +616,15 @@ module.exports = {
                   : 'name';
             // Penalize missing dimension by averaging both signals
             const core = (menuSim + nameSim) / 2;
+            const topItemBoost = matchedItems.length
+              ? itemCandidates[0].sim * 30
+              : 0;
             smartScore =
               core * 100 +
               distanceWeight * 8 +
               popularityBoost * 4 +
               ratingBoost * 4 +
+              topItemBoost +
               (userFavorites.has(restaurant.id) ? 2 : 0);
 
             // Attach core to the restaurant object for FE visibility
@@ -500,6 +644,7 @@ module.exports = {
               totalTerms: searchTerms.length,
             },
             perTerm: { nameSims, menuBestSims },
+            matchedItems,
             ...(searchTerms.length === 1
               ? { core: restaurant._singleTermCore }
               : {}),

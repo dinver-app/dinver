@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       return code;
     }
 
-    // Helper method to get referral statistics
+    // Helper method to get referral statistics (two-phase model)
     async getStatistics() {
       const referrals = await this.getReferrals({
         include: [
@@ -60,23 +60,15 @@ module.exports = (sequelize, DataTypes) => {
 
       const stats = {
         total: referrals.length,
-        pending: 0,
         registered: 0,
-        firstVisit: 0,
         completed: 0,
         totalRewards: parseFloat(this.totalRewards) || 0,
       };
 
       referrals.forEach((referral) => {
         switch (referral.status) {
-          case 'PENDING':
-            stats.pending++;
-            break;
           case 'REGISTERED':
             stats.registered++;
-            break;
-          case 'FIRST_VISIT':
-            stats.firstVisit++;
             break;
           case 'COMPLETED':
             stats.completed++;
