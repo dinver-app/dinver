@@ -74,6 +74,12 @@ module.exports = (sequelize, DataTypes) => {
           'visit_qr',
           'reservation_visit',
           'achievement_unlocked',
+          // Referral-related action types
+          'referral_registration_referrer',
+          'referral_registration_referred',
+          'referral_visit_referrer',
+          // Points deduction (spending)
+          'points_spent_coupon',
         ),
         allowNull: false,
       },
