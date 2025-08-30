@@ -1725,7 +1725,7 @@ const nearYou = async (req, res) => {
     const userLat = parseFloat(latitude);
     const userLon = parseFloat(longitude);
 
-    // Get all restaurants
+    // Get all restaurants (only claimed)
     const restaurants = await Restaurant.findAll({
       attributes: [
         'id',
@@ -1743,6 +1743,7 @@ const nearYou = async (req, res) => {
         'isClaimed',
         'priceCategoryId',
       ],
+      where: { isClaimed: true },
     });
 
     // Calculate distance for each restaurant and filter those within 60km
@@ -2510,11 +2511,12 @@ const getRestaurantsMap = async (req, res) => {
       return res.status(400).json({ error: 'Invalid coordinates provided' });
     }
 
-    // Get all restaurants with coordinates
+    // Get all restaurants with coordinates (only claimed)
     const restaurants = await Restaurant.findAll({
       where: {
         latitude: { [Op.not]: null },
         longitude: { [Op.not]: null },
+        isClaimed: true,
       },
       attributes: [
         'id',
