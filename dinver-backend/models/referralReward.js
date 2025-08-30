@@ -20,13 +20,7 @@ module.exports = (sequelize, DataTypes) => {
         onUpdate: 'CASCADE',
       });
 
-      // A reward can be associated with a coupon
-      ReferralReward.belongsTo(models.Coupon, {
-        foreignKey: 'couponId',
-        as: 'coupon',
-        onDelete: 'SET NULL',
-        onUpdate: 'CASCADE',
-      });
+      // No coupon linkage for referral rewards (POINTS only)
     }
 
     // Claim flow removed as rewards are auto-claimed in current design
@@ -47,23 +41,10 @@ module.exports = (sequelize, DataTypes) => {
         isExpired: this.isExpired(),
       };
 
-      switch (this.rewardType) {
-        case 'POINTS':
-          info.titleCode = 'points_reward';
-          info.descriptionCode = 'points_added_to_account';
-          info.icon = '⭐';
-          break;
-        case 'COUPON':
-          info.titleCode = 'coupon_reward';
-          info.descriptionCode = 'coupon_added_to_wallet';
-          info.icon = '🎫';
-          break;
-        case 'CASH':
-          info.titleCode = 'cash_reward';
-          info.descriptionCode = 'cash_reward_received';
-          info.icon = '💰';
-          break;
-      }
+      // Only POINTS are supported for referral rewards
+      info.titleCode = 'points_reward';
+      info.descriptionCode = 'points_added_to_account';
+      info.icon = '⭐';
 
       return info;
     }
@@ -85,17 +66,15 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       rewardType: {
-        type: DataTypes.ENUM('POINTS', 'COUPON', 'CASH'),
+        type: DataTypes.ENUM('POINTS'),
         allowNull: false,
+        defaultValue: 'POINTS',
       },
       amount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
       },
-      couponId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-      },
+      // couponId removed – referral rewards are POINTS only
       status: {
         type: DataTypes.ENUM('CLAIMED'),
         allowNull: false,
