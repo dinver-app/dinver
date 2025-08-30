@@ -841,7 +841,7 @@ const getPopularRestaurants = async (req, res) => {
 
     const restaurantIds = clicks.map((c) => c.restaurant_id);
     const restaurants = await Restaurant.findAll({
-      where: { id: restaurantIds },
+      where: { id: restaurantIds, isClaimed: true },
       attributes: [
         'id',
         'name',
