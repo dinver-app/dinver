@@ -94,28 +94,27 @@ module.exports = (sequelize, DataTypes) => {
       };
     }
 
-    // Helper method to format timeline (i18n-ready, codes only)
+    // Helper method to format timeline (i18n-ready)
+    // Always returns both steps with completed flag; date is null if not completed
     getTimeline() {
-      const timeline = [];
+      const registeredCompleted = !!(this.registeredAt || this.createdAt);
+      const completedCompleted = !!this.completedAt;
 
-      // Registration event (we create referral on registration, so always present)
-      timeline.push({
-        code: 'registered',
-        date: this.registeredAt || this.createdAt,
-        completed: !!(this.registeredAt || this.createdAt),
-      });
-
-      // Completion event (first visit confirmed and rewards granted)
-      if (this.completedAt) {
-        timeline.push({
+      return [
+        {
+          code: 'registered',
+          date: registeredCompleted
+            ? this.registeredAt || this.createdAt
+            : null,
+          completed: registeredCompleted,
+        },
+        {
           code: 'completed',
-          date: this.completedAt,
-          completed: true,
+          date: completedCompleted ? this.completedAt : null,
+          completed: completedCompleted,
           restaurantId: this.firstVisitRestaurantId || null,
-        });
-      }
-
-      return timeline;
+        },
+      ];
     }
   }
 
