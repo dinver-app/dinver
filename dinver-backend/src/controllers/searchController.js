@@ -11,6 +11,46 @@ const {
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
 
+// ----------------- Lightweight cache for viewCounts -----------------
+let viewCountsCache = {
+  fetchedAt: 0,
+  data: new Map(),
+};
+const VIEW_COUNTS_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+async function getCachedViewCounts() {
+  const now = Date.now();
+  if (now - viewCountsCache.fetchedAt < VIEW_COUNTS_TTL_MS) {
+    return viewCountsCache.data;
+  }
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const rows = await AnalyticsEvent.findAll({
+    attributes: [
+      'restaurant_id',
+      [
+        Sequelize.fn(
+          'COUNT',
+          Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
+        ),
+        'userCount',
+      ],
+    ],
+    where: {
+      event_type: 'restaurant_view',
+      session_id: { [Op.ne]: null },
+      timestamp: { [Op.gte]: weekAgo },
+    },
+    group: ['restaurant_id'],
+  });
+  const map = new Map();
+  rows.forEach((item) => {
+    map.set(item.restaurant_id, parseInt(item.get('userCount'), 10));
+  });
+  viewCountsCache = { fetchedAt: now, data: map };
+  return map;
+}
+
 // ----------------- Helpers for matching & scoring -----------------
 function normalizeText(text) {
   if (!text) return '';
@@ -130,6 +170,9 @@ module.exports = {
       searchTerms.length > 0 ? req.query.sortBy || 'match_score' : sortBy;
 
     try {
+      const hasCoordinates =
+        typeof latitude !== 'undefined' && typeof longitude !== 'undefined';
+      const MAX_SEARCH_DISTANCE_KM = 60;
       // Get user favorites if authenticated
       let userFavorites = new Set();
       if (userId) {
@@ -291,6 +334,7 @@ module.exports = {
               ],
             },
           ],
+          limit: 300,
         });
 
         // Search in drink items
@@ -315,6 +359,7 @@ module.exports = {
               ],
             },
           ],
+          limit: 300,
         });
 
         // Get restaurant IDs from menu and drink items
@@ -354,46 +399,8 @@ module.exports = {
         // Get candidate restaurants with all data
         const finalRestaurants = await Restaurant.findAll(restaurantQuery);
 
-        // Get restaurant view counts from AnalyticsEvent for popularity calculation
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-
-        const viewCounts = await AnalyticsEvent.findAll({
-          attributes: [
-            'restaurant_id',
-            [
-              Sequelize.fn(
-                'COUNT',
-                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
-              ),
-              'userCount',
-            ],
-          ],
-          where: {
-            event_type: 'restaurant_view',
-            session_id: { [Op.ne]: null },
-            timestamp: { [Op.gte]: weekAgo },
-          },
-          group: ['restaurant_id'],
-          order: [
-            [
-              Sequelize.fn(
-                'COUNT',
-                Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
-              ),
-              'DESC',
-            ],
-          ],
-        });
-
-        // Create a map of restaurant_id to view count
-        const viewCountMap = new Map();
-        viewCounts.forEach((item) => {
-          viewCountMap.set(
-            item.restaurant_id,
-            parseInt(item.get('userCount'), 10),
-          );
-        });
+        // Get cached popularity map
+        const viewCountMap = await getCachedViewCounts();
 
         // Calculate distance and prepare final response with smart scoring
         const restaurantsWithMetrics = finalRestaurants.map((restaurant) => {
@@ -592,15 +599,17 @@ module.exports = {
             const topItemBoost = matchedItems.length
               ? itemCandidates[0].sim * 25
               : 0;
+            const lowNamePenalty = nameAvg < 0.2 ? 20 : 0;
             smartScore =
               coverage * 1000 + // hard group separation 2/2 > 1/2 > 0/2
               coverageScore * 100 +
-              nameAvg * 50 +
-              distanceWeight * 5 +
-              popularityBoost * 3 +
+              nameAvg * 60 +
+              distanceWeight * 6 +
+              popularityBoost * 2.5 +
               ratingBoost * 3 +
               topItemBoost +
-              (userFavorites.has(restaurant.id) ? 1 : 0);
+              (userFavorites.has(restaurant.id) ? 1 : 0) -
+              lowNamePenalty;
           } else {
             // Single-term: fair comparison between menu and name
             const term = searchTerms[0];
@@ -621,14 +630,23 @@ module.exports = {
               : 0;
             smartScore =
               core * 100 +
-              distanceWeight * 8 +
-              popularityBoost * 4 +
-              ratingBoost * 4 +
+              distanceWeight * 12 +
+              popularityBoost * 2 +
+              ratingBoost * 3 +
               topItemBoost +
               (userFavorites.has(restaurant.id) ? 2 : 0);
 
             // Attach core to the restaurant object for FE visibility
             restaurant._singleTermCore = core;
+          }
+
+          // Build reason signal
+          let topItemName = null;
+          if (matchedItems.length) {
+            // pick any translation: prefer 'hr', then 'en', else first
+            const tr = matchedItems[0].translations || {};
+            topItemName =
+              tr.hr?.name || tr.en?.name || Object.values(tr)[0]?.name || null;
           }
 
           return {
@@ -639,6 +657,7 @@ module.exports = {
             isFavorite: userFavorites.has(restaurant.id),
             smartScore,
             matchType,
+            reason: { basis: matchType, topItemName },
             menuCoverage: {
               matchedCount: menuCoverageMatched,
               totalTerms: searchTerms.length,
@@ -651,10 +670,18 @@ module.exports = {
           };
         });
 
+        // Apply default radius filter for main (non-map) search
+        let listForDisplay = restaurantsWithMetrics;
+        if (hasCoordinates) {
+          listForDisplay = listForDisplay.filter(
+            (r) => isFinite(r.distance) && r.distance <= MAX_SEARCH_DISTANCE_KM,
+          );
+        }
+
         // Sort results: smart by default when searching, support existing sortBy
         if (hasComma && searchTerms.length > 1) {
           // First by menu coverage group, then by smartScore desc
-          restaurantsWithMetrics.sort((a, b) => {
+          listForDisplay.sort((a, b) => {
             const covA = a.menuCoverage?.matchedCount || 0;
             const covB = b.menuCoverage?.matchedCount || 0;
             if (covB !== covA) return covB - covA;
@@ -663,28 +690,24 @@ module.exports = {
         } else {
           switch (computedSortBy) {
             case 'rating':
-              restaurantsWithMetrics.sort((a, b) => b.rating - a.rating);
+              listForDisplay.sort((a, b) => b.rating - a.rating);
               break;
             case 'distance':
-              restaurantsWithMetrics.sort((a, b) => a.distance - b.distance);
+              listForDisplay.sort((a, b) => a.distance - b.distance);
               break;
             case 'distance_rating':
-              restaurantsWithMetrics.sort((a, b) => {
+              listForDisplay.sort((a, b) => {
                 const scoreA = (a.rating * 5) / (a.distance + 1); // +1 to avoid division by zero
                 const scoreB = (b.rating * 5) / (b.distance + 1);
                 return scoreB - scoreA;
               });
               break;
             case 'core':
-              restaurantsWithMetrics.sort(
-                (a, b) => (b.core || 0) - (a.core || 0),
-              );
+              listForDisplay.sort((a, b) => (b.core || 0) - (a.core || 0));
               break;
             case 'match_score':
             default:
-              restaurantsWithMetrics.sort(
-                (a, b) => b.smartScore - a.smartScore,
-              );
+              listForDisplay.sort((a, b) => b.smartScore - a.smartScore);
           }
         }
 
@@ -749,65 +772,25 @@ module.exports = {
         const startIndex = (page - 1) * pageLimit;
         const endIndex = page * pageLimit;
 
-        const paginatedRestaurants = restaurantsWithMetrics.slice(
-          startIndex,
-          endIndex,
-        );
-        const totalPages = Math.ceil(restaurantsWithMetrics.length / pageLimit);
+        const paginatedRestaurants = listForDisplay.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
-        return res.json({
+        const responsePayload = {
           restaurants: paginatedRestaurants,
           pagination: {
             currentPage: page,
             totalPages,
-            totalRestaurants: restaurantsWithMetrics.length,
+            totalRestaurants: listForDisplay.length,
           },
-        });
+        };
+        return res.json(responsePayload);
       }
 
       // If no search terms, just return filtered restaurants
       const restaurants = await Restaurant.findAll(restaurantQuery);
 
-      // Get restaurant view counts from AnalyticsEvent for popularity calculation
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-
-      const viewCounts = await AnalyticsEvent.findAll({
-        attributes: [
-          'restaurant_id',
-          [
-            Sequelize.fn(
-              'COUNT',
-              Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
-            ),
-            'userCount',
-          ],
-        ],
-        where: {
-          event_type: 'restaurant_view',
-          session_id: { [Op.ne]: null },
-          timestamp: { [Op.gte]: weekAgo },
-        },
-        group: ['restaurant_id'],
-        order: [
-          [
-            Sequelize.fn(
-              'COUNT',
-              Sequelize.fn('DISTINCT', Sequelize.col('session_id')),
-            ),
-            'DESC',
-          ],
-        ],
-      });
-
-      // Create a map of restaurant_id to view count
-      const viewCountMap = new Map();
-      viewCounts.forEach((item) => {
-        viewCountMap.set(
-          item.restaurant_id,
-          parseInt(item.get('userCount'), 10),
-        );
-      });
+      // Get cached popularity map
+      const viewCountMap = await getCachedViewCounts();
 
       const restaurantsWithDistance = restaurants.map((restaurant) => {
         const distance = calculateDistance(
@@ -835,23 +818,31 @@ module.exports = {
         };
       });
 
+      // Apply default radius filter for main (non-map) search
+      let listForDisplay = restaurantsWithDistance;
+      if (hasCoordinates) {
+        listForDisplay = listForDisplay.filter(
+          (r) => isFinite(r.distance) && r.distance <= MAX_SEARCH_DISTANCE_KM,
+        );
+      }
+
       // Sort results based on sortBy parameter
       switch (sortBy) {
         case 'rating':
-          restaurantsWithDistance.sort((a, b) => b.rating - a.rating);
+          listForDisplay.sort((a, b) => b.rating - a.rating);
           break;
         case 'distance':
-          restaurantsWithDistance.sort((a, b) => a.distance - b.distance);
+          listForDisplay.sort((a, b) => a.distance - b.distance);
           break;
         case 'distance_rating':
-          restaurantsWithDistance.sort((a, b) => {
+          listForDisplay.sort((a, b) => {
             const scoreA = (a.rating * 5) / (a.distance + 1);
             const scoreB = (b.rating * 5) / (b.distance + 1);
             return scoreB - scoreA;
           });
           break;
         default:
-          restaurantsWithDistance.sort((a, b) => a.distance - b.distance);
+          listForDisplay.sort((a, b) => a.distance - b.distance);
       }
 
       // If map mode, return GeoJSON format
@@ -915,20 +906,18 @@ module.exports = {
       const startIndex = (page - 1) * pageLimit;
       const endIndex = page * pageLimit;
 
-      const paginatedRestaurants = restaurantsWithDistance.slice(
-        startIndex,
-        endIndex,
-      );
-      const totalPages = Math.ceil(restaurantsWithDistance.length / pageLimit);
+      const paginatedRestaurants = listForDisplay.slice(startIndex, endIndex);
+      const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
-      return res.json({
+      const responsePayload2 = {
         restaurants: paginatedRestaurants,
         pagination: {
           currentPage: page,
           totalPages,
-          totalRestaurants: restaurantsWithDistance.length,
+          totalRestaurants: listForDisplay.length,
         },
-      });
+      };
+      return res.json(responsePayload2);
     } catch (error) {
       console.error('Search error:', error);
       return res
