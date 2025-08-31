@@ -28,6 +28,7 @@ const registerPushToken = async (req, res) => {
 
     if (pushToken) {
       // Update existing token
+      // Rebind token to current user session
       await pushToken.update({
         userId,
         deviceInfo,
@@ -51,6 +52,7 @@ const registerPushToken = async (req, res) => {
       }
     } else {
       // Create new token
+      // Create and bind token to current user session (or anonymous)
       pushToken = await PushToken.create({
         token,
         userId,

@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User, UserSettings } = require('../../models');
+const { User, UserSettings, PushToken } = require('../../models');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { generateTokens } = require('../../utils/tokenUtils');
@@ -262,7 +262,7 @@ const login = async (req, res) => {
   }
 };
 
-const logout = (req, res) => {
+const logout = async (req, res) => {
   // Clear both cookies
   res.clearCookie('appAccessToken', {
     httpOnly: true,
@@ -294,6 +294,25 @@ const logout = (req, res) => {
     secure: true,
     sameSite: 'none',
   });
+  try {
+    // Optionally detach/deactivate device push token on logout
+    const providedToken = req.body?.pushToken || req.headers['x-push-token'];
+    if (providedToken) {
+      const tokenRow = await PushToken.findOne({
+        where: { token: providedToken },
+      });
+      if (tokenRow) {
+        // Detach from user but keep token active for public pushes
+        await tokenRow.update({
+          isActive: true,
+          userId: null,
+          lastSeen: new Date(),
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to detach push token on logout:', e?.message || e);
+  }
   res.json({ message: 'Logout successful' });
 };
 
