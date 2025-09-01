@@ -93,7 +93,8 @@ const sendPushNotificationToUser = async (pushToken, message) => {
  */
 const sendPushNotificationToUsers = async (userIds, message) => {
   try {
-    // Dohvati push tokene za korisnike iz nove tablice
+    // Dohvati push tokene AKTUALNO PRIJAVLJENIH korisnika
+    // Only tokens that are active AND currently bound to the target userId(s)
     const pushTokens = await PushToken.findAll({
       where: {
         userId: userIds,
@@ -105,7 +106,7 @@ const sendPushNotificationToUsers = async (userIds, message) => {
     const tokenList = pushTokens.map((pt) => pt.token);
 
     if (tokenList.length === 0) {
-      console.log('No push tokens found for the specified users');
+      console.log('No active bound push tokens for target users');
       return { success: 0, failure: 0, errors: [] };
     }
 
