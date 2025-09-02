@@ -10,31 +10,21 @@ const PointsService = require('../utils/pointsService');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { Op } = require('sequelize');
 
-// Generate QR code token for a restaurant visit
-const generateVisitToken = async (req, res) => {
+// User generates own short-lived QR token
+const generateUserVisitToken = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
-    const adminId = req.user.id;
+    const userId = req.user.id;
 
-    // Check if restaurant exists
-    const restaurant = await Restaurant.findByPk(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ error: 'restaurant_not_found' });
-    }
-
-    // Create validation token with JWT - 10 minuta
     const tokenPayload = {
-      restaurantId,
+      userId,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 3 * 60 * 1000), // 3 minute
+      expiresAt: new Date(Date.now() + 3 * 60 * 1000), // 3 minutes
     };
 
     const validationToken = jwt.sign(tokenPayload, process.env.JWT_SECRET);
 
-    // Create visit validation record (admin record - bez userId)
     await VisitValidation.create({
-      restaurantId,
-      generatedBy: adminId, // Tko je generirao token
+      userId,
       validationToken,
       expiresAt: tokenPayload.expiresAt,
     });
@@ -44,64 +34,66 @@ const generateVisitToken = async (req, res) => {
       expiresAt: tokenPayload.expiresAt,
     });
   } catch (error) {
-    console.error('Error generating visit token:', error);
-    res.status(500).json({ error: 'Failed to generate visit token' });
+    console.error('Error generating user visit token:', error);
+    res.status(500).json({ error: 'Failed to generate user visit token' });
   }
 };
 
-// Validate a visit token
-const validateVisit = async (req, res) => {
+// Admin scans user's QR to validate visit
+const adminScanUserToken = async (req, res) => {
   try {
+    const { restaurantId } = req.params;
     const { token } = req.body;
-    const userId = req.user.id;
+    const adminId = req.user.id;
 
-    // Verify and decode token
-    let decodedToken;
+    // Basic restaurant existence check
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'restaurant_not_found' });
+    }
+
+    // Verify token format
     try {
-      decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       return res.status(400).json({ error: 'invalid_token' });
     }
 
-    // Find validation record - samo provjeri da nije istekli
-    const validation = await VisitValidation.findOne({
+    // Find pending user token
+    const pending = await VisitValidation.findOne({
       where: {
         validationToken: token,
-        expiresAt: {
-          [Op.gt]: new Date(),
-        },
-        userId: null, // Mora biti admin record (nije još korišten)
+        userId: { [Op.ne]: null },
+        restaurantId: null,
+        expiresAt: { [Op.gt]: new Date() },
       },
     });
 
-    if (!validation) {
+    if (!pending) {
       return res.status(400).json({ error: 'token_expired_or_invalid' });
     }
 
-    // Provjeri zadnji posjet ovom restoranu u zadnjih 30 dana
+    const userId = pending.userId;
+
+    // Check last visit within 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const lastVisit = await VisitValidation.findOne({
       where: {
-        restaurantId: decodedToken.restaurantId,
+        restaurantId,
         userId,
-        usedAt: {
-          [Op.gte]: thirtyDaysAgo,
-        },
+        usedAt: { [Op.gte]: thirtyDaysAgo },
       },
       order: [['usedAt', 'DESC']],
     });
 
-    // Automatski pronađi rezervaciju za danas
+    // Detect reservation for today
     let isReservationValid = false;
     let reservation = null;
 
-    // Get today's date at midnight for comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Format date in YYYY-MM-DD format using local time
     const todaysDate =
       today.getFullYear() +
       '-' +
@@ -109,11 +101,10 @@ const validateVisit = async (req, res) => {
       '-' +
       String(today.getDate()).padStart(2, '0');
 
-    // Pronađi confirmed rezervaciju za danas
     reservation = await Reservation.findOne({
       where: {
         userId,
-        restaurantId: decodedToken.restaurantId,
+        restaurantId,
         status: 'confirmed',
         date: todaysDate,
       },
@@ -134,14 +125,11 @@ const validateVisit = async (req, res) => {
 
     if (reservation) {
       isReservationValid = true;
-
-      // Update reservation status to completed
       await reservation.update({
         status: 'completed',
-        updatedAt: new Date(), // Force update timestamp for thread expiry calculation
+        updatedAt: new Date(),
       });
 
-      // Send thank you email with review invitation
       await sendReservationEmail({
         to: reservation.user.email,
         type: 'visit_completed',
@@ -151,7 +139,6 @@ const validateVisit = async (req, res) => {
         },
       });
     } else {
-      // Ako nema rezervacije, provjeri zadnji posjet u zadnjih 30 dana
       if (lastVisit) {
         const nextValidDate = new Date(lastVisit.usedAt);
         nextValidDate.setDate(nextValidDate.getDate() + 30);
@@ -162,36 +149,40 @@ const validateVisit = async (req, res) => {
       }
     }
 
-    // Kreiraj NOVI VisitValidation record za ovog gosta
+    // Create visit record
     const reviewExpiration = new Date();
-    reviewExpiration.setDate(reviewExpiration.getDate() + 14); // 14 days to leave a review
+    reviewExpiration.setDate(reviewExpiration.getDate() + 14);
 
     await VisitValidation.create({
-      restaurantId: decodedToken.restaurantId,
+      restaurantId,
       userId,
-      validationToken: token, // Isti token
-      expiresAt: validation.expiresAt, // Isti expiresAt
+      validationToken: token,
+      expiresAt: pending.expiresAt,
       usedAt: new Date(),
       canLeaveReviewUntil: reviewExpiration,
       reservationId: isReservationValid ? reservation.id : null,
-      generatedBy: validation.generatedBy, // Zadrži tko je generirao
+      generatedBy: adminId,
     });
 
-    // Award points through PointsService
+    // Invalidate pending token
+    await pending.update({
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    // Award points
     const pointsService = new PointsService(sequelize);
     await pointsService.addVisitPoints(
       userId,
-      validation.restaurantId,
+      restaurantId,
       isReservationValid,
     );
 
-    // Handle referral progression (first visit)
+    // Referral first visit
     try {
       const { handleFirstVisit } = require('./referralController');
-      await handleFirstVisit(userId, validation.restaurantId);
+      await handleFirstVisit(userId, restaurantId);
     } catch (referralError) {
       console.error('Referral error during visit validation:', referralError);
-      // Don't fail visit validation if referral fails, just log it
     }
 
     res.json({
@@ -200,46 +191,12 @@ const validateVisit = async (req, res) => {
       wasReservation: isReservationValid,
     });
   } catch (error) {
-    console.error('Error validating visit:', error);
+    console.error('Error scanning user token:', error);
     res.status(500).json({ error: 'Failed to validate visit' });
   }
 };
 
-// Close QR code (admin only)
-const closeQRCode = async (req, res) => {
-  try {
-    const { token } = req.params; // Sada je token u URL-u, ne u body-ju
-    const adminId = req.user.id;
-
-    // Find and invalidate the token by setting expiresAt to past
-    const validation = await VisitValidation.findOne({
-      where: {
-        validationToken: token,
-        generatedBy: adminId, // Samo admin koji je generirao može zatvoriti
-        expiresAt: {
-          [Op.gt]: new Date(),
-        },
-        userId: null, // Mora biti admin record
-      },
-    });
-
-    if (!validation) {
-      return res.status(404).json({ error: 'token_not_found_or_expired' });
-    }
-
-    // Set expiresAt to past to invalidate token
-    await validation.update({
-      expiresAt: new Date(Date.now() - 1000), // 1 sekunda u prošlosti
-    });
-
-    res.json({
-      message: 'qr_code_closed',
-    });
-  } catch (error) {
-    console.error('Error closing QR code:', error);
-    res.status(500).json({ error: 'Failed to close QR code' });
-  }
-};
+// Removed: close QR code flow is deprecated in new model
 
 // Get validation status for a restaurant
 const getValidationStatus = async (req, res) => {
@@ -270,8 +227,7 @@ const getValidationStatus = async (req, res) => {
 };
 
 module.exports = {
-  generateVisitToken,
-  validateVisit,
-  closeQRCode,
+  generateUserVisitToken,
+  adminScanUserToken,
   getValidationStatus,
 };

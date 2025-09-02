@@ -8,32 +8,19 @@ const {
 
 const router = express.Router();
 
-// ===== ADMIN RUTES =====
-// Generate QR code token for restaurant
 router.post(
-  '/restaurants/:restaurantId/qr-token',
+  '/visit-qr/generate',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitValidationController.generateUserVisitToken,
+);
+
+router.post(
+  '/restaurants/:restaurantId/scan-user',
   appApiKeyAuth,
   appAuthenticateToken,
   checkAdmin,
-  visitValidationController.generateVisitToken,
-);
-
-// Close QR code
-router.post(
-  '/qr-token/:token/close',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  checkAdmin,
-  visitValidationController.closeQRCode,
-);
-
-// ===== USER RUTES =====
-// Validate visit token (scan QR code)
-router.post(
-  '/qr-token/validate',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  visitValidationController.validateVisit,
+  visitValidationController.adminScanUserToken,
 );
 
 // Get validation status for restaurant (can leave review)
