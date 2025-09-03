@@ -397,7 +397,15 @@ async function viewRestaurant(req, res) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    res.json(restaurant);
+    const data = restaurant.get();
+    if (data.thumbnailUrl) {
+      data.thumbnailUrl = getMediaUrl(data.thumbnailUrl, 'image');
+    }
+    if (data.images && Array.isArray(data.images)) {
+      data.images = data.images.map((key) => getMediaUrl(key, 'image'));
+    }
+
+    res.json(data);
   } catch (error) {
     res
       .status(500)
@@ -1049,7 +1057,14 @@ const getRestaurantById = async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
-    res.json(restaurant);
+    const data = restaurant.get();
+    if (data.thumbnailUrl) {
+      data.thumbnailUrl = getMediaUrl(data.thumbnailUrl, 'image');
+    }
+    if (data.images && Array.isArray(data.images)) {
+      data.images = data.images.map((key) => getMediaUrl(key, 'image'));
+    }
+    res.json(data);
   } catch (error) {
     console.error('Error fetching restaurant by ID:', error);
     res.status(500).json({ error: 'Failed to fetch restaurant' });
@@ -1457,11 +1472,24 @@ const getSampleRestaurants = async (req, res) => {
       MAX_PAGE,
     );
 
+    // Transform thumbnail URLs
+    const restaurantsWithUrls = restaurantsWithStatus.map((r) => ({
+      ...r,
+      thumbnailUrl: r.thumbnailUrl
+        ? getMediaUrl(r.thumbnailUrl, 'image')
+        : null,
+    }));
+
     res.json({
       totalRestaurants: restaurantsWithStatus.length,
       totalPages,
       currentPage: page,
-      restaurants: paginatedRestaurants,
+      restaurants: paginatedRestaurants.map((r) => ({
+        ...r,
+        thumbnailUrl: r.thumbnailUrl
+          ? getMediaUrl(r.thumbnailUrl, 'image')
+          : null,
+      })),
     });
   } catch (error) {
     console.error('Error fetching sample restaurants:', error);
@@ -1624,9 +1652,17 @@ const getNewRestaurants = async (req, res) => {
       return shuffled.slice(0, n);
     }
     const randomRest = getRandom(rest, 2);
-    const newRestaurants = [mostRecent, ...randomRest]
+    let newRestaurants = [mostRecent, ...randomRest]
       .filter(Boolean)
       .slice(0, 3);
+    // Transform thumbnail URLs
+    newRestaurants = newRestaurants.map((r) => ({
+      ...r,
+      thumbnailUrl: r.thumbnailUrl
+        ? getMediaUrl(r.thumbnailUrl, 'image')
+        : null,
+    }));
+
     res.json({ latitude: userLat, longitude: userLon, newRestaurants });
   } catch (error) {
     console.error('Error fetching new restaurants:', error);
@@ -1696,9 +1732,17 @@ const getAllNewRestaurants = async (req, res) => {
       });
 
     // Filtriraj restorane unutar 50km i sortiraj po datumu (najnoviji prvi)
-    const newRestaurants = withDistance
+    let newRestaurants = withDistance
       .filter((r) => r.distance <= 50)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Transform thumbnail URLs
+    newRestaurants = newRestaurants.map((r) => ({
+      ...r,
+      thumbnailUrl: r.thumbnailUrl
+        ? getMediaUrl(r.thumbnailUrl, 'image')
+        : null,
+    }));
 
     res.json({
       latitude: userLat,
@@ -1764,16 +1808,21 @@ const nearYou = async (req, res) => {
       .filter((restaurant) => restaurant.distance <= 60)
       .sort((a, b) => a.distance - b.distance);
 
+    // Transform thumbnail URLs to CloudFront
+    const withUrls = restaurantsWithDistance.map((r) => ({
+      ...r,
+      thumbnailUrl: r.thumbnailUrl
+        ? getMediaUrl(r.thumbnailUrl, 'image')
+        : null,
+    }));
+
     // Implement pagination
     const page = parseInt(req.query.page) || 1;
     const limit = 20;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
 
-    const paginatedRestaurants = restaurantsWithDistance.slice(
-      startIndex,
-      endIndex,
-    );
+    const paginatedRestaurants = withUrls.slice(startIndex, endIndex);
     const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
 
     return res.json({
@@ -1813,9 +1862,20 @@ const getPartners = async (req, res) => {
       order: [Sequelize.fn('RANDOM')],
     });
 
+    // Ensure CloudFront URLs are returned
+    const partnersWithUrls = partners.map((p) => {
+      const data = p.get ? p.get() : p;
+      return {
+        ...data,
+        thumbnailUrl: data.thumbnailUrl
+          ? getMediaUrl(data.thumbnailUrl, 'image')
+          : null,
+      };
+    });
+
     res.json({
-      partners,
-      total: partners.length,
+      partners: partnersWithUrls,
+      total: partnersWithUrls.length,
     });
   } catch (error) {
     console.error('Error fetching partners:', error);

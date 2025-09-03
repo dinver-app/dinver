@@ -1,4 +1,5 @@
 const { User, Restaurant, UserFavorite } = require('../../models');
+const { getMediaUrl } = require('../../config/cdn');
 
 // Dodaj restoran u favorite
 const addToFavorites = async (req, res) => {
@@ -93,7 +94,14 @@ const getUserFavorites = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.status(200).json(user.favoriteRestaurants);
+    const favoritesWithUrls = user.favoriteRestaurants.map((r) => ({
+      ...r.get(),
+      thumbnailUrl: r.thumbnailUrl
+        ? getMediaUrl(r.thumbnailUrl, 'image')
+        : null,
+    }));
+
+    res.status(200).json(favoritesWithUrls);
   } catch (error) {
     console.error('Error fetching favorites:', error);
     res.status(500).json({ error: 'Failed to fetch favorites' });

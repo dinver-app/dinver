@@ -1,4 +1,5 @@
 const { Op, Sequelize } = require('sequelize');
+const { getMediaUrl } = require('../../config/cdn');
 const {
   AnalyticsEvent,
   Restaurant,
@@ -883,7 +884,9 @@ const getPopularRestaurants = async (req, res) => {
                 phone: r.phone,
                 rating: r.rating,
                 priceLevel: r.priceLevel,
-                thumbnailUrl: r.thumbnailUrl,
+                thumbnailUrl: r.thumbnailUrl
+                  ? getMediaUrl(r.thumbnailUrl, 'image')
+                  : null,
                 isClaimed: r.isClaimed,
                 distance,
               }
