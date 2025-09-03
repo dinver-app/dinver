@@ -1,4 +1,5 @@
 const { Op, Sequelize } = require('sequelize');
+const { getMediaUrl } = require('../../config/cdn');
 const {
   MenuItem,
   DrinkItem,
@@ -779,7 +780,12 @@ module.exports = {
         const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
         const responsePayload = {
-          restaurants: paginatedRestaurants,
+          restaurants: paginatedRestaurants.map((r) => ({
+            ...r,
+            thumbnailUrl: r.thumbnailUrl
+              ? getMediaUrl(r.thumbnailUrl, 'image')
+              : null,
+          })),
           pagination: {
             currentPage: page,
             totalPages,
@@ -913,7 +919,12 @@ module.exports = {
       const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
       const responsePayload2 = {
-        restaurants: paginatedRestaurants,
+        restaurants: paginatedRestaurants.map((r) => ({
+          ...r,
+          thumbnailUrl: r.thumbnailUrl
+            ? getMediaUrl(r.thumbnailUrl, 'image')
+            : null,
+        })),
         pagination: {
           currentPage: page,
           totalPages,
