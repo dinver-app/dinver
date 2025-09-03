@@ -508,6 +508,7 @@ module.exports = {
                   id: itemId,
                   type: 'food',
                   price: priceVal,
+                  imageUrl: mi.menuItem.imageUrl || null,
                   translations: trMap,
                   sim,
                 });
@@ -548,6 +549,7 @@ module.exports = {
                   id: itemId,
                   type: 'drink',
                   price: priceVal,
+                  imageUrl: di.drinkItem.imageUrl || null,
                   translations: trMap,
                   sim,
                 });
@@ -563,6 +565,7 @@ module.exports = {
             id: it.id,
             price: it.price != null ? Number(it.price.toFixed(2)) : null,
             type: it.type,
+            imageUrl: it.imageUrl || null,
             translations: it.translations,
           }));
 
