@@ -2,6 +2,7 @@ const {
   Coupon,
   UserCoupon,
   CouponRedemption,
+  CouponCondition,
   MenuItem,
   MenuItemTranslation,
   MenuCategory,
@@ -854,32 +855,87 @@ const deleteCoupon = async (req, res) => {
     }
 
     if (permanent === 'true') {
-      // Permanent delete
-      await logAudit({
-        userId: req.user.id,
-        action: ActionTypes.DELETE,
-        entity: Entities.COUPON,
-        entityId: coupon.id,
-        restaurantId: coupon.restaurantId,
-        changes: { old: coupon.get(), permanent: true },
-      });
+      // Permanent delete with cascading cleanup
+      await sequelize.transaction(async (t) => {
+        await logAudit({
+          userId: req.user.id,
+          action: ActionTypes.DELETE,
+          entity: Entities.COUPON,
+          entityId: coupon.id,
+          restaurantId: coupon.restaurantId,
+          changes: { old: coupon.get(), permanent: true },
+        });
 
-      // Hard delete the coupon
-      await coupon.destroy({ force: true });
+        // Explicitly delete dependent rows to ensure cleanup even if FK constraints differ
+        const userCoupons = await UserCoupon.findAll({
+          where: { couponId: id },
+          attributes: ['id'],
+          transaction: t,
+          paranoid: false,
+        });
+        const userCouponIds = userCoupons.map((uc) => uc.id);
+        if (userCouponIds.length > 0) {
+          await CouponRedemption.destroy({
+            where: { userCouponId: { [Op.in]: userCouponIds } },
+            force: true,
+            transaction: t,
+          });
+          await UserCoupon.destroy({
+            where: { id: { [Op.in]: userCouponIds } },
+            force: true,
+            transaction: t,
+          });
+        }
+        await CouponCondition.destroy({
+          where: { couponId: id },
+          force: true,
+          transaction: t,
+        });
+
+        // Hard delete the coupon (DB FKs set to CASCADE also cover this path)
+        await coupon.destroy({ force: true, transaction: t });
+      });
       res.status(204).send();
     } else {
-      // Soft delete
-      await logAudit({
-        userId: req.user.id,
-        action: ActionTypes.DELETE,
-        entity: Entities.COUPON,
-        entityId: coupon.id,
-        restaurantId: coupon.restaurantId,
-        changes: { old: coupon.get() },
-      });
+      // Soft delete with cascading soft-delete of dependents
+      await sequelize.transaction(async (t) => {
+        await logAudit({
+          userId: req.user.id,
+          action: ActionTypes.DELETE,
+          entity: Entities.COUPON,
+          entityId: coupon.id,
+          restaurantId: coupon.restaurantId,
+          changes: { old: coupon.get() },
+        });
 
-      // Soft delete the coupon
-      await coupon.destroy();
+        // Soft delete redemptions then user coupons
+        const userCoupons = await UserCoupon.findAll({
+          where: { couponId: id },
+          attributes: ['id'],
+          transaction: t,
+        });
+        const userCouponIds = userCoupons.map((uc) => uc.id);
+        if (userCouponIds.length > 0) {
+          await CouponRedemption.destroy({
+            where: { userCouponId: { [Op.in]: userCouponIds } },
+            transaction: t,
+          });
+          await UserCoupon.destroy({
+            where: { id: { [Op.in]: userCouponIds } },
+            transaction: t,
+          });
+        }
+
+        // CouponConditions table is non-paranoid, delete hard
+        await CouponCondition.destroy({
+          where: { couponId: id },
+          force: true,
+          transaction: t,
+        });
+
+        // Soft delete the coupon
+        await coupon.destroy({ transaction: t });
+      });
       res.status(204).send();
     }
   } catch (error) {
