@@ -4,7 +4,9 @@ const {
   MenuItemTranslation,
   MenuCategoryTranslation,
   Allergen,
+  Coupon,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
@@ -299,6 +301,20 @@ const deleteMenuItem = async (req, res) => {
       return res.status(404).json({ error: 'Menu item not found' });
     }
 
+    // Prevent deletion if item is referenced by coupons
+    const referencingCoupons = await Coupon.findAll({
+      where: { rewardItemId: id },
+      attributes: ['id', 'title', 'status', 'type'],
+    });
+    if (referencingCoupons.length > 0) {
+      return res.status(409).json({
+        error: 'cannot_delete_menu_item_in_use_by_coupons',
+        message:
+          'Ova stavka je povezana s kuponima i ne može se obrisati dok se kuponi ne ažuriraju ili obrišu.',
+        coupons: referencingCoupons,
+      });
+    }
+
     // Delete image from S3 if it exists
     if (menuItem.imageUrl) {
       const fileName = menuItem.imageUrl.split('/').pop();
@@ -495,6 +511,23 @@ const deleteCategory = async (req, res) => {
 
     // Find all items in the category
     const menuItems = await MenuItem.findAll({ where: { categoryId: id } });
+
+    // Block deletion if any item is referenced by coupons
+    const itemIds = menuItems.map((i) => i.id);
+    if (itemIds.length > 0) {
+      const referencingCoupons = await Coupon.findAll({
+        where: { rewardItemId: { [Op.in]: itemIds } },
+        attributes: ['id', 'title', 'status', 'type', 'rewardItemId'],
+      });
+      if (referencingCoupons.length > 0) {
+        return res.status(409).json({
+          error: 'cannot_delete_category_items_in_use_by_coupons',
+          message:
+            'Neke stavke u ovoj kategoriji su povezane s kuponima. Ažurirajte ili obrišite te kupone prije brisanja kategorije.',
+          coupons: referencingCoupons,
+        });
+      }
+    }
 
     // Delete images from S3 for each item
     for (const item of menuItems) {

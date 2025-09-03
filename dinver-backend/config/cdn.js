@@ -41,10 +41,16 @@ function getSignedUrlForCloudFront(mediaKey) {
     const url = `${process.env.CLOUDFRONT_URL}/${mediaKey}`;
     const expiresIn = 23 * 60 * 60 * 1000; // 23h (malo manje od stvarnog isteka)
 
+    // Normalize private key newlines if provided via env
+    const rawPrivateKey = process.env.CLOUDFRONT_PRIVATE_KEY || '';
+    const normalizedPrivateKey = rawPrivateKey.includes('\\n')
+      ? rawPrivateKey.replace(/\\n/g, '\n')
+      : rawPrivateKey;
+
     const signedUrl = getSignedUrl({
       url,
       keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID,
-      privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+      privateKey: normalizedPrivateKey,
       dateLessThan: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h za stvarni URL
     });
 
