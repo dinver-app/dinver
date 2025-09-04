@@ -26,6 +26,7 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
+const { translateSizeNameBoth } = require('../../utils/translate');
 
 const {
   FoodType,
@@ -2249,65 +2250,68 @@ const getRestaurantMenu = async (req, res) => {
         .filter(Boolean);
     };
 
-    // Organize food menu by categories
-    const foodMenu = {
-      categories: menuCategories.map((category) => ({
-        id: category.id,
-        name: category.translations[0]?.name || '',
-        nameEn:
-          category.translations.find((t) => t.language === 'en')?.name || '',
-        nameHr:
-          category.translations.find((t) => t.language === 'hr')?.name || '',
-        description: category.translations[0]?.description || '',
+    async function buildItemSizes(item) {
+      if (item.hasSizes && Array.isArray(item.sizes)) {
+        const translated = await Promise.all(
+          item.sizes.map(async (s) => {
+            const name = s?.name || '';
+            const price = s?.price != null ? Number(s.price) : null;
+            const tr = await translateSizeNameBoth(name);
+            return { name: { hr: tr.hr, en: tr.en }, price };
+          }),
+        );
+        return translated;
+      }
+      return null;
+    }
+
+    async function mapFoodItem(item) {
+      const sizes = await buildItemSizes(item);
+      return {
+        id: item.id,
+        name: item.translations[0]?.name || '',
+        nameEn: item.translations.find((t) => t.language === 'en')?.name || '',
+        nameHr: item.translations.find((t) => t.language === 'hr')?.name || '',
+        description: item.translations[0]?.description || '',
         descriptionEn:
-          category.translations.find((t) => t.language === 'en')?.description ||
-          '',
+          item.translations.find((t) => t.language === 'en')?.description || '',
         descriptionHr:
-          category.translations.find((t) => t.language === 'hr')?.description ||
-          '',
-        items: menuItems
-          .filter((item) => item.categoryId === category.id)
-          .map((item) => ({
-            id: item.id,
-            name: item.translations[0]?.name || '',
-            nameEn:
-              item.translations.find((t) => t.language === 'en')?.name || '',
-            nameHr:
-              item.translations.find((t) => t.language === 'hr')?.name || '',
-            description: item.translations[0]?.description || '',
-            descriptionEn:
-              item.translations.find((t) => t.language === 'en')?.description ||
-              '',
-            descriptionHr:
-              item.translations.find((t) => t.language === 'hr')?.description ||
-              '',
-            price: parseFloat(item.price).toFixed(2),
-            imageUrl: item.imageUrl
-              ? getMediaUrl(item.imageUrl, 'image')
-              : null,
-            allergens: mapAllergens(item.allergens),
-          })),
-      })),
-      uncategorized: menuItems
-        .filter((item) => !item.categoryId)
-        .map((item) => ({
-          id: item.id,
-          name: item.translations[0]?.name || '',
+          item.translations.find((t) => t.language === 'hr')?.description || '',
+        price: parseFloat(item.price).toFixed(2),
+        imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
+        allergens: mapAllergens(item.allergens),
+        sizes,
+      };
+    }
+
+    const foodMenu = {
+      categories: await Promise.all(
+        menuCategories.map(async (category) => ({
+          id: category.id,
+          name: category.translations[0]?.name || '',
           nameEn:
-            item.translations.find((t) => t.language === 'en')?.name || '',
+            category.translations.find((t) => t.language === 'en')?.name || '',
           nameHr:
-            item.translations.find((t) => t.language === 'hr')?.name || '',
-          description: item.translations[0]?.description || '',
+            category.translations.find((t) => t.language === 'hr')?.name || '',
+          description: category.translations[0]?.description || '',
           descriptionEn:
-            item.translations.find((t) => t.language === 'en')?.description ||
-            '',
+            category.translations.find((t) => t.language === 'en')
+              ?.description || '',
           descriptionHr:
-            item.translations.find((t) => t.language === 'hr')?.description ||
-            '',
-          price: parseFloat(item.price).toFixed(2),
-          imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
-          allergens: mapAllergens(item.allergens),
+            category.translations.find((t) => t.language === 'hr')
+              ?.description || '',
+          items: await Promise.all(
+            menuItems
+              .filter((item) => item.categoryId === category.id)
+              .map((item) => mapFoodItem(item)),
+          ),
         })),
+      ),
+      uncategorized: await Promise.all(
+        menuItems
+          .filter((item) => !item.categoryId)
+          .map((item) => mapFoodItem(item)),
+      ),
     };
 
     // Organize drinks menu by categories
