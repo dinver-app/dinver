@@ -74,6 +74,34 @@ const autoTranslate = async (translations) => {
   return translations;
 };
 
+// Simple in-memory cache for translating short labels like sizes
+const sizeNameCache = new Map();
+
+/**
+ * Translate a short label (e.g., size name) to both HR and EN.
+ * Uses auto-detect for source language and caches results in-memory.
+ * @param {string} name
+ * @returns {Promise<{hr: string, en: string}>}
+ */
+const translateSizeNameBoth = async (name) => {
+  const key = (name || '').trim().toLowerCase();
+  if (sizeNameCache.has(key)) return sizeNameCache.get(key);
+
+  // Auto-detect source, get both translations
+  const [[enTranslation], [hrTranslation]] = await Promise.all([
+    translate.translate(name, { to: 'en' }),
+    translate.translate(name, { to: 'hr' }),
+  ]);
+
+  const result = {
+    en: enTranslation,
+    hr: hrTranslation,
+  };
+  sizeNameCache.set(key, result);
+  return result;
+};
+
 module.exports = {
   autoTranslate,
+  translateSizeNameBoth,
 };
