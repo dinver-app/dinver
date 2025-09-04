@@ -28,6 +28,24 @@ setInterval(
   60 * 60 * 1000,
 ); // Svaki sat
 
+function normalizePrivateKey(rawKey) {
+  if (!rawKey) return '';
+  let key = String(rawKey).trim();
+  // Strip accidental surrounding quotes from dashboard inputs
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'")) ||
+    (key.startsWith('`') && key.endsWith('`'))
+  ) {
+    key = key.slice(1, -1);
+  }
+  // Replace escaped newlines if provided via env (e.g., HEROKU config vars)
+  key = key.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+  // Normalize CRLF to LF
+  key = key.replace(/\r\n/g, '\n');
+  return key;
+}
+
 function getSignedUrlForCloudFront(mediaKey) {
   try {
     // Provjeri cache
@@ -38,14 +56,14 @@ function getSignedUrlForCloudFront(mediaKey) {
     }
     cacheStats.misses++;
 
-    const url = `${process.env.CLOUDFRONT_URL}/${mediaKey}`;
+    const baseUrl = (process.env.CLOUDFRONT_URL || '').replace(/\/+$/, '');
+    const url = `${baseUrl}/${mediaKey}`;
     const expiresIn = 23 * 60 * 60 * 1000; // 23h (malo manje od stvarnog isteka)
 
-    // Normalize private key newlines if provided via env
-    const rawPrivateKey = process.env.CLOUDFRONT_PRIVATE_KEY || '';
-    const normalizedPrivateKey = rawPrivateKey.includes('\\n')
-      ? rawPrivateKey.replace(/\\n/g, '\n')
-      : rawPrivateKey;
+    // Normalize private key content from env
+    const normalizedPrivateKey = normalizePrivateKey(
+      process.env.CLOUDFRONT_PRIVATE_KEY || '',
+    );
 
     const signedUrl = getSignedUrl({
       url,
