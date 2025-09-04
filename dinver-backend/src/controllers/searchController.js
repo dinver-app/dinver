@@ -509,7 +509,7 @@ module.exports = {
                   id: itemId,
                   type: 'food',
                   price: priceVal,
-                  imageUrl: mi.menuItem.imageUrl || null,
+                  imageUrl: getMediaUrl(mi.menuItem.imageUrl, 'image'),
                   translations: trMap,
                   sim,
                 });
@@ -550,7 +550,7 @@ module.exports = {
                   id: itemId,
                   type: 'drink',
                   price: priceVal,
-                  imageUrl: di.drinkItem.imageUrl || null,
+                  imageUrl: getMediaUrl(di.drinkItem.imageUrl, 'image'),
                   translations: trMap,
                   sim,
                 });
