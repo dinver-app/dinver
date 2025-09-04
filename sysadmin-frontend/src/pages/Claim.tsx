@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   getAllRestaurants,
   handleClaimStatus,
@@ -58,6 +58,7 @@ const Claim = () => {
             ...log,
             restaurantName: restaurant.name,
             userEmail: user.email,
+            place: restaurant.place,
           };
         })
       );
@@ -68,6 +69,16 @@ const Claim = () => {
       toast.dismiss(loadingToastId);
     }
   };
+
+  const totalClaimed = useMemo(() => claimLogs.length, [claimLogs]);
+  const claimedByCity = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const log of claimLogs) {
+      const city = (log.place || "Nepoznato").trim();
+      counts[city] = (counts[city] || 0) + 1;
+    }
+    return counts;
+  }, [claimLogs]);
 
   const handleSubmit = async () => {
     if (!selectedRestaurant) {
@@ -118,6 +129,23 @@ const Claim = () => {
         </button>
       </div>
       <div className="h-line mb-4"></div>
+
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold mb-2">Statistika claimova</h2>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-sm mb-2">Ukupno claimanih: {totalClaimed}</div>
+          <div className="text-sm">
+            Po gradovima:
+            <ul className="list-disc list-inside">
+              {Object.entries(claimedByCity).map(([city, count]) => (
+                <li key={city} className="text-sm">
+                  {city}: {count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
 
       <div className="mb-4">
         <h2 className="text-lg font-semibold mb-2">{t("current_claims")}</h2>
