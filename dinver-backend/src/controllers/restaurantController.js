@@ -2987,7 +2987,13 @@ const submitClaimForm = async (req, res) => {
     };
 
     const formatWorkingHours = (hours) => {
-      if (!hours || !hours.periods) return 'Nije definirano';
+      if (!hours) return 'Nije definirano';
+      // If frontend sends a free-text textarea, just echo it back
+      if (typeof hours === 'string') {
+        return hours.trim() || 'Nije definirano';
+      }
+
+      if (!hours.periods) return 'Nije definirano';
 
       const days = [
         'Ponedjeljak',
