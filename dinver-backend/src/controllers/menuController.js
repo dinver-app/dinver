@@ -10,7 +10,10 @@ const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { autoTranslate } = require('../../utils/translate');
+const {
+  autoTranslate,
+  translateSizeNameBoth,
+} = require('../../utils/translate');
 const { getMediaUrl } = require('../../config/cdn');
 
 // Helper function to get user language
@@ -48,23 +51,45 @@ const getMenuItems = async (req, res) => {
       ],
     });
 
-    const formattedMenuItems = menuItems.map((item) => {
-      const itemData = item.toJSON();
-      const userTranslation = itemData.translations.find(
-        (t) => t.language === language,
-      );
-      const anyTranslation = itemData.translations[0];
+    const formattedMenuItems = await Promise.all(
+      menuItems.map(async (item) => {
+        const itemData = item.toJSON();
+        const userTranslation = itemData.translations.find(
+          (t) => t.language === language,
+        );
+        const anyTranslation = itemData.translations[0];
 
-      return {
-        ...itemData,
-        name: (userTranslation || anyTranslation)?.name || '',
-        description: (userTranslation || anyTranslation)?.description || '',
-        price: parseFloat(itemData.price).toFixed(2),
-        imageUrl: itemData.imageUrl
-          ? getMediaUrl(itemData.imageUrl, 'image')
-          : null,
-      };
-    });
+        // Build sizes with translations when available
+        let sizes = null;
+        if (itemData.hasSizes && Array.isArray(itemData.sizes)) {
+          sizes = await Promise.all(
+            itemData.sizes.map(async (s) => {
+              const name = s?.name || '';
+              const price = s?.price != null ? Number(s.price) : null;
+              const tr = await translateSizeNameBoth(name);
+              return {
+                name: {
+                  hr: tr.hr,
+                  en: tr.en,
+                },
+                price,
+              };
+            }),
+          );
+        }
+
+        return {
+          ...itemData,
+          name: (userTranslation || anyTranslation)?.name || '',
+          description: (userTranslation || anyTranslation)?.description || '',
+          price: parseFloat(itemData.price).toFixed(2),
+          imageUrl: itemData.imageUrl
+            ? getMediaUrl(itemData.imageUrl, 'image')
+            : null,
+          sizes,
+        };
+      }),
+    );
 
     res.json(formattedMenuItems);
   } catch (error) {
@@ -610,23 +635,45 @@ const getAllMenuItemsForAdmin = async (req, res) => {
       ],
     });
 
-    const formattedMenuItems = menuItems.map((item) => {
-      const itemData = item.toJSON();
-      const userTranslation = itemData.translations.find(
-        (t) => t.language === language,
-      );
-      const anyTranslation = itemData.translations[0];
+    const formattedMenuItems = await Promise.all(
+      menuItems.map(async (item) => {
+        const itemData = item.toJSON();
+        const userTranslation = itemData.translations.find(
+          (t) => t.language === language,
+        );
+        const anyTranslation = itemData.translations[0];
 
-      return {
-        ...itemData,
-        name: (userTranslation || anyTranslation)?.name || '',
-        description: (userTranslation || anyTranslation)?.description || '',
-        price: parseFloat(itemData.price).toFixed(2),
-        imageUrl: itemData.imageUrl
-          ? getMediaUrl(itemData.imageUrl, 'image')
-          : null,
-      };
-    });
+        // Build sizes with translations when available
+        let sizes = null;
+        if (itemData.hasSizes && Array.isArray(itemData.sizes)) {
+          sizes = await Promise.all(
+            itemData.sizes.map(async (s) => {
+              const name = s?.name || '';
+              const price = s?.price != null ? Number(s.price) : null;
+              const tr = await translateSizeNameBoth(name);
+              return {
+                name: {
+                  hr: tr.hr,
+                  en: tr.en,
+                },
+                price,
+              };
+            }),
+          );
+        }
+
+        return {
+          ...itemData,
+          name: (userTranslation || anyTranslation)?.name || '',
+          description: (userTranslation || anyTranslation)?.description || '',
+          price: parseFloat(itemData.price).toFixed(2),
+          imageUrl: itemData.imageUrl
+            ? getMediaUrl(itemData.imageUrl, 'image')
+            : null,
+          sizes,
+        };
+      }),
+    );
 
     res.json(formattedMenuItems);
   } catch (error) {
