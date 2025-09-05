@@ -65,6 +65,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       icon: <FaRegChartBar className="h-4 w-4 mr-3" />,
     },
     {
+      name: t("types_management"),
+      path: "/types",
+      icon: <FaCog className="h-4 w-4 mr-3" />,
+    },
+    {
       name: t("claim"),
       path: "/claim",
       icon: <FaShieldAlt className="h-4 w-4 mr-3" />,
