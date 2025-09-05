@@ -799,5 +799,11 @@
   "previous": "Previous",
   "next": "Next",
   "page": "Page",
-  "of": "of"
+  "of": "of",
+  "types_management": "Types & Categories",
+  "types_management_desc": "Manage types and categories (food, establishments, perks, meals, dietary types).",
+  "establishment_types": "Establishment Types",
+  "establishment_perks": "Establishment Perks",
+  "list": "List",
+  "add_new": "Add New"
 }

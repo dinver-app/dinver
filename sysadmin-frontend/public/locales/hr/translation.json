@@ -680,5 +680,11 @@
   "previous": "Prethodno",
   "next": "Sljedeće",
   "page": "Stranica",
-  "of": "od"
+  "of": "od",
+  "types_management": "Tipovi i kategorije",
+  "types_management_desc": "Upravljajte tipovima i kategorijama (hrana, objekti, pogodnosti, obroci, prehrambene preferencije).",
+  "establishment_types": "Tipovi objekta",
+  "establishment_perks": "Pogodnosti objekta",
+  "list": "Popis",
+  "add_new": "Dodaj novo"
 }

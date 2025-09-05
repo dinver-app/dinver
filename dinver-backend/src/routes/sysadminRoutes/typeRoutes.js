@@ -50,3 +50,32 @@ router.get(
 );
 
 module.exports = router;
+
+// CRUD for types (sysadmin)
+router.post(
+  '/types/:type',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.createType,
+);
+
+router.put(
+  '/types/:type/:id',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.updateType,
+);
+
+router.delete(
+  '/types/:type/:id',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.deleteType,
+);
+
+router.put(
+  '/types/:type-order',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  typeController.updateTypeOrder,
+);
