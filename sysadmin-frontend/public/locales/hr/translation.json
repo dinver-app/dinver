@@ -674,11 +674,12 @@
   "loading_referrals": "Učitavanje preporuka...",
   "no_referrals_found": "Nema pronađenih preporuka",
   "no_referrals_match_filters": "Nema preporuka koje odgovaraju trenutnim filterima",
-  "pending": "Na čekanju",
-  "all_statuses": "Svi statusi",
-  "created": "Kreirano",
-  "previous": "Prethodno",
-  "next": "Sljedeće",
-  "page": "Stranica",
-  "of": "od"
+  "has_sizes": "Ima veličine",
+  "name_hr": "Naziv (hr)",
+  "name_en": "Naziv (en)",
+  "add_size": "Dodaj veličinu",
+  "remove_size": "Ukloni veličinu",
+  "default_size": "Zadana veličina",
+  "default_size_name": "Naziv zadane veličine",
+  "sizes": "Veličine"
 }

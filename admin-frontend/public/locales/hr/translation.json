@@ -669,5 +669,13 @@
   "kpi_visits_short": "Potvrđene posjete",
   "kpi_qr_scans_short": "QR skeniranja jelovnika",
   "event_type_profile_views_short": "Pregledi profila",
-  "event_type_click_short": "Klikovi"
+  "event_type_click_short": "Klikovi",
+  "has_sizes": "Ima veličine",
+  "name_hr": "Naziv (hr)",
+  "name_en": "Naziv (en)",
+  "add_size": "Dodaj veličinu",
+  "remove_size": "Ukloni veličinu",
+  "default_size": "Zadana veličina",
+  "default_size_name": "Naziv zadane veličine",
+  "sizes": "Veličine"
 }

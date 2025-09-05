@@ -669,5 +669,13 @@
   "kpi_visits_short": "Confirmed visits",
   "kpi_qr_scans_short": "QR menu scans",
   "event_type_profile_views_short": "Profile views",
-  "event_type_click_short": "Clicks"
+  "event_type_click_short": "Clicks",
+  "has_sizes": "Has Sizes",
+  "name_hr": "Name (hr)",
+  "name_en": "Name (en)",
+  "add_size": "Add Size",
+  "remove_size": "Remove Size",
+  "default_size": "Default Size",
+  "default_size_name": "Default Size Name",
+  "sizes": "Sizes"
 }

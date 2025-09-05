@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       price: {
         type: DataTypes.DECIMAL,
-        allowNull: false,
+        allowNull: true,
       },
       imageUrl: {
         type: DataTypes.STRING,
@@ -71,13 +71,8 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: true,
       },
-      hasSizes: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      defaultSizeName: {
-        type: DataTypes.STRING,
+      defaultSizeId: {
+        type: DataTypes.UUID,
         allowNull: true,
       },
       sizes: {

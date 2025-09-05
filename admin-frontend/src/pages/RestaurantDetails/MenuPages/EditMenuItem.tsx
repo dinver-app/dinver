@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MenuItem,
   Allergen,
@@ -28,6 +28,15 @@ interface EditMenuItemProps {
       removeImage: boolean;
       categoryId?: string | null;
       isActive: boolean;
+      // sizes support
+      defaultSizeNumber?: number;
+      sizes?:
+        | {
+            id?: string;
+            price: number;
+            translations: { hr: string; en: string };
+          }[]
+        | null;
     }
   ) => Promise<void>;
   allergens: Allergen[];
@@ -76,6 +85,47 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isActive, setIsActive] = useState(menuItem.isActive);
+  const [hasSizes, setHasSizes] = useState<boolean>(
+    Boolean((menuItem as any).sizes?.length)
+  );
+  const [sizes, setSizes] = useState<
+    { id?: string; hr: string; en: string; price: string }[]
+  >(
+    (((menuItem as any).sizes || []) as any[]).map((s: any) => ({
+      id: s.id,
+      hr: s.translations?.hr || "",
+      en: s.translations?.en || "",
+      price: String(s.price ?? ""),
+    }))
+  );
+  const [defaultSizeNumber, setDefaultSizeNumber] = useState<number | null>(
+    (menuItem as any).sizes && (menuItem as any).defaultSizeId
+      ? Math.max(
+          0,
+          (((menuItem as any).sizes as any[]) || []).findIndex(
+            (s: any) => s.id === (menuItem as any).defaultSizeId
+          )
+        )
+      : null
+  );
+
+  // Ensure at least one size when enabling sizes and keep a default
+  useEffect(() => {
+    if (hasSizes) {
+      if (sizes.length === 0) {
+        setSizes([{ hr: "", en: "", price: "" }]);
+        setDefaultSizeNumber(0);
+      } else if (
+        defaultSizeNumber === null ||
+        defaultSizeNumber === undefined
+      ) {
+        setDefaultSizeNumber(0);
+      }
+    } else {
+      setDefaultSizeNumber(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSizes]);
 
   const handleSave = async () => {
     // Zamijeni zarez s točkom za cijenu
@@ -94,28 +144,82 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
       return;
     }
 
-    if (!normalizedPrice.trim()) {
-      toast.error(t("price_required"));
-      return;
-    }
+    const validSizes = sizes.filter(
+      (s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== ""
+    );
+    const hasValidSizes = hasSizes && validSizes.length > 0;
 
-    if (isNaN(parseFloat(normalizedPrice))) {
-      toast.error(t("invalid_price"));
-      return;
+    if (!hasValidSizes) {
+      if (!normalizedPrice.trim()) {
+        toast.error(t("price_required"));
+        return;
+      }
+      if (isNaN(parseFloat(normalizedPrice))) {
+        toast.error(t("invalid_price"));
+        return;
+      }
+    } else {
+      if (defaultSizeNumber === null || defaultSizeNumber === undefined) {
+        toast.error(t("default_size_required"));
+        return;
+      }
+      if (
+        defaultSizeNumber < 0 ||
+        defaultSizeNumber >= validSizes.length ||
+        isNaN(parseFloat(validSizes[defaultSizeNumber].price.replace(",", ".")))
+      ) {
+        toast.error(t("invalid_default_size"));
+        return;
+      }
     }
 
     setIsSaving(true);
     const loadingToast = toast.loading(t("saving"));
 
     try {
+      let sizesPayload:
+        | {
+            id?: string;
+            price: number;
+            translations: { hr: string; en: string };
+          }[]
+        | null
+        | undefined = undefined;
+      let priceToSend = normalizedPrice;
+      let defaultIndexToSend: number | undefined = undefined;
+      if (hasValidSizes) {
+        sizesPayload = validSizes.map((s) => ({
+          id: s.id,
+          price: parseFloat(s.price.replace(",", ".")),
+          translations: { hr: s.hr.trim(), en: s.en.trim() },
+        }));
+        defaultIndexToSend = defaultSizeNumber as number;
+        priceToSend = sizesPayload[defaultIndexToSend].price.toString();
+      } else if (!hasSizes) {
+        sizesPayload = null; // explicit clear
+      }
+
       await onSave(menuItem.id, {
         translations: translatesArray,
-        price: normalizedPrice,
+        price: priceToSend,
         allergens: selectedAllergenIds.map(String),
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
         isActive,
+        ...(hasValidSizes
+          ? {
+              // @ts-ignore admin onSave signature extended in MenuTab
+              defaultSizeNumber: defaultIndexToSend,
+              // @ts-ignore admin onSave signature extended in MenuTab
+              sizes: sizesPayload,
+            }
+          : !hasSizes
+          ? {
+              // @ts-ignore
+              sizes: sizesPayload,
+            }
+          : {}),
       });
       toast.dismiss(loadingToast);
     } catch (error) {
@@ -307,7 +411,111 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
           value={itemPrice}
           onChange={(e) => setItemPrice(e.target.value)}
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          disabled={
+            hasSizes &&
+            sizes.some(
+              (s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== ""
+            )
+          }
         />
+      </div>
+      <div className="mb-3 max-w-xl">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("sizes")}
+        </label>
+        <div className="flex items-center mb-2 gap-2">
+          <input
+            type="checkbox"
+            checked={hasSizes}
+            onChange={(e) => setHasSizes(e.target.checked)}
+          />
+          <span className="text-sm text-gray-700">{t("has_sizes")}</span>
+        </div>
+        {hasSizes && (
+          <>
+            <div className="space-y-2">
+              {sizes.map((s, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <input
+                    type="radio"
+                    name="defaultSize"
+                    checked={defaultSizeNumber === idx}
+                    onChange={() => setDefaultSizeNumber(idx)}
+                  />
+                  <input
+                    type="text"
+                    placeholder={t("name_hr")}
+                    value={s.hr || ""}
+                    onChange={(e) =>
+                      setSizes((prev) =>
+                        prev.map((x, i) =>
+                          i === idx ? { ...x, hr: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
+                  />
+                  <input
+                    type="text"
+                    placeholder={t("name_en")}
+                    value={s.en || ""}
+                    onChange={(e) =>
+                      setSizes((prev) =>
+                        prev.map((x, i) =>
+                          i === idx ? { ...x, en: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
+                  />
+                  <input
+                    type="text"
+                    placeholder={t("price")}
+                    value={s.price}
+                    onChange={(e) =>
+                      setSizes((prev) =>
+                        prev.map((x, i) =>
+                          i === idx ? { ...x, price: e.target.value } : x
+                        )
+                      )
+                    }
+                    className="w-28 text-sm p-2 border border-gray-300 rounded-md"
+                  />
+                  {sizes.length > 1 && (
+                    <button
+                      type="button"
+                      className="text-red-600 text-sm"
+                      onClick={() =>
+                        setSizes((prev) => {
+                          if (prev.length <= 1) return prev;
+                          const next = prev.filter((_, i) => i !== idx);
+                          setDefaultSizeNumber((cur) => {
+                            if (next.length === 0) return null;
+                            if (cur === idx) return 0;
+                            if (cur !== null && cur > idx) return cur - 1;
+                            return cur;
+                          });
+                          return next;
+                        })
+                      }
+                    >
+                      {t("remove")}
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="secondary-button text-xs"
+                onClick={() =>
+                  setSizes((prev) => [...prev, { hr: "", en: "", price: "" }])
+                }
+              >
+                {t("add_size")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
       <div className="mb-3 max-w-xl">
         <label className="block text-sm font-medium text-gray-700">

@@ -39,6 +39,11 @@ export const createMenuItem = async (data: {
   categoryId?: string | null;
   imageFile?: File;
   isActive?: boolean;
+  // sizes support
+  defaultSizeNumber?: number;
+  sizes?:
+    | { id?: string; price: number; translations: { hr: string; en: string } }[]
+    | null;
 }) => {
   const formData = new FormData();
 
@@ -63,6 +68,14 @@ export const createMenuItem = async (data: {
     formData.append("imageFile", data.imageFile);
   }
 
+  // sizes payload
+  if (data.defaultSizeNumber !== undefined) {
+    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  }
+  if (data.sizes !== undefined) {
+    formData.append("sizes", JSON.stringify(data.sizes));
+  }
+
   const response = await apiClient.post("/api/admin/menu/menuItems", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -82,6 +95,15 @@ export const updateMenuItem = async (
     imageFile?: File;
     removeImage?: boolean;
     isActive?: boolean;
+    // sizes support
+    defaultSizeNumber?: number;
+    sizes?:
+      | {
+          id?: string;
+          price: number;
+          translations: { hr: string; en: string };
+        }[]
+      | null;
   }
 ) => {
   const formData = new FormData();
@@ -109,6 +131,14 @@ export const updateMenuItem = async (
 
   if (data.removeImage) {
     formData.append("removeImage", "true");
+  }
+
+  // sizes payload
+  if (data.defaultSizeNumber !== undefined) {
+    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  }
+  if (data.sizes !== undefined) {
+    formData.append("sizes", JSON.stringify(data.sizes));
   }
 
   const response = await apiClient.put(
