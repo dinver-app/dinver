@@ -800,18 +800,16 @@
   "remove_size": "Remove Size",
   "default_size": "Default Size",
   "default_size_name": "Default Size Name",
-  "sizes": "Sizes"
-  "pending": "Pending",
-  "all_statuses": "All Statuses",
-  "created": "Created",
-  "previous": "Previous",
-  "next": "Next",
-  "page": "Page",
-  "of": "of",
+  "sizes": "Sizes",
   "types_management": "Types & Categories",
   "types_management_desc": "Manage types and categories (food, establishments, perks, meals, dietary types).",
-  "establishment_types": "Establishment Types",
-  "establishment_perks": "Establishment Perks",
   "list": "List",
-  "add_new": "Add New"
+  "add_new": "Add New",
+  "select_size": "Select Size",
+  "create_new_size": "Create new size",
+  "create_new_size_modal_title": "Create new size",
+  "size_name_required": "Size name is required",
+  "enter_size_name": "Enter size name",
+  "size_created_successfully": "Size created successfully",
+  "failed_to_create_size": "Failed to create size"
 }

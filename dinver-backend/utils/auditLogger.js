@@ -16,6 +16,7 @@ const Entities = {
   RESTAURANT_POST: 'restaurant_post',
   MENU_ITEM: 'menu_item',
   MENU_CATEGORY: 'menu_category',
+  SIZE: 'size',
   DRINK_ITEM: 'drink_item',
   DRINK_CATEGORY: 'drink_category',
   WORKING_HOURS: 'working_hours',

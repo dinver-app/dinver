@@ -4,6 +4,7 @@ const typeController = require('../../controllers/typeController');
 const menuController = require('../../controllers/menuController');
 const drinksController = require('../../controllers/drinkController');
 const restaurantPostController = require('../../controllers/restaurantPostController');
+const sizeController = require('../../controllers/sizeController');
 
 const {
   appAuthenticateToken,
@@ -410,6 +411,39 @@ router.get(
   appApiKeyAuth,
   checkAdmin,
   restaurantPostController.getRestaurantPostStats,
+);
+
+// Get all sizes for a specific restaurant
+router.get(
+  '/admin/sizes/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  sizeController.getAllSizes,
+);
+
+// Create a new size (admin only)
+router.post(
+  '/admin/sizes/',
+  appAuthenticateToken,
+  checkAdmin,
+  sizeController.createSize,
+);
+
+// Update a size (admin only)
+router.put(
+  '/admin/sizes/:id',
+  appAuthenticateToken,
+  checkAdmin,
+  sizeController.updateSize,
+);
+
+// Delete a size (admin only)
+router.delete(
+  '/admin/sizes/:id',
+  appAuthenticateToken,
+  checkAdmin,
+  sizeController.deleteSize,
 );
 
 module.exports = router;

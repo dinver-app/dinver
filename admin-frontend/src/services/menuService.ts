@@ -40,10 +40,8 @@ export const createMenuItem = async (data: {
   imageFile?: File;
   isActive?: boolean;
   // sizes support
-  defaultSizeNumber?: number;
-  sizes?:
-    | { id?: string; price: number; translations: { hr: string; en: string } }[]
-    | null;
+  defaultSizeIndex?: number;
+  sizes?: { sizeId: string; price: number }[] | null;
 }) => {
   const formData = new FormData();
 
@@ -69,8 +67,8 @@ export const createMenuItem = async (data: {
   }
 
   // sizes payload
-  if (data.defaultSizeNumber !== undefined) {
-    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  if (data.defaultSizeIndex !== undefined) {
+    formData.append("defaultSizeIndex", String(data.defaultSizeIndex));
   }
   if (data.sizes !== undefined) {
     formData.append("sizes", JSON.stringify(data.sizes));
@@ -96,14 +94,8 @@ export const updateMenuItem = async (
     removeImage?: boolean;
     isActive?: boolean;
     // sizes support
-    defaultSizeNumber?: number;
-    sizes?:
-      | {
-          id?: string;
-          price: number;
-          translations: { hr: string; en: string };
-        }[]
-      | null;
+    defaultSizeIndex?: number;
+    sizes?: { sizeId: string; price: number }[] | null;
   }
 ) => {
   const formData = new FormData();
@@ -134,8 +126,8 @@ export const updateMenuItem = async (
   }
 
   // sizes payload
-  if (data.defaultSizeNumber !== undefined) {
-    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  if (data.defaultSizeIndex !== undefined) {
+    formData.append("defaultSizeIndex", String(data.defaultSizeIndex));
   }
   if (data.sizes !== undefined) {
     formData.append("sizes", JSON.stringify(data.sizes));

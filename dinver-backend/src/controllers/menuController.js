@@ -3,6 +3,9 @@ const {
   MenuCategory,
   MenuItemTranslation,
   MenuCategoryTranslation,
+  MenuItemSize,
+  Size,
+  SizeTranslation,
   Allergen,
   Coupon,
 } = require('../../models');
@@ -49,6 +52,23 @@ const getMenuItems = async (req, res) => {
             },
           ],
         },
+        {
+          model: MenuItemSize,
+          as: 'sizes',
+          include: [
+            {
+              model: Size,
+              as: 'size',
+              include: [
+                {
+                  model: SizeTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+          order: [['position', 'ASC']],
+        },
       ],
     });
 
@@ -60,24 +80,54 @@ const getMenuItems = async (req, res) => {
         );
         const anyTranslation = itemData.translations[0];
 
-        // Use sizes as-is in new schema
-        const sizes =
-          Array.isArray(itemData.sizes) && itemData.sizes.length
-            ? itemData.sizes
-            : null;
+        // Format sizes with translations
+        let formattedSizes = null;
+        if (itemData.sizes && itemData.sizes.length > 0) {
+          formattedSizes = itemData.sizes.map((menuItemSize) => {
+            const sizeData = menuItemSize.size;
+            const hrTranslation = sizeData.translations.find(
+              (t) => t.language === 'hr',
+            );
+            const enTranslation = sizeData.translations.find(
+              (t) => t.language === 'en',
+            );
+
+            return {
+              id: menuItemSize.id,
+              sizeId: sizeData.id,
+              price: parseFloat(menuItemSize.price).toFixed(2),
+              isDefault: menuItemSize.isDefault,
+              position: menuItemSize.position,
+              name:
+                language === 'en'
+                  ? enTranslation?.name || hrTranslation?.name || ''
+                  : hrTranslation?.name || enTranslation?.name || '',
+              translations: {
+                hr: hrTranslation?.name || '',
+                en: enTranslation?.name || '',
+              },
+            };
+          });
+        }
+
+        // Find default price (from default size or first size)
+        let displayPrice = itemData.price;
+        if (formattedSizes && formattedSizes.length > 0) {
+          const defaultSize =
+            formattedSizes.find((s) => s.isDefault) || formattedSizes[0];
+          displayPrice = defaultSize ? defaultSize.price : itemData.price;
+        }
 
         return {
           ...itemData,
           name: (userTranslation || anyTranslation)?.name || '',
           description: (userTranslation || anyTranslation)?.description || '',
           price:
-            itemData.price != null
-              ? parseFloat(itemData.price).toFixed(2)
-              : null,
+            displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
           imageUrl: itemData.imageUrl
             ? getMediaUrl(itemData.imageUrl, 'image')
             : null,
-          sizes,
+          sizes: formattedSizes,
         };
       }),
     );
@@ -169,49 +219,38 @@ const createMenuItem = async (req, res) => {
       }
     }
 
-    // Parse sizes payload (new shape)
-    let defaultSizeId = null;
-    let defaultSizeNumber = null;
-    let sizes = null;
-    if (req.body.defaultSizeNumber !== undefined) {
-      const n = Number(req.body.defaultSizeNumber);
-      if (!Number.isNaN(n)) defaultSizeNumber = n;
-    }
+    // Parse sizes payload (new structure with sizeId and price)
+    let sizesData = null;
+    let defaultSizeIndex = null;
     if (req.body.sizes) {
       try {
         const parsed = JSON.parse(req.body.sizes);
         if (Array.isArray(parsed)) {
-          sizes = await Promise.all(
-            parsed.map(async (s) => {
-              const id = s.id || uuidv4();
-              const price = s.price != null ? Number(s.price) : null;
-              const translations = await translateSizeNameFill(
-                s.translations || {},
-              );
-              return { id, price, translations };
-            }),
-          );
-          // derive defaultSizeId from index, fallback to first
-          if (sizes.length > 0) {
-            const idx =
-              defaultSizeNumber != null &&
-              defaultSizeNumber >= 0 &&
-              defaultSizeNumber < sizes.length
-                ? defaultSizeNumber
-                : 0;
-            defaultSizeId = sizes[idx].id;
-          }
+          sizesData = parsed;
         }
       } catch (_) {
-        sizes = null;
+        sizesData = null;
       }
+    }
+    if (req.body.defaultSizeIndex !== undefined) {
+      const n = Number(req.body.defaultSizeIndex);
+      if (!Number.isNaN(n)) defaultSizeIndex = n;
     }
 
     // Determine price: if sizes exist, use default size price (fallback first); else use provided price
     let priceToSave = price;
-    if (sizes && sizes.length > 0) {
-      const selected = sizes.find((s) => s.id === defaultSizeId) || sizes[0];
-      priceToSave = selected && selected.price != null ? selected.price : null;
+    if (sizesData && sizesData.length > 0) {
+      const defaultIdx =
+        defaultSizeIndex != null &&
+        defaultSizeIndex >= 0 &&
+        defaultSizeIndex < sizesData.length
+          ? defaultSizeIndex
+          : 0;
+      const defaultSize = sizesData[defaultIdx];
+      priceToSave =
+        defaultSize && defaultSize.price != null
+          ? Number(defaultSize.price)
+          : price;
     }
 
     // Create menu item
@@ -223,8 +262,6 @@ const createMenuItem = async (req, res) => {
       imageUrl: imageKey,
       categoryId,
       isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
-      defaultSizeId,
-      sizes,
     });
 
     // Create translations
@@ -237,9 +274,42 @@ const createMenuItem = async (req, res) => {
       });
     }
 
-    // Fetch created item with translations
+    // Create size associations if provided
+    if (sizesData && sizesData.length > 0) {
+      for (let i = 0; i < sizesData.length; i++) {
+        const sizeData = sizesData[i];
+        await MenuItemSize.create({
+          menuItemId: menuItem.id,
+          sizeId: sizeData.sizeId,
+          price: Number(sizeData.price),
+          isDefault: i === defaultSizeIndex,
+          position: i,
+        });
+      }
+    }
+
+    // Fetch created item with translations and sizes
     const createdItem = await MenuItem.findByPk(menuItem.id, {
-      include: [{ model: MenuItemTranslation, as: 'translations' }],
+      include: [
+        { model: MenuItemTranslation, as: 'translations' },
+        {
+          model: MenuItemSize,
+          as: 'sizes',
+          include: [
+            {
+              model: Size,
+              as: 'size',
+              include: [
+                {
+                  model: SizeTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+          order: [['position', 'ASC']],
+        },
+      ],
     });
 
     const userTranslation = createdItem.translations.find(
@@ -247,11 +317,42 @@ const createMenuItem = async (req, res) => {
     );
     const anyTranslation = createdItem.translations[0];
 
+    // Format sizes
+    let formattedSizes = null;
+    if (createdItem.sizes && createdItem.sizes.length > 0) {
+      formattedSizes = createdItem.sizes.map((menuItemSize) => {
+        const sizeData = menuItemSize.size;
+        const hrTranslation = sizeData.translations.find(
+          (t) => t.language === 'hr',
+        );
+        const enTranslation = sizeData.translations.find(
+          (t) => t.language === 'en',
+        );
+
+        return {
+          id: menuItemSize.id,
+          sizeId: sizeData.id,
+          price: parseFloat(menuItemSize.price).toFixed(2),
+          isDefault: menuItemSize.isDefault,
+          position: menuItemSize.position,
+          name:
+            language === 'en'
+              ? enTranslation?.name || hrTranslation?.name || ''
+              : hrTranslation?.name || enTranslation?.name || '',
+          translations: {
+            hr: hrTranslation?.name || '',
+            en: enTranslation?.name || '',
+          },
+        };
+      });
+    }
+
     const result = {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
       imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
+      sizes: formattedSizes,
     };
 
     res.status(201).json(result);
@@ -320,68 +421,44 @@ const updateMenuItem = async (req, res) => {
       });
     }
 
-    // Parse sizes payload (new shape)
-    let defaultSizeIdU = undefined;
-    let defaultSizeNumberU = undefined;
-    let sizes = undefined;
-    if (req.body.defaultSizeId !== undefined) {
-      defaultSizeIdU = req.body.defaultSizeId || null;
-    }
-    if (req.body.defaultSizeNumber !== undefined) {
-      const n = Number(req.body.defaultSizeNumber);
-      if (!Number.isNaN(n)) defaultSizeNumberU = n;
-    }
+    // Parse sizes payload (new structure with sizeId and price)
+    let sizesData = undefined;
+    let defaultSizeIndex = undefined;
     if (req.body.sizes !== undefined) {
       try {
         const parsed = JSON.parse(req.body.sizes || 'null');
-        sizes = Array.isArray(parsed)
-          ? await Promise.all(
-              parsed.map(async (s) => {
-                const id = s.id || uuidv4();
-                const price = s.price != null ? Number(s.price) : null;
-                const translations = await translateSizeNameFill(
-                  s.translations || {},
-                );
-                return { id, price, translations };
-              }),
-            )
-          : null;
-        // If sizes provided, set defaultSizeId from index (fallback to first)
-        if (sizes && sizes.length > 0) {
-          const idx =
-            defaultSizeNumberU != null &&
-            defaultSizeNumberU >= 0 &&
-            defaultSizeNumberU < sizes.length
-              ? defaultSizeNumberU
-              : 0;
-          defaultSizeIdU = sizes[idx].id;
-        } else if (sizes === null) {
-          defaultSizeIdU = null;
+        if (Array.isArray(parsed)) {
+          sizesData = parsed;
+        } else {
+          sizesData = null;
         }
       } catch (_) {
-        sizes = null;
+        sizesData = null;
       }
+    }
+    if (req.body.defaultSizeIndex !== undefined) {
+      const n = Number(req.body.defaultSizeIndex);
+      if (!Number.isNaN(n)) defaultSizeIndex = n;
     }
 
     // Compute price to persist based on sizes/default selection
     let priceToPersist = menuItem.price;
-    if (sizes !== undefined) {
-      if (sizes === null) {
+    if (sizesData !== undefined) {
+      if (sizesData === null) {
         // sizes removed; use provided price or keep existing
         priceToPersist = price !== undefined ? price : menuItem.price;
-      } else if (Array.isArray(sizes) && sizes.length > 0) {
-        const selected = sizes.find((s) => s.id === defaultSizeIdU) || sizes[0];
+      } else if (Array.isArray(sizesData) && sizesData.length > 0) {
+        const defaultIdx =
+          defaultSizeIndex != null &&
+          defaultSizeIndex >= 0 &&
+          defaultSizeIndex < sizesData.length
+            ? defaultSizeIndex
+            : 0;
+        const defaultSize = sizesData[defaultIdx];
         priceToPersist =
-          selected && selected.price != null ? selected.price : null;
-      }
-    } else if (defaultSizeIdU !== undefined && defaultSizeIdU !== null) {
-      // sizes unchanged, default switched → update price from existing sizes
-      const currentSizes = Array.isArray(menuItem.sizes) ? menuItem.sizes : [];
-      const selected =
-        currentSizes.find((s) => s.id === defaultSizeIdU) || currentSizes[0];
-      if (selected) {
-        priceToPersist =
-          selected.price != null ? selected.price : priceToPersist;
+          defaultSize && defaultSize.price != null
+            ? Number(defaultSize.price)
+            : price;
       }
     } else if (price !== undefined) {
       priceToPersist = price;
@@ -395,15 +472,53 @@ const updateMenuItem = async (req, res) => {
       categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
       isActive:
         req.body.isActive !== undefined ? req.body.isActive : menuItem.isActive,
-      ...(defaultSizeIdU !== undefined
-        ? { defaultSizeId: defaultSizeIdU }
-        : {}),
-      ...(sizes !== undefined ? { sizes } : {}),
     });
+
+    // Update size associations if provided
+    if (sizesData !== undefined) {
+      // Delete existing size associations
+      await MenuItemSize.destroy({
+        where: { menuItemId: menuItem.id },
+      });
+
+      // Create new size associations if sizes provided
+      if (sizesData && sizesData.length > 0) {
+        for (let i = 0; i < sizesData.length; i++) {
+          const sizeData = sizesData[i];
+          await MenuItemSize.create({
+            menuItemId: menuItem.id,
+            sizeId: sizeData.sizeId,
+            price: Number(sizeData.price),
+            isDefault:
+              i === defaultSizeIndex || (defaultSizeIndex === null && i === 0),
+            position: i,
+          });
+        }
+      }
+    }
 
     // Fetch updated item
     const updated = await MenuItem.findByPk(id, {
-      include: [{ model: MenuItemTranslation, as: 'translations' }],
+      include: [
+        { model: MenuItemTranslation, as: 'translations' },
+        {
+          model: MenuItemSize,
+          as: 'sizes',
+          include: [
+            {
+              model: Size,
+              as: 'size',
+              include: [
+                {
+                  model: SizeTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+          order: [['position', 'ASC']],
+        },
+      ],
     });
 
     const userTranslation = updated.translations.find(
@@ -411,12 +526,43 @@ const updateMenuItem = async (req, res) => {
     );
     const anyTranslation = updated.translations[0];
 
+    // Format sizes
+    let formattedSizes = null;
+    if (updated.sizes && updated.sizes.length > 0) {
+      formattedSizes = updated.sizes.map((menuItemSize) => {
+        const sizeData = menuItemSize.size;
+        const hrTranslation = sizeData.translations.find(
+          (t) => t.language === 'hr',
+        );
+        const enTranslation = sizeData.translations.find(
+          (t) => t.language === 'en',
+        );
+
+        return {
+          id: menuItemSize.id,
+          sizeId: sizeData.id,
+          price: parseFloat(menuItemSize.price).toFixed(2),
+          isDefault: menuItemSize.isDefault,
+          position: menuItemSize.position,
+          name:
+            language === 'en'
+              ? enTranslation?.name || hrTranslation?.name || ''
+              : hrTranslation?.name || enTranslation?.name || '',
+          translations: {
+            hr: hrTranslation?.name || '',
+            en: enTranslation?.name || '',
+          },
+        };
+      });
+    }
+
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
       imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
       translations: updated.translations,
+      sizes: formattedSizes,
     };
 
     res.json(result);
@@ -741,6 +887,23 @@ const getAllMenuItemsForAdmin = async (req, res) => {
           model: MenuItemTranslation,
           as: 'translations',
         },
+        {
+          model: MenuItemSize,
+          as: 'sizes',
+          include: [
+            {
+              model: Size,
+              as: 'size',
+              include: [
+                {
+                  model: SizeTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+          order: [['position', 'ASC']],
+        },
       ],
     });
 
@@ -751,21 +914,54 @@ const getAllMenuItemsForAdmin = async (req, res) => {
       );
       const anyTranslation = itemData.translations[0];
 
-      const sizes =
-        Array.isArray(itemData.sizes) && itemData.sizes.length
-          ? itemData.sizes
-          : null;
+      // Format sizes with translations
+      let formattedSizes = null;
+      if (itemData.sizes && itemData.sizes.length > 0) {
+        formattedSizes = itemData.sizes.map((menuItemSize) => {
+          const sizeData = menuItemSize.size;
+          const hrTranslation = sizeData.translations.find(
+            (t) => t.language === 'hr',
+          );
+          const enTranslation = sizeData.translations.find(
+            (t) => t.language === 'en',
+          );
+
+          return {
+            id: menuItemSize.id,
+            sizeId: sizeData.id,
+            price: parseFloat(menuItemSize.price).toFixed(2),
+            isDefault: menuItemSize.isDefault,
+            position: menuItemSize.position,
+            name:
+              language === 'en'
+                ? enTranslation?.name || hrTranslation?.name || ''
+                : hrTranslation?.name || enTranslation?.name || '',
+            translations: {
+              hr: hrTranslation?.name || '',
+              en: enTranslation?.name || '',
+            },
+          };
+        });
+      }
+
+      // Find default price (from default size or first size)
+      let displayPrice = itemData.price;
+      if (formattedSizes && formattedSizes.length > 0) {
+        const defaultSize =
+          formattedSizes.find((s) => s.isDefault) || formattedSizes[0];
+        displayPrice = defaultSize ? defaultSize.price : itemData.price;
+      }
 
       return {
         ...itemData,
         name: (userTranslation || anyTranslation)?.name || '',
         description: (userTranslation || anyTranslation)?.description || '',
         price:
-          itemData.price != null ? parseFloat(itemData.price).toFixed(2) : null,
+          displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
         imageUrl: itemData.imageUrl
           ? getMediaUrl(itemData.imageUrl, 'image')
           : null,
-        sizes,
+        sizes: formattedSizes,
       };
     });
 

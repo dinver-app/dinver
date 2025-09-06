@@ -136,14 +136,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     imageFile?: File;
     isActive: boolean;
     // sizes
-    defaultSizeNumber?: number;
-    sizes?:
-      | {
-          id?: string;
-          price: number;
-          translations: { hr: string; en: string };
-        }[]
-      | null;
+    defaultSizeIndex?: number;
+    sizes?: { sizeId: string; price: number }[] | null;
   }) => {
     try {
       const menuItem = await createMenuItem({
@@ -157,7 +151,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         categoryId: data.categoryId,
         imageFile: data.imageFile,
         isActive: data.isActive,
-        defaultSizeNumber: data.defaultSizeNumber,
+        defaultSizeIndex: data.defaultSizeIndex,
         sizes: data.sizes,
       });
 
@@ -186,14 +180,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       categoryId?: string | null;
       isActive: boolean;
       // sizes
-      defaultSizeNumber?: number;
-      sizes?:
-        | {
-            id?: string;
-            price: number;
-            translations: { hr: string; en: string };
-          }[]
-        | null;
+      defaultSizeIndex?: number;
+      sizes?: { sizeId: string; price: number }[] | null;
     }
   ) => {
     try {
@@ -209,7 +197,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         removeImage: data.removeImage,
         categoryId: data.categoryId,
         isActive: data.isActive,
-        defaultSizeNumber: data.defaultSizeNumber,
+        defaultSizeIndex: data.defaultSizeIndex,
         sizes: data.sizes,
       });
 
@@ -302,6 +290,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       case VIEWS.ADD_MENU_ITEM:
         return (
           <AddMenuItem
+            restaurantId={restaurantId as string}
             onCancel={handleCancel}
             onSave={handleSaveMenuItem}
             allergens={allergens}
@@ -313,6 +302,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         return (
           <EditMenuItem
             menuItem={selectedMenuItem as MenuItem}
+            restaurantId={restaurantId as string}
             onCancel={handleCancel}
             onSave={handleUpdateMenuItem}
             allergens={allergens}

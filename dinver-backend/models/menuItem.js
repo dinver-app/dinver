@@ -20,6 +20,17 @@ module.exports = (sequelize, DataTypes) => {
         as: 'translations',
         onDelete: 'CASCADE',
       });
+      MenuItem.hasMany(models.MenuItemSize, {
+        foreignKey: 'menuItemId',
+        as: 'sizes',
+        onDelete: 'CASCADE',
+      });
+      MenuItem.belongsToMany(models.Size, {
+        through: models.MenuItemSize,
+        foreignKey: 'menuItemId',
+        otherKey: 'sizeId',
+        as: 'sizeOptions',
+      });
     }
   }
   MenuItem.init(
@@ -70,14 +81,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-      },
-      defaultSizeId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-      },
-      sizes: {
-        type: DataTypes.JSONB,
-        allowNull: true,
       },
     },
     {
