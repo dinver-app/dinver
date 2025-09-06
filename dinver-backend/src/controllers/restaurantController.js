@@ -6,6 +6,9 @@ const {
   User,
   MenuItem,
   MenuItemTranslation,
+  MenuItemSize,
+  Size,
+  SizeTranslation,
   MenuCategory,
   MenuCategoryTranslation,
   DrinkItem,
@@ -26,7 +29,6 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
-const { translateSizeNameBoth } = require('../../utils/translate');
 
 const {
   FoodType,
@@ -2176,6 +2178,23 @@ const getRestaurantMenu = async (req, res) => {
             },
           ],
         },
+        {
+          model: MenuItemSize,
+          as: 'sizes',
+          include: [
+            {
+              model: Size,
+              as: 'size',
+              include: [
+                {
+                  model: SizeTranslation,
+                  as: 'translations',
+                },
+              ],
+            },
+          ],
+          order: [['position', 'ASC']],
+        },
       ],
       order: [
         [{ model: MenuCategory, as: 'category' }, 'position', 'ASC'],
@@ -2251,22 +2270,42 @@ const getRestaurantMenu = async (req, res) => {
     };
 
     async function buildItemSizes(item) {
-      if (Array.isArray(item.sizes) && item.sizes.length) {
-        // Already in new schema: [{ id, price, translations{hr,en} }]
-        return item.sizes.map((s) => ({
-          id: s.id,
-          price: s.price != null ? Number(s.price) : null,
-          translations: s.translations || {
-            hr: s?.name?.hr || s?.name?.en || '',
-            en: s?.name?.en || s?.name?.hr || '',
-          },
-        }));
+      if (item.sizes && item.sizes.length > 0) {
+        return item.sizes.map((menuItemSize) => {
+          const sizeData = menuItemSize.size;
+          const hrTranslation = sizeData.translations.find(
+            (t) => t.language === 'hr',
+          );
+          const enTranslation = sizeData.translations.find(
+            (t) => t.language === 'en',
+          );
+
+          return {
+            id: menuItemSize.id,
+            sizeId: sizeData.id,
+            price: parseFloat(menuItemSize.price).toFixed(2),
+            isDefault: menuItemSize.isDefault,
+            position: menuItemSize.position,
+            translations: {
+              hr: hrTranslation?.name || '',
+              en: enTranslation?.name || '',
+            },
+          };
+        });
       }
       return null;
     }
 
     async function mapFoodItem(item) {
       const sizes = await buildItemSizes(item);
+
+      // Find default price (from default size or first size)
+      let displayPrice = item.price;
+      if (sizes && sizes.length > 0) {
+        const defaultSize = sizes.find((s) => s.isDefault) || sizes[0];
+        displayPrice = defaultSize ? defaultSize.price : item.price;
+      }
+
       return {
         id: item.id,
         name: item.translations[0]?.name || '',
@@ -2277,11 +2316,11 @@ const getRestaurantMenu = async (req, res) => {
           item.translations.find((t) => t.language === 'en')?.description || '',
         descriptionHr:
           item.translations.find((t) => t.language === 'hr')?.description || '',
-        price: item.price != null ? parseFloat(item.price).toFixed(2) : null,
+        price:
+          displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
         imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
         allergens: mapAllergens(item.allergens),
         sizes,
-        defaultSizeId: item.defaultSizeId || null,
       };
     }
 

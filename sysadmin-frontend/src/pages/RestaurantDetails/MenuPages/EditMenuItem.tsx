@@ -10,9 +10,12 @@ import { FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { translateText } from "../../../services/translateService";
 import { MdTranslate } from "react-icons/md";
+import { getAllSizes, Size } from "../../../services/sizeService";
+import CreateSizeModal from "../../../components/CreateSizeModal";
 
 interface EditMenuItemProps {
   menuItem: MenuItem;
+  restaurantId: string;
   onCancel: () => void;
   onSave: (
     id: string,
@@ -28,11 +31,10 @@ interface EditMenuItemProps {
       removeImage: boolean;
       categoryId?: string | null;
       isActive: boolean;
-      defaultSizeNumber?: number;
+      defaultSizeIndex?: number;
       sizes?: {
-        id?: string;
+        sizeId: string;
         price: number;
-        translations: { hr: string; en: string };
       }[];
     }
   ) => Promise<void>;
@@ -42,6 +44,7 @@ interface EditMenuItemProps {
 
 const EditMenuItem: React.FC<EditMenuItemProps> = ({
   menuItem,
+  restaurantId,
   onCancel,
   onSave,
   allergens,
@@ -72,12 +75,10 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   const [itemPrice, setItemPrice] = useState(
     menuItem.price != null
       ? String(menuItem.price)
-      : menuItem.sizes && (menuItem.sizes as any[]).length
+      : menuItem.sizes && menuItem.sizes.length
       ? String(
-          (menuItem.sizes as any[]).find(
-            (s: any) => s.id === menuItem.defaultSizeId
-          )?.price ??
-            (menuItem.sizes as any[])[0]?.price ??
+          menuItem.sizes.find((s) => s.isDefault)?.price ??
+            menuItem.sizes[0]?.price ??
             ""
         )
       : ""
@@ -97,50 +98,52 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
   const [hasSizes, setHasSizes] = useState<boolean>(
     Boolean(menuItem.sizes?.length)
   );
-  const [defaultSizeNumber, setDefaultSizeNumber] = useState<number | null>(
-    menuItem.sizes && menuItem.defaultSizeId
+  const [defaultSizeIndex, setDefaultSizeIndex] = useState<number | null>(
+    menuItem.sizes
       ? Math.max(
           0,
-          (menuItem.sizes || []).findIndex(
-            (s: any) => s.id === menuItem.defaultSizeId
-          )
+          (menuItem.sizes || []).findIndex((s) => s.isDefault)
         )
       : null
   );
-  const [sizes, setSizes] = useState<
-    { id?: string; hr: string; en: string; price: string }[]
+  const [availableSizes, setAvailableSizes] = useState<Size[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<
+    { sizeId: string; price: string }[]
   >(
-    (menuItem.sizes || []).map((s: any) => ({
-      id: s.id,
-      hr: s.translations?.hr || "",
-      en: s.translations?.en || "",
+    (menuItem.sizes || []).map((s) => ({
+      sizeId: s.sizeId,
       price: String(s.price ?? ""),
     }))
   );
+  const [isCreateSizeModalOpen, setIsCreateSizeModalOpen] = useState(false);
+
+  // Load available sizes on component mount
+  useEffect(() => {
+    const loadSizes = async () => {
+      try {
+        const sizes = await getAllSizes(restaurantId);
+        setAvailableSizes(sizes);
+      } catch (error) {
+        console.error("Failed to load sizes:", error);
+      }
+    };
+    loadSizes();
+  }, [restaurantId]);
 
   // Ensure at least one size when hasSizes is enabled
   useEffect(() => {
     if (hasSizes) {
-      if (sizes.length === 0) {
-        setSizes([{ hr: "", en: "", price: "" }]);
-        setDefaultSizeNumber(0);
-      } else if (
-        defaultSizeNumber === null ||
-        defaultSizeNumber === undefined
-      ) {
-        setDefaultSizeNumber(0);
+      if (selectedSizes.length === 0) {
+        setSelectedSizes([{ sizeId: "", price: "" }]);
+        setDefaultSizeIndex(0);
+      } else if (defaultSizeIndex === null || defaultSizeIndex === undefined) {
+        setDefaultSizeIndex(0);
       }
     } else {
-      setDefaultSizeNumber(null);
+      setDefaultSizeIndex(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasSizes]);
-  const generateUuid = () =>
-    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
 
   const handleSave = async () => {
     // Zamijeni zarez s točkom za cijenu
@@ -159,9 +162,9 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
       return;
     }
 
-    const validSizes = sizes
+    const validSizes = selectedSizes
       .map((s, idx) => ({ ...s, _idx: idx }))
-      .filter((s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== "");
+      .filter((s) => s.sizeId.trim() !== "" && s.price.trim() !== "");
 
     const hasValidSizes = hasSizes && validSizes.length > 0;
 
@@ -177,38 +180,33 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     }
 
     // If sizes are present, require default size
-    let finalDefaultSizeNumber: number | undefined = undefined;
+    let finalDefaultSizeIndex: number | undefined = undefined;
     let finalizedSizes:
       | {
-          id: string;
+          sizeId: string;
           price: number;
-          translations: { hr: string; en: string };
         }[]
       | undefined = undefined;
 
     if (hasValidSizes) {
       finalizedSizes = validSizes.map((s) => ({
-        id: s.id || generateUuid(),
+        sizeId: s.sizeId,
         price: parseFloat(s.price.replace(",", ".")),
-        translations: {
-          hr: s.hr.trim(),
-          en: s.en.trim(),
-        },
       }));
 
-      if (defaultSizeNumber === null || defaultSizeNumber === undefined) {
+      if (defaultSizeIndex === null || defaultSizeIndex === undefined) {
         toast.error("Please select a default size");
         return;
       }
       if (
-        !Number.isFinite(defaultSizeNumber) ||
-        defaultSizeNumber < 0 ||
-        defaultSizeNumber >= finalizedSizes.length
+        !Number.isFinite(defaultSizeIndex) ||
+        defaultSizeIndex < 0 ||
+        defaultSizeIndex >= finalizedSizes.length
       ) {
         toast.error("Please select a valid default size");
         return;
       }
-      finalDefaultSizeNumber = defaultSizeNumber;
+      finalDefaultSizeIndex = defaultSizeIndex;
     }
 
     setIsSaving(true);
@@ -219,17 +217,15 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
         translations: translatesArray,
         // Keep item price aligned with selected default size on update
         price:
-          hasValidSizes &&
-          finalDefaultSizeNumber !== undefined &&
-          finalizedSizes
-            ? String(finalizedSizes[finalDefaultSizeNumber].price)
+          hasValidSizes && finalDefaultSizeIndex !== undefined && finalizedSizes
+            ? String(finalizedSizes[finalDefaultSizeIndex].price)
             : normalizedPrice,
         allergens: selectedAllergenIds.map(String),
         imageFile: itemImageFile,
         removeImage: removeImage,
         categoryId: selectedCategoryId || null,
         isActive,
-        defaultSizeNumber: hasValidSizes ? finalDefaultSizeNumber : undefined,
+        defaultSizeIndex: hasValidSizes ? finalDefaultSizeIndex : undefined,
         // Cast to any to allow explicit null to signal clearing sizes
         sizes: hasValidSizes
           ? finalizedSizes
@@ -262,6 +258,19 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     setSelectedAllergenIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  const handleSizeCreated = (newSize: { id: string; name: string }) => {
+    setAvailableSizes((prev) => [...prev, { ...newSize, isActive: true }]);
+    // Automatically select the newly created size
+    setSelectedSizes((prev) => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+      if (lastIndex >= 0) {
+        updated[lastIndex] = { ...updated[lastIndex], sizeId: newSize.id };
+      }
+      return updated;
+    });
   };
 
   const isLanguageValid = (lang: Language) => {
@@ -378,46 +387,48 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
         {hasSizes && (
           <>
             <div className="space-y-2">
-              {sizes.map((s, idx) => (
+              {selectedSizes.map((s, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
                   <input
                     type="radio"
                     name="defaultSize"
-                    checked={defaultSizeNumber === idx}
-                    onChange={() => setDefaultSizeNumber(idx)}
+                    checked={defaultSizeIndex === idx}
+                    onChange={() => setDefaultSizeIndex(idx)}
                   />
-                  <input
-                    type="text"
-                    placeholder={t("name_hr")}
-                    value={s.hr || ""}
-                    onChange={(e) =>
-                      setSizes((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, hr: e.target.value } : x
-                        )
-                      )
-                    }
+                  <select
+                    value={s.sizeId}
+                    onChange={(e) => {
+                      if (e.target.value === "create_new") {
+                        setIsCreateSizeModalOpen(true);
+                      } else {
+                        setSelectedSizes((prev) =>
+                          prev.map((x, i) =>
+                            i === idx ? { ...x, sizeId: e.target.value } : x
+                          )
+                        );
+                      }
+                    }}
                     className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("name_en")}
-                    value={s.en || ""}
-                    onChange={(e) =>
-                      setSizes((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, en: e.target.value } : x
-                        )
-                      )
-                    }
-                    className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
-                  />
+                  >
+                    <option value="">{t("select_size")}</option>
+                    {availableSizes.map((size) => (
+                      <option key={size.id} value={size.id}>
+                        {size.name}
+                      </option>
+                    ))}
+                    <option
+                      value="create_new"
+                      className="text-green-600 font-semibold"
+                    >
+                      + {t("create_new_size")}
+                    </option>
+                  </select>
                   <input
                     type="text"
                     placeholder={t("price")}
                     value={s.price}
                     onChange={(e) =>
-                      setSizes((prev) =>
+                      setSelectedSizes((prev) =>
                         prev.map((x, i) =>
                           i === idx ? { ...x, price: e.target.value } : x
                         )
@@ -425,15 +436,15 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
                     }
                     className="w-28 text-sm p-2 border border-gray-300 rounded-md"
                   />
-                  {sizes.length > 1 && (
+                  {selectedSizes.length > 1 && (
                     <button
                       type="button"
                       className="text-red-600 text-sm"
                       onClick={() =>
-                        setSizes((prev) => {
+                        setSelectedSizes((prev) => {
                           if (prev.length <= 1) return prev;
                           const next = prev.filter((_, i) => i !== idx);
-                          setDefaultSizeNumber((cur) => {
+                          setDefaultSizeIndex((cur) => {
                             if (next.length === 0) return null;
                             if (cur === idx) return 0;
                             if (cur !== null && cur > idx) return cur - 1;
@@ -452,7 +463,10 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
                 type="button"
                 className="secondary-button text-xs"
                 onClick={() =>
-                  setSizes((prev) => [...prev, { hr: "", en: "", price: "" }])
+                  setSelectedSizes((prev) => [
+                    ...prev,
+                    { sizeId: "", price: "" },
+                  ])
                 }
               >
                 {t("add_size")}
@@ -524,8 +538,8 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
           onChange={(e) => setItemPrice(e.target.value)}
           disabled={
             hasSizes &&
-            sizes.some(
-              (s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== ""
+            selectedSizes.some(
+              (s) => s.sizeId.trim() !== "" && s.price.trim() !== ""
             )
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
@@ -706,6 +720,13 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
           {t("cancel")}
         </button>
       </div>
+
+      <CreateSizeModal
+        isOpen={isCreateSizeModalOpen}
+        onClose={() => setIsCreateSizeModalOpen(false)}
+        onSizeCreated={handleSizeCreated}
+        restaurantId={restaurantId}
+      />
     </div>
   );
 };

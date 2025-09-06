@@ -677,5 +677,13 @@
   "remove_size": "Remove Size",
   "default_size": "Default Size",
   "default_size_name": "Default Size Name",
-  "sizes": "Sizes"
+  "sizes": "Sizes",
+  "select_size": "Select size",
+  "create_new_size": "Create new size",
+  "create_new_size_modal_title": "Create new size",
+  "size_name_required": "Size name is required",
+  "enter_size_name": "Enter size name",
+  "size_created_successfully": "Size created successfully",
+  "failed_to_create_size": "Failed to create size",
+  "price_disabled_with_sizes": "Price is disabled with sizes"
 }

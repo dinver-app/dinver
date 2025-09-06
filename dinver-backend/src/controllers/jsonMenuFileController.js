@@ -19,29 +19,29 @@ const getRestaurantJsonFiles = async (req, res) => {
     const { restaurantId } = req.params;
 
     const files = await JsonMenuFile.findAll({
-      where: { 
+      where: {
         restaurantId,
-        isActive: true 
+        isActive: true,
       },
       include: [
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug']
-        }
+          attributes: ['id', 'name', 'slug'],
+        },
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
     });
 
     res.json({
       success: true,
-      files
+      files,
     });
   } catch (error) {
     console.error('Error fetching JSON menu files:', error);
     res.status(500).json({
       error: 'Failed to fetch JSON menu files',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -55,22 +55,22 @@ const createJsonMenuFile = async (req, res) => {
     // Validate JSON content
     if (!jsonContent || typeof jsonContent !== 'object') {
       return res.status(400).json({
-        error: 'Invalid JSON content'
+        error: 'Invalid JSON content',
       });
     }
 
     // Check if file with same name already exists
     const existingFile = await JsonMenuFile.findOne({
-      where: { 
+      where: {
         restaurantId,
         filename,
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
     if (existingFile) {
       return res.status(400).json({
-        error: 'File with this name already exists'
+        error: 'File with this name already exists',
       });
     }
 
@@ -78,18 +78,18 @@ const createJsonMenuFile = async (req, res) => {
       restaurantId,
       filename,
       jsonContent,
-      menuType: menuType || 'food'
+      menuType: menuType || 'food',
     });
 
     res.json({
       success: true,
-      file
+      file,
     });
   } catch (error) {
     console.error('Error creating JSON menu file:', error);
     res.status(500).json({
       error: 'Failed to create JSON menu file',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -103,14 +103,14 @@ const updateJsonMenuFile = async (req, res) => {
     const file = await JsonMenuFile.findByPk(id);
     if (!file) {
       return res.status(404).json({
-        error: 'File not found'
+        error: 'File not found',
       });
     }
 
     // Validate JSON content if provided
     if (jsonContent && typeof jsonContent !== 'object') {
       return res.status(400).json({
-        error: 'Invalid JSON content'
+        error: 'Invalid JSON content',
       });
     }
 
@@ -118,18 +118,18 @@ const updateJsonMenuFile = async (req, res) => {
       filename: filename || file.filename,
       jsonContent: jsonContent || file.jsonContent,
       menuType: menuType || file.menuType,
-      isActive: isActive !== undefined ? isActive : file.isActive
+      isActive: isActive !== undefined ? isActive : file.isActive,
     });
 
     res.json({
       success: true,
-      file
+      file,
     });
   } catch (error) {
     console.error('Error updating JSON menu file:', error);
     res.status(500).json({
       error: 'Failed to update JSON menu file',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -142,7 +142,7 @@ const deleteJsonMenuFile = async (req, res) => {
     const file = await JsonMenuFile.findByPk(id);
     if (!file) {
       return res.status(404).json({
-        error: 'File not found'
+        error: 'File not found',
       });
     }
 
@@ -150,13 +150,13 @@ const deleteJsonMenuFile = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'File deleted successfully'
+      message: 'File deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting JSON menu file:', error);
     res.status(500).json({
       error: 'Failed to delete JSON menu file',
-      details: error.message
+      details: error.message,
     });
   }
 };
@@ -171,20 +171,20 @@ const importMenuFromJsonFile = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug']
-        }
-      ]
+          attributes: ['id', 'name', 'slug'],
+        },
+      ],
     });
 
     if (!file) {
       return res.status(404).json({
-        error: 'File not found'
+        error: 'File not found',
       });
     }
 
     if (!file.isActive) {
       return res.status(400).json({
-        error: 'File is not active'
+        error: 'File is not active',
       });
     }
 
@@ -195,7 +195,7 @@ const importMenuFromJsonFile = async (req, res) => {
       menuType,
       categories: { created: 0, existing: 0 },
       items: { created: 0, errors: 0 },
-      errors: []
+      errors: [],
     };
 
     // Process categories first
@@ -309,7 +309,7 @@ const importMenuFromJsonFile = async (req, res) => {
           const categoryId = categoryMap.get(itemData.categoryName);
           if (!categoryId) {
             results.errors.push(
-              `Category not found for item: ${itemData.name.hr}`
+              `Category not found for item: ${itemData.name.hr}`,
             );
             results.items.errors++;
             continue;
@@ -370,16 +370,15 @@ const importMenuFromJsonFile = async (req, res) => {
           const lastPosition = existingItems[0]?.position ?? -1;
           const newPosition = lastPosition + 1;
 
-          const item = await (menuType === 'food' ? MenuItem : DrinkItem).create({
+          const item = await (
+            menuType === 'food' ? MenuItem : DrinkItem
+          ).create({
             price: itemData.price,
             restaurantId: restaurant.id,
             position: newPosition,
             categoryId,
             imageUrl: null,
             isActive: true,
-            hasSizes: itemData.hasSizes || false,
-            defaultSizeName: itemData.defaultSizeName || null,
-            sizes: itemData.sizes || [],
             ...(menuType === 'food' && { allergens: [] }), // Only for food items
           });
 
@@ -420,7 +419,6 @@ const importMenuFromJsonFile = async (req, res) => {
       message: `Menu import completed for ${restaurant.name}`,
       results,
     });
-
   } catch (error) {
     console.error('Error importing menu from JSON file:', error);
     res.status(500).json({
@@ -435,5 +433,5 @@ module.exports = {
   createJsonMenuFile,
   updateJsonMenuFile,
   deleteJsonMenuFile,
-  importMenuFromJsonFile
+  importMenuFromJsonFile,
 };

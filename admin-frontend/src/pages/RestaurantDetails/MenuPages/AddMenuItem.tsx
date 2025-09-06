@@ -5,8 +5,11 @@ import { FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { translateText } from "../../../services/translateService";
 import { MdTranslate } from "react-icons/md";
+import { getAllSizes, Size } from "../../../services/sizeService";
+import CreateSizeModal from "../../../components/CreateSizeModal";
 
 interface AddMenuItemProps {
+  restaurantId: string;
   onCancel: () => void;
   onSave: (data: {
     translates: {
@@ -20,14 +23,8 @@ interface AddMenuItemProps {
     imageFile?: File;
     isActive: boolean;
     // sizes support
-    defaultSizeNumber?: number;
-    sizes?:
-      | {
-          id?: string;
-          price: number;
-          translations: { hr: string; en: string };
-        }[]
-      | null;
+    defaultSizeIndex?: number;
+    sizes?: { sizeId: string; price: number }[] | null;
   }) => Promise<void>;
   allergens: Allergen[];
   categories: Category[];
@@ -35,6 +32,7 @@ interface AddMenuItemProps {
 }
 
 const AddMenuItem: React.FC<AddMenuItemProps> = ({
+  restaurantId,
   onCancel,
   onSave,
   allergens,
@@ -42,6 +40,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   initialCategoryId,
 }) => {
   const { t } = useTranslation();
+
   const [activeTab, setActiveTab] = useState<Language>(Language.HR);
   const [translations, setTranslations] = useState<
     Record<Language, { name: string; description: string }>
@@ -60,137 +59,40 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [hasSizes, setHasSizes] = useState(false);
-  const [sizes, setSizes] = useState<
-    { id?: string; hr: string; en: string; price: string }[]
+  const [defaultSizeIndex, setDefaultSizeIndex] = useState<number | null>(null);
+  const [availableSizes, setAvailableSizes] = useState<Size[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<
+    { sizeId: string; price: string }[]
   >([]);
-  const [defaultSizeNumber, setDefaultSizeNumber] = useState<number | null>(
-    null
-  );
+  const [isCreateSizeModalOpen, setIsCreateSizeModalOpen] = useState(false);
 
-  // Ensure at least one size when enabling sizes and keep a default
+  // Load available sizes on component mount
+  useEffect(() => {
+    const loadSizes = async () => {
+      try {
+        const sizes = await getAllSizes(restaurantId);
+        setAvailableSizes(sizes);
+      } catch (error) {
+        console.error("Failed to load sizes:", error);
+      }
+    };
+    loadSizes();
+  }, [restaurantId]);
+
+  // Ensure there is always at least one size when hasSizes is enabled
   useEffect(() => {
     if (hasSizes) {
-      if (sizes.length === 0) {
-        setSizes([{ hr: "", en: "", price: "" }]);
-        setDefaultSizeNumber(0);
-      } else if (
-        defaultSizeNumber === null ||
-        defaultSizeNumber === undefined
-      ) {
-        setDefaultSizeNumber(0);
+      if (selectedSizes.length === 0) {
+        setSelectedSizes([{ sizeId: "", price: "" }]);
+        setDefaultSizeIndex(0);
+      } else if (defaultSizeIndex === null || defaultSizeIndex === undefined) {
+        setDefaultSizeIndex(0);
       }
     } else {
-      setDefaultSizeNumber(null);
+      setSelectedSizes([]);
+      setDefaultSizeIndex(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSizes]);
-
-  const handleSave = async () => {
-    // Zamijeni zarez s točkom za cijenu
-    const normalizedPrice = itemPrice.replace(",", ".");
-
-    // Validate sizes if hasSizes
-    const validSizes = sizes.filter(
-      (s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== ""
-    );
-    const hasValidSizes = hasSizes && validSizes.length > 0;
-
-    const translatesArray = Object.entries(translations)
-      .filter(([_, value]) => value.name.trim() !== "")
-      .map(([language, value]) => ({
-        name: value.name.trim(),
-        description: value.description.trim(),
-        language: language as string,
-      }));
-
-    if (translatesArray.length === 0) {
-      toast.error(t("item_name_required"));
-      return;
-    }
-
-    if (!hasValidSizes) {
-      if (!normalizedPrice.trim()) {
-        toast.error(t("price_required"));
-        return;
-      }
-      if (isNaN(parseFloat(normalizedPrice))) {
-        toast.error(t("invalid_price"));
-        return;
-      }
-    } else {
-      // require default size selection
-      if (defaultSizeNumber === null || defaultSizeNumber === undefined) {
-        toast.error(t("default_size_required"));
-        return;
-      }
-      if (
-        defaultSizeNumber < 0 ||
-        defaultSizeNumber >= validSizes.length ||
-        isNaN(parseFloat(validSizes[defaultSizeNumber].price.replace(",", ".")))
-      ) {
-        toast.error(t("invalid_default_size"));
-        return;
-      }
-    }
-
-    setIsSaving(true);
-    const loadingToast = toast.loading(t("saving"));
-
-    try {
-      // Build sizes payload
-      let sizesPayload:
-        | {
-            id?: string;
-            price: number;
-            translations: { hr: string; en: string };
-          }[]
-        | null
-        | undefined = undefined;
-      let priceToSend = normalizedPrice;
-      let defaultIndexToSend: number | undefined = undefined;
-      if (hasValidSizes) {
-        sizesPayload = validSizes.map((s) => ({
-          price: parseFloat(s.price.replace(",", ".")),
-          translations: { hr: s.hr.trim(), en: s.en.trim() },
-        }));
-        defaultIndexToSend = defaultSizeNumber as number;
-        priceToSend = sizesPayload[defaultIndexToSend].price.toString();
-      }
-
-      await onSave({
-        translates: translatesArray,
-        price: priceToSend,
-        allergens: selectedAllergenIds.map(String),
-        categoryId: selectedCategoryId || null,
-        imageFile: itemImageFile || undefined,
-        isActive,
-        ...(hasValidSizes
-          ? {
-              // @ts-ignore admin onSave signature extended in MenuTab
-              defaultSizeNumber: defaultIndexToSend,
-              // @ts-ignore admin onSave signature extended in MenuTab
-              sizes: sizesPayload,
-            }
-          : {}),
-      });
-      toast.dismiss(loadingToast);
-    } catch (error) {
-      toast.dismiss(loadingToast);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setItemImageFile(event.target.files[0]);
-      event.target.value = "";
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setItemImageFile(null);
-  };
+  }, [hasSizes, selectedSizes.length, defaultSizeIndex]);
 
   const handleAllergenSelect = (id: number) => {
     setSelectedAllergenIds((prev) =>
@@ -198,18 +100,95 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
     );
   };
 
+  const handleSizeCreated = (newSize: { id: string; name: string }) => {
+    setAvailableSizes((prev) => [...prev, { ...newSize, isActive: true }]);
+    // Automatically select the newly created size
+    setSelectedSizes((prev) => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+      if (lastIndex >= 0) {
+        updated[lastIndex] = { ...updated[lastIndex], sizeId: newSize.id };
+      }
+      return updated;
+    });
+  };
+
   const isLanguageValid = (lang: Language) => {
     const translation = translations[lang];
     if (!translation.name.trim()) return false;
-
-    if (!translation.description.trim()) return true;
-
+    if (!translation.description.trim()) return false;
     return true;
   };
 
-  const handleTranslate = async (field: "name" | "description") => {
+  const handleSave = async () => {
+    if (!isLanguageValid(Language.HR)) {
+      toast.error(t("fill_required_fields_croatian"));
+      return;
+    }
+
+    if (!isLanguageValid(Language.EN)) {
+      toast.error(t("fill_required_fields_english"));
+      return;
+    }
+
+    if (!selectedCategoryId) {
+      toast.error(t("select_category"));
+      return;
+    }
+
+    if (!hasSizes && !itemPrice.trim()) {
+      toast.error(t("enter_price"));
+      return;
+    }
+
+    if (hasSizes) {
+      const hasInvalidSizes = selectedSizes.some(
+        (s) => !s.sizeId || !s.price.trim() || isNaN(Number(s.price))
+      );
+      if (hasInvalidSizes) {
+        toast.error(t("fill_all_sizes"));
+        return;
+      }
+    }
+
+    setIsSaving(true);
+
     try {
-      const sourceText = translations[activeTab][field];
+      const translatesArray = Object.entries(translations)
+        .filter(([_, value]) => value.name.trim() !== "")
+        .map(([language, value]) => ({
+          name: value.name.trim(),
+          description: value.description.trim(),
+          language: language as string,
+        }));
+
+      const sizesData = hasSizes
+        ? selectedSizes.map((s) => ({
+            sizeId: s.sizeId,
+            price: Number(s.price),
+          }))
+        : null;
+
+      await onSave({
+        translates: translatesArray,
+        price: itemPrice,
+        allergens: selectedAllergenIds.map(String),
+        categoryId: selectedCategoryId,
+        imageFile: itemImageFile || undefined,
+        isActive,
+        defaultSizeIndex: hasSizes ? defaultSizeIndex ?? undefined : undefined,
+        sizes: sizesData,
+      });
+    } catch (error) {
+      console.error("Error saving menu item:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    try {
+      const sourceText = translations[activeTab].name;
       if (!sourceText.trim()) {
         toast.error(t("nothing_to_translate"));
         return;
@@ -225,7 +204,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
         ...prev,
         [targetLang]: {
           ...prev[targetLang],
-          [field]: translatedText,
+          name: translatedText,
         },
       }));
 
@@ -235,26 +214,88 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
     }
   };
 
+  const handleDescriptionTranslate = async () => {
+    try {
+      const sourceText = translations[activeTab].description;
+      if (!sourceText.trim()) {
+        toast.error(t("nothing_to_translate"));
+        return;
+      }
+
+      const targetLang = activeTab === Language.HR ? Language.EN : Language.HR;
+      const translatedText = await translateText(
+        sourceText,
+        targetLang.toLowerCase()
+      );
+
+      setTranslations((prev) => ({
+        ...prev,
+        [targetLang]: {
+          ...prev[targetLang],
+          description: translatedText,
+        },
+      }));
+
+      toast.success(t("translation_success"));
+    } catch (error) {
+      toast.error(t("translation_failed"));
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setItemImageFile(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setItemImageFile(null);
+  };
+
+  const addSize = () => {
+    setSelectedSizes([...selectedSizes, { sizeId: "", price: "" }]);
+  };
+
+  const removeSize = (index: number) => {
+    const newSizes = selectedSizes.filter((_, i) => i !== index);
+    setSelectedSizes(newSizes);
+
+    // Adjust default size index if needed
+    if (defaultSizeIndex !== null) {
+      if (defaultSizeIndex === index) {
+        // If we removed the default size, set the first one as default
+        setDefaultSizeIndex(newSizes.length > 0 ? 0 : null);
+      } else if (defaultSizeIndex > index) {
+        // If we removed a size before the default, adjust the index
+        setDefaultSizeIndex(defaultSizeIndex - 1);
+      }
+    }
+  };
+
+  const updateSize = (
+    index: number,
+    field: "sizeId" | "price",
+    value: string
+  ) => {
+    setSelectedSizes((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, [field]: value } : s))
+    );
+  };
+
+  const filteredAllergens = allergens.filter(
+    (allergen) =>
+      allergen.nameHr.toLowerCase().includes(allergenSearch.toLowerCase()) ||
+      allergen.nameEn.toLowerCase().includes(allergenSearch.toLowerCase())
+  );
+
   return (
-    <div className="py-2">
-      <button
-        onClick={onCancel}
-        className="mr-2 text-gray-500 hover:text-gray-700 text-xs"
-      >
-        ← {t("back")}
-      </button>
-      <div className="flex items-start">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">
-            {t("add_menu_item")}
-          </h2>
-          <p className="text-gray-600 mb-4 text-sm">
-            {t("add_menu_item_description")}
-          </p>
-        </div>
-      </div>
-      <div className="h-line"></div>
-      <div className="flex space-x-4 mb-6">
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">
+        {t("add_menu_item")}
+      </h2>
+
+      <div className="flex space-x-4 mb-4">
         <button
           onClick={() => setActiveTab(Language.HR)}
           className={`px-4 py-2 rounded-md text-sm ${
@@ -276,7 +317,8 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           {t("english")}
         </button>
       </div>
-      <div className="flex space-x-4 mb-6">
+
+      <div className="flex space-x-4 mb-4">
         <div className="flex items-center">
           <div
             className={`w-3 h-3 rounded-full mr-2 ${
@@ -294,14 +336,15 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           <span className="text-sm text-gray-600">{t("english")}</span>
         </div>
       </div>
-      <div className="mb-3 max-w-xl">
+
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium text-gray-700">
             {t("name")} (
             {activeTab === Language.HR ? t("croatian") : t("english")})
           </label>
           <button
-            onClick={() => handleTranslate("name")}
+            onClick={handleTranslate}
             className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
             title={t("translate")}
           >
@@ -319,16 +362,18 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
             }))
           }
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={t("enter_name")}
         />
       </div>
-      <div className="mb-3 max-w-xl">
+
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium text-gray-700">
             {t("description")} (
             {activeTab === Language.HR ? t("croatian") : t("english")})
           </label>
           <button
-            onClick={() => handleTranslate("description")}
+            onClick={handleDescriptionTranslate}
             className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
             title={t("translate")}
           >
@@ -344,164 +389,13 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
               [activeTab]: { ...prev[activeTab], description: e.target.value },
             }))
           }
+          rows={3}
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={t("enter_description")}
         />
       </div>
-      <div className="mb-3 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("price")}
-        </label>
-        <input
-          type="text"
-          value={itemPrice}
-          onChange={(e) => setItemPrice(e.target.value)}
-          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-          disabled={
-            hasSizes &&
-            sizes.some(
-              (s) => (s.hr || s.en).trim() !== "" && s.price.trim() !== ""
-            )
-          }
-        />
-      </div>
-      <div className="mb-3 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("sizes")}
-        </label>
-        <div className="flex items-center mb-2 gap-2">
-          <input
-            type="checkbox"
-            checked={hasSizes}
-            onChange={(e) => setHasSizes(e.target.checked)}
-          />
-          <span className="text-sm text-gray-700">{t("has_sizes")}</span>
-        </div>
-        {hasSizes && (
-          <>
-            <div className="space-y-2">
-              {sizes.map((s, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <input
-                    type="radio"
-                    name="defaultSize"
-                    checked={defaultSizeNumber === idx}
-                    onChange={() => setDefaultSizeNumber(idx)}
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("name_hr")}
-                    value={s.hr || ""}
-                    onChange={(e) =>
-                      setSizes((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, hr: e.target.value } : x
-                        )
-                      )
-                    }
-                    className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("name_en")}
-                    value={s.en || ""}
-                    onChange={(e) =>
-                      setSizes((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, en: e.target.value } : x
-                        )
-                      )
-                    }
-                    className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
-                  />
-                  <input
-                    type="text"
-                    placeholder={t("price")}
-                    value={s.price}
-                    onChange={(e) =>
-                      setSizes((prev) =>
-                        prev.map((x, i) =>
-                          i === idx ? { ...x, price: e.target.value } : x
-                        )
-                      )
-                    }
-                    className="w-28 text-sm p-2 border border-gray-300 rounded-md"
-                  />
-                  {sizes.length > 1 && (
-                    <button
-                      type="button"
-                      className="text-red-600 text-sm"
-                      onClick={() =>
-                        setSizes((prev) => {
-                          if (prev.length <= 1) return prev;
-                          const next = prev.filter((_, i) => i !== idx);
-                          setDefaultSizeNumber((cur) => {
-                            if (next.length === 0) return null;
-                            if (cur === idx) return 0;
-                            if (cur !== null && cur > idx) return cur - 1;
-                            return cur;
-                          });
-                          return next;
-                        })
-                      }
-                    >
-                      {t("remove")}
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                className="secondary-button text-xs"
-                onClick={() =>
-                  setSizes((prev) => [...prev, { hr: "", en: "", price: "" }])
-                }
-              >
-                {t("add_size")}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      <div className="mb-3 max-w-xl">
-        <label className="block text-sm font-medium text-gray-700">
-          {t("image")}
-        </label>
-        <div className="mt-1 flex items-center gap-2 border border-gray-300 rounded p-2">
-          <input
-            type="file"
-            id="fileInput"
-            onChange={handleFileChange}
-            style={{ display: "none" }}
-          />
-          <button
-            onClick={() => document.getElementById("fileInput")?.click()}
-            className="secondary-button text-xs"
-          >
-            {itemImageFile ? t("choose_another_image") : t("choose_image")}
-          </button>
-          {itemImageFile ? (
-            <div className="flex items-center ml-4 flex-1 min-w-0">
-              <img
-                src={URL.createObjectURL(itemImageFile)}
-                alt={itemImageFile.name}
-                className="w-10 h-10 object-cover rounded mr-2 flex-shrink-0"
-              />
-              <span className="text-xs truncate">{itemImageFile.name}</span>
-            </div>
-          ) : (
-            <span className="text-xs ml-2">{t("no_file_chosen")}</span>
-          )}
-          {itemImageFile && (
-            <button
-              onClick={handleRemoveImage}
-              className="text-gray-500 hover:text-gray-700 text-xs ml-auto flex-shrink-0"
-            >
-              <FaTrash />
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="mb-3 max-w-xl">
+
+      <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("category")}
         </label>
@@ -510,7 +404,7 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           onChange={(e) => setSelectedCategoryId(e.target.value)}
           className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
         >
-          <option value="">{t("no_category")}</option>
+          <option value="">{t("select_category")}</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -518,97 +412,214 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
           ))}
         </select>
       </div>
-      <div className="mb-3 max-w-xl">
+
+      <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t("Alergeni")}
+          {t("price")} (€)
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={itemPrice}
+          onChange={(e) => setItemPrice(e.target.value)}
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+          placeholder={t("enter_price")}
+          disabled={hasSizes && selectedSizes.length > 0}
+        />
+        {hasSizes && selectedSizes.length > 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            {t("price_disabled_with_sizes")}
+          </p>
+        )}
+      </div>
+
+      <div className="mb-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={hasSizes}
+            onChange={(e) => setHasSizes(e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            {t("has_sizes")}
+          </span>
+        </label>
+      </div>
+
+      {hasSizes && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t("sizes")}
+          </label>
+          {selectedSizes.map((s, idx) => (
+            <div key={idx} className="flex items-center gap-2 mb-2">
+              <input
+                type="radio"
+                name="defaultSize"
+                checked={defaultSizeIndex === idx}
+                onChange={() => setDefaultSizeIndex(idx)}
+              />
+              <select
+                value={s.sizeId}
+                onChange={(e) => {
+                  if (e.target.value === "create_new") {
+                    setIsCreateSizeModalOpen(true);
+                  } else {
+                    updateSize(idx, "sizeId", e.target.value);
+                  }
+                }}
+                className="flex-1 text-sm p-2 border border-gray-300 rounded-md"
+              >
+                <option value="">{t("select_size")}</option>
+                {availableSizes.map((size) => (
+                  <option key={size.id} value={size.id}>
+                    {size.name}
+                  </option>
+                ))}
+                <option
+                  value="create_new"
+                  className="text-green-600 font-semibold"
+                >
+                  + {t("create_new_size")}
+                </option>
+              </select>
+              <input
+                type="text"
+                placeholder={t("price")}
+                value={s.price}
+                onChange={(e) => updateSize(idx, "price", e.target.value)}
+                className="w-24 text-sm p-2 border border-gray-300 rounded-md"
+              />
+              <button
+                onClick={() => removeSize(idx)}
+                className="text-red-500 hover:text-red-700"
+                disabled={selectedSizes.length === 1}
+              >
+                <FaTrash className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={addSize}
+            className="text-sm text-green-600 hover:text-green-800"
+          >
+            + {t("add_size")}
+          </button>
+        </div>
+      )}
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("allergens")}
         </label>
         <div className="relative">
           <input
             type="text"
-            placeholder={t("Pretraži alergene")}
             value={allergenSearch}
             onChange={(e) => setAllergenSearch(e.target.value)}
             onFocus={() => setAllergenDropdownOpen(true)}
-            onBlur={() => setAllergenDropdownOpen(false)}
             className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+            placeholder={t("search_allergens")}
           />
           {isAllergenDropdownOpen && (
-            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
-              {allergens
-                .filter(
-                  (allergen) =>
-                    !selectedAllergenIds.includes(allergen.id) &&
-                    (activeTab === Language.EN
-                      ? allergen.nameEn
-                      : allergen.nameHr
-                    )
-                      .toLowerCase()
-                      .includes(allergenSearch.toLowerCase())
-                )
-                .map((allergen) => (
-                  <div
-                    key={allergen.id}
-                    className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
-                    onMouseDown={() => handleAllergenSelect(allergen.id)}
-                  >
-                    <span className="flex items-center">
-                      {allergen.icon}{" "}
-                      {activeTab === Language.EN
-                        ? allergen.nameEn
-                        : allergen.nameHr}
-                    </span>
-                  </div>
-                ))}
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+              {filteredAllergens.map((allergen) => (
+                <div
+                  key={allergen.id}
+                  className="p-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                  onClick={() => {
+                    handleAllergenSelect(allergen.id);
+                    setAllergenSearch("");
+                    setAllergenDropdownOpen(false);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedAllergenIds.includes(allergen.id)}
+                    onChange={() => handleAllergenSelect(allergen.id)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">
+                    {activeTab === Language.HR
+                      ? allergen.nameHr
+                      : allergen.nameEn}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {selectedAllergenIds.map((id) => {
-            const allergen = allergens.find((all) => all.id === id);
-            return (
-              <div
-                key={id}
-                className="flex items-center px-2 py-1 rounded-full bg-gray-100"
-              >
-                <span className="mr-2">{allergen?.icon}</span>
-                <span>
-                  {activeTab === Language.EN
-                    ? allergen?.nameEn
-                    : allergen?.nameHr}
-                </span>
-                <button
-                  onClick={() => handleAllergenSelect(id)}
-                  className="ml-2 text-xs text-red-500 hover:text-red-700"
+        {selectedAllergenIds.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {selectedAllergenIds.map((id) => {
+              const allergen = allergens.find((a) => a.id === id);
+              return (
+                <span
+                  key={id}
+                  className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center gap-1"
                 >
-                  &times;
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  {activeTab === Language.HR
+                    ? allergen?.nameHr
+                    : allergen?.nameEn}
+                  <button
+                    onClick={() => handleAllergenSelect(id)}
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
-      <div className="mb-6 flex items-center">
-        <label className="block text-sm font-medium text-gray-700 mr-3">
-          {t("active")}
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t("image")}
         </label>
-        <button
-          type="button"
-          className={`w-10 h-6 flex items-center bg-gray-200 rounded-full p-1 duration-300 focus:outline-none ${
-            isActive ? "bg-green-500" : "bg-gray-300"
-          }`}
-          onClick={() => setIsActive((prev) => !prev)}
-        >
-          <span
-            className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ${
-              isActive ? "translate-x-4" : ""
-            }`}
-          />
-        </button>
-        <span className="ml-2 text-sm text-gray-600">
-          {isActive ? t("active") : t("inactive")}
-        </span>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+        />
+        {itemImageFile && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-sm text-gray-600">{itemImageFile.name}</span>
+            <button
+              onClick={handleRemoveImage}
+              className="text-red-500 hover:text-red-700 text-sm"
+            >
+              {t("remove")}
+            </button>
+          </div>
+        )}
       </div>
-      <div className="flex justify-start space-x-3 mt-6">
+
+      <div className="mb-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            {t("active")}
+          </span>
+        </label>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          onClick={onCancel}
+          className="secondary-button"
+          disabled={isSaving}
+        >
+          {t("cancel")}
+        </button>
         <button
           onClick={handleSave}
           className={`primary-button ${
@@ -618,14 +629,14 @@ const AddMenuItem: React.FC<AddMenuItemProps> = ({
         >
           {isSaving ? t("saving") : t("save")}
         </button>
-        <button
-          onClick={onCancel}
-          className="secondary-button"
-          disabled={isSaving}
-        >
-          {t("cancel")}
-        </button>
       </div>
+
+      <CreateSizeModal
+        isOpen={isCreateSizeModalOpen}
+        onClose={() => setIsCreateSizeModalOpen(false)}
+        onSizeCreated={handleSizeCreated}
+        restaurantId={restaurantId}
+      />
     </div>
   );
 };

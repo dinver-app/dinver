@@ -677,5 +677,13 @@
   "remove_size": "Ukloni veličinu",
   "default_size": "Zadana veličina",
   "default_size_name": "Naziv zadane veličine",
-  "sizes": "Veličine"
+  "sizes": "Veličine",
+  "select_size": "Odaberi veličinu",
+  "create_new_size": "Kreiraj novu veličinu",
+  "create_new_size_modal_title": "Kreiraj novu veličinu",
+  "size_name_required": "Naziv veličine je obavezan",
+  "enter_size_name": "Unesi naziv veličine",
+  "size_created_successfully": "Veličina uspješno kreirana",
+  "failed_to_create_size": "Neuspješno kreiranje veličine",
+  "price_disabled_with_sizes": "Cijena je onemogućena s veličinama"
 }

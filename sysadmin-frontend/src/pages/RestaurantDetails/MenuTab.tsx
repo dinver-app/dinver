@@ -135,11 +135,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     categoryId?: string | null;
     imageFile?: File;
     isActive: boolean;
-    defaultSizeNumber?: number;
+    defaultSizeIndex?: number;
     sizes?: {
-      id?: string;
+      sizeId: string;
       price: number;
-      translations: { hr: string; en: string };
     }[];
   }) => {
     try {
@@ -154,7 +153,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         categoryId: data.categoryId,
         imageFile: data.imageFile,
         isActive: data.isActive,
-        defaultSizeNumber: data.defaultSizeNumber,
+        defaultSizeIndex: data.defaultSizeIndex,
         sizes: data.sizes,
       });
 
@@ -182,11 +181,10 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       removeImage: boolean;
       categoryId?: string | null;
       isActive: boolean;
-      defaultSizeNumber?: number;
+      defaultSizeIndex?: number;
       sizes?: {
-        id?: string;
+        sizeId: string;
         price: number;
-        translations: { hr: string; en: string };
       }[];
     }
   ) => {
@@ -203,7 +201,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         removeImage: data.removeImage,
         categoryId: data.categoryId,
         isActive: data.isActive,
-        defaultSizeNumber: data.defaultSizeNumber,
+        defaultSizeIndex: data.defaultSizeIndex,
         sizes: data.sizes,
       });
 
@@ -296,6 +294,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       case VIEWS.ADD_MENU_ITEM:
         return (
           <AddMenuItem
+            restaurantId={restaurantId as string}
             onCancel={handleCancel}
             onSave={handleSaveMenuItem}
             allergens={allergens}
@@ -307,6 +306,7 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         return (
           <EditMenuItem
             menuItem={selectedMenuItem as MenuItem}
+            restaurantId={restaurantId as string}
             onCancel={handleCancel}
             onSave={handleUpdateMenuItem}
             allergens={allergens}

@@ -123,6 +123,15 @@ export interface Translation {
   description?: string;
 }
 
+export interface MenuItemSize {
+  id: string;
+  sizeId: string;
+  price: string;
+  isDefault: boolean;
+  position: number;
+  name: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -135,10 +144,7 @@ export interface MenuItem {
   translations: Translation[];
   position: number;
   isActive?: boolean;
-  defaultSizeId?: string | null;
-  sizes?:
-    | { id: string; price: number; translations: { hr: string; en: string } }[]
-    | null;
+  sizes?: MenuItemSize[] | null;
 }
 
 export interface Category {

@@ -22,33 +22,37 @@ const importMenuFromJson = async (req, res) => {
 
     // Find restaurant by slug
     const restaurant = await Restaurant.findOne({
-      where: { slug: restaurantSlug }
+      where: { slug: restaurantSlug },
     });
 
     if (!restaurant) {
-      return res.status(404).json({ 
-        error: `Restaurant with slug '${restaurantSlug}' not found` 
+      return res.status(404).json({
+        error: `Restaurant with slug '${restaurantSlug}' not found`,
       });
     }
 
     // Path to the restaurant's menu folder
-    const menuFolderPath = path.join(__dirname, '../../../data/menus', restaurantSlug);
-    
+    const menuFolderPath = path.join(
+      __dirname,
+      '../../../data/menus',
+      restaurantSlug,
+    );
+
     try {
       await fs.access(menuFolderPath);
     } catch (error) {
-      return res.status(404).json({ 
-        error: `Menu folder for '${restaurantSlug}' not found at ${menuFolderPath}` 
+      return res.status(404).json({
+        error: `Menu folder for '${restaurantSlug}' not found at ${menuFolderPath}`,
       });
     }
 
     // Read all JSON files in the folder
     const files = await fs.readdir(menuFolderPath);
-    const jsonFiles = files.filter(file => file.endsWith('.json'));
+    const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
     if (jsonFiles.length === 0) {
-      return res.status(404).json({ 
-        error: `No JSON files found in menu folder for '${restaurantSlug}'` 
+      return res.status(404).json({
+        error: `No JSON files found in menu folder for '${restaurantSlug}'`,
       });
     }
 
@@ -187,7 +191,7 @@ const importMenuFromJson = async (req, res) => {
               const categoryId = categoryMap.get(itemData.categoryName);
               if (!categoryId) {
                 fileResult.errors.push(
-                  `Category not found for item: ${itemData.name.hr}`
+                  `Category not found for item: ${itemData.name.hr}`,
                 );
                 fileResult.items.errors++;
                 continue;
@@ -217,7 +221,9 @@ const importMenuFromJson = async (req, res) => {
 
               if (existingItem) {
                 fileResult.items.errors++;
-                fileResult.errors.push(`Item already exists: ${itemData.name.hr}`);
+                fileResult.errors.push(
+                  `Item already exists: ${itemData.name.hr}`,
+                );
                 continue;
               }
 
@@ -248,23 +254,24 @@ const importMenuFromJson = async (req, res) => {
               const lastPosition = existingItems[0]?.position ?? -1;
               const newPosition = lastPosition + 1;
 
-              const item = await (menuType === 'food' ? MenuItem : DrinkItem).create({
+              const item = await (
+                menuType === 'food' ? MenuItem : DrinkItem
+              ).create({
                 price: itemData.price,
                 restaurantId: restaurant.id,
                 position: newPosition,
                 categoryId,
                 imageUrl: null,
                 isActive: true,
-                hasSizes: itemData.hasSizes || false,
-                defaultSizeName: itemData.defaultSizeName || null,
-                sizes: itemData.sizes || [],
                 ...(menuType === 'food' && { allergens: [] }), // Only for food items
               });
 
               // Create translations
               for (const translation of translatedData) {
                 await (
-                  menuType === 'food' ? MenuItemTranslation : DrinkItemTranslation
+                  menuType === 'food'
+                    ? MenuItemTranslation
+                    : DrinkItemTranslation
                 ).create({
                   [menuType === 'food' ? 'menuItemId' : 'drinkItemId']: item.id,
                   language: translation.language,
@@ -280,10 +287,14 @@ const importMenuFromJson = async (req, res) => {
                 userId: req.user ? req.user.id : null,
                 action: ActionTypes.CREATE,
                 entity:
-                  menuType === 'food' ? Entities.MENU_ITEM : Entities.DRINK_ITEM,
+                  menuType === 'food'
+                    ? Entities.MENU_ITEM
+                    : Entities.DRINK_ITEM,
                 entityId: item.id,
                 restaurantId: restaurant.id,
-                changes: { new: { name: itemData.name.hr, price: itemData.price } },
+                changes: {
+                  new: { name: itemData.name.hr, price: itemData.price },
+                },
               });
             } catch (error) {
               console.error('Error processing item:', error);
@@ -301,7 +312,6 @@ const importMenuFromJson = async (req, res) => {
         results.errors.push(...fileResult.errors);
 
         results.files.push(fileResult);
-
       } catch (error) {
         console.error(`Error processing file ${jsonFile}:`, error);
         results.files.push({
@@ -319,7 +329,6 @@ const importMenuFromJson = async (req, res) => {
       message: `Menu import completed for ${restaurant.name}`,
       results,
     });
-
   } catch (error) {
     console.error('Error importing menu from JSON:', error);
     res.status(500).json({
@@ -333,7 +342,7 @@ const importMenuFromJson = async (req, res) => {
 const listAvailableMenus = async (req, res) => {
   try {
     const menusPath = path.join(__dirname, '../../../data/menus');
-    
+
     try {
       await fs.access(menusPath);
     } catch (error) {
@@ -346,8 +355,8 @@ const listAvailableMenus = async (req, res) => {
 
     const folders = await fs.readdir(menusPath, { withFileTypes: true });
     const menuFolders = folders
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name);
 
     const menus = [];
 
@@ -355,11 +364,11 @@ const listAvailableMenus = async (req, res) => {
       try {
         const folderPath = path.join(menusPath, folder);
         const files = await fs.readdir(folderPath);
-        const jsonFiles = files.filter(file => file.endsWith('.json'));
+        const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
         // Check if restaurant exists in database
         const restaurant = await Restaurant.findOne({
-          where: { slug: folder }
+          where: { slug: folder },
         });
 
         menus.push({
@@ -387,7 +396,6 @@ const listAvailableMenus = async (req, res) => {
       message: 'Available menus retrieved successfully',
       menus,
     });
-
   } catch (error) {
     console.error('Error listing available menus:', error);
     res.status(500).json({
