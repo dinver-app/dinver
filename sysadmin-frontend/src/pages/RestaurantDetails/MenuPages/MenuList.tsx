@@ -251,9 +251,32 @@ const MenuList: React.FC<MenuListProps> = memo(
                             </p>
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
-                              {item.price.toString().replace(".", ",")} €
-                            </span>
+                            {item.price && (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
+                                {item.price.toString().replace(".", ",")} €
+                              </span>
+                            )}
+                            {item.sizes && item.sizes.length > 0 && (
+                              <div className="flex flex-wrap gap-2 items-center">
+                                {item.sizes.map((s, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-xs"
+                                  >
+                                    {(s as any).translations?.[
+                                      i18n.language as "hr" | "en"
+                                    ] ||
+                                      (s as any).translations?.hr ||
+                                      (s as any).translations?.en}
+                                    :{" "}
+                                    {(s as any).price
+                                      .toString()
+                                      .replace(".", ",")}{" "}
+                                    €
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             {item.allergens && item.allergens.length > 0 && (
                               <div className="flex items-center space-x-1">
                                 <span className="text-xs text-gray-500 font-medium">

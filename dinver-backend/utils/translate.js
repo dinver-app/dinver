@@ -101,7 +101,67 @@ const translateSizeNameBoth = async (name) => {
   return result;
 };
 
+/**
+ * Fill missing size translations. If HR is provided, translate to EN (from: 'hr').
+ * If EN is provided, translate to HR (from: 'en'). Keeps provided value intact.
+ * @param {{hr?: string, en?: string}} input
+ * @returns {Promise<{hr: string, en: string}>}
+ */
+const translateSizeNameFill = async (input = {}) => {
+  const rawHr = (input.hr || '').trim();
+  const rawEn = (input.en || '').trim();
+  const cacheKey = `fill|hr=${rawHr.toLowerCase()}|en=${rawEn.toLowerCase()}`;
+  if (sizeNameCache.has(cacheKey)) return sizeNameCache.get(cacheKey);
+
+  // If both present, return as is
+  if (rawHr && rawEn) {
+    const res = { hr: rawHr, en: rawEn };
+    sizeNameCache.set(cacheKey, res);
+    return res;
+  }
+
+  // If only HR provided → translate HR→EN
+  if (rawHr && !rawEn) {
+    try {
+      const [enTranslation] = await translate.translate(rawHr, {
+        from: 'hr',
+        to: 'en',
+      });
+      const res = { hr: rawHr, en: enTranslation };
+      sizeNameCache.set(cacheKey, res);
+      return res;
+    } catch (e) {
+      const res = { hr: rawHr, en: rawHr };
+      sizeNameCache.set(cacheKey, res);
+      return res;
+    }
+  }
+
+  // If only EN provided → translate EN→HR
+  if (rawEn && !rawHr) {
+    try {
+      const [hrTranslation] = await translate.translate(rawEn, {
+        from: 'en',
+        to: 'hr',
+      });
+      const res = { hr: hrTranslation, en: rawEn };
+      sizeNameCache.set(cacheKey, res);
+      return res;
+    } catch (e) {
+      const res = { hr: rawEn, en: rawEn };
+      sizeNameCache.set(cacheKey, res);
+      return res;
+    }
+  }
+
+  // If nothing provided
+  const res = { hr: '', en: '' };
+  sizeNameCache.set(cacheKey, res);
+  return res;
+};
+
 module.exports = {
   autoTranslate,
   translateSizeNameBoth,
+  translateSizeNameFill,
 };
