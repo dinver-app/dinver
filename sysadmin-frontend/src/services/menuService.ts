@@ -43,6 +43,12 @@ export const createMenuItem = async (data: {
   categoryId?: string | null;
   imageFile?: File;
   isActive?: boolean;
+  defaultSizeNumber?: number;
+  sizes?: {
+    id?: string;
+    price: number;
+    translations: { hr: string; en: string };
+  }[];
 }) => {
   const formData = new FormData();
 
@@ -68,6 +74,15 @@ export const createMenuItem = async (data: {
     formData.append("isActive", data.isActive.toString());
   }
 
+  if (data.defaultSizeNumber !== undefined) {
+    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  }
+  if (data.sizes === null) {
+    formData.append("sizes", "null");
+  } else if (data.sizes && data.sizes.length > 0) {
+    formData.append("sizes", JSON.stringify(data.sizes));
+  }
+
   const response = await apiClient.post(
     "/api/sysadmin/menu/menuItems",
     formData,
@@ -91,6 +106,12 @@ export const updateMenuItem = async (
     imageFile?: File;
     removeImage?: boolean;
     isActive?: boolean;
+    defaultSizeNumber?: number;
+    sizes?: {
+      id?: string;
+      price: number;
+      translations: { hr: string; en: string };
+    }[];
   }
 ) => {
   const formData = new FormData();
@@ -119,6 +140,15 @@ export const updateMenuItem = async (
   // Dodaj isActive ako je definiran
   if (data.isActive !== undefined) {
     formData.append("isActive", data.isActive.toString());
+  }
+
+  if (data.defaultSizeNumber !== undefined) {
+    formData.append("defaultSizeNumber", String(data.defaultSizeNumber));
+  }
+  if (data.sizes === null) {
+    formData.append("sizes", "null");
+  } else if (data.sizes && data.sizes.length > 0) {
+    formData.append("sizes", JSON.stringify(data.sizes));
   }
 
   const response = await apiClient.put(

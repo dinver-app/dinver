@@ -2251,16 +2251,16 @@ const getRestaurantMenu = async (req, res) => {
     };
 
     async function buildItemSizes(item) {
-      if (item.hasSizes && Array.isArray(item.sizes)) {
-        const translated = await Promise.all(
-          item.sizes.map(async (s) => {
-            const name = s?.name || '';
-            const price = s?.price != null ? Number(s.price) : null;
-            const tr = await translateSizeNameBoth(name);
-            return { name: { hr: tr.hr, en: tr.en }, price };
-          }),
-        );
-        return translated;
+      if (Array.isArray(item.sizes) && item.sizes.length) {
+        // Already in new schema: [{ id, price, translations{hr,en} }]
+        return item.sizes.map((s) => ({
+          id: s.id,
+          price: s.price != null ? Number(s.price) : null,
+          translations: s.translations || {
+            hr: s?.name?.hr || s?.name?.en || '',
+            en: s?.name?.en || s?.name?.hr || '',
+          },
+        }));
       }
       return null;
     }
@@ -2277,10 +2277,11 @@ const getRestaurantMenu = async (req, res) => {
           item.translations.find((t) => t.language === 'en')?.description || '',
         descriptionHr:
           item.translations.find((t) => t.language === 'hr')?.description || '',
-        price: parseFloat(item.price).toFixed(2),
+        price: item.price != null ? parseFloat(item.price).toFixed(2) : null,
         imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
         allergens: mapAllergens(item.allergens),
         sizes,
+        defaultSizeId: item.defaultSizeId || null,
       };
     }
 

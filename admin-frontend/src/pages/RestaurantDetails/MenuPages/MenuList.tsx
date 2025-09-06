@@ -277,6 +277,30 @@ const MenuList: React.FC<MenuListProps> = memo(
                               </div>
                             )}
                           </div>
+                          {Array.isArray((item as any).sizes) &&
+                            (item as any).sizes.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {((item as any).sizes as any[]).map(
+                                  (s: any) => (
+                                    <span
+                                      key={s.id}
+                                      className="px-2 py-0.5 bg-gray-50 text-gray-700 text-xs rounded border border-gray-200"
+                                    >
+                                      {(
+                                        s.translations?.hr ||
+                                        s.translations?.en ||
+                                        ""
+                                      ).trim()}{" "}
+                                      —{" "}
+                                      {Number(s.price)
+                                        .toFixed(2)
+                                        .replace(".", ",")}{" "}
+                                      €
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                       <div className="flex space-x-2 ml-4 items-center self-center h-full">
@@ -437,6 +461,30 @@ const MenuList: React.FC<MenuListProps> = memo(
                               </div>
                             )}
                           </div>
+                          {Array.isArray((item as any).sizes) &&
+                            (item as any).sizes.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {((item as any).sizes as any[]).map(
+                                  (s: any) => (
+                                    <span
+                                      key={s.id}
+                                      className="px-2 py-0.5 bg-gray-50 text-gray-700 text-xs rounded border border-gray-200"
+                                    >
+                                      {(
+                                        s.translations?.hr ||
+                                        s.translations?.en ||
+                                        ""
+                                      ).trim()}{" "}
+                                      —{" "}
+                                      {Number(s.price)
+                                        .toFixed(2)
+                                        .replace(".", ",")}{" "}
+                                      €
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                       <div className="flex space-x-2 ml-4 items-center self-center h-full">

@@ -123,6 +123,10 @@ export interface MenuItem {
   translations: Translation[];
   position: number;
   isActive: boolean;
+  defaultSizeId?: string | null;
+  sizes?:
+    | { id: string; price: number; translations: { hr: string; en: string } }[]
+    | null;
 }
 
 export interface Category {

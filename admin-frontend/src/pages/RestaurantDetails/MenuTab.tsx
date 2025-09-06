@@ -135,6 +135,15 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
     categoryId?: string | null;
     imageFile?: File;
     isActive: boolean;
+    // sizes
+    defaultSizeNumber?: number;
+    sizes?:
+      | {
+          id?: string;
+          price: number;
+          translations: { hr: string; en: string };
+        }[]
+      | null;
   }) => {
     try {
       const menuItem = await createMenuItem({
@@ -148,6 +157,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         categoryId: data.categoryId,
         imageFile: data.imageFile,
         isActive: data.isActive,
+        defaultSizeNumber: data.defaultSizeNumber,
+        sizes: data.sizes,
       });
 
       setMenuItems([...menuItems, menuItem]);
@@ -174,6 +185,15 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       removeImage: boolean;
       categoryId?: string | null;
       isActive: boolean;
+      // sizes
+      defaultSizeNumber?: number;
+      sizes?:
+        | {
+            id?: string;
+            price: number;
+            translations: { hr: string; en: string };
+          }[]
+        | null;
     }
   ) => {
     try {
@@ -189,6 +209,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         removeImage: data.removeImage,
         categoryId: data.categoryId,
         isActive: data.isActive,
+        defaultSizeNumber: data.defaultSizeNumber,
+        sizes: data.sizes,
       });
 
       setMenuItems(

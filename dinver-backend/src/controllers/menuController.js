@@ -12,9 +12,10 @@ const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const {
   autoTranslate,
-  translateSizeNameBoth,
+  translateSizeNameFill,
 } = require('../../utils/translate');
 const { getMediaUrl } = require('../../config/cdn');
+const { v4: uuidv4 } = require('uuid');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -59,30 +60,20 @@ const getMenuItems = async (req, res) => {
         );
         const anyTranslation = itemData.translations[0];
 
-        // Build sizes with translations when available
-        let sizes = null;
-        if (itemData.hasSizes && Array.isArray(itemData.sizes)) {
-          sizes = await Promise.all(
-            itemData.sizes.map(async (s) => {
-              const name = s?.name || '';
-              const price = s?.price != null ? Number(s.price) : null;
-              const tr = await translateSizeNameBoth(name);
-              return {
-                name: {
-                  hr: tr.hr,
-                  en: tr.en,
-                },
-                price,
-              };
-            }),
-          );
-        }
+        // Use sizes as-is in new schema
+        const sizes =
+          Array.isArray(itemData.sizes) && itemData.sizes.length
+            ? itemData.sizes
+            : null;
 
         return {
           ...itemData,
           name: (userTranslation || anyTranslation)?.name || '',
           description: (userTranslation || anyTranslation)?.description || '',
-          price: parseFloat(itemData.price).toFixed(2),
+          price:
+            itemData.price != null
+              ? parseFloat(itemData.price).toFixed(2)
+              : null,
           imageUrl: itemData.imageUrl
             ? getMediaUrl(itemData.imageUrl, 'image')
             : null,
@@ -178,15 +169,62 @@ const createMenuItem = async (req, res) => {
       }
     }
 
+    // Parse sizes payload (new shape)
+    let defaultSizeId = null;
+    let defaultSizeNumber = null;
+    let sizes = null;
+    if (req.body.defaultSizeNumber !== undefined) {
+      const n = Number(req.body.defaultSizeNumber);
+      if (!Number.isNaN(n)) defaultSizeNumber = n;
+    }
+    if (req.body.sizes) {
+      try {
+        const parsed = JSON.parse(req.body.sizes);
+        if (Array.isArray(parsed)) {
+          sizes = await Promise.all(
+            parsed.map(async (s) => {
+              const id = s.id || uuidv4();
+              const price = s.price != null ? Number(s.price) : null;
+              const translations = await translateSizeNameFill(
+                s.translations || {},
+              );
+              return { id, price, translations };
+            }),
+          );
+          // derive defaultSizeId from index, fallback to first
+          if (sizes.length > 0) {
+            const idx =
+              defaultSizeNumber != null &&
+              defaultSizeNumber >= 0 &&
+              defaultSizeNumber < sizes.length
+                ? defaultSizeNumber
+                : 0;
+            defaultSizeId = sizes[idx].id;
+          }
+        }
+      } catch (_) {
+        sizes = null;
+      }
+    }
+
+    // Determine price: if sizes exist, use default size price (fallback first); else use provided price
+    let priceToSave = price;
+    if (sizes && sizes.length > 0) {
+      const selected = sizes.find((s) => s.id === defaultSizeId) || sizes[0];
+      priceToSave = selected && selected.price != null ? selected.price : null;
+    }
+
     // Create menu item
     const menuItem = await MenuItem.create({
-      price,
+      price: priceToSave,
       restaurantId,
       position: newPosition,
       allergens: allergenIds,
       imageUrl: imageKey,
       categoryId,
       isActive: req.body.isActive !== undefined ? req.body.isActive : true, // Default to true if not provided
+      defaultSizeId,
+      sizes,
     });
 
     // Create translations
@@ -282,14 +320,85 @@ const updateMenuItem = async (req, res) => {
       });
     }
 
+    // Parse sizes payload (new shape)
+    let defaultSizeIdU = undefined;
+    let defaultSizeNumberU = undefined;
+    let sizes = undefined;
+    if (req.body.defaultSizeId !== undefined) {
+      defaultSizeIdU = req.body.defaultSizeId || null;
+    }
+    if (req.body.defaultSizeNumber !== undefined) {
+      const n = Number(req.body.defaultSizeNumber);
+      if (!Number.isNaN(n)) defaultSizeNumberU = n;
+    }
+    if (req.body.sizes !== undefined) {
+      try {
+        const parsed = JSON.parse(req.body.sizes || 'null');
+        sizes = Array.isArray(parsed)
+          ? await Promise.all(
+              parsed.map(async (s) => {
+                const id = s.id || uuidv4();
+                const price = s.price != null ? Number(s.price) : null;
+                const translations = await translateSizeNameFill(
+                  s.translations || {},
+                );
+                return { id, price, translations };
+              }),
+            )
+          : null;
+        // If sizes provided, set defaultSizeId from index (fallback to first)
+        if (sizes && sizes.length > 0) {
+          const idx =
+            defaultSizeNumberU != null &&
+            defaultSizeNumberU >= 0 &&
+            defaultSizeNumberU < sizes.length
+              ? defaultSizeNumberU
+              : 0;
+          defaultSizeIdU = sizes[idx].id;
+        } else if (sizes === null) {
+          defaultSizeIdU = null;
+        }
+      } catch (_) {
+        sizes = null;
+      }
+    }
+
+    // Compute price to persist based on sizes/default selection
+    let priceToPersist = menuItem.price;
+    if (sizes !== undefined) {
+      if (sizes === null) {
+        // sizes removed; use provided price or keep existing
+        priceToPersist = price !== undefined ? price : menuItem.price;
+      } else if (Array.isArray(sizes) && sizes.length > 0) {
+        const selected = sizes.find((s) => s.id === defaultSizeIdU) || sizes[0];
+        priceToPersist =
+          selected && selected.price != null ? selected.price : null;
+      }
+    } else if (defaultSizeIdU !== undefined && defaultSizeIdU !== null) {
+      // sizes unchanged, default switched → update price from existing sizes
+      const currentSizes = Array.isArray(menuItem.sizes) ? menuItem.sizes : [];
+      const selected =
+        currentSizes.find((s) => s.id === defaultSizeIdU) || currentSizes[0];
+      if (selected) {
+        priceToPersist =
+          selected.price != null ? selected.price : priceToPersist;
+      }
+    } else if (price !== undefined) {
+      priceToPersist = price;
+    }
+
     // Update menu item
     await menuItem.update({
-      price: price !== undefined ? price : menuItem.price,
+      price: priceToPersist,
       imageUrl: imageKey,
       allergens: allergenIds !== undefined ? allergenIds : menuItem.allergens,
       categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
       isActive:
         req.body.isActive !== undefined ? req.body.isActive : menuItem.isActive,
+      ...(defaultSizeIdU !== undefined
+        ? { defaultSizeId: defaultSizeIdU }
+        : {}),
+      ...(sizes !== undefined ? { sizes } : {}),
     });
 
     // Fetch updated item
@@ -625,7 +734,7 @@ const getAllMenuItemsForAdmin = async (req, res) => {
     const language = getUserLanguage(req);
 
     const menuItems = await MenuItem.findAll({
-      where: { restaurantId }, // Uključuje sve stavke, aktivne i neaktivne
+      where: { restaurantId }, // includes active and inactive
       order: [['position', 'ASC']],
       include: [
         {
@@ -635,45 +744,30 @@ const getAllMenuItemsForAdmin = async (req, res) => {
       ],
     });
 
-    const formattedMenuItems = await Promise.all(
-      menuItems.map(async (item) => {
-        const itemData = item.toJSON();
-        const userTranslation = itemData.translations.find(
-          (t) => t.language === language,
-        );
-        const anyTranslation = itemData.translations[0];
+    const formattedMenuItems = menuItems.map((item) => {
+      const itemData = item.toJSON();
+      const userTranslation = itemData.translations.find(
+        (t) => t.language === language,
+      );
+      const anyTranslation = itemData.translations[0];
 
-        // Build sizes with translations when available
-        let sizes = null;
-        if (itemData.hasSizes && Array.isArray(itemData.sizes)) {
-          sizes = await Promise.all(
-            itemData.sizes.map(async (s) => {
-              const name = s?.name || '';
-              const price = s?.price != null ? Number(s.price) : null;
-              const tr = await translateSizeNameBoth(name);
-              return {
-                name: {
-                  hr: tr.hr,
-                  en: tr.en,
-                },
-                price,
-              };
-            }),
-          );
-        }
+      const sizes =
+        Array.isArray(itemData.sizes) && itemData.sizes.length
+          ? itemData.sizes
+          : null;
 
-        return {
-          ...itemData,
-          name: (userTranslation || anyTranslation)?.name || '',
-          description: (userTranslation || anyTranslation)?.description || '',
-          price: parseFloat(itemData.price).toFixed(2),
-          imageUrl: itemData.imageUrl
-            ? getMediaUrl(itemData.imageUrl, 'image')
-            : null,
-          sizes,
-        };
-      }),
-    );
+      return {
+        ...itemData,
+        name: (userTranslation || anyTranslation)?.name || '',
+        description: (userTranslation || anyTranslation)?.description || '',
+        price:
+          itemData.price != null ? parseFloat(itemData.price).toFixed(2) : null,
+        imageUrl: itemData.imageUrl
+          ? getMediaUrl(itemData.imageUrl, 'image')
+          : null,
+        sizes,
+      };
+    });
 
     res.json(formattedMenuItems);
   } catch (error) {
