@@ -23,8 +23,8 @@ const getUserLanguage = (req) => {
 
 // Get all menu items for a specific restaurant
 const getMenuItems = async (req, res) => {
+  const { restaurantId } = req.params;
   try {
-    const { restaurantId } = req.params;
     const language = getUserLanguage(req);
 
     const menuItems = await MenuItem.findAll({
@@ -93,7 +93,19 @@ const getMenuItems = async (req, res) => {
 
     res.json(formattedMenuItems);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch menu items' });
+    console.error('Error fetching menu items:', {
+      restaurantId,
+      userId: req.user?.id || null,
+      message: error?.message,
+      code: error?.original?.code || error?.code,
+      hint: error?.original?.hint,
+    });
+    return res.status(500).json({
+      error: 'Failed to fetch menu items',
+      ...(process.env.NODE_ENV !== 'production'
+        ? { details: error?.message || 'Unknown error' }
+        : {}),
+    });
   }
 };
 
@@ -620,8 +632,8 @@ const updateItemOrder = async (req, res) => {
 
 // Get all menu items for admin (including inactive)
 const getAllMenuItemsForAdmin = async (req, res) => {
+  const { restaurantId } = req.params;
   try {
-    const { restaurantId } = req.params;
     const language = getUserLanguage(req);
 
     const menuItems = await MenuItem.findAll({
@@ -677,7 +689,19 @@ const getAllMenuItemsForAdmin = async (req, res) => {
 
     res.json(formattedMenuItems);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch menu items' });
+    console.error('Error fetching all menu items for admin:', {
+      restaurantId,
+      userId: req.user?.id || null,
+      message: error?.message,
+      code: error?.original?.code || error?.code,
+      hint: error?.original?.hint,
+    });
+    return res.status(500).json({
+      error: 'Failed to fetch menu items',
+      ...(process.env.NODE_ENV !== 'production'
+        ? { details: error?.message || 'Unknown error' }
+        : {}),
+    });
   }
 };
 
