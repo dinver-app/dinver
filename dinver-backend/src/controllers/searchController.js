@@ -120,6 +120,22 @@ function computeSimilarity(termRaw, textRaw) {
     best = Math.max(best, sim);
     if (best === 1) break;
   }
+  // phrase-level contains for multi-word queries (e.g., "onion ring" in "onion rings")
+  if (best < 0.92) {
+    const phrase = term.trim().replace(/\s+/g, ' ');
+    if (phrase && text.includes(phrase)) {
+      best = Math.max(best, 0.9);
+    } else if (phrase) {
+      // simple singular/plural toggle boost
+      if (phrase.endsWith('s') && phrase.length > 1) {
+        const singular = phrase.slice(0, -1);
+        if (text.includes(singular)) best = Math.max(best, 0.88);
+      } else {
+        const plural = `${phrase}s`;
+        if (text.includes(plural)) best = Math.max(best, 0.88);
+      }
+    }
+  }
   // exact word presence via helper provides a strong boost when not already exact
   if (best < 1 && isExactWordMatch(termRaw, textRaw)) {
     best = Math.max(best, 0.95);
