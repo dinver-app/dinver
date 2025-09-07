@@ -1,4 +1,5 @@
 const { Op, Sequelize } = require('sequelize');
+const crypto = require('crypto');
 const {
   Restaurant,
   MenuItem,
@@ -336,6 +337,67 @@ function computeBBox(lat, lon, radiusKm) {
   };
 }
 
+// ---- Stable stringify and cursor helpers ----
+function stableStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value))
+    return `[${value.map((v) => stableStringify(v)).join(',')}]`;
+  const keys = Object.keys(value).sort();
+  const parts = [];
+  for (const k of keys)
+    parts.push(`${JSON.stringify(k)}:${stableStringify(value[k])}`);
+  return `{${parts.join(',')}}`;
+}
+
+function hashParams(intent, params) {
+  const h = crypto.createHash('sha1');
+  h.update(String(intent || ''));
+  h.update('|');
+  h.update(stableStringify(params || {}));
+  return h.digest('hex');
+}
+
+function encodeCursor({ offset, limit, hash }) {
+  const payload = {
+    o: Math.max(0, parseInt(offset) || 0),
+    l: Math.max(1, parseInt(limit) || 20),
+    h: String(hash || ''),
+  };
+  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+}
+
+function decodeCursor(cursor, expectedHash) {
+  try {
+    const raw = Buffer.from(String(cursor || ''), 'base64url').toString('utf8');
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== 'object') return { offset: 0 };
+    if (obj.h !== expectedHash) return { offset: 0 };
+    const off = Math.max(0, parseInt(obj.o) || 0);
+    const lim = Math.max(1, parseInt(obj.l) || 20);
+    return { offset: off, limit: lim };
+  } catch (_) {
+    return { offset: 0 };
+  }
+}
+
+function paginateWithHash({ list, limit, cursor, paramsHash }) {
+  const total = Array.isArray(list) ? list.length : 0;
+  const l = Math.min(Math.max(parseInt(limit) || 20, 1), 50);
+  const { offset: offFromCursor } = decodeCursor(cursor, paramsHash);
+  const off = Math.min(Math.max(offFromCursor || 0, 0), Math.max(total - 1, 0));
+  const page = list.slice(off, off + l);
+  const hasNext = off + page.length < total;
+  const hasPrev = off > 0;
+  const nextCursor = hasNext
+    ? encodeCursor({ offset: off + page.length, limit: l, hash: paramsHash })
+    : null;
+  const prevCursor = hasPrev
+    ? encodeCursor({ offset: Math.max(0, off - l), limit: l, hash: paramsHash })
+    : null;
+  const pageInfo = { offset: off, limit: l, total, hasNext, hasPrev };
+  return { page, nextCursor, prevCursor, pageInfo };
+}
+
 async function findRestaurantsByItemAndPerkNear({
   latitude,
   longitude,
@@ -346,6 +408,7 @@ async function findRestaurantsByItemAndPerkNear({
 }) {
   const perkIds = perkName ? await findPerkIdsByNameLike(perkName) : [];
   const itemTerms = expandSynonyms(itemName || '');
+  const R = clampRadius(radiusKm);
 
   const menuItems = await MenuItemTranslation.findAll({
     where: {
@@ -371,11 +434,7 @@ async function findRestaurantsByItemAndPerkNear({
     new Set(menuItems.map((tr) => tr.menuItem.restaurantId)),
   );
 
-  const bbox = computeBBox(
-    parseFloat(latitude),
-    parseFloat(longitude),
-    clampRadius(radiusKm),
-  );
+  const bbox = computeBBox(parseFloat(latitude), parseFloat(longitude), R);
 
   const where = {
     id: { [Op.in]: restaurantIds },
@@ -412,8 +471,11 @@ async function findRestaurantsByItemAndPerkNear({
       );
       return { restaurant: decorateRestaurant(r), distance: d };
     })
-    .filter((x) => isFinite(x.distance) && x.distance <= parseFloat(radiusKm))
-    .sort((a, b) => a.distance - b.distance);
+    .filter((x) => isFinite(x.distance) && x.distance <= R)
+    .sort((a, b) => {
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return (a.restaurant.id || 0) - (b.restaurant.id || 0);
+    });
 
   return within;
 }
@@ -426,11 +488,8 @@ async function findRestaurantsByPerkNear({
   limit = 50,
 }) {
   const perkIds = await findPerkIdsByNameLike(perkName || '');
-  const bbox = computeBBox(
-    parseFloat(latitude),
-    parseFloat(longitude),
-    clampRadius(radiusKm),
-  );
+  const R = clampRadius(radiusKm);
+  const bbox = computeBBox(parseFloat(latitude), parseFloat(longitude), R);
   const where = {
     isClaimed: true,
     latitude: { [Op.between]: [bbox.latMin, bbox.latMax] },
@@ -463,8 +522,11 @@ async function findRestaurantsByPerkNear({
       );
       return { restaurant: decorateRestaurant(r), distance: d };
     })
-    .filter((x) => isFinite(x.distance) && x.distance <= parseFloat(radiusKm))
-    .sort((a, b) => a.distance - b.distance);
+    .filter((x) => isFinite(x.distance) && x.distance <= R)
+    .sort((a, b) => {
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return (a.restaurant.id || 0) - (b.restaurant.id || 0);
+    });
   return within;
 }
 
@@ -476,6 +538,7 @@ async function findMenuItemsByNameNear({
   limit = 100,
 }) {
   const itemTerms = expandSynonyms(itemName || '');
+  const R = clampRadius(radiusKm);
   const menuItems = await MenuItemTranslation.findAll({
     where: {
       [Op.or]: itemTerms.map((t) =>
@@ -542,11 +605,7 @@ async function findMenuItemsByNameNear({
     });
   }
 
-  const bbox = computeBBox(
-    parseFloat(latitude),
-    parseFloat(longitude),
-    clampRadius(radiusKm),
-  );
+  const bbox = computeBBox(parseFloat(latitude), parseFloat(longitude), R);
   const restaurants = await Restaurant.findAll({
     where: {
       id: { [Op.in]: Array.from(byRestaurant.keys()) },
@@ -589,8 +648,11 @@ async function findMenuItemsByNameNear({
         })),
       };
     })
-    .filter((x) => isFinite(x.distance) && x.distance <= parseFloat(radiusKm))
-    .sort((a, b) => a.distance - b.distance);
+    .filter((x) => isFinite(x.distance) && x.distance <= R)
+    .sort((a, b) => {
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return (a.restaurant.id || 0) - (b.restaurant.id || 0);
+    });
 
   return results;
 }
@@ -988,19 +1050,8 @@ async function routeQueryWithLLM({
     };
   }
 
-  function decodeOffsetCursor(cur) {
-    const s = (cur || '').toString();
-    const m = s.match(/^o:(\d+)$/);
-    return m ? parseInt(m[1], 10) : 0;
-  }
-  function paginate(list, lim, cur) {
-    const l = Math.min(Math.max(parseInt(lim) || 20, 1), 50);
-    const off = decodeOffsetCursor(cur);
-    const page = list.slice(off, off + l);
-    const next =
-      off + page.length < list.length ? `o:${off + page.length}` : null;
-    return { page, next };
-  }
+  // Compute params hash for stable cursoring
+  const paramsHash = hashParams(intent, params);
 
   // Existing execution branches, but driven by intent/params
   if (intent === 'check_item_in_specific_restaurant') {
@@ -1051,6 +1102,7 @@ async function routeQueryWithLLM({
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
+      paramsHash,
     };
   }
 
@@ -1073,7 +1125,12 @@ async function routeQueryWithLLM({
       perkName: params.perkName,
       limit,
     });
-    const { page, next } = paginate(results, limit, cursor);
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit,
+      cursor,
+      paramsHash,
+    });
     // Save thread context / suggested action
     try {
       if (threadId) {
@@ -1098,12 +1155,15 @@ async function routeQueryWithLLM({
       resultType: 'restaurants',
       code: results.length ? undefined : 'NO_RESULTS',
       restaurants: page,
-      nextCursor: next,
+      nextCursor,
+      prevCursor,
+      pageInfo,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
       contextSummary: llm.contextSummary || null,
+      paramsHash,
     };
   }
 
@@ -1211,11 +1271,8 @@ async function routeQueryWithLLM({
       };
     }
     // Reuse findByItem/perk style: start from claimed restaurants in bbox then apply opening hours filter in JS
-    const bbox = computeBBox(
-      parseFloat(latitude),
-      parseFloat(longitude),
-      clampRadius(params.radiusKm || radiusKm),
-    );
+    const R = clampRadius(params.radiusKm || radiusKm);
+    const bbox = computeBBox(parseFloat(latitude), parseFloat(longitude), R);
     const where = {
       isClaimed: true,
       latitude: { [Op.between]: [bbox.latMin, bbox.latMax] },
@@ -1290,14 +1347,18 @@ async function routeQueryWithLLM({
           closesAt: s.closesAt || null,
         };
       })
-      .filter(
-        (x) =>
-          isFinite(x.distance) &&
-          x.distance <= parseFloat(params.radiusKm || radiusKm),
-      )
+      .filter((x) => isFinite(x.distance) && x.distance <= R)
       .filter((x) => x.isOpenNow)
-      .sort((a, b) => a.distance - b.distance);
-    const { page, next } = paginate(results, limit || params.limit, cursor);
+      .sort((a, b) => {
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        return (a.restaurant.id || 0) - (b.restaurant.id || 0);
+      });
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit: limit || params.limit,
+      cursor,
+      paramsHash,
+    });
     try {
       if (threadId) {
         const currentR = Number(params.radiusKm || radiusKm || DEFAULT_RADIUS);
@@ -1326,12 +1387,24 @@ async function routeQueryWithLLM({
       resultType: 'restaurants',
       restaurants: page,
       code: results.length ? undefined : 'NO_RESULTS',
-      nextCursor: next,
+      nextCursor,
+      prevCursor,
+      pageInfo,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
       contextSummary: llm.contextSummary || null,
+      suggestedAction: !results.length
+        ? {
+            type: 'increase_radius',
+            toKm: Math.min(
+              Number(params.radiusKm || radiusKm || DEFAULT_RADIUS) * 2,
+              MAX_RADIUS,
+            ),
+          }
+        : null,
+      paramsHash,
     };
   }
 
@@ -1346,11 +1419,8 @@ async function routeQueryWithLLM({
         durationMs: Date.now() - started,
       };
     }
-    const bbox = computeBBox(
-      parseFloat(latitude),
-      parseFloat(longitude),
-      clampRadius(params.radiusKm || radiusKm),
-    );
+    const R = clampRadius(params.radiusKm || radiusKm);
+    const bbox = computeBBox(parseFloat(latitude), parseFloat(longitude), R);
     const where = {
       isClaimed: true,
       virtualTourUrl: { [Op.ne]: null },
@@ -1381,25 +1451,32 @@ async function routeQueryWithLLM({
         );
         return { restaurant: decorateRestaurant(r), distance: d };
       })
-      .filter(
-        (x) =>
-          isFinite(x.distance) &&
-          x.distance <= parseFloat(params.radiusKm || radiusKm),
-      )
-      .sort((a, b) => a.distance - b.distance);
-    const { page, next } = paginate(results, limit || params.limit, cursor);
+      .filter((x) => isFinite(x.distance) && x.distance <= R)
+      .sort((a, b) => {
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        return (a.restaurant.id || 0) - (b.restaurant.id || 0);
+      });
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit: limit || params.limit,
+      cursor,
+      paramsHash,
+    });
     return {
       intent,
       params,
       resultType: 'restaurants',
       restaurants: page,
       code: results.length ? undefined : 'NO_RESULTS',
-      nextCursor: next,
+      nextCursor,
+      prevCursor,
+      pageInfo,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
       contextSummary: llm.contextSummary || null,
+      paramsHash,
     };
   }
 
@@ -1425,19 +1502,27 @@ async function routeQueryWithLLM({
     for (const r of results) {
       if (r.items && r.items.length > 3) r.items = r.items.slice(0, 3);
     }
-    const { page, next } = paginate(results, limit, cursor);
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit,
+      cursor,
+      paramsHash,
+    });
     return {
       intent,
       params,
       resultType: 'restaurants',
       code: results.length ? undefined : 'NO_RESULTS',
       restaurants: page,
-      nextCursor: next,
+      nextCursor,
+      prevCursor,
+      pageInfo,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
       contextSummary: llm.contextSummary || null,
+      paramsHash,
     };
   }
 
@@ -1459,18 +1544,26 @@ async function routeQueryWithLLM({
       perkName: params.perkName,
       limit,
     });
-    const { page, next } = paginate(results, limit, cursor);
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit,
+      cursor,
+      paramsHash,
+    });
     return {
       intent,
       params,
       resultType: 'restaurants',
       code: results.length ? undefined : 'NO_RESULTS',
       restaurants: page,
-      nextCursor: next,
+      nextCursor,
+      prevCursor,
+      pageInfo,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
+      paramsHash,
     };
   }
 
@@ -1479,17 +1572,28 @@ async function routeQueryWithLLM({
       name: params.name,
       city: params.city,
     });
+    const results = restaurant ? [{ restaurant, distance: null }] : [];
+    const { page, nextCursor, prevCursor, pageInfo } = paginateWithHash({
+      list: results,
+      limit: limit || 20,
+      cursor,
+      paramsHash,
+    });
     return {
       intent,
       params,
       resultType: restaurant ? 'restaurants' : 'answer',
-      restaurants: restaurant ? [{ restaurant, distance: null }] : undefined,
+      restaurants: restaurant ? page : undefined,
       answer: restaurant ? undefined : 'Nismo pronašli taj restoran.',
+      nextCursor: restaurant ? nextCursor : null,
+      prevCursor: restaurant ? prevCursor : null,
+      pageInfo: restaurant ? pageInfo : undefined,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,
       llmError: llm.llmError || null,
       contextSummary: llm.contextSummary || null,
+      paramsHash,
     };
   }
 
@@ -1504,6 +1608,7 @@ async function routeQueryWithLLM({
     usage: llm.usage || null,
     llmError: llm.llmError || null,
     contextSummary: llm.contextSummary || null,
+    paramsHash,
   };
 }
 

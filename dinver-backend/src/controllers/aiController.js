@@ -1,4 +1,5 @@
 const { routeQuery } = require('../utils/aiService');
+const { formatAnswer } = require('../utils/answerFormatter');
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
@@ -59,6 +60,8 @@ module.exports = {
         llmError: response.llmError || null,
         threadId: effectiveThreadId,
       };
+      // Attach service paramsHash early so it is available for logging
+      meta.paramsHash = response.paramsHash || null;
       // Unified response: meta + answer + results
       const results = {
         restaurants: Array.isArray(response.restaurants)
@@ -72,25 +75,10 @@ module.exports = {
         answer: response.answer || null,
         results,
         nextCursor: response.nextCursor ?? null,
+        prevCursor: response.prevCursor ?? null,
+        pageInfo: response.pageInfo || undefined,
       };
-      if (process.env.AI_USAGE_LOG === '1') {
-        try {
-          console.info('AI_USAGE_LOG', {
-            model: meta.model,
-            usage: meta.usage,
-            durationMs: meta.durationMs,
-            intent: meta.intent,
-            llmError: meta.llmError,
-            threadId: meta.threadId,
-            argsCount: meta?.params ? Object.keys(meta.params).length : 0,
-            resultsCount:
-              (Array.isArray(results.restaurants)
-                ? results.restaurants.length
-                : 0) +
-              (Array.isArray(results.items) ? results.items.length : 0),
-          });
-        } catch (_) {}
-      }
+      // Logging moved after NLG so that NLG fields are available
       if (debug) {
         body.debug = { intent: response.intent, params: response.params };
         if (response.contextSummary)
@@ -112,6 +100,9 @@ module.exports = {
         perks: response?.params?.perks || [],
         establishmentTypes: response?.params?.establishmentTypes || [],
       };
+
+      // Surface params hash if provided (useful for cursor validation client-side)
+      if (response.paramsHash) body.meta.paramsHash = response.paramsHash;
 
       // Human-friendly default answers when answer is null
       if (!body.answer) {
@@ -157,6 +148,53 @@ module.exports = {
             body.answer = 'Evo rezultata pretrage.';
           }
         }
+      }
+
+      // Try NLG formatter to polish the final message, except for deterministic open/close intent
+      if (response.intent !== 'is_restaurant_open') {
+        try {
+          const nlgInput = {
+            question: q,
+            intent: response.intent,
+            entities: body.entities,
+            results,
+            code: body.code,
+            defaultAnswer: body.answer,
+          };
+          const nlg = await formatAnswer(nlgInput);
+          if (nlg?.ok && nlg?.answer) {
+            body.answer = nlg.answer;
+            body.meta.nlgModel = nlg.model || null;
+            body.meta.nlgLatencyMs = nlg.latencyMs || null;
+          }
+        } catch (_) {}
+      }
+
+      // Surface suggestedAction from service for UI quick actions (if present)
+      if (response.suggestedAction)
+        body.meta.suggestedAction = response.suggestedAction;
+
+      // AI usage logging (after NLG)
+      if (process.env.AI_USAGE_LOG === '1') {
+        try {
+          console.info('AI_USAGE_LOG', {
+            model: meta.model,
+            usage: meta.usage,
+            durationMs: meta.durationMs,
+            intent: meta.intent,
+            llmError: meta.llmError,
+            threadId: meta.threadId,
+            argsCount: meta?.params ? Object.keys(meta.params).length : 0,
+            resultsCount:
+              (Array.isArray(results.restaurants)
+                ? results.restaurants.length
+                : 0) +
+              (Array.isArray(results.items) ? results.items.length : 0),
+            paramsHash: meta.paramsHash,
+            nlgModel: body.meta?.nlgModel || null,
+            nlgLatencyMs: body.meta?.nlgLatencyMs || null,
+          });
+        } catch (_) {}
       }
 
       // HTTP status code mapping
