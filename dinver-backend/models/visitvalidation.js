@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       restaurantId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
       },
       reservationId: {
         type: DataTypes.UUID,

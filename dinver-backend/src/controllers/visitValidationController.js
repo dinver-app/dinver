@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const PointsService = require('../utils/pointsService');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { Op } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
 
 // User generates own short-lived QR token
 const generateUserVisitToken = async (req, res) => {
@@ -17,11 +18,25 @@ const generateUserVisitToken = async (req, res) => {
 
     const tokenPayload = {
       userId,
+      jti: uuidv4(),
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 3 * 60 * 1000), // 3 minutes
     };
 
     const validationToken = jwt.sign(tokenPayload, process.env.JWT_SECRET);
+
+    // Invalidate any previous pending tokens for this user
+    await VisitValidation.update(
+      { expiresAt: new Date(Date.now() - 1000) },
+      {
+        where: {
+          userId,
+          restaurantId: null,
+          usedAt: null,
+          expiresAt: { [Op.gt]: new Date() },
+        },
+      },
+    );
 
     await VisitValidation.create({
       userId,
