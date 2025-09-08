@@ -19,12 +19,18 @@ const cookieParser = require('cookie-parser');
 
 const cron = require('node-cron');
 const { createDailyBackups } = require('./cron/backupCron');
+const {
+  cleanupStaleVisitValidations,
+} = require('./cron/cleanupVisitValidations');
 dotenv.config();
 
 const app = express();
 
 // Schedule the cron job to run every day at 3:00 AM
 cron.schedule('0 3 * * *', createDailyBackups);
+
+// Čišćenje starih VisitValidation zapisa (svaki dan u 03:30)
+cron.schedule('30 3 * * *', cleanupStaleVisitValidations);
 
 // Initialize client.
 const redisClient = createClient({
