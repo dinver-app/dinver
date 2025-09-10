@@ -15,6 +15,7 @@ const {
   formatHoursResponse,
   formatNearbyResponse,
 } = require('./formatters');
+const { generateNaturalReply } = require('./llm');
 
 function extractRestaurantNameOrSlug(text) {
   // Heuristic: words after keywords "restoran", "restaurant", or explicit quotes
@@ -63,18 +64,29 @@ function scoreMatch(textNorm, candidateNameNorm, candidateSlug) {
   if (textNorm.includes(candidateNameNorm)) score += 1.0; // full phrase match
   const tokens = candidateNameNorm.split(/\s+/).filter(Boolean);
   let hits = 0;
+  const head = tokens[0];
   for (const tok of tokens) {
     if (tok.length < 3) continue;
     if (textNorm.includes(tok)) hits += 1;
   }
   if (tokens.length > 0) score += hits / tokens.length; // partial coverage
+  // Strong brand/head-token boost (e.g., "marabu")
+  if (head && head.length >= 4 && textNorm.includes(head)) score += 0.6;
   if (candidateSlug && textNorm.includes(candidateSlug)) score += 0.25;
   return score; // 0..2.25
 }
 
 async function resolveRestaurantFromText(text) {
   const partners = await fetchPartnersBasic();
-  const t = normalize(text);
+  let t = normalize(text);
+  // Remove generic tokens that commonly appear in questions but aren't part of names
+  t = t
+    .replace(
+      /\b(restoran|caffe|kafi[cć]|bar|pizzeria|club|kavana|coffee|restaurant)\b/g,
+      ' ',
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
   const scored = partners.map((p) => {
     const nameN = normalize(p.name);
     const slug = (p.slug || '').toLowerCase();
@@ -83,9 +95,9 @@ async function resolveRestaurantFromText(text) {
   scored.sort((a, b) => b.s - a.s);
   const top = scored[0];
   const second = scored[1];
-  if (!top || top.s < 0.75)
+  if (!top || top.s < 0.5)
     return { match: null, candidates: scored.slice(0, 3).map((x) => x.p) };
-  if (second && top.s - second.s < 0.25) {
+  if (second && top.s - second.s < 0.2) {
     return { match: null, candidates: scored.slice(0, 3).map((x) => x.p) };
   }
   return {
@@ -167,13 +179,25 @@ async function handleHours({ lang, text }) {
   ) {
     return formatHoursResponse(lang, restaurant.name, dayIndex, null, null);
   }
-  return formatHoursResponse(
+  const fallbackHours = formatHoursResponse(
     lang,
     restaurant.name,
     dayIndex,
     period.open,
     period.close,
   );
+  return generateNaturalReply({
+    lang,
+    intent: 'hours',
+    question: text,
+    data: {
+      restaurant: { id: restaurant.id, name: restaurant.name },
+      dayIndex,
+      open: period.open,
+      close: period.close,
+    },
+    fallback: fallbackHours,
+  });
 }
 
 async function handleNearby({ lang, latitude, longitude, radiusKm }) {
@@ -183,7 +207,14 @@ async function handleNearby({ lang, latitude, longitude, radiusKm }) {
     radiusKm,
     limit: 5,
   });
-  return formatNearbyResponse(lang, nearby);
+  const fallbackNearby = formatNearbyResponse(lang, nearby);
+  return generateNaturalReply({
+    lang,
+    intent: 'nearby',
+    question: 'nearby',
+    data: { nearby },
+    fallback: fallbackNearby,
+  });
 }
 
 async function handleMenuSearch({ lang, text }) {
@@ -222,9 +253,22 @@ async function handleMenuSearch({ lang, text }) {
     if (unique.length >= 3) break;
   }
   const parts = unique.map((r) => `${r.restaurant.name} – ${r.name}`);
-  return lang === 'hr'
-    ? `Našao sam: ${parts.join(', ')}.`
-    : `I found: ${parts.join(', ')}.`;
+  const fallbackMenu =
+    lang === 'hr'
+      ? `Našao sam: ${parts.join(', ')}.`
+      : `I found: ${parts.join(', ')}.`;
+  return generateNaturalReply({
+    lang,
+    intent: 'menu_search',
+    question: text,
+    data: {
+      items: unique.map((x) => ({
+        restaurant: x.restaurant.name,
+        item: x.name,
+      })),
+    },
+    fallback: fallbackMenu,
+  });
 }
 
 async function handlePerks({ lang, text }) {
@@ -256,13 +300,29 @@ async function handlePerks({ lang, text }) {
       : false || target.includes(name);
   });
   if (perkMatch) {
-    return lang === 'hr'
-      ? `Da, dostupno je: ${perkMatch.nameHr}.`
-      : `Yes, available: ${perkMatch.nameEn}.`;
+    const fallbackPerk =
+      lang === 'hr'
+        ? `Da, dostupno je: ${perkMatch.nameHr}.`
+        : `Yes, available: ${perkMatch.nameEn}.`;
+    return generateNaturalReply({
+      lang,
+      intent: 'perks',
+      question: text,
+      data: { restaurant: { name: restaurant.name }, perk: perkMatch },
+      fallback: fallbackPerk,
+    });
   }
-  return lang === 'hr'
-    ? 'Ne vidim tu opciju za taj restoran.'
-    : 'I do not see that option for this restaurant.';
+  const fallbackPerkMissing =
+    lang === 'hr'
+      ? 'Ne vidim tu opciju za taj restoran.'
+      : 'I do not see that option for this restaurant.';
+  return generateNaturalReply({
+    lang,
+    intent: 'perks',
+    question: text,
+    data: { restaurant: { name: restaurant.name } },
+    fallback: fallbackPerkMissing,
+  });
 }
 
 async function handleMealTypes({ lang, text }) {
@@ -286,9 +346,17 @@ async function handleMealTypes({ lang, text }) {
       ? 'Nema definiranih tipova obroka.'
       : 'No meal types defined.';
   const names = mealTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  return lang === 'hr'
-    ? `Poslužuju: ${names.join(', ')}.`
-    : `They serve: ${names.join(', ')}.`;
+  const fallbackMeals =
+    lang === 'hr'
+      ? `Poslužuju: ${names.join(', ')}.`
+      : `They serve: ${names.join(', ')}.`;
+  return generateNaturalReply({
+    lang,
+    intent: 'meal_types',
+    question: text,
+    data: { restaurant: { name: restaurant.name }, mealTypes: names },
+    fallback: fallbackMeals,
+  });
 }
 
 async function handleDietaryTypes({ lang, text }) {
@@ -312,9 +380,17 @@ async function handleDietaryTypes({ lang, text }) {
       ? 'Nema specificiranih opcija.'
       : 'No options specified.';
   const names = dietaryTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  return lang === 'hr'
-    ? `Opcije: ${names.join(', ')}.`
-    : `Options: ${names.join(', ')}.`;
+  const fallbackDiet =
+    lang === 'hr'
+      ? `Opcije: ${names.join(', ')}.`
+      : `Options: ${names.join(', ')}.`;
+  return generateNaturalReply({
+    lang,
+    intent: 'dietary_types',
+    question: text,
+    data: { restaurant: { name: restaurant.name }, dietaryTypes: names },
+    fallback: fallbackDiet,
+  });
 }
 
 async function handleReservations({ lang, text }) {
@@ -333,13 +409,29 @@ async function handleReservations({ lang, text }) {
   const restaurant = await fetchRestaurantDetails(rBasic.id);
   if (!restaurant) return replyNoData(lang);
   if (restaurant.reservationEnabled) {
-    return lang === 'hr'
-      ? 'Da, moguće je rezervirati preko Dinvera.'
-      : 'Yes, reservations via Dinver are available.';
+    const fallbackRes =
+      lang === 'hr'
+        ? 'Da, moguće je rezervirati preko Dinvera.'
+        : 'Yes, reservations via Dinver are available.';
+    return generateNaturalReply({
+      lang,
+      intent: 'reservations',
+      question: text,
+      data: { restaurant: { name: restaurant.name }, reservationEnabled: true },
+      fallback: fallbackRes,
+    });
   }
-  return lang === 'hr'
-    ? 'Rezervacije preko Dinvera trenutno nisu podržane.'
-    : 'Reservations via Dinver are not supported at the moment.';
+  const fallbackRes2 =
+    lang === 'hr'
+      ? 'Rezervacije preko Dinvera trenutno nisu podržane.'
+      : 'Reservations via Dinver are not supported at the moment.';
+  return generateNaturalReply({
+    lang,
+    intent: 'reservations',
+    question: text,
+    data: { restaurant: { name: restaurant.name }, reservationEnabled: false },
+    fallback: fallbackRes2,
+  });
 }
 
 async function handleContact({ lang, text }) {
@@ -367,11 +459,19 @@ async function handleContact({ lang, text }) {
   if (r.ttUrl) links.push(`TikTok: ${r.ttUrl}`);
   if (r.phone) links.push((lang === 'hr' ? 'Telefon: ' : 'Phone: ') + r.phone);
   if (r.email) links.push('Email: ' + r.email);
-  if (links.length === 0)
-    return lang === 'hr'
-      ? 'Kontakt nije dostupan.'
-      : 'Contact info is not available.';
-  return links.join(' | ');
+  const fallbackContact =
+    links.length === 0
+      ? lang === 'hr'
+        ? 'Kontakt nije dostupan.'
+        : 'Contact info is not available.'
+      : links.join(' | ');
+  return generateNaturalReply({
+    lang,
+    intent: 'contact',
+    question: text,
+    data: { restaurant: { name: r.name }, links },
+    fallback: fallbackContact,
+  });
 }
 
 async function handleDescription({ lang, text }) {
@@ -398,9 +498,18 @@ async function handleDescription({ lang, text }) {
   if (!r) return replyNoData(lang);
   const t = (r.translations || []).find((x) => x.language === lang);
   const desc = t?.description || '';
-  if (!desc)
-    return lang === 'hr' ? 'Nema unesen opis.' : 'No description available.';
-  return desc;
+  const fallbackDesc = !desc
+    ? lang === 'hr'
+      ? 'Nema unesen opis.'
+      : 'No description available.'
+    : desc;
+  return generateNaturalReply({
+    lang,
+    intent: 'description',
+    question: text,
+    data: { restaurant: { name: r.name }, description: desc },
+    fallback: fallbackDesc,
+  });
 }
 
 async function handleVirtualTour({ lang, text }) {
@@ -417,13 +526,24 @@ async function handleVirtualTour({ lang, text }) {
         ? 'Za koji restoran?'
         : 'Which restaurant?';
   const r = await fetchRestaurantDetails(rBasic.id);
-  if (!r || !r.virtualTourUrl)
-    return lang === 'hr'
+  const has = !!(r && r.virtualTourUrl);
+  const fallbackVt = has
+    ? lang === 'hr'
+      ? `Virtualna tura: ${r.virtualTourUrl}`
+      : `Virtual tour: ${r.virtualTourUrl}`
+    : lang === 'hr'
       ? 'Virtualna tura nije dostupna.'
       : 'Virtual tour is not available.';
-  return lang === 'hr'
-    ? `Virtualna tura: ${r.virtualTourUrl}`
-    : `Virtual tour: ${r.virtualTourUrl}`;
+  return generateNaturalReply({
+    lang,
+    intent: 'virtual_tour',
+    question: text,
+    data: {
+      restaurant: { name: r?.name },
+      virtualTourUrl: r?.virtualTourUrl || null,
+    },
+    fallback: fallbackVt,
+  });
 }
 
 async function handlePrice({ lang, text }) {
@@ -472,36 +592,94 @@ async function handleReviews({ lang, text }) {
     : `Ratings: overall ${ratings.overall} (${totalReviews} reviews).`;
 }
 
+const ctxStore = require('./contextStore');
+
 async function chatAgent(input) {
-  const { message, language, latitude, longitude, radiusKm } = input;
+  const { message, language, latitude, longitude, radiusKm, threadId } = input;
   const lang = detectLanguage(message, language);
   const intent = classifyIntent(message, lang);
 
+  // Load prior context if any
+  const ctx = threadId ? ctxStore.get(threadId) : null;
+  // If context contains lastRestaurantId, prefer it when matching
+  let lastRestaurantId = ctx?.lastRestaurantId;
+
   switch (intent) {
-    case 'hours':
-      return handleHours({ lang, text: message });
+    case 'hours': {
+      const reply = await handleHours({ lang, text: message });
+      // Best-effort: store resolved restaurant if disambiguation didn’t happen
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
     case 'nearby':
       return handleNearby({ lang, latitude, longitude, radiusKm });
     case 'menu_search':
       return handleMenuSearch({ lang, text: message });
-    case 'perks':
-      return handlePerks({ lang, text: message });
-    case 'meal_types':
-      return handleMealTypes({ lang, text: message });
-    case 'dietary_types':
-      return handleDietaryTypes({ lang, text: message });
-    case 'reservations':
-      return handleReservations({ lang, text: message });
-    case 'contact':
-      return handleContact({ lang, text: message });
-    case 'description':
-      return handleDescription({ lang, text: message });
-    case 'virtual_tour':
-      return handleVirtualTour({ lang, text: message });
-    case 'price':
-      return handlePrice({ lang, text: message });
-    case 'reviews':
-      return handleReviews({ lang, text: message });
+    case 'perks': {
+      const reply = await handlePerks({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'meal_types': {
+      const reply = await handleMealTypes({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'dietary_types': {
+      const reply = await handleDietaryTypes({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'reservations': {
+      const reply = await handleReservations({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'contact': {
+      const reply = await handleContact({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'description': {
+      const reply = await handleDescription({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'virtual_tour': {
+      const reply = await handleVirtualTour({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'price': {
+      const reply = await handlePrice({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
+    case 'reviews': {
+      const reply = await handleReviews({ lang, text: message });
+      if (reply && reply.restaurantId && threadId) {
+        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
+      }
+      return reply.text || reply;
+    }
     default:
       return replyOutOfScope(lang);
   }
