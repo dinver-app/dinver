@@ -656,7 +656,7 @@ module.exports = {
 
           const itemCandidates = Array.from(groupedByItem.values());
           itemCandidates.sort((a, b) => b.sim - a.sim);
-          const matchedItems = itemCandidates.slice(0, 3).map((it) => ({
+          const matchedItems = itemCandidates.slice(0, 5).map((it) => ({
             id: it.id,
             price: it.price != null ? Number(it.price.toFixed(2)) : null,
             type: it.type,
