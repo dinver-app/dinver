@@ -128,6 +128,43 @@ function formatHHmm(s) {
   return `${hh}:${mm}`;
 }
 
+function getDayRelationLabel(atISO, timeZone = 'Europe/Zagreb') {
+  try {
+    const fmtDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const fmtWeekday = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      weekday: 'short',
+    });
+    const now = new Date();
+    const at = atISO ? new Date(atISO) : now;
+    const dateStrNow = fmtDate.format(now);
+    const dateStrAt = fmtDate.format(at);
+    if (dateStrAt === dateStrNow) return { when: 'today', label: 'danas' };
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (fmtDate.format(tomorrow) === dateStrAt)
+      return { when: 'tomorrow', label: 'sutra' };
+    const wd = fmtWeekday.format(at); // Mon..Sun
+    const map = {
+      Sun: 'u nedjelju',
+      Mon: 'u ponedjeljak',
+      Tue: 'u utorak',
+      Wed: 'u srijedu',
+      Thu: 'u četvrtak',
+      Fri: 'u petak',
+      Sat: 'u subotu',
+    };
+    return { when: 'other', label: map[wd] || '' };
+  } catch (_) {
+    return { when: 'today', label: 'danas' };
+  }
+}
+
 function expandSynonyms(term) {
   const out = new Set([term]);
   const t = normalizeText(term);
@@ -194,6 +231,7 @@ async function findRestaurantByNameCity({ name, city }) {
     attributes: [
       'id',
       'name',
+      'description',
       'place',
       'address',
       'latitude',
@@ -205,6 +243,16 @@ async function findRestaurantByNameCity({ name, city }) {
       'reservationEnabled',
       'phone',
       'email',
+      'websiteUrl',
+      'fbUrl',
+      'igUrl',
+      'ttUrl',
+      'establishmentTypes',
+      'mealTypes',
+      'foodTypes',
+      'dietaryTypes',
+      'establishmentPerks',
+      'virtualTourUrl',
     ],
     include: [
       {
@@ -224,6 +272,7 @@ function decorateRestaurant(r) {
   return {
     id: json.id,
     name: json.name,
+    description: json.description || null,
     place: json.place,
     address: json.address,
     latitude: json.latitude,
@@ -238,6 +287,16 @@ function decorateRestaurant(r) {
     reservationEnabled: !!json.reservationEnabled,
     phone: json.phone || null,
     email: json.email || null,
+    websiteUrl: json.websiteUrl || null,
+    fbUrl: json.fbUrl || null,
+    igUrl: json.igUrl || null,
+    ttUrl: json.ttUrl || null,
+    establishmentTypes: json.establishmentTypes || [],
+    mealTypes: json.mealTypes || [],
+    foodTypes: json.foodTypes || [],
+    dietaryTypes: json.dietaryTypes || [],
+    establishmentPerks: json.establishmentPerks || [],
+    virtualTourUrl: json.virtualTourUrl || null,
   };
 }
 
@@ -657,6 +716,51 @@ async function findMenuItemsByNameNear({
   return results;
 }
 
+async function getRestaurantMenuStructured({
+  restaurantId,
+  menuType = 'all',
+  limit = 300,
+}) {
+  const wantFood = menuType === 'all' || menuType === 'food';
+  const wantDrink = menuType === 'all' || menuType === 'drink';
+  const out = { food: [], drinks: [] };
+  if (wantFood) {
+    const menuItems = await MenuItem.findAll({
+      where: { restaurantId, isActive: true },
+      include: [
+        { model: MenuItemTranslation, as: 'translations', required: false },
+      ],
+      limit: Math.min(parseInt(limit) || 300, 500),
+    });
+    out.food = menuItems.map((m) => ({
+      id: m.id,
+      price: m.price != null ? Number(parseFloat(m.price).toFixed(2)) : null,
+      imageUrl: m.imageUrl ? getMediaUrl(m.imageUrl, 'image') : null,
+      name: m.translations?.[0]?.name || null,
+      description: m.translations?.[0]?.description || null,
+      language: m.translations?.[0]?.language || null,
+    }));
+  }
+  if (wantDrink) {
+    const drinkItems = await DrinkItem.findAll({
+      where: { restaurantId, isActive: true },
+      include: [
+        { model: DrinkItemTranslation, as: 'translations', required: false },
+      ],
+      limit: Math.min(parseInt(limit) || 300, 500),
+    });
+    out.drinks = drinkItems.map((d) => ({
+      id: d.id,
+      price: d.price != null ? Number(parseFloat(d.price).toFixed(2)) : null,
+      imageUrl: d.imageUrl ? getMediaUrl(d.imageUrl, 'image') : null,
+      name: d.translations?.[0]?.name || null,
+      description: d.translations?.[0]?.description || null,
+      language: d.translations?.[0]?.language || null,
+    }));
+  }
+  return out;
+}
+
 function extractFirst(regex, text) {
   const m = regex.exec(text);
   return m ? m[1] : undefined;
@@ -676,7 +780,31 @@ function parseTemporalAtFromQuery(queryRaw, timeZone = 'Europe/Zagreb') {
     hour = 20; // heuristika za "večeras"
     minute = 0;
   }
-  const timeMatch = q.match(/\b(\d{1,2})[:\.](\d{2})\b/);
+  // Tjedni dani (pon, uto, sri, cet, pet, sub, ned)
+  const weekdays = [
+    ['ponedjeljak', 'pon'],
+    ['utorak', 'uto'],
+    ['srijeda', 'sri'],
+    ['četvrtak', 'cet', 'čet'],
+    ['petak', 'pet'],
+    ['subota', 'sub'],
+    ['nedjelja', 'ned', 'nedjeljom', 'u nedjelju'],
+  ];
+  const weekIdx = weekdays.findIndex((names) =>
+    names.some((w) => q.includes(normalizeText(w))),
+  );
+  if (weekIdx >= 0) {
+    const target = new Date(now);
+    const currentDay = target.getDay(); // 0=ned, 1=pon ...
+    const toDateDay = weekIdx === 6 ? 0 : weekIdx + 1; // map na Date.getDay()
+    let add = (toDateDay - currentDay + 7) % 7;
+    if (add === 0 && !/\bdanas\b/.test(q)) add = 7; // ako je isti dan, pomakni na idući
+    target.setDate(target.getDate() + add);
+    base.setTime(target.getTime());
+    hour = 12;
+    minute = 0;
+  }
+  const timeMatch = q.match(/\b(\d{1,2})[:\.]?(\d{2})\b/);
   if (timeMatch) {
     hour = Math.min(23, Math.max(0, parseInt(timeMatch[1], 10)));
     minute = Math.min(59, Math.max(0, parseInt(timeMatch[2], 10)));
@@ -757,6 +885,16 @@ const argsSchemas = {
     restaurantName: z.string().min(1),
     city: z.string().optional(),
     itemName: z.string().min(1),
+  }),
+  get_restaurant_info: z.object({
+    restaurantName: z.string().min(1),
+    city: z.string().optional(),
+  }),
+  get_restaurant_menu: z.object({
+    restaurantName: z.string().min(1),
+    city: z.string().optional(),
+    menuType: z.enum(['food', 'drink', 'all']).optional(),
+    limit: z.number().min(1).max(500).optional(),
   }),
   find_by_item_and_perk_nearby: z.object({
     itemName: z.string().min(1),
@@ -876,7 +1014,8 @@ async function llmRoute({ query, coords, threadId }) {
         content: JSON.stringify({
           question: query,
           userLocation: coords ?? null,
-          notes: 'Call exactly ONE function tool with validated arguments.',
+          notes:
+            'Odgovaraj na hrvatskom. Ako je pitanje o konkretnom restoranu, koristi get_restaurant_info ili get_restaurant_menu ili is_restaurant_open. Za pretrage blizu koristi find_* alate. Pozovi točno JEDNU funkciju s validiranim argumentima.',
         }),
       },
     ];
@@ -1185,24 +1324,26 @@ async function routeQueryWithLLM({
         llmError: llm.llmError || null,
       };
     }
-    const state = isOpenAt(restaurant.openingHours, params.at);
+    const at = params.at || parseTemporalAtFromQuery(query);
+    const state = isOpenAt(restaurant.openingHours, at);
+    const dayLabel = getDayRelationLabel(at).label;
     const wantsClosingTime = asksClosingTime(query);
     let answer;
     if (state.state === 'open') {
       const closes = formatHHmm(state.closesAt);
       answer = wantsClosingTime
         ? closes
-          ? `Danas rade do ${closes}.`
-          : 'Radno vrijeme za danas nije dostupno.'
+          ? `${dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)} rade do ${closes}.`
+          : `Radno vrijeme za ${dayLabel} nije dostupno.`
         : closes
-          ? `Da, otvoreni su. Danas rade do ${closes}.`
+          ? `Da, otvoreni su – ${dayLabel} rade do ${closes}.`
           : 'Da, otvoreni su.';
     } else if (state.state === 'closed') {
       const opens = formatHHmm(state.opensAt);
       answer = wantsClosingTime
-        ? 'Trenutno su zatvoreni.'
+        ? `${dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)} su zatvoreni.`
         : opens
-          ? `Zatvoreni su. Danas otvaraju u ${opens}.`
+          ? `Zatvoreni su – ${dayLabel} otvaraju u ${opens}.`
           : 'Zatvoreni su.';
     } else {
       answer = 'Radno vrijeme nije dostupno.';
@@ -1216,6 +1357,88 @@ async function routeQueryWithLLM({
       isOpenNow: state.state === 'open',
       opensAt: state.opensAt ? formatHHmm(state.opensAt) : null,
       closesAt: state.closesAt ? formatHHmm(state.closesAt) : null,
+      at,
+      durationMs: Date.now() - started,
+      model: llm.model || null,
+      usage: llm.usage || null,
+      llmError: llm.llmError || null,
+    };
+  }
+
+  if (intent === 'get_restaurant_info') {
+    const restaurant = await findRestaurantByNameCity({
+      name: params.restaurantName,
+      city: params.city,
+    });
+    if (!restaurant) {
+      return {
+        intent,
+        params,
+        resultType: 'answer',
+        code: 'RESTAURANT_NOT_FOUND',
+        answer: 'Nismo pronašli taj restoran.',
+        durationMs: Date.now() - started,
+        model: llm.model || null,
+        usage: llm.usage || null,
+        llmError: llm.llmError || null,
+      };
+    }
+    return {
+      intent,
+      params,
+      resultType: 'restaurant_info',
+      restaurant,
+      durationMs: Date.now() - started,
+      model: llm.model || null,
+      usage: llm.usage || null,
+      llmError: llm.llmError || null,
+    };
+  }
+
+  if (intent === 'get_restaurant_menu') {
+    const restaurant = await findRestaurantByNameCity({
+      name: params.restaurantName,
+      city: params.city,
+    });
+    if (!restaurant) {
+      return {
+        intent,
+        params,
+        resultType: 'answer',
+        code: 'RESTAURANT_NOT_FOUND',
+        answer: 'Nismo pronašli taj restoran.',
+        durationMs: Date.now() - started,
+        model: llm.model || null,
+        usage: llm.usage || null,
+        llmError: llm.llmError || null,
+      };
+    }
+    if (!restaurant.isClaimed) {
+      return {
+        intent,
+        params,
+        resultType: 'answer',
+        code: 'NOT_PARTNER',
+        restaurant,
+        answer:
+          'Taj restoran trenutno nije partner Dinveru pa nemamo njihov službeni meni.',
+        durationMs: Date.now() - started,
+        model: llm.model || null,
+        usage: llm.usage || null,
+        llmError: llm.llmError || null,
+      };
+    }
+    const menu = await getRestaurantMenuStructured({
+      restaurantId: restaurant.id,
+      menuType: params.menuType || 'all',
+      limit: params.limit || 300,
+    });
+    return {
+      intent,
+      params,
+      resultType: 'menu',
+      restaurant,
+      menu,
       durationMs: Date.now() - started,
       model: llm.model || null,
       usage: llm.usage || null,

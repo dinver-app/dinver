@@ -18,6 +18,44 @@ module.exports = [
   {
     type: 'function',
     function: {
+      name: 'get_restaurant_info',
+      description:
+        'Vrati detalje o restoranu (opis, radno vrijeme, linkovi, tipovi, perks, opcije prehrane, mogućnost rezervacije).',
+      parameters: {
+        type: 'object',
+        properties: {
+          restaurantName: { type: 'string' },
+          city: { type: 'string', nullable: true },
+        },
+        required: ['restaurantName'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_restaurant_menu',
+      description:
+        'Vrati meni restorana (hrana/piće/sve) iz točnih partnerskih podataka.',
+      parameters: {
+        type: 'object',
+        properties: {
+          restaurantName: { type: 'string' },
+          city: { type: 'string', nullable: true },
+          menuType: {
+            type: 'string',
+            enum: ['food', 'drink', 'all'],
+            nullable: true,
+          },
+          limit: { type: 'number', nullable: true },
+        },
+        required: ['restaurantName'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'find_by_item_and_perk_nearby',
       description: 'Nađi restorane blizu korisnika s jelo+perk.',
       parameters: {

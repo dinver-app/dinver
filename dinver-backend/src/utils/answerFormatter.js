@@ -5,6 +5,7 @@ const OpenAIClient = require('../services/openaiClient');
 function buildMessages({
   question,
   intent,
+  resultType,
   entities,
   results,
   code,
@@ -16,10 +17,13 @@ function buildMessages({
     'Do not invent restaurants, menus, times or numbers. If data is missing, say it is not available.',
     'Prefer short, helpful answers (one sentence). Avoid emojis and marketing tone.',
     'For opening hours: explain the current state and hours naturally based on the data.',
+    'If resultType is restaurant_info: sažmi: rezervacije (da/ne), kratko radno vrijeme danas (ako dostupno), ključne oznake (tip objekta, kuhinje, prehrambene opcije), i spomeni link (web) ako postoji.',
+    'If resultType is menu: reci korisniku da sam prikazao traženi meni i koliko stavki je vidljivo.',
   ].join(' ');
 
   const data = {
     intent: intent || null,
+    resultType: resultType || null,
     code: code || null,
     entities: entities || null,
     results: results || null,
@@ -44,6 +48,7 @@ function buildMessages({
 async function formatAnswer({
   question,
   intent,
+  resultType,
   entities,
   results,
   code,
@@ -53,6 +58,7 @@ async function formatAnswer({
     const messages = buildMessages({
       question,
       intent,
+      resultType,
       entities,
       results,
       code,
