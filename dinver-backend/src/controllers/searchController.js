@@ -416,6 +416,84 @@ module.exports = {
         // Get candidate restaurants with all data
         const finalRestaurants = await Restaurant.findAll(restaurantQuery);
 
+        // Fallback: ensure restaurants that matched only by name also get their matching items
+        // Identify restaurants that currently have no matched items due to global limits on initial item queries
+        const existingItemRestaurantIdSet = new Set([
+          ...menuItems.map((i) => i.menuItem.restaurantId),
+          ...drinkItems.map((i) => i.drinkItem.restaurantId),
+        ]);
+        const fallbackRestaurantIds = finalRestaurants
+          .filter((r) => !existingItemRestaurantIdSet.has(r.id))
+          .map((r) => r.id);
+
+        if (fallbackRestaurantIds.length > 0) {
+          // Fetch matching MenuItems for these restaurants
+          const fallbackMenuItems = await MenuItemTranslation.findAll({
+            where: {
+              [Op.or]: searchTerms.map((term) => ({
+                name: { [Op.iLike]: `%${term}%` },
+              })),
+            },
+            include: [
+              {
+                model: MenuItem,
+                as: 'menuItem',
+                required: true,
+                where: {
+                  isActive: true,
+                  restaurantId: { [Op.in]: fallbackRestaurantIds },
+                },
+                include: [
+                  {
+                    model: MenuItemTranslation,
+                    as: 'translations',
+                    attributes: ['language', 'name', 'description'],
+                  },
+                ],
+              },
+            ],
+          });
+
+          // Fetch matching DrinkItems for these restaurants
+          const fallbackDrinkItems = await DrinkItemTranslation.findAll({
+            where: {
+              [Op.or]: searchTerms.map((term) => ({
+                name: { [Op.iLike]: `%${term}%` },
+              })),
+            },
+            include: [
+              {
+                model: DrinkItem,
+                as: 'drinkItem',
+                required: true,
+                where: {
+                  isActive: true,
+                  restaurantId: { [Op.in]: fallbackRestaurantIds },
+                },
+                include: [
+                  {
+                    model: DrinkItemTranslation,
+                    as: 'translations',
+                    attributes: ['language', 'name', 'description'],
+                  },
+                ],
+              },
+            ],
+          });
+
+          // Merge fallbacks into the per-restaurant maps so items are available for scoring and chips
+          fallbackMenuItems.forEach((mi) => {
+            const rid = mi.menuItem.restaurantId;
+            if (!menuByRestaurant.has(rid)) menuByRestaurant.set(rid, []);
+            menuByRestaurant.get(rid).push(mi);
+          });
+          fallbackDrinkItems.forEach((di) => {
+            const rid = di.drinkItem.restaurantId;
+            if (!drinkByRestaurant.has(rid)) drinkByRestaurant.set(rid, []);
+            drinkByRestaurant.get(rid).push(di);
+          });
+        }
+
         // Get cached popularity map
         const viewCountMap = await getCachedViewCounts();
 
