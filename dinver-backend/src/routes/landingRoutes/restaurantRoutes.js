@@ -1,5 +1,7 @@
 const express = require('express');
 const restaurantController = require('../../controllers/restaurantController');
+const menuController = require('../../controllers/menuController');
+const drinksController = require('../../controllers/drinkController');
 const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -41,4 +43,37 @@ router.post(
   restaurantController.submitClaimForm,
 );
 
+// menu routes
+
+router.get(
+  '/restaurantDetails/menu/categories/:restaurantId',
+  landingApiKeyAuth,
+  menuController.getCategoryItems,
+);
+
+router.get(
+  '/restaurantDetails/menu/menuItems/:restaurantId',
+  landingApiKeyAuth,
+  menuController.getMenuItems,
+);
+
+router.get(
+  '/restaurantDetails/menu/allergens',
+  landingApiKeyAuth,
+  menuController.getAllAllergens,
+);
+
+// drinks routes
+
+router.get(
+  '/restaurantDetails/drinks/categories/:restaurantId',
+  landingApiKeyAuth,
+  drinksController.getDrinkCategories,
+);
+
+router.get(
+  '/restaurantDetails/drinks/drinkItems/:restaurantId',
+  landingApiKeyAuth,
+  drinksController.getDrinkItems,
+);
 module.exports = router;
