@@ -14,6 +14,7 @@
  * - virtual_tour
  * - price
  * - reviews
+ * - data_provenance
  * - out_of_scope
  */
 
@@ -21,11 +22,11 @@ function classifyIntent(text, lang) {
   const t = (text || '').toLowerCase();
   const isHr = lang === 'hr';
 
-  // Hours
+  // Hours (extended with danas/sada/trenutno)
   const hoursHr =
-    /(radno vrijeme|kada se otvara|do kada radi|radi li|otvara|zatvara|nedjelj|ponedjelj|utorak|srijed|četvrt|petak|subot)/;
+    /(radno vrijeme|kada se otvara|do kada radi|radi li|otvara|zatvara|nedjelj|ponedjelj|utorak|srijed|četvrt|petak|subot|danas|sada|trenutno|otvoren[oa]? sada)/;
   const hoursEn =
-    /(hours|open|close|closing|opening|sunday|monday|tuesday|wednesday|thursday|friday|saturday)/;
+    /(hours|open|close|closing|opening|sunday|monday|tuesday|wednesday|thursday|friday|saturday|open now|today)/;
   if ((isHr && hoursHr.test(t)) || (!isHr && hoursEn.test(t))) return 'hours';
 
   // Nearby
@@ -37,15 +38,15 @@ function classifyIntent(text, lang) {
 
   // Menu search (food/drink)
   const menuHr =
-    /(meni|jelovnik|ima li|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata)/;
+    /(meni|jelovnik|ima li|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata|lazanj|lazanje)/;
   const menuEn =
-    /(menu|dish|food|drink|has.*(steak|pizza|burger|dessert|salad)|looking for|do you serve)/;
+    /(menu|dish|food|drink|has.*(steak|pizza|burger|dessert|salad|lasagn)|looking for|do you serve)/;
   if ((isHr && menuHr.test(t)) || (!isHr && menuEn.test(t)))
     return 'menu_search';
 
   // Perks
   const perksHr =
-    /(terasa|stolica za djecu|igralište|klimatiziran|kava za van|hrana za van|parking|pristup|wi[- ]?fi)/;
+    /(terasa|stolica za djecu|igralište|klimatiziran|kava za van|hrana za van|parking|pristup|wi[- ]?fi|vanjska terasa)/;
   const perksEn =
     /(outdoor|terrace|high chair|play area|air[- ]?conditioned|to go|takeaway|parking|accessible|wi[- ]?fi)/;
   if ((isHr && perksHr.test(t)) || (!isHr && perksEn.test(t))) return 'perks';
@@ -69,8 +70,10 @@ function classifyIntent(text, lang) {
     return 'reservations';
 
   // Contact/social
-  const contactHr = /(kontakt|telefon|email|web|facebook|instagram|tiktok)/;
-  const contactEn = /(contact|phone|email|website|facebook|instagram|tiktok)/;
+  const contactHr =
+    /(kontakt|telefon|telefona|broj telefona|email|web|facebook|instagram|tiktok)/;
+  const contactEn =
+    /(contact|phone|telephone|number|email|website|facebook|instagram|tiktok)/;
   if ((isHr && contactHr.test(t)) || (!isHr && contactEn.test(t)))
     return 'contact';
 
@@ -94,6 +97,13 @@ function classifyIntent(text, lang) {
   const revHr = /(recenzij|ocjen|ocjena|rating|dojam)/;
   const revEn = /(reviews?|rating|feedback)/;
   if ((isHr && revHr.test(t)) || (!isHr && revEn.test(t))) return 'reviews';
+
+  // Data provenance
+  const provHr =
+    /(odakle (su|dolaze) podaci|izvora podataka|iz baze|od kud su info|odakle informacije)/;
+  const provEn = /(where.*data.*from|data source|provenance)/;
+  if ((isHr && provHr.test(t)) || (!isHr && provEn.test(t)))
+    return 'data_provenance';
 
   return 'out_of_scope';
 }

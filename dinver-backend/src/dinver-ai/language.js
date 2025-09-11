@@ -17,13 +17,22 @@ function detectLanguage(text, preferred) {
     'ima li',
     'radi li',
     'radno vrijeme',
+    'broj',
+    'telefon',
+    'telefona',
+    'njihov',
     'nedjelj',
     'ponedjelj',
+    'subotom',
+    'subotu',
+    'danas',
+    'dokad',
     'blizu mene',
     'rezervacij',
     'cijena',
     'opis',
     'terasa',
+    'radi',
   ];
   if (
     croatianChars.test(sample) ||

@@ -1,21 +1,99 @@
 'use strict';
 const { detectLanguage } = require('./language');
 const { classifyIntent } = require('./intentClassifier');
+const { inferIntent } = require('./llmRouter');
 const {
   fetchRestaurantDetails,
   searchMenuAcrossRestaurants,
+  searchMenuForRestaurant,
   findNearbyPartners,
   fetchTypesForRestaurant,
   fetchReviewsSummary,
   fetchPartnersBasic,
+  resolvePerkIdByName,
+  findMostExpensiveItemsForRestaurant,
 } = require('./dataAccess');
-const {
-  replyOutOfScope,
-  replyNoData,
-  formatHoursResponse,
-  formatNearbyResponse,
-} = require('./formatters');
+// (formatters no longer used for replies; LLM crafts all natural text)
 const { generateNaturalReply } = require('./llm');
+
+// ---- Scope helpers ----
+function isGlobalQuery(text = '') {
+  const t = (text || '').toLowerCase();
+  return /\b(blizu mene|u blizini|near me|nearby|neki restoran|neki restorani|restaurants|restorani|u okolici|oko mene)\b/.test(
+    t,
+  );
+}
+
+// ---- Time helpers (Europe/Zagreb) ----
+function getZagrebNow() {
+  const now = new Date();
+  // Convert to Europe/Zagreb by using localeString trick
+  return new Date(now.toLocaleString('en-GB', { timeZone: 'Europe/Zagreb' }));
+}
+
+function jsDayToMon0(jsDay) {
+  // JS: 0=Sunday..6=Saturday; Mon0: 0=Mon..6=Sun
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
+function parseMinutes(hhmm) {
+  if (!hhmm || hhmm.length < 2) return null;
+  const h = Number(hhmm.slice(0, 2));
+  const m = Number(hhmm.slice(2, 4) || '0');
+  return h * 60 + m;
+}
+
+function getTodayPeriod(openingHours, customWorkingDays) {
+  const now = getZagrebNow();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const key = `${y}-${m}-${d}`;
+
+  const override = customWorkingDays && customWorkingDays[key];
+  if (override && override.open && override.close) {
+    const toHHmm = (s) => (s || '').replace(':', '').padEnd(4, '0').slice(0, 4);
+    const jsDay = now.getDay();
+    const mon0 = jsDay === 0 ? 6 : jsDay - 1;
+    const nextDay = (mon0 + 1) % 7;
+    const spansMidnight = override.closeDayOffset === 1;
+    return {
+      open: { day: mon0, time: toHHmm(override.open) },
+      close: {
+        day: spansMidnight ? nextDay : mon0,
+        time: toHHmm(override.close),
+      },
+    };
+  }
+
+  const jsDay = now.getDay();
+  const mon0 = jsDay === 0 ? 6 : jsDay - 1;
+  const p = openingHours?.periods?.[mon0];
+  return p || null;
+}
+
+function computeOpenNow(openingHours, customWorkingDays) {
+  try {
+    const now = getZagrebNow();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+
+    const today = getTodayPeriod(openingHours, customWorkingDays);
+    if (!today?.open?.time || !today?.close?.time) return false;
+
+    const o = parseMinutes(today.open.time);
+    const c = parseMinutes(today.close.time);
+    const spansMidnight = today.close.day !== today.open.day;
+
+    if (o == null || c == null) return false;
+    if (!spansMidnight) return minutes >= o && minutes < c;
+
+    if (minutes >= o) return true;
+    if (minutes < c) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 function extractRestaurantNameOrSlug(text) {
   // Heuristic: words after keywords "restoran", "restaurant", or explicit quotes
@@ -76,7 +154,7 @@ function scoreMatch(textNorm, candidateNameNorm, candidateSlug) {
   return score; // 0..2.25
 }
 
-async function resolveRestaurantFromText(text) {
+async function resolveRestaurantFromText(text, preferRestaurantId) {
   const partners = await fetchPartnersBasic();
   let t = normalize(text);
   // Remove generic tokens that commonly appear in questions but aren't part of names
@@ -95,9 +173,14 @@ async function resolveRestaurantFromText(text) {
   scored.sort((a, b) => b.s - a.s);
   const top = scored[0];
   const second = scored[1];
-  if (!top || top.s < 0.5)
+  if (!top || top.s < 0.5) {
+    if (preferRestaurantId)
+      return { match: { id: preferRestaurantId }, candidates: [] };
     return { match: null, candidates: scored.slice(0, 3).map((x) => x.p) };
+  }
   if (second && top.s - second.s < 0.2) {
+    if (preferRestaurantId)
+      return { match: { id: preferRestaurantId }, candidates: [] };
     return { match: null, candidates: scored.slice(0, 3).map((x) => x.p) };
   }
   return {
@@ -139,24 +222,39 @@ function pickDayIndexFromText(text, lang) {
   for (const key of Object.keys(map)) {
     if (t.includes(key)) return map[key];
   }
-  // Default: today (assuming Monday=0 .. Sunday=6)
-  const jsDay = new Date().getDay(); // 0=Sunday
-  return jsDay === 0 ? 6 : jsDay - 1;
+  // Default to today
+  const jsDay = getZagrebNow().getDay();
+  return jsDayToMon0(jsDay);
 }
 
-async function handleHours({ lang, text }) {
-  const { match, candidates } = await resolveRestaurantFromText(text);
-  let restaurantBasic = match;
+async function handleHours({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
+  let restaurantBasic = resolved;
   if (!restaurantBasic) {
     const nameOrSlug = extractRestaurantNameOrSlug(text);
     restaurantBasic = await resolveRestaurantByName(nameOrSlug);
   }
   if (!restaurantBasic) {
-    if (candidates && candidates.length > 0)
-      return formatDisambiguation(candidates, lang);
-    return lang === 'hr'
-      ? 'Za koji restoran te zanima radno vrijeme?'
-      : 'Which restaurant’s hours are you interested in?';
+    // Delegate clarification to LLM (no fallback text)
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'hours',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
   }
   const restaurant = await fetchRestaurantDetails(restaurantBasic.id);
   if (
@@ -164,9 +262,17 @@ async function handleHours({ lang, text }) {
     !restaurant.openingHours ||
     !restaurant.openingHours.periods
   ) {
-    return lang === 'hr'
-      ? 'Nemam podatke o radnom vremenu. Možeš nazvati restoran za provjeru.'
-      : 'I do not have hours for this restaurant. Please call the restaurant to confirm.';
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'hours',
+      question: text,
+      data: {
+        restaurant: { id: restaurantBasic.id, name: restaurantBasic.name },
+        missingHours: true,
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurantBasic.id };
   }
   const dayIndex = pickDayIndexFromText(text, lang);
   const period = restaurant.openingHours.periods[dayIndex];
@@ -177,16 +283,23 @@ async function handleHours({ lang, text }) {
     !period.open.time ||
     !period.close.time
   ) {
-    return formatHoursResponse(lang, restaurant.name, dayIndex, null, null);
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'hours',
+      question: text,
+      data: {
+        restaurant: { id: restaurant.id, name: restaurant.name },
+        dayIndex,
+        open: null,
+        close: null,
+        openNow: computeOpenNow(restaurant.openingHours),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurant.id };
   }
-  const fallbackHours = formatHoursResponse(
-    lang,
-    restaurant.name,
-    dayIndex,
-    period.open,
-    period.close,
-  );
-  return generateNaturalReply({
+  const openNow = computeOpenNow(restaurant.openingHours);
+  const textOut = await generateNaturalReply({
     lang,
     intent: 'hours',
     question: text,
@@ -195,52 +308,317 @@ async function handleHours({ lang, text }) {
       dayIndex,
       open: period.open,
       close: period.close,
+      openNow: computeOpenNow(
+        restaurant.openingHours,
+        restaurant.customWorkingDays,
+      ),
     },
-    fallback: fallbackHours,
+    fallback: '',
   });
+  return { text: textOut, restaurantId: restaurant.id };
 }
 
-async function handleNearby({ lang, latitude, longitude, radiusKm }) {
-  const nearby = await findNearbyPartners({
+async function handleNearby({
+  lang,
+  latitude,
+  longitude,
+  radiusKm,
+  filters,
+  text,
+}) {
+  const initialNearby = await findNearbyPartners({
     latitude,
     longitude,
     radiusKm,
-    limit: 5,
+    limit: 20,
   });
-  const fallbackNearby = formatNearbyResponse(lang, nearby);
-  return generateNaturalReply({
+  console.log('[AI][nearby] query', {
+    latitude,
+    longitude,
+    radiusKm,
+    filters,
+    initialCount: initialNearby.length,
+  });
+
+  let nearby = [...initialNearby];
+  // Filter by perk if requested
+  if (filters && filters.perk) {
+    // Resolve to specific perk id (hr/en synonyms supported)
+    const resolved = await resolvePerkIdByName(filters.perk);
+    console.log('[AI][nearby] perk resolve', { input: filters.perk, resolved });
+    if (resolved?.id) {
+      const targetId = resolved.id;
+      const enriched = await Promise.all(
+        nearby.map(async (r) => {
+          const details = await fetchRestaurantDetails(r.id);
+          if (!details) return null;
+          const has = Array.isArray(details.establishmentPerks)
+            ? details.establishmentPerks.includes(targetId)
+            : false;
+          return has ? r : null;
+        }),
+      );
+      nearby = enriched.filter(Boolean);
+    } else {
+      // If we cannot resolve the perk name to an id, force empty to avoid hallucinations
+      nearby = [];
+    }
+    console.log('[AI][nearby] after perk filter', {
+      perk: filters.perk,
+      count: nearby.length,
+      sample: nearby
+        .slice(0, 3)
+        .map((x) => x?.name)
+        .filter(Boolean),
+    });
+  }
+  // Food type filter
+  if (filters && filters.foodType) {
+    const term = String(filters.foodType).toLowerCase();
+    const enriched = await Promise.all(
+      nearby.map(async (r) => {
+        const details = await fetchRestaurantDetails(r.id);
+        if (!details) return null;
+        const { foodTypes } = await fetchTypesForRestaurant(details);
+        const has = foodTypes?.some((ft) =>
+          (ft.nameHr || ft.nameEn || '').toLowerCase().includes(term),
+        );
+        return has ? r : null;
+      }),
+    );
+    nearby = enriched.filter(Boolean);
+    console.log('[AI][nearby] after foodType filter', {
+      foodType: term,
+      count: nearby.length,
+      sample: nearby.slice(0, 3).map((x) => x.name),
+    });
+  }
+
+  // Ranking: distance asc, then rating desc
+  nearby.sort((a, b) => {
+    if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+    const ra = a.rating || 0;
+    const rb = b.rating || 0;
+    return rb - ra;
+  });
+
+  // Enrich for LLM: priceCategory + openNow + short description
+  const enrichedForLlm = await Promise.all(
+    nearby.slice(0, 5).map(async (r) => {
+      const details = await fetchRestaurantDetails(r.id);
+      const openNow = computeOpenNow(
+        details?.openingHours,
+        details?.customWorkingDays,
+      );
+      const priceLabel = details?.priceCategory
+        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
+        : null;
+      const descShort =
+        lang === 'hr' ? details?.description?.hr : details?.description?.en;
+      return {
+        id: r.id,
+        name: r.name,
+        distanceKm: r.distanceKm,
+        rating: r.rating || null,
+        priceCategory: priceLabel,
+        openNow,
+        address: details?.address || null,
+        place: details?.place || null,
+        description: descShort || '',
+      };
+    }),
+  );
+
+  // Clearer fallback when no matches
+  let fallbackNearby = '';
+
+  console.log('[AI][nearby] final', {
+    count: enrichedForLlm.length,
+    names: enrichedForLlm.slice(0, 5).map((x) => x.name),
+  });
+
+  const textOut = await generateNaturalReply({
     lang,
     intent: 'nearby',
-    question: 'nearby',
-    data: { nearby },
+    question: text || 'nearby',
+    data: { nearby: enrichedForLlm, filters: filters || null },
     fallback: fallbackNearby,
   });
+  return { text: textOut, restaurantId: null };
 }
 
-async function handleMenuSearch({ lang, text }) {
-  // Extract a likely food/drink term (naive: last word over 3 chars after key verbs)
-  const clean = (text || '').toLowerCase();
-  let term = clean
+function stripDiacritics(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s"']/gi, ' ')
+    .toLowerCase();
+}
+
+function extractMenuSearchTerm(question, opts = {}) {
+  const clean = stripDiacritics(question);
+  // 1) Quoted term has priority
+  const quoted = /"([^"]{2,60})"|'([^']{2,60})'/.exec(clean);
+  if (quoted) return (quoted[1] || quoted[2] || '').trim();
+
+  // 2) Remove common prefixes and helper phrases
+  let t = clean
+    .replace(/^\s*da[,\s]+/, '')
     .replace(
-      /.*(ima li|do you have|do they have|looking for|trazim|tražim)\s+/i,
+      /.*(imaju li|ima li|da li imaju|da li ima|jel imaju|jeli imaju|do you have|do they have|have you got|looking for|trazim|trazim|tražim|ima|imaju)\s+/i,
       '',
     )
     .replace(/\?+.*/, '')
     .trim();
-  if (!term || term.length < 2) {
-    // Fallback to any quoted term
-    const q = /"([^"]{2,50})"/.exec(text || '');
-    term = q?.[1] || '';
+
+  // 2a) Remove restaurant words if provided
+  const restaurantName = opts.restaurantName
+    ? stripDiacritics(opts.restaurantName)
+    : '';
+  const restaurantSlug = opts.restaurantSlug
+    ? stripDiacritics(opts.restaurantSlug.replace(/-/g, ' '))
+    : '';
+  const generic = /(restoran|restaurant|kafi[cć]|caffe|bar|pizzeria|kavana)/g;
+  t = t.replace(generic, ' ');
+  if (restaurantName) {
+    const nameTokens = restaurantName.split(/\s+/).filter(Boolean);
+    for (const tok of nameTokens) {
+      t = t.replace(new RegExp(`\\b${tok}\\b`, 'g'), ' ');
+    }
   }
-  if (!term)
-    return lang === 'hr'
-      ? 'Koje jelo/piće tražiš?'
-      : 'What dish or drink are you looking for?';
+  if (restaurantSlug) {
+    const slugTokens = restaurantSlug.split(/\s+/).filter(Boolean);
+    for (const tok of slugTokens) {
+      t = t.replace(new RegExp(`\\b${tok}\\b`, 'g'), ' ');
+    }
+  }
+  t = t.replace(/\s+/g, ' ').trim();
+
+  // 2b) If contains obvious food roots like pizza/piz/pica, return that root
+  const pizzaMatch = /(pizza|piz+\w*|pica|pice)/i.exec(t);
+  if (pizzaMatch) return pizzaMatch[1];
+
+  // 3) If still long, take last 1-3 tokens that look like a dish
+  if (!t || t.length < 2) return '';
+  const tokens = t.split(/\s+/).filter(Boolean);
+  if (tokens.length > 3) t = tokens.slice(-3).join(' ');
+  return t.trim();
+}
+
+async function handleMenuSearch({
+  lang,
+  question,
+  menuTerm,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  // Resolve restaurant scope: prefer thread context, otherwise from question/router
+  let restaurantForScope = null;
+  let restaurantIdForScope = preferRestaurantId || null;
+  if (!restaurantIdForScope) {
+    const { match } = await resolveRestaurantFromText(
+      restaurantQuery || question,
+      null,
+    );
+    if (match?.id) restaurantIdForScope = match.id;
+  }
+  if (restaurantIdForScope) {
+    restaurantForScope = await fetchRestaurantDetails(restaurantIdForScope);
+  }
+
+  function isMostExpensiveQuery(text = '') {
+    const t = (text || '').toLowerCase();
+    return /najskuplj|najskup|most\s+expensive|highest\s+price|najvi[sš]e\s+ko[sš]ta/.test(
+      t,
+    );
+  }
+
+  const askMax = isMostExpensiveQuery(question);
+  if (restaurantIdForScope && askMax) {
+    const { maxPrice, items } = await findMostExpensiveItemsForRestaurant(
+      restaurantIdForScope,
+      lang,
+    );
+    const r =
+      restaurantForScope ||
+      (await fetchRestaurantDetails(restaurantIdForScope));
+    const textMax = await generateNaturalReply({
+      lang,
+      intent: 'menu_search',
+      question,
+      data: {
+        restaurant: { id: r?.id, name: r?.name },
+        items: (items || []).map((x) => ({ name: x.name, price: x.price })),
+        maxPrice: maxPrice ?? null,
+        isMaxPriceQuery: true,
+      },
+      fallback: '',
+    });
+    return { text: textMax, restaurantId: r?.id || null };
+  }
+
+  // Extract term: prefer LLM-provided canonical term, else derive from question
+  let term = (menuTerm || '').trim();
+  if (!term) {
+    term = extractMenuSearchTerm(question || '', {
+      restaurantName: restaurantForScope?.name,
+      restaurantSlug: restaurantForScope?.slug,
+    });
+  }
+  if (!term) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'menu_search',
+      question,
+      data: { items: [], clarify: true },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurantIdForScope || null };
+  }
+
+  const askedGlobal = isGlobalQuery(question);
+  // If we have a restaurant in scope and not asking global, restrict to that restaurant
+  if (restaurantIdForScope && !askedGlobal) {
+    const scoped = await searchMenuForRestaurant(restaurantIdForScope, term);
+    const r =
+      restaurantForScope ||
+      (await fetchRestaurantDetails(restaurantIdForScope));
+    if (scoped && scoped.length > 0) {
+      const textScoped = await generateNaturalReply({
+        lang,
+        intent: 'menu_search',
+        question,
+        data: { items: scoped, restaurant: { id: r?.id, name: r?.name } },
+        fallback: '',
+      });
+      return { text: textScoped, restaurantId: r?.id || null };
+    }
+    const textNf = await generateNaturalReply({
+      lang,
+      intent: 'menu_search',
+      question,
+      data: {
+        items: [],
+        restaurant: { id: r?.id, name: r?.name },
+        notFoundInThisRestaurant: true,
+        term,
+      },
+      fallback: '',
+    });
+    return { text: textNf, restaurantId: r?.id || null };
+  }
+
+  // Otherwise search across all partners
   const results = await searchMenuAcrossRestaurants(term);
   if (!results || results.length === 0) {
-    return lang === 'hr'
-      ? 'Nisam našao to na jelovnicima partner restorana.'
-      : 'I could not find that on partner menus.';
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'menu_search',
+      question,
+      data: { items: [], term },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
   }
   const unique = [];
   const seen = new Set();
@@ -252,45 +630,83 @@ async function handleMenuSearch({ lang, text }) {
     }
     if (unique.length >= 3) break;
   }
-  const parts = unique.map((r) => `${r.restaurant.name} – ${r.name}`);
-  const fallbackMenu =
-    lang === 'hr'
-      ? `Našao sam: ${parts.join(', ')}.`
-      : `I found: ${parts.join(', ')}.`;
-  return generateNaturalReply({
+
+  const withPrice = await Promise.all(
+    unique.map(async (r) => {
+      const details = await fetchRestaurantDetails(r.restaurant.id);
+      const priceLabel = details?.priceCategory
+        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
+        : null;
+      return {
+        restaurant: { id: r.restaurant.id, name: r.restaurant.name },
+        item: r.name,
+        priceCategory: priceLabel,
+      };
+    }),
+  );
+
+  const textGlobal = await generateNaturalReply({
     lang,
     intent: 'menu_search',
-    question: text,
-    data: {
-      items: unique.map((x) => ({
-        restaurant: x.restaurant.name,
-        item: x.name,
-      })),
-    },
-    fallback: fallbackMenu,
+    question,
+    data: { items: withPrice },
+    fallback: '',
   });
+  return {
+    text: textGlobal,
+    restaurantId: null,
+  };
 }
 
-async function handlePerks({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handlePerks({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let restaurantBasic = resolved;
   if (!restaurantBasic) {
     const nameOrSlug = extractRestaurantNameOrSlug(text);
     restaurantBasic = await resolveRestaurantByName(nameOrSlug);
   }
-  if (!restaurantBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran te zanima ta opcija?'
-        : 'Which restaurant are you asking about?';
+  if (!restaurantBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'perks',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const restaurant = await fetchRestaurantDetails(restaurantBasic.id);
-  if (!restaurant) return replyNoData(lang);
+  if (!restaurant) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'perks',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const { establishmentPerks } = await fetchTypesForRestaurant(restaurant);
   if (!establishmentPerks || establishmentPerks.length === 0) {
-    return lang === 'hr'
-      ? 'Restoran nema navedene pogodnosti.'
-      : 'The restaurant has no listed perks.';
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'perks',
+      question: text,
+      data: { restaurant: { name: restaurant.name }, perks: [] },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurant.id };
   }
   const target = (text || '').toLowerCase();
   const perkMatch = establishmentPerks.find((p) => {
@@ -299,156 +715,233 @@ async function handlePerks({ lang, text }) {
       ? name.includes(lang === 'hr' ? 'terasa' : 'terrace')
       : false || target.includes(name);
   });
-  if (perkMatch) {
-    const fallbackPerk =
-      lang === 'hr'
-        ? `Da, dostupno je: ${perkMatch.nameHr}.`
-        : `Yes, available: ${perkMatch.nameEn}.`;
-    return generateNaturalReply({
-      lang,
-      intent: 'perks',
-      question: text,
-      data: { restaurant: { name: restaurant.name }, perk: perkMatch },
-      fallback: fallbackPerk,
-    });
-  }
-  const fallbackPerkMissing =
-    lang === 'hr'
-      ? 'Ne vidim tu opciju za taj restoran.'
-      : 'I do not see that option for this restaurant.';
-  return generateNaturalReply({
+  const textOut = await generateNaturalReply({
     lang,
     intent: 'perks',
     question: text,
-    data: { restaurant: { name: restaurant.name } },
-    fallback: fallbackPerkMissing,
+    data: {
+      restaurant: { id: restaurant.id, name: restaurant.name },
+      perk: perkMatch || null,
+      perks: establishmentPerks,
+    },
+    fallback: '',
   });
+  return { text: textOut, restaurantId: restaurant.id };
 }
 
-async function handleMealTypes({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleMealTypes({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran te zanima?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'meal_types',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) return replyNoData(lang);
+  if (!restaurant) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'meal_types',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const { mealTypes } = await fetchTypesForRestaurant(restaurant);
-  if (!mealTypes || mealTypes.length === 0)
-    return lang === 'hr'
-      ? 'Nema definiranih tipova obroka.'
-      : 'No meal types defined.';
+  if (!mealTypes || mealTypes.length === 0) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'meal_types',
+      question: text,
+      data: { restaurant: { name: restaurant.name }, mealTypes: [] },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurant.id };
+  }
   const names = mealTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  const fallbackMeals =
-    lang === 'hr'
-      ? `Poslužuju: ${names.join(', ')}.`
-      : `They serve: ${names.join(', ')}.`;
-  return generateNaturalReply({
+  const textOut2 = await generateNaturalReply({
     lang,
     intent: 'meal_types',
     question: text,
     data: { restaurant: { name: restaurant.name }, mealTypes: names },
-    fallback: fallbackMeals,
+    fallback: '',
   });
+  return { text: textOut2, restaurantId: restaurant.id };
 }
 
-async function handleDietaryTypes({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleDietaryTypes({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran te zanima?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'dietary_types',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) return replyNoData(lang);
+  if (!restaurant) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'dietary_types',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const { dietaryTypes } = await fetchTypesForRestaurant(restaurant);
-  if (!dietaryTypes || dietaryTypes.length === 0)
-    return lang === 'hr'
-      ? 'Nema specificiranih opcija.'
-      : 'No options specified.';
+  if (!dietaryTypes || dietaryTypes.length === 0) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'dietary_types',
+      question: text,
+      data: { restaurant: { name: restaurant.name }, dietaryTypes: [] },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurant.id };
+  }
   const names = dietaryTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  const fallbackDiet =
-    lang === 'hr'
-      ? `Opcije: ${names.join(', ')}.`
-      : `Options: ${names.join(', ')}.`;
-  return generateNaturalReply({
+  const textOut3 = await generateNaturalReply({
     lang,
     intent: 'dietary_types',
     question: text,
     data: { restaurant: { name: restaurant.name }, dietaryTypes: names },
-    fallback: fallbackDiet,
+    fallback: '',
   });
+  return { text: textOut3, restaurantId: restaurant.id };
 }
 
-async function handleReservations({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleReservations({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
-  const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) return replyNoData(lang);
-  if (restaurant.reservationEnabled) {
-    const fallbackRes =
-      lang === 'hr'
-        ? 'Da, moguće je rezervirati preko Dinvera.'
-        : 'Yes, reservations via Dinver are available.';
-    return generateNaturalReply({
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
       lang,
       intent: 'reservations',
       question: text,
-      data: { restaurant: { name: restaurant.name }, reservationEnabled: true },
-      fallback: fallbackRes,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
     });
+    return { text: textOut, restaurantId: null };
   }
-  const fallbackRes2 =
-    lang === 'hr'
-      ? 'Rezervacije preko Dinvera trenutno nisu podržane.'
-      : 'Reservations via Dinver are not supported at the moment.';
-  return generateNaturalReply({
+  const restaurant = await fetchRestaurantDetails(rBasic.id);
+  if (!restaurant) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'reservations',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
+  const textOut4 = await generateNaturalReply({
     lang,
     intent: 'reservations',
     question: text,
-    data: { restaurant: { name: restaurant.name }, reservationEnabled: false },
-    fallback: fallbackRes2,
+    data: {
+      restaurant: { name: restaurant.name },
+      reservationEnabled: !!restaurant.reservationEnabled,
+    },
+    fallback: '',
   });
+  return { text: textOut4, restaurantId: restaurant.id };
 }
 
-async function handleContact({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleContact({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'contact',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const r = await fetchRestaurantDetails(rBasic.id);
-  if (!r) return replyNoData(lang);
+  if (!r) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'contact',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const links = [];
   if (r.websiteUrl)
     links.push(
@@ -459,34 +952,44 @@ async function handleContact({ lang, text }) {
   if (r.ttUrl) links.push(`TikTok: ${r.ttUrl}`);
   if (r.phone) links.push((lang === 'hr' ? 'Telefon: ' : 'Phone: ') + r.phone);
   if (r.email) links.push('Email: ' + r.email);
-  const fallbackContact =
-    links.length === 0
-      ? lang === 'hr'
-        ? 'Kontakt nije dostupan.'
-        : 'Contact info is not available.'
-      : links.join(' | ');
-  return generateNaturalReply({
+  const textOut5 = await generateNaturalReply({
     lang,
     intent: 'contact',
     question: text,
     data: { restaurant: { name: r.name }, links },
-    fallback: fallbackContact,
+    fallback: '',
   });
+  return { text: textOut5, restaurantId: r.id };
 }
 
-async function handleDescription({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleDescription({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'description',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   // getFullRestaurantDetails composes description from translations; fetch basic then fallback fields
   const { Restaurant, RestaurantTranslation } = require('../../models');
   const { Op } = require('sequelize');
@@ -495,46 +998,59 @@ async function handleDescription({ lang, text }) {
     include: [{ model: RestaurantTranslation, as: 'translations' }],
     attributes: ['id', 'name'],
   });
-  if (!r) return replyNoData(lang);
+  if (!r) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'description',
+      question: text,
+      data: {},
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const t = (r.translations || []).find((x) => x.language === lang);
   const desc = t?.description || '';
-  const fallbackDesc = !desc
-    ? lang === 'hr'
-      ? 'Nema unesen opis.'
-      : 'No description available.'
-    : desc;
-  return generateNaturalReply({
+  const textOut6 = await generateNaturalReply({
     lang,
     intent: 'description',
     question: text,
     data: { restaurant: { name: r.name }, description: desc },
-    fallback: fallbackDesc,
+    fallback: '',
   });
+  return { text: textOut6, restaurantId: r.id };
 }
 
-async function handleVirtualTour({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleVirtualTour({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'virtual_tour',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const r = await fetchRestaurantDetails(rBasic.id);
   const has = !!(r && r.virtualTourUrl);
-  const fallbackVt = has
-    ? lang === 'hr'
-      ? `Virtualna tura: ${r.virtualTourUrl}`
-      : `Virtual tour: ${r.virtualTourUrl}`
-    : lang === 'hr'
-      ? 'Virtualna tura nije dostupna.'
-      : 'Virtual tour is not available.';
-  return generateNaturalReply({
+  const textOut7 = await generateNaturalReply({
     lang,
     intent: 'virtual_tour',
     question: text,
@@ -542,54 +1058,121 @@ async function handleVirtualTour({ lang, text }) {
       restaurant: { name: r?.name },
       virtualTourUrl: r?.virtualTourUrl || null,
     },
-    fallback: fallbackVt,
+    fallback: '',
   });
+  return { text: textOut7, restaurantId: r?.id || null };
 }
 
-async function handlePrice({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handlePrice({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'price',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const r = await fetchRestaurantDetails(rBasic.id);
-  if (!r || !r.priceCategory)
-    return lang === 'hr' ? 'Cijena nije navedena.' : 'Price is not specified.';
-  const label = lang === 'hr' ? r.priceCategory.nameHr : r.priceCategory.nameEn;
-  return lang === 'hr'
-    ? `Cjenovna razina: ${label}.`
-    : `Price range: ${label}.`;
+  const textOut8 = await generateNaturalReply({
+    lang,
+    intent: 'price',
+    question: text,
+    data: {
+      restaurant: { name: r?.name },
+      priceCategory: r?.priceCategory || null,
+    },
+    fallback: '',
+  });
+  return { text: textOut8, restaurantId: r?.id || null };
 }
 
-async function handleReviews({ lang, text }) {
-  const { match: resolved, candidates } = await resolveRestaurantFromText(text);
+async function handleReviews({
+  lang,
+  text,
+  restaurantQuery,
+  preferRestaurantId,
+}) {
+  const { match: resolved, candidates } = await resolveRestaurantFromText(
+    restaurantQuery || text,
+    preferRestaurantId,
+  );
   let rBasic = resolved;
   if (!rBasic) {
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
-  if (!rBasic)
-    return candidates && candidates.length > 0
-      ? formatDisambiguation(candidates, lang)
-      : lang === 'hr'
-        ? 'Za koji restoran?'
-        : 'Which restaurant?';
+  if (!rBasic) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'reviews',
+      question: text,
+      data: {
+        clarify: true,
+        candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: null };
+  }
   const summary = await fetchReviewsSummary(rBasic.id);
-  if (!summary || summary.totalReviews === 0)
-    return lang === 'hr'
-      ? 'Restoran još nema recenzija.'
-      : 'This restaurant has no reviews yet.';
+  if (!summary || summary.totalReviews === 0) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'reviews',
+      question: text,
+      data: { reviews: [], totalReviews: 0 },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: rBasic.id };
+  }
   const { ratings, totalReviews } = summary;
-  return lang === 'hr'
-    ? `Ocjene: ukupno ${ratings.overall} (${totalReviews} recenzija).`
-    : `Ratings: overall ${ratings.overall} (${totalReviews} reviews).`;
+  const textOut9 = await generateNaturalReply({
+    lang,
+    intent: 'reviews',
+    question: text,
+    data: { ratings, totalReviews },
+    fallback: '',
+  });
+  return { text: textOut9, restaurantId: rBasic.id };
+}
+
+async function handleDataProvenance({ lang, text }) {
+  return generateNaturalReply({
+    lang,
+    intent: 'data_provenance',
+    question: text,
+    data: {
+      sources: [
+        'Dinver database (partner restaurants: isClaimed=true)',
+        'Restaurant model fields (address, place, hours, types, perks, priceCategory, social)',
+        'Menus & Drinks (MenuItemTranslations/DrinkItemTranslations mapped to restaurantId)',
+        'Opening hours with customWorkingDays overrides',
+      ],
+    },
+    fallback:
+      lang === 'hr'
+        ? 'AI koristi Dinver bazu i podatke partner restorana (jelovnici, radno vrijeme, tipovi, pogodnosti).'
+        : "AI uses Dinver's database and partner data (menus, hours, types, perks).",
+  });
 }
 
 const ctxStore = require('./contextStore');
@@ -597,91 +1180,167 @@ const ctxStore = require('./contextStore');
 async function chatAgent(input) {
   const { message, language, latitude, longitude, radiusKm, threadId } = input;
   const lang = detectLanguage(message, language);
-  const intent = classifyIntent(message, lang);
+  // Delegate intent inference to LLM. If router fails, fall back to simple classifier.
+  let { intent, restaurantQuery, filters, menuTerm } = await inferIntent({
+    lang,
+    message,
+  });
+  if (!intent) intent = classifyIntent(message, lang);
 
   // Load prior context if any
   const ctx = threadId ? ctxStore.get(threadId) : null;
   // If context contains lastRestaurantId, prefer it when matching
   let lastRestaurantId = ctx?.lastRestaurantId;
 
+  // Scoped-by-default behavior
+  const scopedByContext = !!ctx?.lastRestaurantId;
+  const globalSignal = isGlobalQuery(message);
+  let preferId = scopedByContext && !globalSignal ? ctx.lastRestaurantId : null;
+
+  function saveContextMaybe(reply, thread) {
+    if (!thread) return;
+    const rid = reply && typeof reply === 'object' ? reply.restaurantId : null;
+    if (rid) {
+      const prev = ctxStore.get(thread) || {};
+      ctxStore.set(thread, { ...prev, lastRestaurantId: rid });
+    }
+  }
+
   switch (intent) {
     case 'hours': {
-      const reply = await handleHours({ lang, text: message });
-      // Best-effort: store resolved restaurant if disambiguation didn’t happen
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleHours({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
-    case 'nearby':
-      return handleNearby({ lang, latitude, longitude, radiusKm });
-    case 'menu_search':
-      return handleMenuSearch({ lang, text: message });
+    case 'nearby': {
+      const reply = await handleNearby({
+        lang,
+        latitude,
+        longitude,
+        radiusKm,
+        filters,
+        text: message,
+      });
+      saveContextMaybe(reply, threadId);
+      return reply.text || reply;
+    }
+    case 'menu_search': {
+      const reply = await handleMenuSearch({
+        lang,
+        question: message,
+        menuTerm,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
+      return reply.text || reply;
+    }
     case 'perks': {
-      const reply = await handlePerks({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handlePerks({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'meal_types': {
-      const reply = await handleMealTypes({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleMealTypes({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'dietary_types': {
-      const reply = await handleDietaryTypes({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleDietaryTypes({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'reservations': {
-      const reply = await handleReservations({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleReservations({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'contact': {
-      const reply = await handleContact({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleContact({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'description': {
-      const reply = await handleDescription({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleDescription({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'virtual_tour': {
-      const reply = await handleVirtualTour({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleVirtualTour({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'price': {
-      const reply = await handlePrice({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handlePrice({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
     case 'reviews': {
-      const reply = await handleReviews({ lang, text: message });
-      if (reply && reply.restaurantId && threadId) {
-        ctxStore.set(threadId, { lastRestaurantId: reply.restaurantId });
-      }
+      const reply = await handleReviews({
+        lang,
+        text: message,
+        restaurantQuery,
+        preferRestaurantId: preferId,
+      });
+      saveContextMaybe(reply, threadId);
       return reply.text || reply;
     }
+    case 'data_provenance':
+      return handleDataProvenance({ lang, text: message });
     default:
-      return replyOutOfScope(lang);
+      // No predefined phrase; let LLM craft a natural, scoped reply.
+      return generateNaturalReply({
+        lang,
+        intent: 'out_of_scope',
+        question: message,
+        data: {},
+        fallback: '',
+      });
   }
 }
 

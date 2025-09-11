@@ -58,24 +58,9 @@ function formatHoursResponse(lang, restaurantName, dayIndex, open, close) {
     : `${restaurantName} is open on ${dayLabel} from ${o} to ${c}.`;
 }
 
-function formatNearbyResponse(lang, results) {
-  if (!results || results.length === 0) {
-    return lang === 'hr'
-      ? 'Nema partner restorana u blizini.'
-      : 'No partner restaurants nearby.';
-  }
-  const names = results
-    .slice(0, 3)
-    .map((r) => `${r.name} (${r.distanceKm} km)`);
-  return lang === 'hr'
-    ? `Blizu su: ${names.join(', ')}.`
-    : `Nearby: ${names.join(', ')}.`;
-}
-
 module.exports = {
   replyOutOfScope,
   replyNoData,
   formatHoursResponse,
-  formatNearbyResponse,
   shortJoin,
 };
