@@ -17,6 +17,10 @@ const INTENTS = [
     desc: 'Search dishes/drinks via MenuItemTranslations/DrinkItemTranslations and map to restaurantId; results only for partners.',
   },
   {
+    id: 'menu_stats',
+    desc: 'Menu statistics for a specific restaurant: most expensive / cheapest items with prices based on MenuItem/DrinkItem price fields.',
+  },
+  {
     id: 'perks',
     desc: 'Amenities from establishmentPerks (resolve ids). Examples: terrace, high chair, takeaway, AC.',
   },
@@ -60,6 +64,7 @@ async function inferIntent({ lang, message }) {
         INTENTS.map((i) => i.id).join(', ') +
         '), restaurantQuery (string|null), filters (object|null), menuTerm (string|null).',
       'For menu_search specifically, extract a single canonical food/drink term (menuTerm), lemmatized to its base form in the same language (e.g., "pizza" for "pizzu/pizzi/pice/picu"). If unclear, set menuTerm to null.',
+      'If the user asks generally what a restaurant offers or what is on the menu (phrases: "u ponudi", "ponuda", "jelovnik", "meni", "sta nudi/što nudi", "ima", or in EN: "what do they serve/offer/have"), choose intent=menu_search and set menuTerm=null.',
       'filters may include: perk (e.g., "terrace"/"vanjska terasa"). If none, set filters to null.',
     ].join('\n');
 
@@ -69,7 +74,7 @@ async function inferIntent({ lang, message }) {
       ...INTENTS.map((i) => `- ${i.id}: ${i.desc}`),
       'Decide the single best intent and extract restaurantQuery when a specific restaurant is implied or named.',
       'Also extract simple filters when present (e.g., a perk like terrace).',
-      'If intent is menu_search, provide menuTerm as the base food/drink word to search in our DB (no extra words like restaurant names).',
+      'If intent is menu_search, provide menuTerm as the base food/drink word to search in our DB (no extra words like restaurant names). For general menu questions, set menuTerm to null.',
     ].join('\n');
 
     const resp = await client.chat.completions.create({

@@ -38,7 +38,7 @@ function classifyIntent(text, lang) {
 
   // Menu search (food/drink)
   const menuHr =
-    /(meni|jelovnik|ima li|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata|lazanj|lazanje)/;
+    /(meni|jelovnik|ima li|ima\b|imate\b|imaju\b|što nudi|sto nudi|šta nudi|sta nudi|nudi\b|nudite\b|nude\b|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata|lazanj|lazanje)/;
   const menuEn =
     /(menu|dish|food|drink|has.*(steak|pizza|burger|dessert|salad|lasagn)|looking for|do you serve)/;
   if ((isHr && menuHr.test(t)) || (!isHr && menuEn.test(t)))

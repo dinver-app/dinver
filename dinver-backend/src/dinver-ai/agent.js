@@ -6,15 +6,18 @@ const {
   fetchRestaurantDetails,
   searchMenuAcrossRestaurants,
   searchMenuForRestaurant,
+  fetchAllMenuItemsForRestaurant,
   findNearbyPartners,
   fetchTypesForRestaurant,
   fetchReviewsSummary,
   fetchPartnersBasic,
   resolvePerkIdByName,
   findMostExpensiveItemsForRestaurant,
+  findCheapestItemsForRestaurant,
 } = require('./dataAccess');
 // (formatters no longer used for replies; LLM crafts all natural text)
 const { generateNaturalReply } = require('./llm');
+const { logAiInteraction } = require('../utils/metrics');
 
 // ---- Scope helpers ----
 function isGlobalQuery(text = '') {
@@ -27,8 +30,9 @@ function isGlobalQuery(text = '') {
 // ---- Time helpers (Europe/Zagreb) ----
 function getZagrebNow() {
   const now = new Date();
-  // Convert to Europe/Zagreb by using localeString trick
-  return new Date(now.toLocaleString('en-GB', { timeZone: 'Europe/Zagreb' }));
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const zagreb = new Date(utc + 2 * 3600000); // UTC+2
+  return zagreb;
 }
 
 function jsDayToMon0(jsDay) {
@@ -199,6 +203,7 @@ function formatDisambiguation(candidates, lang) {
 
 function pickDayIndexFromText(text, lang) {
   const t = (text || '').toLowerCase();
+
   const mapHr = {
     pon: 0,
     uto: 1,
@@ -219,12 +224,17 @@ function pickDayIndexFromText(text, lang) {
     sun: 6,
   };
   const map = lang === 'hr' ? mapHr : mapEn;
+
   for (const key of Object.keys(map)) {
-    if (t.includes(key)) return map[key];
+    if (t.includes(key)) {
+      return map[key];
+    }
   }
+
   // Default to today
   const jsDay = getZagrebNow().getDay();
-  return jsDayToMon0(jsDay);
+  const mon0 = jsDayToMon0(jsDay);
+  return mon0;
 }
 
 async function handleHours({
@@ -257,11 +267,11 @@ async function handleHours({
     return { text: textOut, restaurantId: null };
   }
   const restaurant = await fetchRestaurantDetails(restaurantBasic.id);
-  if (
-    !restaurant ||
-    !restaurant.openingHours ||
-    !restaurant.openingHours.periods
-  ) {
+
+  const firstCondition =
+    !restaurant || !restaurant.openingHours || !restaurant.openingHours.periods;
+
+  if (firstCondition) {
     const textOut = await generateNaturalReply({
       lang,
       intent: 'hours',
@@ -276,13 +286,11 @@ async function handleHours({
   }
   const dayIndex = pickDayIndexFromText(text, lang);
   const period = restaurant.openingHours.periods[dayIndex];
-  if (
-    !period ||
-    !period.open ||
-    !period.close ||
-    !period.open.time ||
-    !period.close.time
-  ) {
+
+  // Check if we have no data at all
+  const noDataCondition = !period || !period.open || !period.close;
+
+  if (noDataCondition) {
     const textOut = await generateNaturalReply({
       lang,
       intent: 'hours',
@@ -293,6 +301,28 @@ async function handleHours({
         open: null,
         close: null,
         openNow: computeOpenNow(restaurant.openingHours),
+      },
+      fallback: '',
+    });
+    return { text: textOut, restaurantId: restaurant.id };
+  }
+
+  // Check if restaurant is closed (empty time strings)
+  const isClosed = period.open.time === '' || period.close.time === '';
+
+  if (isClosed) {
+    const textOut = await generateNaturalReply({
+      lang,
+      intent: 'hours',
+      question: text,
+      data: {
+        restaurant: { id: restaurant.id, name: restaurant.name },
+        restaurantName: restaurant.name,
+        dayIndex,
+        open: period.open,
+        close: period.close,
+        openNow: computeOpenNow(restaurant.openingHours),
+        isClosed: true,
       },
       fallback: '',
     });
@@ -456,7 +486,9 @@ function stripDiacritics(s) {
 }
 
 function extractMenuSearchTerm(question, opts = {}) {
+  console.log('[DEBUG] extractMenuSearchTerm called with:', { question, opts });
   const clean = stripDiacritics(question);
+  console.log('[DEBUG] Clean question:', clean);
   // 1) Quoted term has priority
   const quoted = /"([^"]{2,60})"|'([^']{2,60})'/.exec(clean);
   if (quoted) return (quoted[1] || quoted[2] || '').trim();
@@ -470,6 +502,14 @@ function extractMenuSearchTerm(question, opts = {}) {
     )
     .replace(/\?+.*/, '')
     .trim();
+
+  // 2c) Remove general menu terms that shouldn't be searched
+  const generalMenuTerms =
+    /^(ponuda|ponud|jelovnik|meni|menu|sta ima|sto ima|šta ima|što ima|sta nudi|sto nudi|šta nudi|što nudi|nudi|nudite|nude|ima|imate|imaju|what.*have|what.*offer|what.*serve)$/i;
+  if (generalMenuTerms.test(t)) {
+    console.log('[DEBUG] Detected general menu query, returning empty term');
+    return '';
+  }
 
   // 2a) Remove restaurant words if provided
   const restaurantName = opts.restaurantName
@@ -494,6 +534,16 @@ function extractMenuSearchTerm(question, opts = {}) {
   }
   t = t.replace(/\s+/g, ' ').trim();
 
+  // 2d) After removing restaurant words, if the text is a generic menu phrase, treat as general query
+  const generalMenuStarts =
+    /^(sta nudi|sto nudi|što nudi|šta nudi|sta ima|sto ima|što ima|šta ima|u ponudi|ponuda|jelovnik|meni|menu|what.*(serve|offer|have))/i;
+  if (generalMenuStarts.test(t)) {
+    console.log(
+      '[DEBUG] General menu phrase after cleanup, returning empty term',
+    );
+    return '';
+  }
+
   // 2b) If contains obvious food roots like pizza/piz/pica, return that root
   const pizzaMatch = /(pizza|piz+\w*|pica|pice)/i.exec(t);
   if (pizzaMatch) return pizzaMatch[1];
@@ -512,6 +562,13 @@ async function handleMenuSearch({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  console.log('[DEBUG] handleMenuSearch called with:', {
+    question,
+    menuTerm,
+    restaurantQuery,
+    preferRestaurantId,
+  });
+
   // Resolve restaurant scope: prefer thread context, otherwise from question/router
   let restaurantForScope = null;
   let restaurantIdForScope = preferRestaurantId || null;
@@ -559,13 +616,57 @@ async function handleMenuSearch({
 
   // Extract term: prefer LLM-provided canonical term, else derive from question
   let term = (menuTerm || '').trim();
+  console.log('[DEBUG] Initial term from menuTerm:', term);
   if (!term) {
     term = extractMenuSearchTerm(question || '', {
       restaurantName: restaurantForScope?.name,
       restaurantSlug: restaurantForScope?.slug,
     });
+    console.log('[DEBUG] Extracted term from question:', term);
   }
   if (!term) {
+    // Check if this is a general menu request (asking about "ponuda", "jelovnik", etc.)
+    const isGeneralMenuQuery = (text = '') => {
+      const t = (text || '').toLowerCase();
+      return /(ponuda|ponud|jelovnik|meni|menu|sta ima|sto ima|što ima|šta ima|sta nudi|sto nudi|što nudi|šta nudi|nudi|nudite|nude|what.*have|what.*offer|what.*serve)/.test(
+        t,
+      );
+    };
+
+    console.log('[DEBUG] No term found, checking general menu query');
+    console.log('[DEBUG] Question:', question);
+    console.log('[DEBUG] RestaurantIdForScope:', restaurantIdForScope);
+    console.log('[DEBUG] IsGeneralMenuQuery:', isGeneralMenuQuery(question));
+
+    if (isGeneralMenuQuery(question) && restaurantIdForScope) {
+      const r =
+        restaurantForScope ||
+        (await fetchRestaurantDetails(restaurantIdForScope));
+
+      const all = await fetchAllMenuItemsForRestaurant(
+        restaurantIdForScope,
+        lang,
+        60,
+      );
+      if (all && all.length > 0) {
+        const shuffled = all.slice().sort(() => Math.random() - 0.5);
+        const sampleSize = Math.min(7, Math.max(5, Math.floor(all.length / 5)));
+        const picks = shuffled.slice(0, sampleSize);
+        const textOut = await generateNaturalReply({
+          lang,
+          intent: 'menu_search',
+          question,
+          data: {
+            items: picks,
+            restaurant: { id: r?.id, name: r?.name },
+            isGeneralMenu: true,
+          },
+          fallback: '',
+        });
+        return { text: textOut, restaurantId: r?.id || null };
+      }
+    }
+
     const textOut = await generateNaturalReply({
       lang,
       intent: 'menu_search',
@@ -574,6 +675,40 @@ async function handleMenuSearch({
       fallback: '',
     });
     return { text: textOut, restaurantId: restaurantIdForScope || null };
+  }
+
+  // If extracted term is actually a generic phrase (e.g., "u ponudi", "serve", "offer"),
+  // treat it as a general menu request for the scoped restaurant
+  const isGenericMenuTerm = (t = '') =>
+    /^(u\s*ponudi|ponuda|ponud|jelovnik|meni|menu|serve|offer|have|nudi|nudite|nude|ima|imate|imaju)$/i.test(
+      (t || '').trim(),
+    );
+  if (restaurantIdForScope && isGenericMenuTerm(term)) {
+    const r =
+      restaurantForScope ||
+      (await fetchRestaurantDetails(restaurantIdForScope));
+    const all = await fetchAllMenuItemsForRestaurant(
+      restaurantIdForScope,
+      lang,
+      60,
+    );
+    if (all && all.length > 0) {
+      const shuffled = all.slice().sort(() => Math.random() - 0.5);
+      const sampleSize = Math.min(7, Math.max(5, Math.floor(all.length / 5)));
+      const picks = shuffled.slice(0, sampleSize);
+      const textOut = await generateNaturalReply({
+        lang,
+        intent: 'menu_search',
+        question,
+        data: {
+          items: picks,
+          restaurant: { id: r?.id, name: r?.name },
+          isGeneralMenu: true,
+        },
+        fallback: '',
+      });
+      return { text: textOut, restaurantId: r?.id || null };
+    }
   }
 
   const askedGlobal = isGlobalQuery(question);
@@ -1187,6 +1322,15 @@ async function chatAgent(input) {
   });
   if (!intent) intent = classifyIntent(message, lang);
 
+  // Heuristic override: treat generic menu phrases as menu_search
+  const msg = (message || '').toLowerCase();
+  const genericMenuPhrase =
+    /(u\s*ponudi|ponuda|jelovnik|meni|sta nudi|sto nudi|što nudi|šta nudi|sta ima|sto ima|što ima|šta ima|what do they (serve|offer|have)|what (do you|do they) (serve|offer|have))/;
+  if (genericMenuPhrase.test(msg)) {
+    intent = 'menu_search';
+    // keep menuTerm as provided by router; general handling in handleMenuSearch will cover null/empty/gen terms
+  }
+
   // Load prior context if any
   const ctx = threadId ? ctxStore.get(threadId) : null;
   // If context contains lastRestaurantId, prefer it when matching
@@ -1207,7 +1351,70 @@ async function chatAgent(input) {
   }
 
   switch (intent) {
+    case 'menu_stats': {
+      // Scoped by default; if not in scope, ask to specify restaurant via natural reply
+      let restaurantIdForScope = preferId;
+      if (!restaurantIdForScope) {
+        const { match } = await resolveRestaurantFromText(
+          restaurantQuery || message,
+          null,
+        );
+        restaurantIdForScope = match?.id || null;
+      }
+      if (!restaurantIdForScope) {
+        const textOut = await generateNaturalReply({
+          lang,
+          intent: 'menu_stats',
+          question: message,
+          data: { clarify: true },
+          fallback: '',
+        });
+        return textOut;
+      }
+      const r = await fetchRestaurantDetails(restaurantIdForScope);
+      // Decide max/cheapest from question
+      const q = (message || '').toLowerCase();
+      const wantMax = /najskuplj|najskup|most\s+expensive|highest\s+price/.test(
+        q,
+      );
+      const wantMin = /najjeftin|cheapest|lowest\s+price/.test(q);
+      let payload;
+      if (wantMin) {
+        const { minPrice, items } = await findCheapestItemsForRestaurant(
+          restaurantIdForScope,
+          lang,
+        );
+        payload = {
+          restaurant: { id: r?.id, name: r?.name },
+          items,
+          minPrice: minPrice ?? null,
+          isMinPriceQuery: true,
+        };
+      } else {
+        const { maxPrice, items } = await findMostExpensiveItemsForRestaurant(
+          restaurantIdForScope,
+          lang,
+        );
+        payload = {
+          restaurant: { id: r?.id, name: r?.name },
+          items,
+          maxPrice: maxPrice ?? null,
+          isMaxPriceQuery: true,
+        };
+      }
+      const textStats = await generateNaturalReply({
+        lang,
+        intent: 'menu_stats',
+        question: message,
+        data: payload,
+        fallback: '',
+      });
+      const reply = { text: textStats, restaurantId: r?.id || null };
+      saveContextMaybe(reply, threadId);
+      return reply.text || reply;
+    }
     case 'hours': {
+      const t0 = Date.now();
       const reply = await handleHours({
         lang,
         text: message,
@@ -1215,9 +1422,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'hours',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'nearby': {
+      const t0 = Date.now();
       const reply = await handleNearby({
         lang,
         latitude,
@@ -1227,9 +1444,25 @@ async function chatAgent(input) {
         text: message,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'nearby',
+        message,
+        lang,
+        restaurantIdUsed: null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'menu_search': {
+      console.log('[DEBUG] Calling handleMenuSearch with:', {
+        message,
+        menuTerm,
+        restaurantQuery,
+        preferId,
+      });
+      const t0 = Date.now();
       const reply = await handleMenuSearch({
         lang,
         question: message,
@@ -1238,9 +1471,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'menu_search',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'perks': {
+      const t0 = Date.now();
       const reply = await handlePerks({
         lang,
         text: message,
@@ -1248,9 +1491,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'perks',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'meal_types': {
+      const t0 = Date.now();
       const reply = await handleMealTypes({
         lang,
         text: message,
@@ -1258,9 +1511,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'meal_types',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'dietary_types': {
+      const t0 = Date.now();
       const reply = await handleDietaryTypes({
         lang,
         text: message,
@@ -1268,9 +1531,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'dietary_types',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'reservations': {
+      const t0 = Date.now();
       const reply = await handleReservations({
         lang,
         text: message,
@@ -1278,9 +1551,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'reservations',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'contact': {
+      const t0 = Date.now();
       const reply = await handleContact({
         lang,
         text: message,
@@ -1288,9 +1571,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'contact',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'description': {
+      const t0 = Date.now();
       const reply = await handleDescription({
         lang,
         text: message,
@@ -1298,9 +1591,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'description',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'virtual_tour': {
+      const t0 = Date.now();
       const reply = await handleVirtualTour({
         lang,
         text: message,
@@ -1308,9 +1611,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'virtual_tour',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'price': {
+      const t0 = Date.now();
       const reply = await handlePrice({
         lang,
         text: message,
@@ -1318,9 +1631,19 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'price',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'reviews': {
+      const t0 = Date.now();
       const reply = await handleReviews({
         lang,
         text: message,
@@ -1328,6 +1651,15 @@ async function chatAgent(input) {
         preferRestaurantId: preferId,
       });
       saveContextMaybe(reply, threadId);
+      logAiInteraction({
+        intent: 'reviews',
+        message,
+        lang,
+        restaurantIdUsed: reply?.restaurantId || null,
+        durationMs: Date.now() - t0,
+        globalSignal,
+        scopedByContext,
+      });
       return reply.text || reply;
     }
     case 'data_provenance':
@@ -1342,6 +1674,23 @@ async function chatAgent(input) {
         fallback: '',
       });
   }
+
+  // Fallback return shouldn't happen; but log for diagnostics
+  logAiInteraction({
+    intent,
+    message,
+    lang,
+    restaurantIdUsed: null,
+    durationMs: null,
+    note: 'fell through switch',
+  });
+  return generateNaturalReply({
+    lang,
+    intent: 'out_of_scope',
+    question: message,
+    data: {},
+    fallback: '',
+  });
 }
 
 module.exports = { chatAgent };

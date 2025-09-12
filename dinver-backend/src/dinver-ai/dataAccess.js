@@ -67,11 +67,50 @@ function normalizeText(s) {
 
 // Very small synonyms map for frequent queries
 const PERK_SYNONYMS = new Map([
+  // Outdoor Seating
   ['terasa', 'outdoor seating'],
   ['vanjska terasa', 'outdoor seating'],
   ['terrace', 'outdoor seating'],
   ['outdoor', 'outdoor seating'],
-  // credit cards
+
+  // Rooftop View
+  ['krovna terasa', 'rooftop view'],
+  ['krovna terasa s pogledom', 'rooftop view'],
+  ['rooftop view', 'rooftop view'],
+  ['rooftop', 'rooftop view'],
+
+  // Beachfront
+  ['prvi red do mora', 'beachfront'],
+  ['beachfront', 'beachfront'],
+  ['mora', 'beachfront'],
+
+  // Themed Establishment
+  ['tematski objekt', 'themed establishment'],
+  ['themed establishment', 'themed establishment'],
+  ['themed', 'themed establishment'],
+
+  // Public Transport
+  ['javnog prijevoza', 'close to public transport'],
+  ['public transport', 'close to public transport'],
+  ['transport', 'close to public transport'],
+
+  // Open Late Night
+  ['kasno u noć', 'open late-night'],
+  ['kasno', 'open late-night'],
+  ['late night', 'open late-night'],
+  ['late-night', 'open late-night'],
+
+  // 24/7 Open
+  ['0-24', '24/7 open'],
+  ['24/7', '24/7 open'],
+  ['nonstop', '24/7 open'],
+
+  // Reservations Recommended
+  ['preporučeno rezervirati', 'reservations recommended'],
+  ['reservations recommended', 'reservations recommended'],
+  ['rezervirati', 'reservations recommended'],
+
+  // Credit Cards
   ['kartica', 'accepts credit cards'],
   ['kartice', 'accepts credit cards'],
   ['karticom', 'accepts credit cards'],
@@ -81,6 +120,100 @@ const PERK_SYNONYMS = new Map([
   ['plaćanje karticom', 'accepts credit cards'],
   ['credit card', 'accepts credit cards'],
   ['credit cards', 'accepts credit cards'],
+
+  // Free Wi-Fi
+  ['besplatan wi-fi', 'free wi-fi'],
+  ['free wi-fi', 'free wi-fi'],
+  ['wifi', 'free wi-fi'],
+  ['wi-fi', 'free wi-fi'],
+
+  // Takeaway
+  ['hranu za van', 'takeaway available'],
+  ['takeaway', 'takeaway available'],
+  ['za van', 'takeaway available'],
+
+  // Coffee To Go
+  ['kavu za van', 'coffee to go available'],
+  ['coffee to go', 'coffee to go available'],
+  ['kava za van', 'coffee to go available'],
+
+  // Quick Bites
+  ['brze zalogaje', 'quick bites'],
+  ['quick bites', 'quick bites'],
+  ['brzo', 'quick bites'],
+
+  // Play Areas
+  ['igrališta', 'play areas'],
+  ['play areas', 'play areas'],
+  ['igralište', 'play areas'],
+
+  // Children Menu
+  ['jelovnik za djecu', 'childrens menu'],
+  ['children menu', 'childrens menu'],
+  ['childrens menu', 'childrens menu'],
+  ['djecu', 'childrens menu'],
+
+  // Pet Friendly
+  ['kućne ljubimce', 'pet-friendly'],
+  ['pet friendly', 'pet-friendly'],
+  ['pet-friendly', 'pet-friendly'],
+  ['ljubimce', 'pet-friendly'],
+
+  // Live Music
+  ['glazbu uživo', 'live music'],
+  ['live music', 'live music'],
+  ['uživo', 'live music'],
+
+  // Karaoke
+  ['karaoke', 'karaoke'],
+
+  // Sports Bar
+  ['sportski bar', 'sports bar'],
+  ['sports bar', 'sports bar'],
+  ['sportski', 'sports bar'],
+
+  // Spicy Food
+  ['ljutu hranu', 'spicy food lovers'],
+  ['spicy food', 'spicy food lovers'],
+  ['ljuto', 'spicy food lovers'],
+
+  // Buffet
+  ['all-you-can-eat buffet', 'all-you-can-eat buffet'],
+  ['buffet', 'all-you-can-eat buffet'],
+
+  // Signature Desserts
+  ['prepoznatljive deserte', 'signature desserts'],
+  ['signature desserts', 'signature desserts'],
+  ['deserte', 'signature desserts'],
+
+  // Michelin Star
+  ['michelinovu zvjezdicu', 'michelin-starred restaurant'],
+  ['michelin starred', 'michelin-starred restaurant'],
+  ['michelin', 'michelin-starred restaurant'],
+
+  // Free Parking
+  ['besplatni parking', 'free parking'],
+  ['free parking', 'free parking'],
+  ['parking', 'free parking'],
+
+  // Paid Parking
+  ['plaćeni parking', 'paid parking'],
+  ['paid parking', 'paid parking'],
+
+  // Air Conditioned
+  ['klimatiziran prostor', 'air-conditioned space'],
+  ['air conditioned', 'air-conditioned space'],
+  ['klima', 'air-conditioned space'],
+
+  // High Chairs
+  ['stolice za djecu', 'high chairs available'],
+  ['high chairs', 'high chairs available'],
+  ['stolice', 'high chairs available'],
+
+  // Tobacco Products
+  ['duhanske proizvode', 'tobacco products available'],
+  ['tobacco products', 'tobacco products available'],
+  ['duhanske', 'tobacco products available'],
 ]);
 
 async function resolvePerkIdByName(query) {
@@ -428,6 +561,75 @@ async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
   );
 }
 
+// Returns up to maxItems of all menu items (food + drinks) for a restaurant,
+// selecting best translation per item for preferLang
+async function fetchAllMenuItemsForRestaurant(
+  restaurantId,
+  preferLang = 'hr',
+  maxItems = 60,
+) {
+  if (!restaurantId) return [];
+  const [foods, drinks] = await Promise.all([
+    MenuItem.findAll({
+      where: { restaurantId },
+      attributes: ['id', 'price'],
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+          attributes: ['language', 'name'],
+        },
+      ],
+      limit: maxItems,
+    }),
+    DrinkItem.findAll({
+      where: { restaurantId },
+      attributes: ['id', 'price'],
+      include: [
+        {
+          model: DrinkItemTranslation,
+          as: 'translations',
+          attributes: ['language', 'name'],
+        },
+      ],
+      limit: maxItems,
+    }),
+  ]);
+
+  const items = [];
+  for (const m of foods) {
+    const obj = m.get ? m.get() : m;
+    items.push({
+      type: 'food',
+      id: obj.id,
+      name: pickNameByLang(obj.translations || [], preferLang),
+      price: obj.price != null ? Number(obj.price) : null,
+    });
+  }
+  for (const d of drinks) {
+    const obj = d.get ? d.get() : d;
+    items.push({
+      type: 'drink',
+      id: obj.id,
+      name: pickNameByLang(obj.translations || [], preferLang),
+      price: obj.price != null ? Number(obj.price) : null,
+    });
+  }
+
+  // Deduplicate by name+price in case of overlaps
+  const seen = new Set();
+  const unique = [];
+  for (const it of items) {
+    const key = `${it.name}|${it.price ?? ''}`;
+    if (!seen.has(key) && it.name) {
+      seen.add(key);
+      unique.push(it);
+    }
+  }
+
+  return unique.slice(0, maxItems);
+}
+
 async function findMostExpensiveItemsForRestaurant(
   restaurantId,
   preferLang = 'hr',
@@ -480,6 +682,59 @@ async function findMostExpensiveItemsForRestaurant(
   if (items.length === 0) return { maxPrice: null, items: [] };
   const maxPrice = Math.max(...items.map((i) => i.price || 0));
   return { maxPrice, items: items.filter((i) => i.price === maxPrice) };
+}
+
+async function findCheapestItemsForRestaurant(restaurantId, preferLang = 'hr') {
+  const [foods, drinks] = await Promise.all([
+    MenuItem.findAll({
+      where: { restaurantId, price: { [Op.ne]: null } },
+      attributes: ['id', 'price'],
+      order: [['price', 'ASC']],
+      limit: 10,
+      include: [
+        {
+          model: MenuItemTranslation,
+          as: 'translations',
+          attributes: ['language', 'name'],
+        },
+      ],
+    }),
+    DrinkItem.findAll({
+      where: { restaurantId, price: { [Op.ne]: null } },
+      attributes: ['id', 'price'],
+      order: [['price', 'ASC']],
+      limit: 10,
+      include: [
+        {
+          model: DrinkItemTranslation,
+          as: 'translations',
+          attributes: ['language', 'name'],
+        },
+      ],
+    }),
+  ]);
+  const items = [];
+  for (const m of foods) {
+    const obj = m.get ? m.get() : m;
+    items.push({
+      type: 'food',
+      id: obj.id,
+      name: pickNameByLang(obj.translations || [], preferLang),
+      price: Number(obj.price),
+    });
+  }
+  for (const d of drinks) {
+    const obj = d.get ? d.get() : d;
+    items.push({
+      type: 'drink',
+      id: obj.id,
+      name: pickNameByLang(obj.translations || [], preferLang),
+      price: Number(obj.price),
+    });
+  }
+  if (items.length === 0) return { minPrice: null, items: [] };
+  const minPrice = Math.min(...items.map((i) => i.price || 0));
+  return { minPrice, items: items.filter((i) => i.price === minPrice) };
 }
 
 async function findNearbyPartners({
@@ -583,10 +838,12 @@ module.exports = {
   fetchRestaurantDetails,
   searchMenuAcrossRestaurants,
   searchMenuForRestaurant,
+  fetchAllMenuItemsForRestaurant,
+  findMostExpensiveItemsForRestaurant,
+  findCheapestItemsForRestaurant,
   findNearbyPartners,
   fetchTypesForRestaurant,
   fetchReviewsSummary,
   getAllPerksCached,
   resolvePerkIdByName,
-  findMostExpensiveItemsForRestaurant,
 };
