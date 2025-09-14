@@ -22,6 +22,7 @@ const { createDailyBackups } = require('./cron/backupCron');
 const {
   cleanupStaleVisitValidations,
 } = require('./cron/cleanupVisitValidations');
+const { runDataHealthChecks } = require('./cron/dataHealthCron');
 dotenv.config();
 
 const app = express();
@@ -31,6 +32,24 @@ cron.schedule('0 3 * * *', createDailyBackups);
 
 // Čišćenje starih VisitValidation zapisa (svaki dan u 03:30)
 cron.schedule('30 3 * * *', cleanupStaleVisitValidations);
+
+// Data health checks (svaki dan u 04:00) – log samo u konzolu za sada
+cron.schedule('0 4 * * *', async () => {
+  try {
+    const problems = await runDataHealthChecks();
+    if (problems.length > 0) {
+      console.log(
+        '[DataHealth] issues:',
+        problems.length,
+        problems.slice(0, 5),
+      );
+    } else {
+      console.log('[DataHealth] OK');
+    }
+  } catch (e) {
+    console.error('[DataHealth] error', e?.message || e);
+  }
+});
 
 // Initialize client.
 const redisClient = createClient({
