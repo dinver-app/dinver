@@ -1,5 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { listSysadmins, removeSysadmin } from "../services/sysadminService";
+import {
+  listSysadmins,
+  removeSysadmin,
+  addSysadmin,
+} from "../services/sysadminService";
 import {
   updateUserLanguage,
   getUserLanguage,
@@ -32,7 +36,9 @@ const Settings = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
   const [sysadmins, setSysadmins] = useState<Sysadmin[]>([]);
-  const [_, setModalOpen] = useState(false);
+  const [isAddModalOpen, setModalOpen] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSysadmin, setSelectedSysadmin] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState(
@@ -201,6 +207,22 @@ const Settings = () => {
 
   const handleOpenModal = (log: AuditLog) => {
     setSelectedLog(log);
+  };
+
+  const handleAddSysadmin = async () => {
+    if (!newAdminEmail) return;
+    setIsSubmitting(true);
+    try {
+      await addSysadmin(newAdminEmail);
+      await fetchSysadmins();
+      toast.success(t("sysadmin_added_successfully"));
+      setNewAdminEmail("");
+      setModalOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || t("failed_to_add_sysadmin"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -645,6 +667,56 @@ const Settings = () => {
                 className="secondary-button px-6 py-3"
               >
                 {t("close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Sysadmin Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{t("add_sysadmin")}</h3>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("email")}
+              </label>
+              <input
+                type="email"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newAdminEmail && !isSubmitting) {
+                    handleAddSysadmin();
+                  }
+                }}
+                placeholder="name@example.com"
+                className="w-full px-3 py-2 border border-gray-300 rounded outline-gray-300"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="secondary-button px-4 py-2"
+                disabled={isSubmitting}
+              >
+                {t("close")}
+              </button>
+              <button
+                onClick={handleAddSysadmin}
+                className="primary-button px-4 py-2 disabled:opacity-50"
+                disabled={!newAdminEmail || isSubmitting}
+              >
+                {isSubmitting ? t("loading") : t("add_sysadmin")}
               </button>
             </div>
           </div>
