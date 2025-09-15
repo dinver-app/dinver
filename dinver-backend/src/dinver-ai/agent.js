@@ -1132,6 +1132,53 @@ async function handleDescription({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // In per-restaurant chat, preferRestaurantId is forced. Use it directly when present.
+  if (preferRestaurantId) {
+    const details = await fetchRestaurantDetails(preferRestaurantId);
+    if (details) {
+      const types = await fetchTypesForRestaurant(details);
+      const priceLabel = details?.priceCategory
+        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
+        : null;
+      const openNow = computeOpenNow(
+        details?.openingHours,
+        details?.customWorkingDays,
+      );
+      const descriptionText =
+        (lang === 'hr' ? details?.description?.hr : details?.description?.en) ||
+        '';
+      const data = {
+        singleRestaurantMode: true,
+        restaurant: {
+          id: details?.id,
+          name: details?.name,
+          address: details?.address || null,
+          place: details?.place || null,
+          thumbnailUrl: details?.thumbnailUrl || null,
+          openNow,
+          priceCategory: priceLabel,
+        },
+        description: descriptionText,
+        perks: (types?.establishmentPerks || []).map((p) => ({
+          id: p.id,
+          name: lang === 'hr' ? p.nameHr : p.nameEn,
+        })),
+        foodTypes: (types?.foodTypes || []).map((p) => ({
+          id: p.id,
+          name: lang === 'hr' ? p.nameHr : p.nameEn,
+        })),
+      };
+      const textOut = await generateNaturalReply({
+        lang,
+        intent: 'description',
+        question: text,
+        data,
+        fallback: '',
+      });
+      return { text: textOut, restaurantId: details.id };
+    }
+  }
+
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1149,39 +1196,58 @@ async function handleDescription({
       data: {
         clarify: true,
         candidates: (candidates || []).map((c) => ({ id: c.id, name: c.name })),
+        singleRestaurantMode: true,
       },
       fallback: '',
     });
     return { text: textOut, restaurantId: null };
   }
-  // getFullRestaurantDetails composes description from translations; fetch basic then fallback fields
-  const { Restaurant, RestaurantTranslation } = require('../../models');
-  const { Op } = require('sequelize');
-  const r = await Restaurant.findOne({
-    where: { id: rBasic.id },
-    include: [{ model: RestaurantTranslation, as: 'translations' }],
-    attributes: ['id', 'name'],
-  });
-  if (!r) {
-    const textOut = await generateNaturalReply({
-      lang,
-      intent: 'description',
-      question: text,
-      data: {},
-      fallback: '',
-    });
-    return { text: textOut, restaurantId: null };
-  }
-  const t = (r.translations || []).find((x) => x.language === lang);
-  const desc = t?.description || '';
+
+  // Fetch rich details and build an overview payload
+  const details = await fetchRestaurantDetails(rBasic.id);
+  const types = details ? await fetchTypesForRestaurant(details) : null;
+  const priceLabel = details?.priceCategory
+    ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
+    : null;
+  const openNow = computeOpenNow(
+    details?.openingHours,
+    details?.customWorkingDays,
+  );
+  const descriptionText =
+    (lang === 'hr' ? details?.description?.hr : details?.description?.en) || '';
+
+  const data = {
+    singleRestaurantMode: true,
+    restaurant: {
+      id: details?.id,
+      name: details?.name,
+      address: details?.address || null,
+      place: details?.place || null,
+      thumbnailUrl: details?.thumbnailUrl || null,
+      openNow,
+      priceCategory: priceLabel,
+    },
+    description: descriptionText,
+    perks:
+      types?.establishmentPerks?.map((p) => ({
+        id: p.id,
+        name: lang === 'hr' ? p.nameHr : p.nameEn,
+      })) || [],
+    foodTypes:
+      types?.foodTypes?.map((p) => ({
+        id: p.id,
+        name: lang === 'hr' ? p.nameHr : p.nameEn,
+      })) || [],
+  };
+
   const textOut6 = await generateNaturalReply({
     lang,
     intent: 'description',
     question: text,
-    data: { restaurant: { name: r.name }, description: desc },
+    data,
     fallback: '',
   });
-  return { text: textOut6, restaurantId: r.id };
+  return { text: textOut6, restaurantId: details?.id || null };
 }
 
 async function handleVirtualTour({
@@ -1342,7 +1408,15 @@ async function handleDataProvenance({ lang, text }) {
 const ctxStore = require('./contextStore');
 
 async function chatAgent(input) {
-  const { message, language, latitude, longitude, radiusKm, threadId } = input;
+  const {
+    message,
+    language,
+    latitude,
+    longitude,
+    radiusKm,
+    threadId,
+    forcedRestaurantId,
+  } = input;
   const lang = detectLanguage(message, language);
   // Delegate intent inference to LLM. If router fails, fall back to simple classifier.
   let { intent, restaurantQuery, filters, menuTerm } = await inferIntent({
@@ -1366,9 +1440,11 @@ async function chatAgent(input) {
   let lastRestaurantId = ctx?.lastRestaurantId;
 
   // Scoped-by-default behavior
-  const scopedByContext = !!ctx?.lastRestaurantId;
-  const globalSignal = isGlobalQuery(message);
-  let preferId = scopedByContext && !globalSignal ? ctx.lastRestaurantId : null;
+  const scopedByContext = !!(forcedRestaurantId || ctx?.lastRestaurantId);
+  const globalSignal = forcedRestaurantId ? false : isGlobalQuery(message);
+  let preferId =
+    forcedRestaurantId ||
+    (scopedByContext && !globalSignal ? ctx.lastRestaurantId : null);
 
   function saveContextMaybe(reply, thread) {
     if (!thread) return;
@@ -1377,6 +1453,11 @@ async function chatAgent(input) {
       const prev = ctxStore.get(thread) || {};
       ctxStore.set(thread, { ...prev, lastRestaurantId: rid });
     }
+  }
+
+  // In single-restaurant mode, override intents that don't make sense globally
+  if (forcedRestaurantId && intent === 'nearby') {
+    intent = 'description';
   }
 
   switch (intent) {
