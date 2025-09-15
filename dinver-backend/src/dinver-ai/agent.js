@@ -448,6 +448,7 @@ async function handleNearby({
       return {
         id: r.id,
         name: r.name,
+        thumbnailUrl: details?.thumbnailUrl || null,
         distanceKm: r.distanceKm,
         rating: r.rating || null,
         priceCategory: priceLabel,
@@ -474,7 +475,15 @@ async function handleNearby({
     data: { nearby: enrichedForLlm, filters: filters || null },
     fallback: fallbackNearby,
   });
-  return { text: textOut, restaurantId: null };
+  const restaurants = enrichedForLlm.map((r) => ({
+    id: r.id,
+    name: r.name,
+    address: r.address,
+    place: r.place,
+    thumbnailUrl: r.thumbnailUrl || null,
+    distance: r.distanceKm,
+  }));
+  return { text: textOut, restaurantId: null, restaurants };
 }
 
 function stripDiacritics(s) {
@@ -726,7 +735,16 @@ async function handleMenuSearch({
         data: { items: scoped, restaurant: { id: r?.id, name: r?.name } },
         fallback: '',
       });
-      return { text: textScoped, restaurantId: r?.id || null };
+      const items = scoped.map((it) => ({
+        type: it.type,
+        id: it.id,
+        price: it.price ?? null,
+        thumbnailUrl: it.thumbnailUrl || null,
+        translations: it.translations || null,
+        name: it.name || null,
+        restaurantId: it.restaurantId || r?.id || null,
+      }));
+      return { text: textScoped, restaurantId: r?.id || null, items };
     }
     const textNf = await generateNaturalReply({
       lang,
@@ -740,7 +758,7 @@ async function handleMenuSearch({
       },
       fallback: '',
     });
-    return { text: textNf, restaurantId: r?.id || null };
+    return { text: textNf, restaurantId: r?.id || null, items: [] };
   }
 
   // Otherwise search across all partners
@@ -766,31 +784,42 @@ async function handleMenuSearch({
     if (unique.length >= 3) break;
   }
 
-  const withPrice = await Promise.all(
-    unique.map(async (r) => {
-      const details = await fetchRestaurantDetails(r.restaurant.id);
-      const priceLabel = details?.priceCategory
-        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
-        : null;
-      return {
-        restaurant: { id: r.restaurant.id, name: r.restaurant.name },
-        item: r.name,
-        priceCategory: priceLabel,
-      };
-    }),
-  );
+  const withDetails = unique.map((r) => ({
+    restaurant: { id: r.restaurant.id, name: r.restaurant.name },
+    type: r.type,
+    item: r.item,
+  }));
 
   const textGlobal = await generateNaturalReply({
     lang,
     intent: 'menu_search',
     question,
-    data: { items: withPrice },
+    data: { items: withDetails },
     fallback: '',
   });
-  return {
-    text: textGlobal,
-    restaurantId: null,
-  };
+  const restaurantIds = unique.map((x) => x.restaurant.id);
+  const items = unique.map((r) => ({
+    type: r.type,
+    id: r.item?.id || null,
+    price: r.item?.price ?? null,
+    thumbnailUrl: r.item?.thumbnailUrl || null,
+    translations: r.item?.translations || null,
+    name: r.item?.translations
+      ? lang === 'hr'
+        ? r.item.translations.hr?.name
+        : r.item.translations.en?.name
+      : r.item?.name || null,
+    restaurantId: r.restaurant.id,
+  }));
+  const restaurants = unique.map((r) => ({
+    id: r.restaurant.id,
+    name: r.restaurant.name,
+    place: r.restaurant.place || null,
+    address: null,
+    thumbnailUrl: null,
+    distance: null,
+  }));
+  return { text: textGlobal, restaurantId: null, restaurants, items };
 }
 
 async function handlePerks({
@@ -1411,7 +1440,7 @@ async function chatAgent(input) {
       });
       const reply = { text: textStats, restaurantId: r?.id || null };
       saveContextMaybe(reply, threadId);
-      return reply.text || reply;
+      return reply;
     }
     case 'hours': {
       const t0 = Date.now();
@@ -1431,7 +1460,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'nearby': {
       const t0 = Date.now();
@@ -1453,7 +1482,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'menu_search': {
       console.log('[DEBUG] Calling handleMenuSearch with:', {
@@ -1480,7 +1509,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'perks': {
       const t0 = Date.now();
@@ -1500,7 +1529,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'meal_types': {
       const t0 = Date.now();
@@ -1520,7 +1549,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'dietary_types': {
       const t0 = Date.now();
@@ -1540,7 +1569,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'reservations': {
       const t0 = Date.now();
@@ -1560,7 +1589,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'contact': {
       const t0 = Date.now();
@@ -1580,7 +1609,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'description': {
       const t0 = Date.now();
@@ -1600,7 +1629,7 @@ async function chatAgent(input) {
         globalSignal,
         scopedByContext,
       });
-      return reply.text || reply;
+      return reply;
     }
     case 'virtual_tour': {
       const t0 = Date.now();

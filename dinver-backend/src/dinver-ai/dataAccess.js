@@ -380,12 +380,20 @@ async function searchMenuAcrossRestaurants(term) {
   ]);
 
   const restaurantIds = new Set();
-  menuTranslations.forEach(
-    (t) => t.menuItem && restaurantIds.add(t.menuItem.restaurantId),
-  );
-  drinkTranslations.forEach(
-    (t) => t.drinkItem && restaurantIds.add(t.drinkItem.restaurantId),
-  );
+  const menuIds = new Set();
+  const drinkIds = new Set();
+  menuTranslations.forEach((t) => {
+    if (t.menuItem) {
+      restaurantIds.add(t.menuItem.restaurantId);
+      menuIds.add(t.menuItem.id);
+    }
+  });
+  drinkTranslations.forEach((t) => {
+    if (t.drinkItem) {
+      restaurantIds.add(t.drinkItem.restaurantId);
+      drinkIds.add(t.drinkItem.id);
+    }
+  });
 
   if (restaurantIds.size === 0) return [];
   const restaurants = await Restaurant.findAll({
@@ -397,6 +405,7 @@ async function searchMenuAcrossRestaurants(term) {
       'slug',
       'latitude',
       'longitude',
+      'thumbnailUrl',
       'priceCategoryId',
     ],
     include: [
@@ -407,48 +416,104 @@ async function searchMenuAcrossRestaurants(term) {
       },
     ],
   });
-  const byId = new Map(restaurants.map((r) => [r.id, r.get ? r.get() : r]));
+  const restaurantById = new Map(
+    restaurants.map((r) => [r.id, r.get ? r.get() : r]),
+  );
+
+  // Fetch item details with translations and images
+  const [menuItems, drinkItems] = await Promise.all([
+    menuIds.size
+      ? MenuItem.findAll({
+          where: { id: { [Op.in]: Array.from(menuIds) } },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name'],
+            },
+          ],
+        })
+      : Promise.resolve([]),
+    drinkIds.size
+      ? DrinkItem.findAll({
+          where: { id: { [Op.in]: Array.from(drinkIds) } },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name'],
+            },
+          ],
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const menuById = new Map(menuItems.map((m) => [m.id, m.get ? m.get() : m]));
+  const drinkById = new Map(drinkItems.map((d) => [d.id, d.get ? d.get() : d]));
+
+  function toTranslationsMap(translations = []) {
+    const t = { hr: { name: '' }, en: { name: '' } };
+    for (const tr of translations) {
+      if (tr.language === 'hr') t.hr.name = tr.name || '';
+      if (tr.language === 'en') t.en.name = tr.name || '';
+    }
+    return t;
+  }
 
   const results = [];
-  const pushUnique = (arr, rec, key) => {
-    if (
-      !arr.some(
-        (x) => x[key] === rec[key] && x.restaurant.id === rec.restaurant.id,
-      )
-    ) {
-      arr.push(rec);
-    }
+  const pushUnique = (arr, rec, keyFn) => {
+    const key = keyFn(rec);
+    if (!arr.some((x) => keyFn(x) === key)) arr.push(rec);
   };
+
   menuTranslations.forEach((t) => {
-    const rest = t.menuItem ? byId.get(t.menuItem.restaurantId) : null;
-    if (rest)
+    const rest = t.menuItem
+      ? restaurantById.get(t.menuItem.restaurantId)
+      : null;
+    const item = t.menuItem ? menuById.get(t.menuItem.id) : null;
+    if (rest && item)
       pushUnique(
         results,
         {
           type: 'food',
           restaurant: rest,
-          name: t.name,
-          menuItemId: t.menuItemId,
+          item: {
+            id: item.id,
+            restaurantId: item.restaurantId,
+            price: item.price != null ? Number(item.price) : null,
+            thumbnailUrl: item.imageUrl || null,
+            translations: toTranslationsMap(item.translations || []),
+          },
         },
-        'menuItemId',
+        (x) => `food:${x.item.id}:${x.restaurant.id}`,
       );
   });
   drinkTranslations.forEach((t) => {
-    const rest = t.drinkItem ? byId.get(t.drinkItem.restaurantId) : null;
-    if (rest)
+    const rest = t.drinkItem
+      ? restaurantById.get(t.drinkItem.restaurantId)
+      : null;
+    const item = t.drinkItem ? drinkById.get(t.drinkItem.id) : null;
+    if (rest && item)
       pushUnique(
         results,
         {
           type: 'drink',
           restaurant: rest,
-          name: t.name,
-          drinkItemId: t.drinkItemId,
+          item: {
+            id: item.id,
+            restaurantId: item.restaurantId,
+            price: item.price != null ? Number(item.price) : null,
+            thumbnailUrl: item.imageUrl || null,
+            translations: toTranslationsMap(item.translations || []),
+          },
         },
-        'drinkItemId',
+        (x) => `drink:${x.item.id}:${x.restaurant.id}`,
       );
   });
-  // Remove helper ids before returning
-  return results.map(({ menuItemId, drinkItemId, ...rest }) => rest);
+
+  return results;
 }
 
 function normalizeMenuTerm(s) {
@@ -492,12 +557,12 @@ async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
         {
           model: MenuItem,
           as: 'menuItem',
-          attributes: ['id', 'restaurantId', 'price'],
+          attributes: ['id', 'restaurantId'],
           where: { restaurantId },
           required: true,
         },
       ],
-      attributes: ['name', 'language'],
+      attributes: ['language'],
       limit: 50,
     }),
     DrinkItemTranslation.findAll({
@@ -510,55 +575,93 @@ async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
         {
           model: DrinkItem,
           as: 'drinkItem',
-          attributes: ['id', 'restaurantId', 'price'],
+          attributes: ['id', 'restaurantId'],
           where: { restaurantId },
           required: true,
         },
       ],
-      attributes: ['name', 'language'],
+      attributes: ['language'],
       limit: 50,
     }),
   ]);
-  const foodsById = new Map();
-  for (const t of menuTranslations) {
-    const id = t.menuItem?.id;
-    if (!id) continue;
-    const candidate = {
-      type: 'food',
-      name: t.name,
-      price: t.menuItem?.price || null,
-      lang: t.language,
-    };
-    const current = foodsById.get(id);
-    if (
-      !current ||
-      (t.language === preferLang && current.lang !== preferLang)
-    ) {
-      foodsById.set(id, candidate);
+
+  const menuIds = Array.from(
+    new Set(
+      menuTranslations.map((t) => t.menuItem && t.menuItem.id).filter(Boolean),
+    ),
+  );
+  const drinkIds = Array.from(
+    new Set(
+      drinkTranslations
+        .map((t) => t.drinkItem && t.drinkItem.id)
+        .filter(Boolean),
+    ),
+  );
+
+  const [menuItems, drinkItems] = await Promise.all([
+    menuIds.length
+      ? MenuItem.findAll({
+          where: { id: { [Op.in]: menuIds } },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name'],
+            },
+          ],
+        })
+      : Promise.resolve([]),
+    drinkIds.length
+      ? DrinkItem.findAll({
+          where: { id: { [Op.in]: drinkIds } },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name'],
+            },
+          ],
+        })
+      : Promise.resolve([]),
+  ]);
+
+  function toTranslationsMap(translations = []) {
+    const t = { hr: { name: '' }, en: { name: '' } };
+    for (const tr of translations) {
+      if (tr.language === 'hr') t.hr.name = tr.name || '';
+      if (tr.language === 'en') t.en.name = tr.name || '';
     }
+    return t;
   }
 
-  const drinksById = new Map();
-  for (const t of drinkTranslations) {
-    const id = t.drinkItem?.id;
-    if (!id) continue;
-    const candidate = {
-      type: 'drink',
-      name: t.name,
-      price: t.drinkItem?.price || null,
-      lang: t.language,
-    };
-    const current = drinksById.get(id);
-    if (
-      !current ||
-      (t.language === preferLang && current.lang !== preferLang)
-    ) {
-      drinksById.set(id, candidate);
-    }
+  const out = [];
+  for (const m of menuItems) {
+    const obj = m.get ? m.get() : m;
+    out.push({
+      type: 'food',
+      id: obj.id,
+      restaurantId: obj.restaurantId,
+      price: obj.price != null ? Number(obj.price) : null,
+      thumbnailUrl: obj.imageUrl || null,
+      translations: toTranslationsMap(obj.translations || []),
+      name: pickNameByLang(obj.translations || [], preferLang),
+    });
   }
-  return [...foodsById.values(), ...drinksById.values()].map(
-    ({ lang, ...rest }) => rest,
-  );
+  for (const d of drinkItems) {
+    const obj = d.get ? d.get() : d;
+    out.push({
+      type: 'drink',
+      id: obj.id,
+      restaurantId: obj.restaurantId,
+      price: obj.price != null ? Number(obj.price) : null,
+      thumbnailUrl: obj.imageUrl || null,
+      translations: toTranslationsMap(obj.translations || []),
+      name: pickNameByLang(obj.translations || [], preferLang),
+    });
+  }
+  return out;
 }
 
 // Returns up to maxItems of all menu items (food + drinks) for a restaurant,
@@ -572,7 +675,7 @@ async function fetchAllMenuItemsForRestaurant(
   const [foods, drinks] = await Promise.all([
     MenuItem.findAll({
       where: { restaurantId },
-      attributes: ['id', 'price'],
+      attributes: ['id', 'price', 'imageUrl', 'restaurantId'],
       include: [
         {
           model: MenuItemTranslation,
@@ -584,7 +687,7 @@ async function fetchAllMenuItemsForRestaurant(
     }),
     DrinkItem.findAll({
       where: { restaurantId },
-      attributes: ['id', 'price'],
+      attributes: ['id', 'price', 'imageUrl', 'restaurantId'],
       include: [
         {
           model: DrinkItemTranslation,
@@ -596,14 +699,26 @@ async function fetchAllMenuItemsForRestaurant(
     }),
   ]);
 
+  function toTranslationsMap(translations = []) {
+    const t = { hr: { name: '' }, en: { name: '' } };
+    for (const tr of translations) {
+      if (tr.language === 'hr') t.hr.name = tr.name || '';
+      if (tr.language === 'en') t.en.name = tr.name || '';
+    }
+    return t;
+  }
+
   const items = [];
   for (const m of foods) {
     const obj = m.get ? m.get() : m;
     items.push({
       type: 'food',
       id: obj.id,
-      name: pickNameByLang(obj.translations || [], preferLang),
+      restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
+      thumbnailUrl: obj.imageUrl || null,
+      translations: toTranslationsMap(obj.translations || []),
+      name: pickNameByLang(obj.translations || [], preferLang),
     });
   }
   for (const d of drinks) {
@@ -611,8 +726,11 @@ async function fetchAllMenuItemsForRestaurant(
     items.push({
       type: 'drink',
       id: obj.id,
-      name: pickNameByLang(obj.translations || [], preferLang),
+      restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
+      thumbnailUrl: obj.imageUrl || null,
+      translations: toTranslationsMap(obj.translations || []),
+      name: pickNameByLang(obj.translations || [], preferLang),
     });
   }
 
@@ -620,8 +738,15 @@ async function fetchAllMenuItemsForRestaurant(
   const seen = new Set();
   const unique = [];
   for (const it of items) {
-    const key = `${it.name}|${it.price ?? ''}`;
-    if (!seen.has(key) && it.name) {
+    const namePref = pickNameByLang(
+      [
+        { language: 'hr', name: it.translations?.hr?.name || '' },
+        { language: 'en', name: it.translations?.en?.name || '' },
+      ],
+      preferLang,
+    );
+    const key = `${namePref}|${it.price ?? ''}`;
+    if (!seen.has(key) && namePref) {
       seen.add(key);
       unique.push(it);
     }
