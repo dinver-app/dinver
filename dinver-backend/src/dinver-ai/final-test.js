@@ -1,4 +1,33 @@
-#!/usr/bin/env node
+// Testovi za upite s restaurantId/threadId (konkretni restoran)
+const contextTests = [
+  { text: 'Što nudi ovaj restoran?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'what_offers' },
+  { text: 'What does this restaurant offer?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'what_offers' },
+  { text: 'Imate li vi parking?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'perks' },
+  { text: 'Do you have outdoor seating?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'perks' },
+  { text: 'Koja jela imate na meniju?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'menu_search' },
+  { text: 'What drinks do you offer?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'menu_search' },
+  { text: 'Imate li bezglutenska jela?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'dietary_types' },
+  { text: 'Do you have vegan meals?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'dietary_types' },
+  { text: 'Koje je radno vrijeme restorana?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'hours' },
+  { text: 'What are the opening hours?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'hours' },
+  // Kombinacija perks + menu_search
+  { text: 'Imate li vi parking i pizzu?', lang: 'hr', context: { restaurantId: 'abc123' }, expected: 'combined_search' },
+  { text: 'Do you have outdoor seating and vegan options?', lang: 'en', context: { restaurantId: 'abc123' }, expected: 'combined_search' },
+  // Edge case: bez restaurantId
+  { text: 'Što nudi ovaj restoran?', lang: 'hr', context: {}, expected: 'combined_search' },
+  { text: 'Imate li vi parking?', lang: 'hr', context: {}, expected: 'combined_search' },
+];
+
+console.log('🧪 Testovi za upite s restaurantId/threadId (konkretni restoran):\n');
+let contextPassed = 0;
+contextTests.forEach((test, index) => {
+  const result = require('./intentClassifier').classifyIntent(test.text, test.lang, test.context);
+  const success = result === test.expected;
+  console.log(`${success ? '✅' : '❌'} ${test.text} [context: ${JSON.stringify(test.context)}]`);
+  console.log(`   Expected: ${test.expected} | Got: ${result}\n`);
+  if (success) contextPassed++;
+});
+
 'use strict';
 
 // End-to-end test for Dinver AI improvements
