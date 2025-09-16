@@ -31,8 +31,8 @@ function normalizeText(text) {
 function detectMultipleIntents(text, lang) {
   const t = normalizeText(text);
   const intents = [];
-  
-  // Check for each intent type
+
+  // Check for each intent type - provjeri sve intents
   if (hasHoursKeywords(t, lang)) intents.push('hours');
   if (hasNearbyKeywords(t, lang)) intents.push('nearby');
   if (hasMenuKeywords(t, lang)) intents.push('menu_search');
@@ -46,71 +46,92 @@ function detectMultipleIntents(text, lang) {
   if (hasPriceKeywords(t, lang)) intents.push('price');
   if (hasReviewsKeywords(t, lang)) intents.push('reviews');
   if (hasWhatOffersKeywords(t, lang)) intents.push('what_offers');
-  
+
   return intents;
 }
 
 function hasHoursKeywords(t, lang) {
   const isHr = lang === 'hr';
   // Be more specific to avoid matching weather questions
-  const hoursHr = /(radno vrijeme|koje je radno vrijeme|koje su radne sate|koje su radne sate restorana|radno vrijeme restorana|kada restoran radi|kada je restoran otvoren|kada je restoran zatvoren|kada se otvara|kada se zatvara|do kada radi|do kad radi|radi li|otvara se|zatvara se|nedjelj|ponedjelj|utorak|srijed|četvrt|petak|subot|danas.*rad|sada.*otvoren|trenutno.*rad|otvoren[oa]? sada|zatvoreno|radni dan|kada radi|kada je otvoren|kada je zatvoren|kada je otvoreno|kada je zatvoreno|u koje vrijeme radi|od kada do kada radi)/;
-  const hoursEn = /(hours|open|close|closing time|opening time|sunday|monday|tuesday|wednesday|thursday|friday|saturday|open now|today.*open|closed|working hours|what time|when do you open|when do you close|when is the restaurant open|when is the restaurant closed|when are you open|when are you closed)/;
+  const hoursHr =
+    /(radno vrijeme|koje je radno vrijeme|koje su radne sate|koje su radne sate restorana|radno vrijeme restorana|kada restoran radi|kada je restoran otvoren|kada je restoran zatvoren|kada se otvara|kada se zatvara|do kada radi|do kad radi|radi li|otvara se|zatvara se|nedjelj|ponedjelj|utorak|srijed|četvrt|petak|subot|danas.*rad|sada.*otvoren|trenutno.*rad|otvoren[oa]? sada|zatvoreno|radni dan|kada radi|kada je otvoren|kada je zatvoren|kada je otvoreno|kada je zatvoreno|u koje vrijeme radi|od kada do kada radi)/;
+  const hoursEn =
+    /(hours|open|close|closing time|opening time|sunday|monday|tuesday|wednesday|thursday|friday|saturday|open now|today.*open|closed|working hours|what time|when do you open|when do you close|when is the restaurant open|when is the restaurant closed|when are you open|when are you closed)/;
   return (isHr && hoursHr.test(t)) || (!isHr && hoursEn.test(t));
 }
 
 function hasNearbyKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const nearbyHr = /(blizu mene|u blizini|najbliž|najbliz|udaljen|koliko daleko|oko mene|u okolici)/;
-  const nearbyEn = /(near me|nearby|closest|distance|how far|around me)/;
+  const nearbyHr =
+    /(blizu mene|u blizini|najbliž|najbliz|udaljen|koliko daleko|oko mene|u okolici|gdje.*blizu|gdje.*blizini|gdje.*najbliž|gdje.*najbliz)/;
+  const nearbyEn =
+    /(near me|nearby|closest|distance|how far|around me|where.*near|where.*closest|where.*around)/;
   return (isHr && nearbyHr.test(t)) || (!isHr && nearbyEn.test(t));
 }
 
 function hasMenuKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const menuHr = /(meni|jelovnik|ima li|ima\b|imate\b|imaju\b|što nudi|sto nudi|šta nudi|sta nudi|nudi\b|nudite\b|nude\b|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata|lazanj|lazanje|pasta|tjestenina|juha|supa|piletina|riba|meso|vegetarijan|vegan|morski plodovi|deserti|vegan obrok|vegetarijanski obrok|bezglutensko jelo|bez glutena|gluten free|halal)/;
-  const menuEn = /(menu|dish|food|drink|has.*(steak|pizza|burger|dessert|salad|lasagn|pasta|soup|chicken|fish|meat|seafood|vegan|vegetarian|gluten[- ]?free|halal)|looking for|do you serve|do you have|pizza|burger|steak|vegan|vegetarian|gluten[- ]?free|halal|dessert|salad|lasagna|pasta|soup|chicken|fish|meat|seafood|breakfast|lunch|dinner|brunch)/;
+  // Ukloni "restoran" iz menu keywords jer se koristi u perks pitanjima, ali dodaj hranu u kombinacijama
+  const menuHr =
+    /(meni|jelovnik|ima li.*jela|ima li.*pića|ima li.*hranu|imate.*jela|imate.*pića|imate.*hranu|što nudi|sto nudi|šta nudi|sta nudi|nudi\b|nudite\b|nude\b|tražim|trazim|biftek|pizza|burger|jela|pića|pica|piće|pice|desert|salata|lazanj|lazanje|pasta|tjestenina|juha|supa|piletina|riba|meso|vegetarijan|vegan|morski plodovi|deserti|vegan obrok|vegetarijanski obrok|bezglutensko jelo|bez glutena|gluten free|halal|.*pizza.*|.*burger.*|.*pasta.*|.*salata.*|.*desert.*|.*jela.*|.*pića.*|.*hrana.*|.*hranu.*|.*jelo.*|.*piće.*)/;
+  const menuEn =
+    /(menu|dish|food|drink|has.*(steak|pizza|burger|dessert|salad|lasagn|pasta|soup|chicken|fish|meat|seafood|vegan|vegetarian|gluten[- ]?free|halal)|looking for|do you serve|do you have.*food|do you have.*drink|do you have.*menu|pizza|burger|steak|vegan|vegetarian|gluten[- ]?free|halal|dessert|salad|lasagna|pasta|soup|chicken|fish|meat|seafood|breakfast|lunch|dinner|brunch|.*pizza.*|.*burger.*|.*pasta.*|.*salad.*|.*dessert.*|.*food.*|.*drink.*|.*meal.*|.*meals.*)/;
   return (isHr && menuHr.test(t)) || (!isHr && menuEn.test(t));
 }
 
 function hasPerksKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const perksHr = /(vanjsk[au] teras[au]|terasa|stolica za djecu|stolice za djecu|igralište|klimatiziran|kava za van|hrana za van|parking|pristup|wi[- ]?fi|dostava|takeaway|besplatan|kartice|kartica|kartom|plaćanje|imate li vi|ima li parking|ima li terasa|ima li igralište|ima li wi[- ]?fi|ima li dostava|ima li kartice|ima li kartica|ima li plaćanje)/;
-  const perksEn = /(outdoor|terrace|high chair|high chairs|play area|air[- ]?conditioned|to go|takeaway|parking|accessible|wi[- ]?fi|delivery|payment|cards|card|do you have parking|do you have outdoor seating|do you have wi[- ]?fi|do you have delivery|do you have cards|do you have payment)/;
+  // Ažurirani keywords na temelju stvarnih filtera iz baze
+  const perksHr =
+    /(krovna terasa|vanjska terasa|terasa|prvi red do mora|tematski objekt|javni prijevoz|otvoreno do kasno|otvoreno 0-24|rezervacije|kreditna kartica|kartica|besplatan wi[- ]?fi|wi[- ]?fi|hrana za van|kava za van|brzi zalogaji|igralište|jelovnik za djecu|djeca|kućni ljubimci|ljubimci|glazba uživo|karaoke|sportski bar|ljuta hrana|buffet|michelin|zvjezdica|parking|besplatni parking|plaćeni parking|klimatiziran|prostor za pušače|duhanski proizvodi|imate li vi|ima li.*parking|ima li.*terasa|ima li.*igralište|ima li.*wi[- ]?fi|ima li.*dostava|ima li.*kartice|ima li.*plaćanje|ima li.*klimatiziran|ima li.*glazbu|ima li.*karaoke|ima li.*sportski bar|ima li.*buffet|ima li.*michelin|ima li.*zvjezdicu|ima li.*ljubimce|ima li.*djecu|ima li.*kavu za van|ima li.*hranu za van|ima li.*brze zalogaje|ima li.*javni prijevoz|ima li.*otvoreno do kasno|ima li.*otvoreno 0-24|ima li.*rezervacije|ima li.*kreditnu karticu|ima li.*besplatan wi[- ]?fi|ima li.*besplatni parking|ima li.*plaćeni parking|ima li.*klimatiziran prostor|ima li.*prostor za pušače|ima li.*duhanske proizvode)/;
+  const perksEn =
+    /(rooftop view|outdoor seating|terrace|beachfront|themed establishment|public transport|late-night|24\/7|reservations|credit cards|free wi[- ]?fi|wi[- ]?fi|takeaway|coffee to go|quick bites|play areas|childrens menu|kids|pet-friendly|pets|live music|karaoke|sports bar|spicy food|buffet|michelin|starred|parking|free parking|paid parking|air-conditioned|smoking area|tobacco products|do you have.*parking|do you have.*outdoor|do you have.*terrace|do you have.*wi[- ]?fi|do you have.*delivery|do you have.*cards|do you have.*payment|do you have.*playground|do you have.*kids|do you have.*pets|do you have.*music|do you have.*karaoke|do you have.*sports bar|do you have.*buffet|do you have.*michelin|do you have.*star|do you have.*air conditioning|do you have.*smoking|do you have.*tobacco|have.*parking|have.*outdoor|have.*terrace|have.*wi[- ]?fi|have.*delivery|have.*cards|have.*payment)/;
   return (isHr && perksHr.test(t)) || (!isHr && perksEn.test(t));
 }
 
 function hasMealTypesKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const mealHr = /(doručak|dorucak|ručak|rucak|večera|vecera|brunch|obrok|obroci|vrste obroka|tipovi obroka|koje obroke|koje vrste obroka)/;
-  const mealEn = /(breakfast|lunch|dinner|brunch|meal|meals|types of meals|what meals|what kind of meals|meal types|types of food)/;
+  // Ažurirani keywords na temelju stvarnih filtera iz baze
+  const mealHr =
+    /(doručak|dorucak|ručak|rucak|večera|vecera|brunch|obrok|obroci|vrste obroka|tipovi obroka|koje obroke|koje vrste obroka|doručak|ručak|večera|brunch|breakfast|lunch|dinner|brunch)/;
+  const mealEn =
+    /(breakfast|lunch|dinner|brunch|meal|meals|types of meals|what meals|what kind of meals|meal types|types of food|breakfast|lunch|dinner|brunch)/;
   return (isHr && mealHr.test(t)) || (!isHr && mealEn.test(t));
 }
 
 function hasDietaryKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const dietHr = /(vegetar|vegetarijan|vegetarijanski|vegan|veganski|halal|bez glutena|bezgluten|gluten free|bezglutensko|dijeta|dijetalan|dijetalno|dijetalna|dijetalni)/;
-  const dietEn = /(vegetarian|vegetarian meal|vegetarian food|vegan|vegan meal|vegan food|halal|gluten[- ]?free|gluten free meal|gluten free food|diet|dietary|diet meal|diet food)/;
+  // Ažurirani keywords na temelju stvarnih filtera iz baze
+  const dietHr =
+    /(vegetarijanski|vegetarijan|vegan|veganski|bez glutena|bezgluten|halal|dijeta|dijetalan|dijetalno|dijetalna|dijetalni|vegetarian|vegan|gluten[- ]?free|halal)/;
+  const dietEn =
+    /(vegetarian|vegetarian meal|vegetarian food|vegan|vegan meal|vegan food|gluten[- ]?free|gluten free meal|gluten free food|halal|halal meal|halal food|diet|dietary|diet meal|diet food)/;
   return (isHr && dietHr.test(t)) || (!isHr && dietEn.test(t));
 }
 
 function hasReservationKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const resHr = /(rezervacij|rezervirat|rezervirati|rezervacije|rezervacija|booking)/;
+  const resHr =
+    /(rezervacij|rezervirat|rezervirati|rezervacije|rezervacija|booking)/;
   const resEn = /(reservations?|book( a)? table|reserve|booking)/;
   return (isHr && resHr.test(t)) || (!isHr && resEn.test(t));
 }
 
 function hasContactKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const contactHr = /(kontakt|telefon|telefona|broj telefona|email|web|facebook|instagram|tiktok|adresa|lokacija)/;
-  const contactEn = /(contact|phone|telephone|number|email|website|facebook|instagram|tiktok|address|location)/;
+  const contactHr =
+    /(kontakt|telefon|telefona|broj telefona|email|web|facebook|instagram|tiktok|adresa|lokacija)/;
+  const contactEn =
+    /(contact|phone|telephone|number|email|website|facebook|instagram|tiktok|address|location)/;
   return (isHr && contactHr.test(t)) || (!isHr && contactEn.test(t));
 }
 
 function hasDescriptionKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const descHr = /(opis|recite nešto|reci nesto|o restoranu|kakav je|opišite|opisite)/;
-  const descEn = /(describe|about the restaurant|description|what is.*like|tell me about)/;
+  const descHr =
+    /(opis|recite nešto|reci nesto|o restoranu|kakav je|opišite|opisite)/;
+  const descEn =
+    /(describe|about the restaurant|description|what is.*like|tell me about)/;
   return (isHr && descHr.test(t)) || (!isHr && descEn.test(t));
 }
 
@@ -123,24 +144,92 @@ function hasVirtualTourKeywords(t, lang) {
 
 function hasPriceKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const priceHr = /(cijena|cjena|cijene|cjene|skupoća|skupoca|kategorija cijene|price level|skup|jeftin|pristupačno|budžet|budget|kosta|košta)/;
-  const priceEn = /(price( range)?|budget|expensive|cheap|affordable|cost|costs)/;
+  const priceHr =
+    /(cijena|cjena|cijene|cjene|skupoća|skupoca|kategorija cijene|price level|skup|jeftin|pristupačno|budžet|budget|kosta|košta)/;
+  const priceEn =
+    /(price( range)?|budget|expensive|cheap|affordable|cost|costs)/;
   return (isHr && priceHr.test(t)) || (!isHr && priceEn.test(t));
 }
 
 function hasReviewsKeywords(t, lang) {
   const isHr = lang === 'hr';
-  const revHr = /(recenzij|recenzije|ocjen|ocjena|ocjene|rating|dojam|mišljenje|misljenje|kako je|kakva su iskustva|kakva su mišljenja|što misle|što kažu|što govore|dobro|loš|loše|iskustva|gosti|gostiju)/;
-  const revEn = /(reviews?|review|rating|ratings|feedback|opinion|opinions|guest experience|guest reviews|how is|how are|what do people think|what do guests say|good|bad|experience|experiences)/;
+  const revHr =
+    /(recenzij|recenzije|ocjen|ocjena|ocjene|rating|dojam|mišljenje|misljenje|kako je|kakva su iskustva|kakva su mišljenja|što misle|što kažu|što govore|dobro|loš|loše|iskustva|gosti|gostiju)/;
+  const revEn =
+    /(reviews?|review|rating|ratings|feedback|opinion|opinions|guest experience|guest reviews|how is|how are|what do people think|what do guests say|good|bad|experience|experiences)/;
   return (isHr && revHr.test(t)) || (!isHr && revEn.test(t));
 }
 
 function hasWhatOffersKeywords(t, lang) {
   const isHr = lang === 'hr';
   // Make this more specific to avoid conflicts with menu_search
-  const offersHr = /(što nudi|sto nudi|šta nudi|sta nudi|što ima|sto ima|šta ima|sta ima|ponuda|kakva je ponuda)/;
-  const offersEn = /(what do.*offer|what does.*offer|what.*have|what is.*menu)/;
+  const offersHr =
+    /(što nudi|sto nudi|šta nudi|sta nudi|što ima|sto ima|šta ima|sta ima|ponuda|kakva je ponuda|što nudi.*restoran|sto nudi.*restoran|šta nudi.*restoran|sta nudi.*restoran|što ima.*restoran|sto ima.*restoran|šta ima.*restoran|sta ima.*restoran|what does.*restaurant.*offer|what do.*restaurant.*offer|what.*restaurant.*have|what.*restaurant.*menu)/;
+  const offersEn =
+    /(what do.*offer|what does.*offer|what.*have|what is.*menu|what does.*restaurant.*offer|what do.*restaurant.*offer|what.*restaurant.*have|what.*restaurant.*menu)/;
   return (isHr && offersHr.test(t)) || (!isHr && offersEn.test(t));
+}
+
+// Funkcija za provjeru nepoznatih perks-a
+function isUnknownPerk(text, lang) {
+  const t = normalizeText(text);
+  const isHr = lang === 'hr';
+
+  // Poznati perks iz baze
+  const knownPerksHr =
+    /(krovna terasa|vanjska terasa|terasa|prvi red do mora|tematski objekt|javni prijevoz|otvoreno do kasno|otvoreno 0-24|rezervacije|kreditna kartica|kartica|besplatan wi[- ]?fi|wi[- ]?fi|hrana za van|kava za van|brzi zalogaji|igralište|jelovnik za djecu|djeca|kućni ljubimci|ljubimci|glazba uživo|karaoke|sportski bar|ljuta hrana|buffet|michelin|zvjezdica|parking|besplatni parking|plaćeni parking|klimatiziran|prostor za pušače|duhanski proizvodi)/;
+  const knownPerksEn =
+    /(rooftop view|outdoor seating|terrace|beachfront|themed establishment|public transport|late-night|24\/7|reservations|credit cards|free wi[- ]?fi|wi[- ]?fi|takeaway|coffee to go|quick bites|play areas|childrens menu|kids|pet-friendly|pets|live music|karaoke|sports bar|spicy food|buffet|michelin|starred|parking|free parking|paid parking|air-conditioned|smoking area|tobacco products)/;
+
+  // Provjeri da li sadrži "ima li" ili "do you have" ali nije poznati perk
+  const hasPerkQuestion = /(ima li|do you have|imate li|have.*)/i.test(text);
+  const isKnownPerk =
+    (isHr && knownPerksHr.test(t)) || (!isHr && knownPerksEn.test(t));
+
+  return hasPerkQuestion && !isKnownPerk;
+}
+
+// Funkcija za pametno prepoznavanje kombinacija
+function detectSmartCombinations(text, lang, intents) {
+  const t = normalizeText(text);
+  const isHr = lang === 'hr';
+
+  // Provjeri da li sadrži kombinaciju različitih tipova
+  const hasPerks = intents.includes('perks');
+  const hasMenu = intents.includes('menu_search');
+  const hasDietary = intents.includes('dietary_types');
+  const hasNearby = intents.includes('nearby');
+  const hasHours = intents.includes('hours');
+  const hasWhatOffers = intents.includes('what_offers');
+
+  // Kombinacije koje trebaju biti combined_search
+  const combinationPatterns = [
+    // Perks + Menu (terasa i pizza)
+    hasPerks && hasMenu,
+    // Perks + Dietary (terasa i veganska jela)
+    hasPerks && hasDietary,
+    // Menu + Nearby (pizza u blizini)
+    hasMenu && hasNearby,
+    // Menu + Dietary (vegan pizza)
+    hasMenu && hasDietary,
+    // Nearby + Dietary (vegan restoran u blizini)
+    hasNearby && hasDietary,
+    // What offers + Menu (što nudi restoran + jela)
+    hasWhatOffers && hasMenu,
+    // What offers + Perks (što nudi restoran + terasa)
+    hasWhatOffers && hasPerks,
+  ];
+
+  // Ako ima 2+ različita intents, vrati combined_search
+  const uniqueIntents = [...new Set(intents)];
+  if (
+    uniqueIntents.length >= 2 &&
+    combinationPatterns.some((pattern) => pattern)
+  ) {
+    return 'combined_search';
+  }
+
+  return null; // Nema kombinacije
 }
 
 function classifyIntent(text, lang, context = {}) {
@@ -148,6 +237,13 @@ function classifyIntent(text, lang, context = {}) {
   const isHr = lang === 'hr';
   // First detect multiple intents
   const intents = detectMultipleIntents(text, lang);
+
+  // Provjeri pametne kombinacije
+  const smartCombination = detectSmartCombinations(text, lang, intents);
+  if (smartCombination) {
+    return smartCombination;
+  }
+
   // If multiple intents detected, return combined_search ONLY if it makes sense
   if (intents.length > 1) {
     const hasNearby = intents.includes('nearby');
@@ -156,9 +252,13 @@ function classifyIntent(text, lang, context = {}) {
     const hasPerks = intents.includes('perks');
     const hasWhatOffers = intents.includes('what_offers');
     // Fraze za traženje/restoran/nearby
-    const searchPhrases = /(gdje|neki|restoran s|restoran za|near me|find|search|place|restaurant with|restoran|tražim|trazim)/i;
+    const searchPhrases =
+      /(gdje|neki|restoran s|restoran za|near me|find|search|place|restaurant with|restoran|tražim|trazim)/i;
     // 0. Upiti za 'što nudi ovaj restoran' vraćaju what_offers ako postoji restaurantId/thread
-  const isDirectWhatOffers = /što nudi|sto nudi|šta nudi|sta nudi|what does.*offer|what do.*offer/.test(t);
+    const isDirectWhatOffers =
+      /što nudi|sto nudi|šta nudi|sta nudi|what does.*offer|what do.*offer/.test(
+        t,
+      );
     if (hasWhatOffers && isDirectWhatOffers) {
       if (context.restaurantId || context.threadId) {
         return 'what_offers';
@@ -166,33 +266,89 @@ function classifyIntent(text, lang, context = {}) {
         return 'combined_search';
       }
     }
+
+    // Definiraj isDirectPerksQuestion na početku
+    const isDirectPerksQuestion =
+      /(imate li vi|do you have|do you offer|do you provide|ima li.*parking|ima li.*terasa|ima li.*wi[- ]?fi|ima li.*dostava|ima li.*kartice|ima li.*plaćanje|have.*parking|have.*outdoor|have.*terrace|have.*wi[- ]?fi|have.*delivery|have.*cards|have.*payment|ima li restoran.*parking|ima li restoran.*terasa|ima li restoran.*wi[- ]?fi|ima li restoran.*dostava|ima li restoran.*kartice|ima li restoran.*plaćanje)/i.test(
+        t,
+      );
     // 1. menu_search + nearby OR menu_search + search fraza → combined_search
-    if ((hasMenu && hasNearby) || (hasMenu && searchPhrases.test(text))) return 'combined_search';
-    // 2. perks + perks/menu_search OR perks + search fraza → combined_search
-  const isDirectPerksQuestion = /(imate li vi|do you have|do you offer|do you provide)/i.test(t);
-    if (hasPerks && intents.length === 1 && isDirectPerksQuestion) {
+    if ((hasMenu && hasNearby) || (hasMenu && searchPhrases.test(text)))
+      return 'combined_search';
+    // Special case: "gdje mogu pojesti dobru pizzu u blizini" should be combined_search
+    if (
+      hasNearby &&
+      hasMenu &&
+      /gdje.*pojesti|where.*eat|gdje.*jesti|where.*get/.test(text)
+    )
+      return 'combined_search';
+    // Special case: prioritiziraj perks za direct questions
+    if (hasPerks && hasMenu && isDirectPerksQuestion) {
       if (context.restaurantId || context.threadId) {
         return 'perks';
       } else {
         return 'combined_search';
       }
     }
-    if ((hasPerks && (intents.filter(i => i === 'perks').length > 1 || hasMenu)) || (hasPerks && searchPhrases.test(text))) return 'combined_search';
+    // 2. perks + perks/menu_search OR perks + search fraza → combined_search
+    // Prvo provjeri direct perks questions - prioritiziraj perks
+    if (hasPerks && isDirectPerksQuestion) {
+      if (context.restaurantId || context.threadId) {
+        return 'perks';
+      } else {
+        return 'combined_search';
+      }
+    }
+    // Zatim provjeri kombinacije - ali ne ako je direct perks question
+    if (
+      (hasPerks &&
+        (intents.filter((i) => i === 'perks').length > 1 || hasMenu)) ||
+      (hasPerks && searchPhrases.test(text))
+    ) {
+      // Ako je direct perks question, prioritiziraj perks
+      if (isDirectPerksQuestion) {
+        if (context.restaurantId || context.threadId) {
+          return 'perks';
+        } else {
+          return 'combined_search';
+        }
+      }
+      return 'combined_search';
+    }
+    // Dodatna provjera za perks + menu_search kombinacije
+    if (hasPerks && hasMenu && isDirectPerksQuestion) {
+      if (context.restaurantId || context.threadId) {
+        return 'perks';
+      } else {
+        return 'combined_search';
+      }
+    }
     // 3. dietary_types + "restoran s"/"restaurant with" → combined_search
-    if (hasDietary && (/restoran s|restaurant with|opcijama|options/.test(text))) return 'combined_search';
+    if (hasDietary && /restoran s|restaurant with|opcijama|options/.test(text))
+      return 'combined_search';
     // 4. nearby + dietary_types → combined_search
     if (hasNearby && hasDietary) return 'combined_search';
     // Perks upiti bez kombinacije i bez search fraza
-    if (hasPerks && intents.length === 1 && !searchPhrases.test(text)) return 'perks';
+    if (hasPerks && intents.length === 1 && !searchPhrases.test(text))
+      return 'perks';
     // Don't combine if it's a simple question about one thing
-    const isSimpleQuestion = /^(ima li|ima|imate|imaju|does|do you have|is there|do you serve)/i.test(text);
+    const isSimpleQuestion =
+      /^(ima li|ima|imate|imaju|does|do you have|is there|do you serve)/i.test(
+        text,
+      );
     if (isSimpleQuestion && intents.length === 2) {
       // For simple questions, prefer the more specific intent
       if (intents.includes('perks')) return 'perks';
       if (intents.includes('hours')) return 'hours';
       // Poboljšaj razliku dietary_types vs meal_types za engleski
-      if (intents.includes('dietary_types') && lang === 'en') return 'dietary_types';
-      if (intents.includes('meal_types') && lang === 'en' && !intents.includes('dietary_types')) return 'meal_types';
+      if (intents.includes('dietary_types') && lang === 'en')
+        return 'dietary_types';
+      if (
+        intents.includes('meal_types') &&
+        lang === 'en' &&
+        !intents.includes('dietary_types')
+      )
+        return 'meal_types';
       if (intents.includes('dietary_types')) return 'dietary_types';
       if (intents.includes('menu_search')) return 'menu_search';
       if (intents.includes('meal_types')) return 'meal_types';
@@ -207,19 +363,35 @@ function classifyIntent(text, lang, context = {}) {
     if (intents.includes('hours')) return 'hours';
     if (intents.includes('reviews')) return 'reviews';
     // Poboljšaj razliku dietary_types vs meal_types za engleski
-    if (intents.includes('dietary_types') && lang === 'en') return 'dietary_types';
-    if (intents.includes('meal_types') && lang === 'en' && !intents.includes('dietary_types')) return 'meal_types';
+    if (intents.includes('dietary_types') && lang === 'en')
+      return 'dietary_types';
+    if (
+      intents.includes('meal_types') &&
+      lang === 'en' &&
+      !intents.includes('dietary_types')
+    )
+      return 'meal_types';
     if (intents.includes('meal_types')) return 'meal_types';
     if (intents.includes('price')) return 'price';
     if (intents.includes('dietary_types')) return 'dietary_types';
     return 'combined_search';
   }
-  
+
   // Single intent detection with context-aware logic
   // Check for out_of_scope first (weather, general questions), ali ne za radno vrijeme
-  const outOfScopeHr = /(vrijeme(?!.*radno vrijeme)|weather|kako si|how are you|što radiš|what are you doing)/;
-  const outOfScopeEn = /(weather|how are you|what are you doing|hello|hi there)/;
-  if ((isHr && outOfScopeHr.test(t) && !hasHoursKeywords(t, lang)) || (!isHr && outOfScopeEn.test(t))) {
+  const outOfScopeHr =
+    /(vrijeme(?!.*radno vrijeme)|weather|kako si|how are you|što radiš|what are you doing)/;
+  const outOfScopeEn =
+    /(weather|how are you|what are you doing|hello|hi there)/;
+  if (
+    (isHr && outOfScopeHr.test(t) && !hasHoursKeywords(t, lang)) ||
+    (!isHr && outOfScopeEn.test(t))
+  ) {
+    return 'out_of_scope';
+  }
+
+  // Check for unknown perks - ako korisnik pita za nešto što nije u bazi
+  if (isUnknownPerk(text, lang)) {
     return 'out_of_scope';
   }
 
@@ -253,7 +425,7 @@ function classifyIntent(text, lang, context = {}) {
   // Menu search (greatly expanded)
   if (hasMenuKeywords(t, lang)) return 'menu_search';
 
-  // Meal types  
+  // Meal types
   if (hasMealTypesKeywords(t, lang)) return 'meal_types';
 
   // Reservations
@@ -275,9 +447,11 @@ function classifyIntent(text, lang, context = {}) {
   if (hasReviewsKeywords(t, lang)) return 'reviews';
 
   // Data provenance
-  const provHr = /(odakle (su|dolaze) podaci|izvora podataka|iz baze|od kud su info|odakle informacije)/;
+  const provHr =
+    /(odakle (su|dolaze) podaci|izvora podataka|iz baze|od kud su info|odakle informacije)/;
   const provEn = /(where.*data.*from|data source|provenance)/;
-  if ((isHr && provHr.test(t)) || (!isHr && provEn.test(t))) return 'data_provenance';
+  if ((isHr && provHr.test(t)) || (!isHr && provEn.test(t)))
+    return 'data_provenance';
 
   return 'out_of_scope';
 }
@@ -287,7 +461,7 @@ function extractIntentsFromText(text, lang) {
   return detectMultipleIntents(text, lang);
 }
 
-module.exports = { 
+module.exports = {
   classifyIntent,
   extractIntentsFromText,
   hasHoursKeywords,
@@ -296,5 +470,7 @@ module.exports = {
   hasPerksKeywords,
   hasMealTypesKeywords,
   hasDietaryKeywords,
-  hasWhatOffersKeywords
+  hasWhatOffersKeywords,
+  isUnknownPerk,
+  detectSmartCombinations,
 };
