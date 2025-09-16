@@ -13,12 +13,86 @@ function normalizeText(text) {
     .trim();
 }
 
+// Helper funkcija za kreiranje varijacija search term-a
+function createSearchVariations(term) {
+  if (!term) return [];
+
+  const variations = new Set();
+  const normalized = normalizeText(term);
+
+  // Dodaj originalni term
+  variations.add(normalized);
+
+  // Dodaj varijacije bez razmaka
+  variations.add(normalized.replace(/\s+/g, ''));
+
+  // Dodaj varijacije s različitim razmacima
+  variations.add(normalized.replace(/\s+/g, ' '));
+
+  // Dodaj varijacije s dijelovima (za složene nazive)
+  const words = normalized.split(/\s+/);
+  if (words.length > 1) {
+    // Dodaj svaku riječ pojedinačno
+    words.forEach((word) => {
+      if (word.length > 2) {
+        variations.add(word);
+      }
+    });
+
+    // Dodaj kombinacije riječi
+    for (let i = 0; i < words.length - 1; i++) {
+      for (let j = i + 1; j < words.length; j++) {
+        const combination = words.slice(i, j + 1).join(' ');
+        if (combination.length > 2) {
+          variations.add(combination);
+        }
+      }
+    }
+  }
+
+  return Array.from(variations).filter((v) => v.length > 0);
+}
+
 // Enhanced food synonyms map for better menu search
 const FOOD_SYNONYMS = new Map([
   // Vegan/Vegetarian/Gluten-free variations
-  ['vegan', ['vegan', 'vegan meal', 'vegan food', 'vegan options', 'veganski', 'vegan obrok', 'veganska jela', 'veganske opcije']],
-  ['vegetarian', ['vegetarian', 'vegetarian meal', 'vegetarian food', 'vegetarijan', 'vegetarijanski', 'vegetarijanska jela', 'vegetarijanske opcije']],
-  ['gluten-free', ['gluten-free', 'gluten free', 'glutenfree', 'bez glutena', 'bezglutensko', 'bezglutenska jela', 'bezglutenske opcije']],
+  [
+    'vegan',
+    [
+      'vegan',
+      'vegan meal',
+      'vegan food',
+      'vegan options',
+      'veganski',
+      'vegan obrok',
+      'veganska jela',
+      'veganske opcije',
+    ],
+  ],
+  [
+    'vegetarian',
+    [
+      'vegetarian',
+      'vegetarian meal',
+      'vegetarian food',
+      'vegetarijan',
+      'vegetarijanski',
+      'vegetarijanska jela',
+      'vegetarijanske opcije',
+    ],
+  ],
+  [
+    'gluten-free',
+    [
+      'gluten-free',
+      'gluten free',
+      'glutenfree',
+      'bez glutena',
+      'bezglutensko',
+      'bezglutenska jela',
+      'bezglutenske opcije',
+    ],
+  ],
   ['halal', ['halal', 'halal meal', 'halal food', 'halal opcije']],
   // Breakfast/Lunch/Dinner/Brunch
   ['breakfast', ['breakfast', 'doručak', 'dorucak']],
@@ -29,73 +103,79 @@ const FOOD_SYNONYMS = new Map([
   ['pizza', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
   ['pizze', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
   ['pica', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
-  
+
   // Burger variations
-  ['burger', ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic']],
-  ['hamburger', ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic']],
-  
+  [
+    'burger',
+    ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic'],
+  ],
+  [
+    'hamburger',
+    ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic'],
+  ],
+
   // Ćevapi variations
   ['cevap', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
   ['cevapi', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
   ['ćevapi', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
-  
+
   // Lasagna variations
   ['lazanj', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
   ['lazanje', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
   ['lasagna', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
-  
+
   // Pasta variations
   ['pasta', ['pasta', 'paste', 'tjestenina', 'tjestenine']],
   ['tjestenina', ['pasta', 'paste', 'tjestenina', 'tjestenine']],
-  
+
   // Salad variations
   ['salata', ['salata', 'salate', 'salatu', 'salad']],
   ['salate', ['salata', 'salate', 'salatu', 'salad']],
   ['salad', ['salata', 'salate', 'salatu', 'salad']],
-  
+
   // Soup variations
   ['juha', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
   ['supa', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
   ['soup', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
-  
+
   // Meat variations
   ['meso', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
   ['biftek', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
   ['steak', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
-  
+
   // Chicken variations
   ['piletina', ['piletina', 'pileća', 'pilece', 'chicken']],
   ['chicken', ['piletina', 'pileća', 'pilece', 'chicken']],
-  
+
   // Fish variations
   ['riba', ['riba', 'ribe', 'ribu', 'fish']],
   ['fish', ['riba', 'ribe', 'ribu', 'fish']],
-  
+
   // Seafood variations
   ['morski plodovi', ['morski plodovi', 'seafood', 'plodovi mora']],
   ['seafood', ['morski plodovi', 'seafood', 'plodovi mora']],
-  
+
   // Dessert variations
   ['desert', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
   ['dessert', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
   ['slastice', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
-  
+
   // Pancakes variations
   ['palačinke', ['palačinke', 'palačinka', 'palacinke', 'pancakes', 'pancake']],
   ['pancakes', ['palačinke', 'palačinka', 'palacinke', 'pancakes', 'pancake']],
-  
+
   // Coffee variations
   ['kava', ['kava', 'kave', 'kavu', 'kafi', 'coffee']],
   ['coffee', ['kava', 'kave', 'kavu', 'kafi', 'coffee']],
-  
+
   // Beer variations
   ['pivo', ['pivo', 'piva', 'pive', 'beer']],
   ['beer', ['pivo', 'piva', 'pive', 'beer']],
-  
+
   // Wine variations
   ['vino', ['vino', 'vina', 'vine', 'wine']],
   ['wine', ['vino', 'vina', 'vine', 'wine']],
-  
+
   // Rice variations
   ['riža', ['riža', 'riže', 'rižu', 'rice']],
   ['rice', ['riža', 'riže', 'rižu', 'rice']],
@@ -110,8 +190,11 @@ function createEnhancedSearchVariations(term) {
 
   // Add synonyms from map
   for (const [key, synonyms] of FOOD_SYNONYMS) {
-    if (normalizeText(key) === normalized || synonyms.some(s => normalizeText(s) === normalized)) {
-      synonyms.forEach(s => variations.add(normalizeText(s)));
+    if (
+      normalizeText(key) === normalized ||
+      synonyms.some((s) => normalizeText(s) === normalized)
+    ) {
+      synonyms.forEach((s) => variations.add(normalizeText(s)));
     }
   }
 
@@ -1185,7 +1268,7 @@ async function fetchReviewsSummary(restaurantId) {
 // New function: Get comprehensive restaurant offerings
 async function getRestaurantOfferings(restaurantId, lang = 'hr') {
   if (!restaurantId) return null;
-  
+
   try {
     const [restaurant, menuItems, drinkItems, types] = await Promise.all([
       fetchRestaurantDetails(restaurantId),
@@ -1216,12 +1299,15 @@ async function getRestaurantOfferings(restaurantId, lang = 'hr') {
       dietaryTypes: types?.dietaryTypes || [],
       priceCategory: restaurant?.priceCategory,
       menuItems: menuItems?.slice(0, 8) || [], // Limit to 8 items
-      drinkItems: drinkItems?.map(dt => ({
-        id: dt.drinkItem.id,
-        name: dt.name,
-        description: dt.description,
-        price: dt.drinkItem.price,
-      })).slice(0, 5) || [], // Limit to 5 drinks
+      drinkItems:
+        drinkItems
+          ?.map((dt) => ({
+            id: dt.drinkItem.id,
+            name: dt.name,
+            description: dt.description,
+            price: dt.drinkItem.price,
+          }))
+          .slice(0, 5) || [], // Limit to 5 drinks
       reservationEnabled: restaurant?.reservationEnabled,
       openingHours: restaurant?.openingHours,
       description: restaurant?.description,
