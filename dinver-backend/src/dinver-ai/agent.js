@@ -1,6 +1,12 @@
 'use strict';
 const { detectLanguage } = require('./language');
-const { classifyIntent, extractIntentsFromText, hasMenuKeywords, hasPerksKeywords, hasNearbyKeywords } = require('./intentClassifier');
+const {
+  classifyIntent,
+  extractIntentsFromText,
+  hasMenuKeywords,
+  hasPerksKeywords,
+  hasNearbyKeywords,
+} = require('./intentClassifier');
 const { inferIntent } = require('./llmRouter');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -1576,8 +1582,10 @@ async function handleCombinedSearch({
     const menuTerms = extractMenuTerms(text);
     if (menuTerms.length > 0) {
       const menuResults = await searchMenuAcrossRestaurants(menuTerms[0]);
-      const restaurantIdsWithMenu = new Set(menuResults.map(m => m.restaurantId));
-      restaurants = restaurants.filter(r => restaurantIdsWithMenu.has(r.id));
+      const restaurantIdsWithMenu = new Set(
+        menuResults.map((m) => m.restaurantId),
+      );
+      restaurants = restaurants.filter((r) => restaurantIdsWithMenu.has(r.id));
     }
   }
 
@@ -1624,14 +1632,30 @@ async function handleCombinedSearch({
 // Helper functions for combined search
 function extractMenuTerms(text) {
   const t = text.toLowerCase();
-  const foodWords = ['pizza', 'burger', 'pasta', 'salata', 'lazanje', 'biftek', 'piletina', 'riba', 'desert'];
-  return foodWords.filter(word => t.includes(word));
+  const foodWords = [
+    'pizza',
+    'burger',
+    'pasta',
+    'salata',
+    'lazanje',
+    'biftek',
+    'piletina',
+    'riba',
+    'desert',
+  ];
+  return foodWords.filter((word) => t.includes(word));
 }
 
 function extractPerkTerms(text) {
   const t = text.toLowerCase();
-  const perkWords = ['terasa', 'parking', 'stolica za djecu', 'klimatiziran', 'wi-fi'];
-  return perkWords.filter(word => t.includes(word));
+  const perkWords = [
+    'terasa',
+    'parking',
+    'stolica za djecu',
+    'klimatiziran',
+    'wi-fi',
+  ];
+  return perkWords.filter((word) => t.includes(word));
 }
 
 async function handleDataProvenance({ lang, text }) {
@@ -1659,17 +1683,19 @@ const ctxStore = require('./contextStore');
 async function chatAgent(input) {
   const startTime = Date.now();
 
+  const {
+    message,
+    language,
+    latitude,
+    longitude,
+    radiusKm,
+    threadId,
+    forcedRestaurantId,
+  } = input;
+
+  const lang = detectLanguage(message, language);
+
   try {
-    const {
-      message,
-      language,
-      latitude,
-      longitude,
-      radiusKm,
-      threadId,
-      forcedRestaurantId,
-    } = input;
-    const lang = detectLanguage(message, language);
     // Delegate intent inference to LLM. If router fails, fall back to simple classifier.
     let { intent, restaurantQuery, filters, menuTerm, confidence } =
       await inferIntent({
