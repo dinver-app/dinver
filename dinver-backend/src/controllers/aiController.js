@@ -115,4 +115,120 @@ module.exports = {
       return res.status(500).json({ error: 'AI service error' });
     }
   },
+
+  async getThreadByRestaurant(req, res) {
+    try {
+      const userId = req.user?.id;
+      const { restaurantId } = req.params || {};
+      if (!userId || !restaurantId) {
+        return res
+          .status(400)
+          .json({ error: 'User must be logged in and restaurantId is required' });
+      }
+      const t = await AiThread.findOne({
+        where: { userId, restaurantId },
+        order: [['lastMessageAt', 'DESC']],
+      });
+      if (!t) return res.status(200).json({ thread: null });
+      return res.status(200).json({
+        thread: {
+          threadId: t.id,
+          createdAt: t.createdAt,
+          lastMessageAt: t.lastMessageAt,
+          messageCount: t.messageCount,
+          readOnly: !!t.isReadOnly,
+        },
+      });
+    } catch (err) {
+      console.error('AI get thread error', err);
+      return res.status(500).json({ error: 'AI service error' });
+    }
+  },
+
+  async getThreads(req, res) {
+    try {
+      const userId = req.user?.id;
+      const { limit = 10 } = req.query || {};
+      if (!userId)
+        return res.status(401).json({ error: 'User must be logged in' });
+      
+      const items = await AiThread.findAll({
+        where: { userId },
+        order: [['lastMessageAt', 'DESC']],
+        limit: Number(limit) || 10,
+        attributes: [
+          'id',
+          'restaurantId',
+          'title',
+          'isReadOnly',
+          'messageCount',
+          'lastMessageAt',
+          'createdAt',
+        ],
+      });
+      return res.status(200).json({ threads: items });
+    } catch (err) {
+      console.error('AI list threads error', err);
+      return res.status(500).json({ error: 'AI service error' });
+    }
+  },
+
+  async getThreadById(req, res) {
+    try {
+      const { id } = req.params || {};
+      const userId = req.user?.id;
+      if (!userId)
+        return res.status(401).json({ error: 'User must be logged in' });
+      
+      const thread = await AiThread.findOne({
+        where: { id, userId },
+      });
+      if (!thread) return res.status(404).json({ error: 'not found' });
+      
+      const { AiMessage } = require('../../models');
+      const messages = await AiMessage.findAll({
+        where: { threadId: id },
+        order: [['createdAt', 'ASC']],
+        attributes: ['id', 'role', 'text', 'reply', 'createdAt'],
+      });
+      
+      return res.status(200).json({
+        thread: {
+          id: thread.id,
+          title: thread.title,
+          restaurantId: thread.restaurantId,
+          isReadOnly: thread.isReadOnly,
+          messageCount: thread.messageCount,
+          lastMessageAt: thread.lastMessageAt,
+          createdAt: thread.createdAt,
+          messages,
+        },
+      });
+    } catch (err) {
+      console.error('AI get thread error', err);
+      return res.status(500).json({ error: 'AI service error' });
+    }
+  },
+
+  async deleteThread(req, res) {
+    try {
+      const { id } = req.params || {};
+      const userId = req.user?.id;
+      if (!userId)
+        return res.status(401).json({ error: 'User must be logged in' });
+      
+      const thread = await AiThread.findOne({
+        where: { id, userId },
+      });
+      if (!thread) return res.status(404).json({ error: 'not found' });
+      
+      const { AiMessage } = require('../../models');
+      await AiMessage.destroy({ where: { threadId: id } });
+      await thread.destroy();
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('AI delete thread error', err);
+      return res.status(500).json({ error: 'AI service error' });
+    }
+  },
 };

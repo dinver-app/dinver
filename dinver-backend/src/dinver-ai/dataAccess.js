@@ -1,6 +1,129 @@
 'use strict';
 const { Op, Sequelize } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
+
+// Helper funkcija za normalizaciju teksta
+function normalizeText(text) {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Ukloni dijakritike
+    .replace(/[^\w\s]/g, '') // Ukloni interpunkciju
+    .trim();
+}
+
+// Enhanced food synonyms map for better menu search
+const FOOD_SYNONYMS = new Map([
+  // Pizza variations
+  ['pizza', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
+  ['pizze', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
+  ['pica', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
+  
+  // Burger variations
+  ['burger', ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic']],
+  ['hamburger', ['burger', 'hamburger', 'burgeri', 'hamburgeri', 'sendvič', 'sendvic']],
+  
+  // Ćevapi variations
+  ['cevap', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
+  ['cevapi', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
+  ['ćevapi', ['cevap', 'cevapi', 'ćevap', 'ćevapi', 'cevape', 'ćevape']],
+  
+  // Lasagna variations
+  ['lazanj', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
+  ['lazanje', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
+  ['lasagna', ['lazanj', 'lazanja', 'lazanje', 'lasagna', 'lasagne']],
+  
+  // Pasta variations
+  ['pasta', ['pasta', 'paste', 'tjestenina', 'tjestenine']],
+  ['tjestenina', ['pasta', 'paste', 'tjestenina', 'tjestenine']],
+  
+  // Salad variations
+  ['salata', ['salata', 'salate', 'salatu', 'salad']],
+  ['salate', ['salata', 'salate', 'salatu', 'salad']],
+  ['salad', ['salata', 'salate', 'salatu', 'salad']],
+  
+  // Soup variations
+  ['juha', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
+  ['supa', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
+  ['soup', ['juha', 'juhe', 'juhu', 'supa', 'supu', 'soup']],
+  
+  // Meat variations
+  ['meso', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
+  ['biftek', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
+  ['steak', ['meso', 'mesa', 'meat', 'biftek', 'odrezak', 'steak']],
+  
+  // Chicken variations
+  ['piletina', ['piletina', 'pileća', 'pilece', 'chicken']],
+  ['chicken', ['piletina', 'pileća', 'pilece', 'chicken']],
+  
+  // Fish variations
+  ['riba', ['riba', 'ribe', 'ribu', 'fish']],
+  ['fish', ['riba', 'ribe', 'ribu', 'fish']],
+  
+  // Seafood variations
+  ['morski plodovi', ['morski plodovi', 'seafood', 'plodovi mora']],
+  ['seafood', ['morski plodovi', 'seafood', 'plodovi mora']],
+  
+  // Dessert variations
+  ['desert', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
+  ['dessert', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
+  ['slastice', ['desert', 'deserti', 'dessert', 'slastice', 'slastica']],
+  
+  // Pancakes variations
+  ['palačinke', ['palačinke', 'palačinka', 'palacinke', 'pancakes', 'pancake']],
+  ['pancakes', ['palačinke', 'palačinka', 'palacinke', 'pancakes', 'pancake']],
+  
+  // Coffee variations
+  ['kava', ['kava', 'kave', 'kavu', 'kafi', 'coffee']],
+  ['coffee', ['kava', 'kave', 'kavu', 'kafi', 'coffee']],
+  
+  // Beer variations
+  ['pivo', ['pivo', 'piva', 'pive', 'beer']],
+  ['beer', ['pivo', 'piva', 'pive', 'beer']],
+  
+  // Wine variations
+  ['vino', ['vino', 'vina', 'vine', 'wine']],
+  ['wine', ['vino', 'vina', 'vine', 'wine']],
+  
+  // Rice variations
+  ['riža', ['riža', 'riže', 'rižu', 'rice']],
+  ['rice', ['riža', 'riže', 'rižu', 'rice']],
+]);
+
+// Enhanced search function with synonyms
+function createEnhancedSearchVariations(term) {
+  if (!term) return [];
+
+  const normalized = normalizeText(term);
+  const variations = new Set([normalized]);
+
+  // Add synonyms from map
+  for (const [key, synonyms] of FOOD_SYNONYMS) {
+    if (normalizeText(key) === normalized || synonyms.some(s => normalizeText(s) === normalized)) {
+      synonyms.forEach(s => variations.add(normalizeText(s)));
+    }
+  }
+
+  // Original plural/singular logic
+  if (normalized.endsWith('i')) {
+    variations.add(normalized.slice(0, -1)); // burgeri → burger
+  }
+  if (normalized.endsWith('e')) {
+    variations.add(normalized.slice(0, -1)); // pizze → pizz
+    variations.add(normalized.slice(0, -1) + 'a'); // pizze → pizza
+  }
+  if (
+    !normalized.endsWith('a') &&
+    !normalized.endsWith('e') &&
+    !normalized.endsWith('i')
+  ) {
+    variations.add(normalized + 'a'); // pizz → pizza
+    variations.add(normalized + 'i'); // burger → burgeri
+  }
+
+  return Array.from(variations);
+}
 const {
   Restaurant,
   MenuItem,
@@ -347,35 +470,78 @@ async function fetchRestaurantDetails(id) {
 
 async function searchMenuAcrossRestaurants(term) {
   if (!term) return [];
-  const like = `%${term}%`;
+
+  const variations = createEnhancedSearchVariations(term);
+  const likeConditions = variations.flatMap((v) => [
+    { name: { [Op.iLike]: `%${v}%` } },
+    { description: { [Op.iLike]: `%${v}%` } },
+  ]);
+
+  console.log('[Enhanced Global Menu Search] Searching with variations:', {
+    term,
+    variations: variations.slice(0, 8), // Show more variations
+  });
+
   // Find item translations first (both menu and drink) for partner restaurants only
   const [menuTranslations, drinkTranslations] = await Promise.all([
     MenuItemTranslation.findAll({
       where: {
-        [Op.or]: [
-          { name: { [Op.iLike]: like } },
-          { description: { [Op.iLike]: like } },
-        ],
+        [Op.or]: likeConditions,
+        ...(process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? {
+              [Op.or]: [
+                ...likeConditions,
+                Sequelize.where(
+                  Sequelize.fn('similarity', Sequelize.col('name'), term),
+                  { [Op.gt]: 0.3 },
+                ),
+              ],
+            }
+          : {}),
       },
       include: [
-        { model: MenuItem, as: 'menuItem', attributes: ['id', 'restaurantId'] },
+        {
+          model: MenuItem,
+          as: 'menuItem',
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          where: { isActive: true },
+          required: true,
+        },
       ],
+      order:
+        process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? [[Sequelize.fn('similarity', Sequelize.col('name'), term), 'DESC']]
+          : undefined,
       limit: 100,
     }),
     DrinkItemTranslation.findAll({
       where: {
-        [Op.or]: [
-          { name: { [Op.iLike]: like } },
-          { description: { [Op.iLike]: like } },
-        ],
+        [Op.or]: likeConditions,
+        ...(process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? {
+              [Op.or]: [
+                ...likeConditions,
+                Sequelize.where(
+                  Sequelize.fn('similarity', Sequelize.col('name'), term),
+                  { [Op.gt]: 0.3 },
+                ),
+              ],
+            }
+          : {}),
       },
       include: [
         {
           model: DrinkItem,
           as: 'drinkItem',
-          attributes: ['id', 'restaurantId'],
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          where: { isActive: true },
+          required: true,
         },
       ],
+      order:
+        process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? [[Sequelize.fn('similarity', Sequelize.col('name'), term), 'DESC']]
+          : undefined,
       limit: 100,
     }),
   ]);
@@ -531,61 +697,104 @@ function normalizeMenuTerm(s) {
 }
 
 function buildMenuLikeVariants(term) {
-  const t = normalizeMenuTerm(term);
-  if (!t) return [];
-  const variants = new Set();
-  variants.add(`%${t}%`);
-  // simple stemming: drop trailing vowels or common suffixes
-  if (t.length >= 4) {
-    variants.add(`%${t.slice(0, t.length - 1)}%`);
-    variants.add(`%${t.slice(0, t.length - 2)}%`);
-  }
-  // handle pizza/pizzu/pizze/pice/pica
-  if (t.startsWith('pizz')) variants.add('%pizz%');
-  if (t.startsWith('piz')) variants.add('%piz%');
-  if (t === 'pizza') variants.add('%pica%');
-  if (t === 'pica') variants.add('%pizza%');
-  return Array.from(variants);
+  const variations = createSearchVariations(term);
+  return variations.map((v) => `%${v}%`);
 }
 
 async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
   if (!restaurantId || !term) return [];
-  const likes = buildMenuLikeVariants(term);
+
+  const variations = createSearchVariations(term);
+  const likes = variations.map((v) => `%${v}%`);
+
+  // Generiraj LIKE uvjete za sve varijacije
+  const likeConditions = variations.flatMap((v) => [
+    { name: { [Op.iLike]: `%${v}%` } },
+    { description: { [Op.iLike]: `%${v}%` } },
+  ]);
+
+  console.log('[Menu Search] Searching with variations:', {
+    term,
+    variations: variations.slice(0, 5), // Log samo prve 5 varijacija
+    restaurantId,
+  });
+
   const [menuTranslations, drinkTranslations] = await Promise.all([
     MenuItemTranslation.findAll({
       where: {
-        [Op.or]: likes
-          .map((l) => ({ name: { [Op.iLike]: l } }))
-          .concat(likes.map((l) => ({ description: { [Op.iLike]: l } }))),
+        [Op.or]: likeConditions,
+        // Također dodaj Sequelize.where za similarity search ako je dostupan
+        ...(process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? {
+              [Op.or]: [
+                ...likeConditions,
+                Sequelize.where(
+                  Sequelize.fn('similarity', Sequelize.col('name'), term),
+                  { [Op.gt]: 0.3 },
+                ),
+              ],
+            }
+          : {}),
       },
       include: [
         {
           model: MenuItem,
           as: 'menuItem',
-          attributes: ['id', 'restaurantId'],
-          where: { restaurantId },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          where: { restaurantId, isActive: true },
           required: true,
+          include: [
+            {
+              model: MenuItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name', 'description'],
+            },
+          ],
         },
       ],
       attributes: ['language'],
+      order:
+        process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? [[Sequelize.fn('similarity', Sequelize.col('name'), term), 'DESC']]
+          : undefined,
       limit: 50,
     }),
     DrinkItemTranslation.findAll({
       where: {
-        [Op.or]: likes
-          .map((l) => ({ name: { [Op.iLike]: l } }))
-          .concat(likes.map((l) => ({ description: { [Op.iLike]: l } }))),
+        [Op.or]: likeConditions,
+        ...(process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? {
+              [Op.or]: [
+                ...likeConditions,
+                Sequelize.where(
+                  Sequelize.fn('similarity', Sequelize.col('name'), term),
+                  { [Op.gt]: 0.3 },
+                ),
+              ],
+            }
+          : {}),
       },
       include: [
         {
           model: DrinkItem,
           as: 'drinkItem',
-          attributes: ['id', 'restaurantId'],
-          where: { restaurantId },
+          attributes: ['id', 'restaurantId', 'price', 'imageUrl'],
+          where: { restaurantId, isActive: true },
           required: true,
+          include: [
+            {
+              model: DrinkItemTranslation,
+              as: 'translations',
+              attributes: ['language', 'name', 'description'],
+            },
+          ],
         },
       ],
       attributes: ['language'],
+      order:
+        process.env.POSTGRES_SIMILARITY_ENABLED === 'true'
+          ? [[Sequelize.fn('similarity', Sequelize.col('name'), term), 'DESC']]
+          : undefined,
       limit: 50,
     }),
   ]);
@@ -963,6 +1172,58 @@ async function fetchReviewsSummary(restaurantId) {
   return { ratings, totalReviews: reviews.length };
 }
 
+// New function: Get comprehensive restaurant offerings
+async function getRestaurantOfferings(restaurantId, lang = 'hr') {
+  if (!restaurantId) return null;
+  
+  try {
+    const [restaurant, menuItems, drinkItems, types] = await Promise.all([
+      fetchRestaurantDetails(restaurantId),
+      fetchAllMenuItemsForRestaurant(restaurantId),
+      DrinkItemTranslation.findAll({
+        include: [
+          {
+            model: DrinkItem,
+            as: 'drinkItem',
+            where: { restaurantId },
+            attributes: ['id', 'price'],
+            required: true,
+          },
+        ],
+        where: { language: lang },
+        limit: 10,
+      }),
+      fetchTypesForRestaurant(restaurantId),
+    ]);
+
+    const offerings = {
+      restaurantId,
+      restaurantName: restaurant?.name,
+      foodTypes: types?.foodTypes || [],
+      establishmentTypes: types?.establishmentTypes || [],
+      establishmentPerks: types?.establishmentPerks || [],
+      mealTypes: types?.mealTypes || [],
+      dietaryTypes: types?.dietaryTypes || [],
+      priceCategory: restaurant?.priceCategory,
+      menuItems: menuItems?.slice(0, 8) || [], // Limit to 8 items
+      drinkItems: drinkItems?.map(dt => ({
+        id: dt.drinkItem.id,
+        name: dt.name,
+        description: dt.description,
+        price: dt.drinkItem.price,
+      })).slice(0, 5) || [], // Limit to 5 drinks
+      reservationEnabled: restaurant?.reservationEnabled,
+      openingHours: restaurant?.openingHours,
+      description: restaurant?.description,
+    };
+
+    return offerings;
+  } catch (error) {
+    console.error('Error fetching restaurant offerings:', error);
+    return null;
+  }
+}
+
 module.exports = {
   fetchPartnersBasic,
   fetchRestaurantDetails,
@@ -976,4 +1237,5 @@ module.exports = {
   fetchReviewsSummary,
   getAllPerksCached,
   resolvePerkIdByName,
+  getRestaurantOfferings,
 };
