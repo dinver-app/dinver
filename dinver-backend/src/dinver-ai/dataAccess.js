@@ -15,6 +15,16 @@ function normalizeText(text) {
 
 // Enhanced food synonyms map for better menu search
 const FOOD_SYNONYMS = new Map([
+  // Vegan/Vegetarian/Gluten-free variations
+  ['vegan', ['vegan', 'vegan meal', 'vegan food', 'vegan options', 'veganski', 'vegan obrok', 'veganska jela', 'veganske opcije']],
+  ['vegetarian', ['vegetarian', 'vegetarian meal', 'vegetarian food', 'vegetarijan', 'vegetarijanski', 'vegetarijanska jela', 'vegetarijanske opcije']],
+  ['gluten-free', ['gluten-free', 'gluten free', 'glutenfree', 'bez glutena', 'bezglutensko', 'bezglutenska jela', 'bezglutenske opcije']],
+  ['halal', ['halal', 'halal meal', 'halal food', 'halal opcije']],
+  // Breakfast/Lunch/Dinner/Brunch
+  ['breakfast', ['breakfast', 'doručak', 'dorucak']],
+  ['lunch', ['lunch', 'ručak', 'rucak']],
+  ['dinner', ['dinner', 'večera', 'vecera']],
+  ['brunch', ['brunch', 'brunch obrok']],
   // Pizza variations
   ['pizza', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
   ['pizze', ['pizza', 'pizz', 'pica', 'pizze', 'pizzu', 'pice', 'picu']],
