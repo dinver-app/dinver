@@ -8,7 +8,6 @@ const {
   hasNearbyKeywords,
 } = require('./intentClassifier');
 const { inferIntent } = require('./llmRouter');
-const { getMediaUrl } = require('../../config/cdn');
 const {
   fetchRestaurantDetails,
   searchMenuAcrossRestaurants,
@@ -28,7 +27,6 @@ const { generateNaturalReply } = require('./llm');
 const { logAiInteraction } = require('../utils/metrics');
 const {
   logIntentClassification,
-  logMenuSearch,
   logContextUpdate,
   logError,
   logPerformance,
@@ -463,9 +461,7 @@ async function handleNearby({
       return {
         id: r.id,
         name: r.name,
-        thumbnailUrl: details?.thumbnailUrl
-          ? getMediaUrl(details.thumbnailUrl, 'image')
-          : null,
+        thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key from database
         distanceKm: r.distanceKm,
         rating: r.rating || null,
         priceCategory: priceLabel,
@@ -497,7 +493,7 @@ async function handleNearby({
     name: r.name,
     address: r.address,
     place: r.place,
-    thumbnailUrl: r.thumbnailUrl ? getMediaUrl(r.thumbnailUrl, 'image') : null,
+    thumbnailUrl: r.thumbnailUrl || null, // Keep as raw key, transform when serving
     distance: r.distanceKm,
   }));
   return { text: textOut, restaurantId: null, restaurants };
@@ -835,7 +831,7 @@ async function handleMenuSearch({
         type: it.type,
         id: it.id,
         price: it.price ?? null,
-        thumbnailUrl: it.thumbnailUrl || null,
+        thumbnailUrl: it.thumbnailUrl || null, // Keep as raw key, transform when serving
         translations: it.translations || null,
         name: it.name || null,
         restaurantId: it.restaurantId || r?.id || null,
@@ -898,9 +894,7 @@ async function handleMenuSearch({
     type: r.type,
     id: r.item?.id || null,
     price: r.item?.price ?? null,
-    thumbnailUrl: r.item?.thumbnailUrl
-      ? getMediaUrl(r.item.thumbnailUrl, 'image')
-      : null,
+    thumbnailUrl: r.item?.thumbnailUrl || null, // Keep as raw key, transform when serving
     translations: r.item?.translations || null,
     name: r.item?.translations
       ? lang === 'hr'
@@ -1259,9 +1253,7 @@ async function handleDescription({
           name: details?.name,
           address: details?.address || null,
           place: details?.place || null,
-          thumbnailUrl: details?.thumbnailUrl
-            ? getMediaUrl(details.thumbnailUrl, 'image')
-            : null,
+          thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key, transform when serving
           openNow,
           priceCategory: priceLabel,
         },
@@ -1330,7 +1322,7 @@ async function handleDescription({
       name: details?.name,
       address: details?.address || null,
       place: details?.place || null,
-      thumbnailUrl: details?.thumbnailUrl || null,
+      thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key, transform when serving
       openNow,
       priceCategory: priceLabel,
     },
