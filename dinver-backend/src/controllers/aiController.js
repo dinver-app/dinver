@@ -3,6 +3,7 @@ const { chatAgent } = require('../dinver-ai/agent');
 const { fetchRestaurantDetails } = require('../dinver-ai/dataAccess');
 const { v4: uuidv4 } = require('uuid');
 const { AiThread, AiMessage } = require('../../models');
+const { getMediaUrl } = require('../../config/cdn');
 
 async function findOrCreateActiveThread({
   userId,
@@ -116,6 +117,37 @@ module.exports = {
         } catch {}
       }
 
+      // Transform thumbnailUrls in response (raw keys to CloudFront URLs)
+      if (normalized.restaurants && Array.isArray(normalized.restaurants)) {
+        normalized.restaurants = normalized.restaurants.map((restaurant) => ({
+          ...restaurant,
+          thumbnailUrl:
+            restaurant.thumbnailUrl &&
+            !restaurant.thumbnailUrl.includes('cloudfront.net')
+              ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+              : restaurant.thumbnailUrl,
+        }));
+      }
+      if (normalized.items && Array.isArray(normalized.items)) {
+        normalized.items = normalized.items.map((item) => ({
+          ...item,
+          thumbnailUrl:
+            item.thumbnailUrl && !item.thumbnailUrl.includes('cloudfront.net')
+              ? getMediaUrl(item.thumbnailUrl, 'image')
+              : item.thumbnailUrl,
+        }));
+      }
+      if (
+        normalized.restaurant &&
+        normalized.restaurant.thumbnailUrl &&
+        !normalized.restaurant.thumbnailUrl.includes('cloudfront.net')
+      ) {
+        normalized.restaurant.thumbnailUrl = getMediaUrl(
+          normalized.restaurant.thumbnailUrl,
+          'image',
+        );
+      }
+
       // Spremi u bazu samo ako je korisnik logiran
       let finalThreadId = threadId;
       if (userId) {
@@ -125,12 +157,77 @@ module.exports = {
           titleSeed: message,
           threadId,
         });
+
+        // Create a copy for database storage with raw keys (not transformed URLs)
+        const normalizedForDb = JSON.parse(JSON.stringify(normalized));
+
+        // Remove getMediaUrl transformations from restaurants array
+        if (
+          normalizedForDb.restaurants &&
+          Array.isArray(normalizedForDb.restaurants)
+        ) {
+          normalizedForDb.restaurants = normalizedForDb.restaurants.map(
+            (restaurant) => {
+              // If thumbnailUrl is a CloudFront URL, we need to extract the raw key
+              let rawThumbnailUrl = restaurant.thumbnailUrl;
+              if (
+                rawThumbnailUrl &&
+                rawThumbnailUrl.includes('cloudfront.net')
+              ) {
+                // Extract the key from CloudFront URL
+                const keyMatch = rawThumbnailUrl.match(
+                  /restaurant_thumbnails\/[^?]+/,
+                );
+                rawThumbnailUrl = keyMatch ? keyMatch[0] : null;
+              }
+              return {
+                ...restaurant,
+                thumbnailUrl: rawThumbnailUrl,
+              };
+            },
+          );
+        }
+
+        // Remove getMediaUrl transformations from items array
+        if (normalizedForDb.items && Array.isArray(normalizedForDb.items)) {
+          normalizedForDb.items = normalizedForDb.items.map((item) => {
+            let rawThumbnailUrl = item.thumbnailUrl;
+            if (rawThumbnailUrl && rawThumbnailUrl.includes('cloudfront.net')) {
+              // Extract the key from CloudFront URL
+              const keyMatch = rawThumbnailUrl.match(
+                /restaurant_images\/[^?]+/,
+              );
+              rawThumbnailUrl = keyMatch ? keyMatch[0] : null;
+            }
+            return {
+              ...item,
+              thumbnailUrl: rawThumbnailUrl,
+            };
+          });
+        }
+
+        // Remove getMediaUrl transformations from single restaurant
+        if (
+          normalizedForDb.restaurant &&
+          normalizedForDb.restaurant.thumbnailUrl
+        ) {
+          let rawThumbnailUrl = normalizedForDb.restaurant.thumbnailUrl;
+          if (rawThumbnailUrl && rawThumbnailUrl.includes('cloudfront.net')) {
+            // Extract the key from CloudFront URL
+            const keyMatch = rawThumbnailUrl.match(
+              /restaurant_thumbnails\/[^?]+/,
+            );
+            rawThumbnailUrl = keyMatch ? keyMatch[0] : null;
+          }
+          normalizedForDb.restaurant.thumbnailUrl = rawThumbnailUrl;
+        }
+
         await appendDbMessage(dbThread, 'user', message);
         await appendDbMessage(
           dbThread,
           'assistant',
-          normalized.text,
-          normalized,
+          normalizedForDb.text,
+          normalizedForDb,
         );
         // Koristi ID iz baze umjesto originalnog threadId
         finalThreadId = dbThread.id;
@@ -215,10 +312,62 @@ module.exports = {
       if (!thread) return res.status(404).json({ error: 'not found' });
 
       const { AiMessage } = require('../../models');
+      const { getMediaUrl } = require('../../config/cdn');
       const messages = await AiMessage.findAll({
         where: { threadId: id },
         order: [['createdAt', 'ASC']],
         attributes: ['id', 'role', 'text', 'reply', 'createdAt'],
+      });
+
+      // Transform thumbnailUrls in reply objects (raw keys to CloudFront URLs)
+      const transformedMessages = messages.map((msg) => {
+        const messageData = msg.toJSON();
+        if (messageData.reply && typeof messageData.reply === 'object') {
+          // Transform restaurants array
+          if (
+            messageData.reply.restaurants &&
+            Array.isArray(messageData.reply.restaurants)
+          ) {
+            messageData.reply.restaurants = messageData.reply.restaurants.map(
+              (restaurant) => ({
+                ...restaurant,
+                thumbnailUrl:
+                  restaurant.thumbnailUrl &&
+                  !restaurant.thumbnailUrl.includes('cloudfront.net')
+                    ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+                    : restaurant.thumbnailUrl,
+              }),
+            );
+          }
+          // Transform items array
+          if (
+            messageData.reply.items &&
+            Array.isArray(messageData.reply.items)
+          ) {
+            messageData.reply.items = messageData.reply.items.map((item) => ({
+              ...item,
+              thumbnailUrl:
+                item.thumbnailUrl &&
+                !item.thumbnailUrl.includes('cloudfront.net')
+                  ? getMediaUrl(item.thumbnailUrl, 'image')
+                  : item.thumbnailUrl,
+            }));
+          }
+          // Transform single restaurant
+          if (
+            messageData.reply.restaurant &&
+            messageData.reply.restaurant.thumbnailUrl &&
+            !messageData.reply.restaurant.thumbnailUrl.includes(
+              'cloudfront.net',
+            )
+          ) {
+            messageData.reply.restaurant.thumbnailUrl = getMediaUrl(
+              messageData.reply.restaurant.thumbnailUrl,
+              'image',
+            );
+          }
+        }
+        return messageData;
       });
 
       return res.status(200).json({
@@ -230,7 +379,7 @@ module.exports = {
           messageCount: thread.messageCount,
           lastMessageAt: thread.lastMessageAt,
           createdAt: thread.createdAt,
-          messages,
+          messages: transformedMessages,
         },
       });
     } catch (err) {
