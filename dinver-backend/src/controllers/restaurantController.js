@@ -2961,6 +2961,51 @@ const getRestaurantsByIdsPost = async (req, res) => {
   }
 };
 
+const getRestaurantCities = async (req, res) => {
+  try {
+    // Get all claimed restaurants with their place and coordinates
+    const restaurants = await Restaurant.findAll({
+      where: {
+        isClaimed: true,
+        place: { [Op.ne]: null },
+        latitude: { [Op.ne]: null },
+        longitude: { [Op.ne]: null },
+      },
+      attributes: ['place', 'latitude', 'longitude'],
+    });
+
+    // Group restaurants by place and count them
+    const cityMap = new Map();
+
+    restaurants.forEach((restaurant) => {
+      const place = restaurant.place;
+      if (!cityMap.has(place)) {
+        cityMap.set(place, {
+          name: place,
+          count: 0,
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude,
+        });
+      }
+      cityMap.get(place).count += 1;
+    });
+
+    // Convert to array and sort by count (descending)
+    const cities = Array.from(cityMap.values()).sort(
+      (a, b) => b.count - a.count,
+    );
+
+    res.json({
+      cities,
+      total: cities.length,
+      totalRestaurants: restaurants.length,
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant cities:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant cities' });
+  }
+};
+
 const submitClaimForm = async (req, res) => {
   try {
     const {
@@ -3194,4 +3239,5 @@ module.exports = {
   submitClaimForm,
   getRestaurantsMap,
   getRestaurantsByIdsPost,
+  getRestaurantCities,
 };
