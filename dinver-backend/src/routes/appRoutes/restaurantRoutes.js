@@ -67,4 +67,10 @@ router.get(
 );
 router.get('/menu/:id', appApiKeyAuth, restaurantController.getRestaurantMenu);
 
+router.get(
+  '/restaurants/cities',
+  appApiKeyAuth,
+  restaurantController.getRestaurantCities,
+);
+
 module.exports = router;
