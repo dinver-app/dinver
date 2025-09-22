@@ -743,9 +743,7 @@ async function searchMenuAcrossRestaurants(term) {
             id: item.id,
             restaurantId: item.restaurantId,
             price: item.price != null ? Number(item.price) : null,
-            thumbnailUrl: item.imageUrl
-              ? getMediaUrl(item.imageUrl, 'image')
-              : null,
+            thumbnailUrl: item.imageUrl || null,
             translations: toTranslationsMap(item.translations || []),
           },
         },
@@ -767,9 +765,7 @@ async function searchMenuAcrossRestaurants(term) {
             id: item.id,
             restaurantId: item.restaurantId,
             price: item.price != null ? Number(item.price) : null,
-            thumbnailUrl: item.imageUrl
-              ? getMediaUrl(item.imageUrl, 'image')
-              : null,
+            thumbnailUrl: item.imageUrl || null,
             translations: toTranslationsMap(item.translations || []),
           },
         },
@@ -951,7 +947,7 @@ async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
       id: obj.id,
       restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
-      thumbnailUrl: obj.imageUrl ? getMediaUrl(obj.imageUrl, 'image') : null,
+      thumbnailUrl: obj.imageUrl || null,
       translations: toTranslationsMap(obj.translations || []),
       name: pickNameByLang(obj.translations || [], preferLang),
     });
@@ -963,7 +959,7 @@ async function searchMenuForRestaurant(restaurantId, term, preferLang = 'hr') {
       id: obj.id,
       restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
-      thumbnailUrl: obj.imageUrl ? getMediaUrl(obj.imageUrl, 'image') : null,
+      thumbnailUrl: obj.imageUrl || null,
       translations: toTranslationsMap(obj.translations || []),
       name: pickNameByLang(obj.translations || [], preferLang),
     });
@@ -1023,7 +1019,7 @@ async function fetchAllMenuItemsForRestaurant(
       id: obj.id,
       restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
-      thumbnailUrl: obj.imageUrl ? getMediaUrl(obj.imageUrl, 'image') : null,
+      thumbnailUrl: obj.imageUrl || null,
       translations: toTranslationsMap(obj.translations || []),
       name: pickNameByLang(obj.translations || [], preferLang),
     });
@@ -1035,7 +1031,7 @@ async function fetchAllMenuItemsForRestaurant(
       id: obj.id,
       restaurantId: obj.restaurantId,
       price: obj.price != null ? Number(obj.price) : null,
-      thumbnailUrl: obj.imageUrl ? getMediaUrl(obj.imageUrl, 'image') : null,
+      thumbnailUrl: obj.imageUrl || null,
       translations: toTranslationsMap(obj.translations || []),
       name: pickNameByLang(obj.translations || [], preferLang),
     });
