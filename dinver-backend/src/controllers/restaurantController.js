@@ -2147,6 +2147,267 @@ const getFullRestaurantDetails = async (req, res) => {
   }
 };
 
+const getFullRestaurantDetailsBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { includeWifi } = req.query;
+
+    // Get restaurant base data
+    const restaurant = await Restaurant.findOne({
+      where: { slug },
+      include: [
+        {
+          model: PriceCategory,
+          as: 'priceCategory',
+          attributes: ['id', 'nameEn', 'nameHr', 'icon', 'level'],
+        },
+        {
+          model: require('../../models').RestaurantTranslation,
+          as: 'translations',
+        },
+      ],
+      attributes: [
+        'id',
+        'name',
+        'address',
+        'place',
+        'latitude',
+        'longitude',
+        'phone',
+        'rating',
+        'userRatingsTotal',
+        'priceLevel',
+        'thumbnailUrl',
+        'slug',
+        'isClaimed',
+        'foodTypes',
+        'establishmentTypes',
+        'establishmentPerks',
+        'mealTypes',
+        'dietaryTypes',
+        'priceCategoryId',
+        'reservationEnabled',
+        'websiteUrl',
+        'fbUrl',
+        'igUrl',
+        'ttUrl',
+        'email',
+        'images',
+        'openingHours',
+        'customWorkingDays',
+        'subdomain',
+        'virtualTourUrl',
+        ...(includeWifi
+          ? ['wifiSsid', 'wifiPassword', 'showWifiCredentials']
+          : []),
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Transform restaurant data to include translations
+    const restaurantWithTranslations = {
+      ...restaurant.get(),
+      description: {
+        en:
+          restaurant.translations.find((t) => t.language === 'en')
+            ?.description || '',
+        hr:
+          restaurant.translations.find((t) => t.language === 'hr')
+            ?.description || '',
+      },
+    };
+
+    // Remove translations from the response since we've transformed them
+    delete restaurantWithTranslations.translations;
+
+    // Get all reviews for rating calculations
+    const allReviews = await Review.findAll({
+      where: {
+        restaurantId: restaurant.id,
+        isHidden: false,
+      },
+    });
+
+    // Calculate average ratings
+    const calculateAverage = (reviews, field) => {
+      const sum = reviews.reduce(
+        (acc, review) => acc + (review[field] || 0),
+        0,
+      );
+      return reviews.length > 0 ? Number((sum / reviews.length).toFixed(2)) : 0;
+    };
+
+    const ratings = {
+      overall: calculateAverage(allReviews, 'rating'),
+      foodQuality: calculateAverage(allReviews, 'foodQuality'),
+      service: calculateAverage(allReviews, 'service'),
+      atmosphere: calculateAverage(allReviews, 'atmosphere'),
+    };
+
+    // Get latest 5 reviews for display
+    const { count: totalReviews, rows: reviews } = await Review.findAndCountAll(
+      {
+        where: {
+          restaurantId: restaurant.id,
+          isHidden: false,
+        },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: 5,
+      },
+    );
+
+    // Get all type data
+    const [
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+    ] = await Promise.all([
+      FoodType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.foodTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      EstablishmentPerk.findAll({
+        where: {
+          id: { [Op.in]: restaurant.establishmentPerks || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      MealType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.mealTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+      DietaryType.findAll({
+        where: {
+          id: { [Op.in]: restaurant.dietaryTypes || [] },
+        },
+        attributes: ['id', 'nameEn', 'nameHr', 'icon'],
+      }),
+    ]);
+
+    // Filter customWorkingDays to only include dates within next 30 days
+    const now = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(now.getDate() + 30);
+
+    const filteredCustomWorkingDays = restaurantWithTranslations
+      .customWorkingDays?.customWorkingDays
+      ? {
+          customWorkingDays:
+            restaurantWithTranslations.customWorkingDays.customWorkingDays.filter(
+              (day) => {
+                const dayDate = new Date(day.date);
+                const startOfDayDate = new Date(dayDate.setHours(0, 0, 0, 0));
+                const startOfToday = new Date(now.setHours(0, 0, 0, 0));
+                const startOfThirtyDays = new Date(
+                  thirtyDaysFromNow.setHours(0, 0, 0, 0),
+                );
+
+                return (
+                  startOfDayDate >= startOfToday &&
+                  startOfDayDate <= startOfThirtyDays
+                );
+              },
+            ),
+        }
+      : { customWorkingDays: [] };
+
+    // Transform final restaurant data
+    const finalRestaurantData = {
+      ...restaurantWithTranslations,
+      foodTypes,
+      establishmentTypes,
+      establishmentPerks,
+      mealTypes,
+      dietaryTypes,
+      reviews,
+      totalReviews,
+      ratings,
+      customWorkingDays: filteredCustomWorkingDays,
+    };
+
+    // Always include rating and userRatingsTotal from the Restaurant model
+    finalRestaurantData.rating = restaurant.rating;
+    finalRestaurantData.userRatingsTotal = restaurant.userRatingsTotal;
+
+    // Transform thumbnail URL if exists
+    if (finalRestaurantData.thumbnailUrl) {
+      finalRestaurantData.thumbnailUrl = getMediaUrl(
+        finalRestaurantData.thumbnailUrl,
+        'image',
+      );
+    }
+
+    // Transform image gallery URLs
+    if (
+      finalRestaurantData.images &&
+      Array.isArray(finalRestaurantData.images)
+    ) {
+      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) =>
+        getMediaUrl(imageKey, 'image'),
+      );
+    }
+
+    // Transform review photos URLs
+    if (
+      finalRestaurantData.reviews &&
+      Array.isArray(finalRestaurantData.reviews)
+    ) {
+      // Convert all reviews to plain JS objects to avoid circular references
+      finalRestaurantData.reviews = finalRestaurantData.reviews.map((r) =>
+        typeof r.get === 'function' ? r.get({ plain: true }) : r,
+      );
+
+      finalRestaurantData.reviews = finalRestaurantData.reviews.map(
+        (review) => {
+          if (review.photos && Array.isArray(review.photos)) {
+            return {
+              ...review,
+              photos: review.photos.map((photoKey) =>
+                getMediaUrl(photoKey, 'image'),
+              ),
+            };
+          }
+          return review;
+        },
+      );
+    }
+
+    // Only include WiFi data if it's allowed and requested
+    if (!includeWifi || !finalRestaurantData.showWifiCredentials) {
+      delete finalRestaurantData.wifiSsid;
+      delete finalRestaurantData.wifiPassword;
+      delete finalRestaurantData.showWifiCredentials;
+    }
+
+    res.json(finalRestaurantData);
+  } catch (error) {
+    console.error('Error fetching restaurant details by slug:', error);
+    res.status(500).json({ error: 'Failed to fetch restaurant details' });
+  }
+};
+
 const getRestaurantMenu = async (req, res) => {
   try {
     const { id } = req.params;
@@ -3231,6 +3492,7 @@ module.exports = {
   nearYou,
   getPartners,
   getFullRestaurantDetails,
+  getFullRestaurantDetailsBySlug,
   getRestaurantMenu,
   getRestaurantBySubdomain,
   getClaimFilters,

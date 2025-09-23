@@ -65,6 +65,13 @@ router.get(
   appApiKeyAuth,
   restaurantController.getFullRestaurantDetails,
 );
+
+router.get(
+  '/detailsBySlug/:slug',
+  appApiKeyAuth,
+  restaurantController.getFullRestaurantDetailsBySlug,
+);
+
 router.get('/menu/:id', appApiKeyAuth, restaurantController.getRestaurantMenu);
 
 router.get(
