@@ -3,6 +3,9 @@ const menuController = require('../../controllers/menuController');
 const drinksController = require('../../controllers/drinkController');
 
 const { appApiKeyAuth } = require('../../middleware/roleMiddleware');
+const {
+  restaurantIdentifierMiddleware,
+} = require('../../middleware/restaurantIdentifierMiddleware');
 
 const router = express.Router();
 
@@ -11,12 +14,14 @@ const router = express.Router();
 router.get(
   '/restaurantDetails/menu/categories/:restaurantId',
   appApiKeyAuth,
+  restaurantIdentifierMiddleware,
   menuController.getCategoryItems,
 );
 
 router.get(
   '/restaurantDetails/menu/menuItems/:restaurantId',
   appApiKeyAuth,
+  restaurantIdentifierMiddleware,
   menuController.getMenuItems,
 );
 
@@ -31,12 +36,14 @@ router.get(
 router.get(
   '/restaurantDetails/drinks/categories/:restaurantId',
   appApiKeyAuth,
+  restaurantIdentifierMiddleware,
   drinksController.getDrinkCategories,
 );
 
 router.get(
   '/restaurantDetails/drinks/drinkItems/:restaurantId',
   appApiKeyAuth,
+  restaurantIdentifierMiddleware,
   drinksController.getDrinkItems,
 );
 
