@@ -4,6 +4,9 @@ const {
   appApiKeyAuth,
   appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
+const {
+  restaurantIdentifierMiddleware,
+} = require('../../middleware/restaurantIdentifierMiddleware');
 
 const router = express.Router();
 
@@ -61,15 +64,10 @@ router.post(
 );
 
 router.get(
-  '/details/:id',
+  '/details/:restaurantId',
   appApiKeyAuth,
+  restaurantIdentifierMiddleware,
   restaurantController.getFullRestaurantDetails,
-);
-
-router.get(
-  '/detailsBySlug/:slug',
-  appApiKeyAuth,
-  restaurantController.getFullRestaurantDetailsBySlug,
 );
 
 router.get('/menu/:id', appApiKeyAuth, restaurantController.getRestaurantMenu);

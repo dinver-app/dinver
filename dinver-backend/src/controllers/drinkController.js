@@ -18,7 +18,7 @@ const getUserLanguage = (req) => {
 // Get all drink items for a specific restaurant
 const getDrinkItems = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
+    const restaurantId = req.restaurantId || req.params.restaurantId;
     const language = getUserLanguage(req);
 
     const drinkItems = await DrinkItem.findAll({
@@ -72,7 +72,7 @@ const getDrinkItems = async (req, res) => {
 // Get all drink categories for a specific restaurant
 const getDrinkCategories = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
+    const restaurantId = req.restaurantId || req.params.restaurantId;
     const language = getUserLanguage(req);
 
     const categories = await DrinkCategory.findAll({

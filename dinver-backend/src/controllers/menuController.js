@@ -28,7 +28,7 @@ const getUserLanguage = (req) => {
 // Get all menu items for a specific restaurant
 const getMenuItems = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
+    const restaurantId = req.restaurantId || req.params.restaurantId;
     const language = getUserLanguage(req);
 
     const menuItems = await MenuItem.findAll({
@@ -141,7 +141,7 @@ const getMenuItems = async (req, res) => {
 // Get all categories for a specific restaurant
 const getCategoryItems = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
+    const restaurantId = req.restaurantId || req.params.restaurantId;
     const language = getUserLanguage(req);
 
     const categories = await MenuCategory.findAll({
