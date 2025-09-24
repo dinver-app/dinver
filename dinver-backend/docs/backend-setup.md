@@ -71,7 +71,7 @@ psql -U postgres
 
 # U PostgreSQL konzoli:
 CREATE DATABASE dinver;
-CREATE USER dinver_user WITH PASSWORD '05111974vk';
+CREATE USER dinver_user WITH PASSWORD '4W3:ix91N7TB';
 GRANT ALL PRIVILEGES ON DATABASE dinver TO dinver_user;
 \q
 ```
@@ -93,7 +93,7 @@ Kreiraj `.env` datoteku u `dinver-backend` direktoriju:
 # ===========================================
 # DATABASE CONFIGURATION
 # ===========================================
-DATABASE_URL=postgres://dinver_user:05111974vk@localhost:5432/dinver
+DATABASE_URL=postgres://dinver_user:4W3:ix91N7TB@localhost:5432/dinver
 
 # ===========================================
 # JWT & AUTHENTICATION
@@ -236,7 +236,7 @@ psql -U postgres -c "\l" | grep dinver
 
 # Ako ne postoji, kreiraj je ponovno:
 psql -U postgres -c "CREATE DATABASE dinver;"
-psql -U postgres -c "CREATE USER dinver_user WITH PASSWORD '05111974vk';"
+psql -U postgres -c "CREATE USER dinver_user WITH PASSWORD '4W3:ix91N7TB';"
 psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE dinver TO dinver_user;"
 ```
 
