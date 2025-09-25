@@ -469,6 +469,7 @@ async function handleNearby({
         address: details?.address || null,
         place: details?.place || null,
         description: descShort || '',
+        slug: details?.slug || null,
       };
     }),
   );
@@ -495,6 +496,7 @@ async function handleNearby({
     place: r.place,
     thumbnailUrl: r.thumbnailUrl || null, // Keep as raw key, transform when serving
     distance: r.distanceKm,
+    slug: r.slug || null,
   }));
   return { text: textOut, restaurantId: null, restaurants };
 }
@@ -835,6 +837,7 @@ async function handleMenuSearch({
         translations: it.translations || null,
         name: it.name || null,
         restaurantId: it.restaurantId || r?.id || null,
+        restaurantSlug: r?.slug || null,
       }));
       return { text: textScoped, restaurantId: r?.id || null, items };
     }
@@ -902,6 +905,7 @@ async function handleMenuSearch({
         : r.item.translations.en?.name
       : r.item?.name || null,
     restaurantId: r.restaurant.id,
+    restaurantSlug: r.restaurant.slug || null,
   }));
   const restaurants = unique.map((r) => ({
     id: r.restaurant.id,
@@ -910,6 +914,7 @@ async function handleMenuSearch({
     address: null,
     thumbnailUrl: null,
     distance: null,
+    slug: r.restaurant.slug || null,
   }));
   const duration = Date.now() - startTime;
   logPerformance('handleMenuSearch', duration, {
@@ -1325,6 +1330,7 @@ async function handleDescription({
       thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key, transform when serving
       openNow,
       priceCategory: priceLabel,
+      slug: details?.slug || null,
     },
     description: descriptionText,
     perks:
