@@ -544,16 +544,22 @@ async function updateRestaurant(req, res) {
 
     // Validacija i update subdomaina
     if (subdomain !== undefined) {
-      if (subdomain && !/^[a-z0-9-]{3,}$/.test(subdomain)) {
+      // Ako je prazan string, postaviti na null umesto praznog stringa
+      const subdomainValue =
+        subdomain && subdomain.trim() !== '' ? subdomain : null;
+
+      if (subdomainValue && !/^[a-z0-9-]{3,}$/.test(subdomainValue)) {
         return res.status(400).json({ error: 'Invalid subdomain format' });
       }
-      if (subdomain) {
-        const existing = await Restaurant.findOne({ where: { subdomain } });
+      if (subdomainValue) {
+        const existing = await Restaurant.findOne({
+          where: { subdomain: subdomainValue },
+        });
         if (existing && existing.id !== restaurant.id) {
           return res.status(400).json({ error: 'Subdomain already taken' });
         }
       }
-      await restaurant.update({ subdomain });
+      await restaurant.update({ subdomain: subdomainValue });
     }
 
     // Update restaurant data
