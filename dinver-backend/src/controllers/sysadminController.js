@@ -50,12 +50,50 @@ async function sysadminLogin(req, res) {
 async function createRestaurant(req, res) {
   try {
     const { name, address } = req.body;
+
+    if (!name || !address) {
+      return res.status(400).json({ error: 'Name and address are required' });
+    }
+
+    // Generate slug for the restaurant
+    const generateSlug = async (name) => {
+      const normalizedName = name
+        .toLowerCase()
+        .trim()
+        .replace(/[čć]/g, 'c')
+        .replace(/[š]/g, 's')
+        .replace(/[ž]/g, 'z')
+        .replace(/[đ]/g, 'd')
+        .replace(/[^\w\s-]/g, '');
+
+      const baseSlug = normalizedName
+        .replace(/[\s]+/g, '-')
+        .replace(/[^\w\-]+/g, '');
+
+      let slug = baseSlug;
+      let suffix = 1;
+
+      while (await Restaurant.findOne({ where: { slug } })) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix += 1;
+      }
+
+      return slug;
+    };
+
+    const slug = await generateSlug(name);
+
     const restaurant = await Restaurant.create({
       name,
       address,
+      slug,
+      latitude: 0, // Default value since it's required
+      longitude: 0, // Default value since it's required
     });
+
     res.status(201).json(restaurant);
   } catch (error) {
+    console.error('Error creating restaurant:', error);
     res
       .status(500)
       .json({ error: 'An error occurred while creating the restaurant' });
