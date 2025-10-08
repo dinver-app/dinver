@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { listUsers, createUser, deleteUser } from "../services/userService";
 import { getSubscribers } from "../services/newsletterService";
+import {
+  getWaitListEntries,
+  getWaitListStats,
+  WaitListEntry,
+  WaitListStats,
+} from "../services/waitListService";
 import { format } from "date-fns";
 import { User } from "../interfaces/Interfaces";
 import { toast } from "react-hot-toast";
@@ -22,15 +28,22 @@ const Users = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState<User[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [waitListEntries, setWaitListEntries] = useState<WaitListEntry[]>([]);
+  const [waitListStats, setWaitListStats] = useState<WaitListStats | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [subscribersPage, setSubscribersPage] = useState(1);
+  const [waitListPage, setWaitListPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [subscribersTotalPages, setSubscribersTotalPages] = useState(1);
+  const [waitListTotalPages, setWaitListTotalPages] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalSubscribers, setTotalSubscribers] = useState(0);
+  const [totalWaitListEntries, setTotalWaitListEntries] = useState(0);
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
@@ -41,6 +54,7 @@ const Users = () => {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [subscriberStatus, setSubscriberStatus] = useState<string>("");
+  const [waitListType, setWaitListType] = useState<string>("");
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [userToBan, setUserToBan] = useState<User | null>(null);
   const [isBanModalOpen, setBanModalOpen] = useState(false);
@@ -48,10 +62,20 @@ const Users = () => {
   useEffect(() => {
     if (activeTab === "users") {
       fetchUsers(currentPage, searchTerm);
-    } else {
+    } else if (activeTab === "subscribers") {
       fetchSubscribers(subscribersPage, subscriberStatus);
+    } else if (activeTab === "waitlist") {
+      fetchWaitListEntries(waitListPage, waitListType);
     }
-  }, [currentPage, subscribersPage, searchTerm, subscriberStatus, activeTab]);
+  }, [
+    currentPage,
+    subscribersPage,
+    waitListPage,
+    searchTerm,
+    subscriberStatus,
+    waitListType,
+    activeTab,
+  ]);
 
   const fetchSubscribers = async (page: number, status: string) => {
     const loadingToastId = toast.loading(t("loading"));
@@ -65,6 +89,30 @@ const Users = () => {
       toast.error(t("failed_to_fetch_subscribers"));
     } finally {
       toast.dismiss(loadingToastId);
+    }
+  };
+
+  const fetchWaitListEntries = async (page: number, type: string) => {
+    const loadingToastId = toast.loading(t("loading"));
+    try {
+      const data = await getWaitListEntries(page, type);
+      setWaitListEntries(data.data.entries);
+      setWaitListTotalPages(data.data.pagination.totalPages);
+      setTotalWaitListEntries(data.data.pagination.total);
+    } catch (error) {
+      console.error("Failed to fetch wait list entries", error);
+      toast.error("Failed to fetch wait list entries");
+    } finally {
+      toast.dismiss(loadingToastId);
+    }
+  };
+
+  const fetchWaitListStats = async () => {
+    try {
+      const stats = await getWaitListStats();
+      setWaitListStats(stats);
+    } catch (error) {
+      console.error("Failed to fetch wait list stats", error);
     }
   };
 
@@ -85,8 +133,10 @@ const Users = () => {
   const handlePageChange = (page: number) => {
     if (activeTab === "users") {
       setCurrentPage(page);
-    } else {
+    } else if (activeTab === "subscribers") {
       setSubscribersPage(page);
+    } else if (activeTab === "waitlist") {
+      setWaitListPage(page);
     }
   };
 
@@ -95,8 +145,11 @@ const Users = () => {
     setSearchTerm("");
     if (tab === "users") {
       setCurrentPage(1);
-    } else {
+    } else if (tab === "subscribers") {
       setSubscribersPage(1);
+    } else if (tab === "waitlist") {
+      setWaitListPage(1);
+      fetchWaitListStats();
     }
   };
 
@@ -188,6 +241,16 @@ const Users = () => {
           }`}
         >
           {t("subscribers")}
+        </button>
+        <button
+          onClick={() => handleTabChange("waitlist")}
+          className={`py-2 px-4 border-b-2 text-sm ${
+            activeTab === "waitlist"
+              ? "border-b-2 border-black"
+              : "text-gray-500"
+          }`}
+        >
+          Wait List
         </button>
       </div>
 
@@ -324,7 +387,7 @@ const Users = () => {
             </div>
           </div>
         </>
-      ) : (
+      ) : activeTab === "subscribers" ? (
         <>
           <div className="flex justify-between items-center mb-4">
             <select
@@ -412,7 +475,119 @@ const Users = () => {
             </div>
           </div>
         </>
-      )}
+      ) : activeTab === "waitlist" ? (
+        <>
+          {/* Wait List Stats */}
+          {waitListStats && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-blue-600">
+                  {waitListStats.totalUsers}
+                </div>
+                <div className="text-sm text-gray-600">Total Users</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-green-600">
+                  {waitListStats.totalRestaurants}
+                </div>
+                <div className="text-sm text-gray-600">Total Restaurants</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-purple-600">
+                  {waitListStats.totalEntries}
+                </div>
+                <div className="text-sm text-gray-600">Total Entries</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-orange-600">
+                  {waitListStats.cityStats.length}
+                </div>
+                <div className="text-sm text-gray-600">Cities</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mb-4">
+            <select
+              value={waitListType}
+              onChange={(e) => setWaitListType(e.target.value)}
+              className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
+            >
+              <option value="">All Types</option>
+              <option value="user">Users</option>
+              <option value="restaurant">Restaurants</option>
+            </select>
+          </div>
+          <div className="rounded-lg border border-gray-200">
+            <table className="min-w-full bg-white">
+              <thead className="bg-gray-100">
+                <tr className="text-sm text-black">
+                  <th className="py-2 px-4 text-left font-normal">Email</th>
+                  <th className="py-2 px-4 text-left font-normal">City</th>
+                  <th className="py-2 px-4 text-left font-normal">Type</th>
+                  <th className="py-2 px-4 text-left font-normal">
+                    Restaurant Name
+                  </th>
+                  <th className="py-2 px-4 text-left font-normal">
+                    Created At
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {waitListEntries.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className="hover:bg-gray-100 border-b border-gray-200"
+                  >
+                    <td className="py-2 px-4 text-sm">{entry.email}</td>
+                    <td className="py-2 px-4 text-sm">{entry.city}</td>
+                    <td className="py-2 px-4 text-sm">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          entry.type === "user"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {entry.type}
+                      </span>
+                    </td>
+                    <td className="py-2 px-4 text-sm">
+                      {entry.restaurantName || "-"}
+                    </td>
+                    <td className="py-2 px-4 text-sm">
+                      {format(new Date(entry.createdAt), "dd.MM.yyyy.")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-between items-center mt-4">
+            <span className="text-sm">
+              {(waitListPage - 1) * 10 + 1} -{" "}
+              {Math.min(waitListPage * 10, totalWaitListEntries)} of{" "}
+              {totalWaitListEntries}
+            </span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handlePageChange(waitListPage - 1)}
+                disabled={waitListPage === 1}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                &lt;
+              </button>
+              <button
+                onClick={() => handlePageChange(waitListPage + 1)}
+                disabled={waitListPage === waitListTotalPages}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
