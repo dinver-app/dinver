@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.use(restaurantRoutes);
 router.use(analyticsRoutes);
-router.use('/waitlist', waitListRoutes);
+router.use(waitListRoutes);
 
 module.exports = router;
