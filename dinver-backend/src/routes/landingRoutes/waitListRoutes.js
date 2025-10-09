@@ -46,7 +46,7 @@ const restaurantValidation = [
 
 // Rute za prijavu korisnika
 router.post(
-  '/user',
+  '/waitlist/user',
   waitListLimiter,
   landingApiKeyAuth,
   userValidation,
@@ -55,7 +55,7 @@ router.post(
 
 // Rute za prijavu restorana
 router.post(
-  '/restaurant',
+  '/waitlist/restaurant',
   waitListLimiter,
   landingApiKeyAuth,
   restaurantValidation,
