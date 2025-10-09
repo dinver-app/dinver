@@ -16,15 +16,15 @@ const waitListController = {
 
       const { email, city } = req.body;
 
-      // Provjeri da li email već postoji
+      // Provjeri da li email već postoji za ovaj tip
       const existingEntry = await WaitList.findOne({
-        where: { email },
+        where: { email, type: 'user' },
       });
 
       if (existingEntry) {
         return res.status(409).json({
           success: false,
-          message: 'Email već postoji na wait listi',
+          message: 'Već ste se prijavili na wait listu kao korisnik',
         });
       }
 
@@ -69,15 +69,15 @@ const waitListController = {
 
       const { email, city, restaurantName } = req.body;
 
-      // Provjeri da li email već postoji
+      // Provjeri da li email već postoji za ovaj tip
       const existingEntry = await WaitList.findOne({
-        where: { email },
+        where: { email, type: 'restaurant' },
       });
 
       if (existingEntry) {
         return res.status(409).json({
           success: false,
-          message: 'Email već postoji na wait listi',
+          message: 'Već ste se prijavili na wait listu kao restoran',
         });
       }
 
