@@ -26,6 +26,8 @@ interface EditMenuItemProps {
         language: string;
       }[];
       price: string;
+      minPrice?: string;
+      maxPrice?: string;
       allergens: string[];
       imageFile: File | null;
       removeImage: boolean;
@@ -67,6 +69,15 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
     },
   });
   const [itemPrice, setItemPrice] = useState(menuItem.price);
+  const [hasPriceRange, setHasPriceRange] = useState(
+    Boolean(menuItem.minPrice != null && menuItem.maxPrice != null)
+  );
+  const [minPrice, setMinPrice] = useState(
+    menuItem.minPrice != null ? String(menuItem.minPrice) : ""
+  );
+  const [maxPrice, setMaxPrice] = useState(
+    menuItem.maxPrice != null ? String(menuItem.maxPrice) : ""
+  );
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [selectedAllergenIds, setSelectedAllergenIds] = useState<number[]>(
@@ -170,9 +181,26 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
       return;
     }
 
-    if (!hasSizes && !itemPrice.trim()) {
-      toast.error(t("enter_price"));
-      return;
+    if (!hasSizes) {
+      if (hasPriceRange) {
+        if (!minPrice.trim() || !maxPrice.trim()) {
+          toast.error("Please enter both min and max price");
+          return;
+        }
+        if (isNaN(parseFloat(minPrice)) || isNaN(parseFloat(maxPrice))) {
+          toast.error("Please enter valid prices");
+          return;
+        }
+        if (parseFloat(minPrice) > parseFloat(maxPrice)) {
+          toast.error("Min price cannot be greater than max price");
+          return;
+        }
+      } else {
+        if (!itemPrice.trim()) {
+          toast.error(t("enter_price"));
+          return;
+        }
+      }
     }
 
     if (hasSizes) {
@@ -206,6 +234,8 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
       await onSave(menuItem.id, {
         translations: translatesArray,
         price: itemPrice,
+        minPrice: hasPriceRange ? minPrice : undefined,
+        maxPrice: hasPriceRange ? maxPrice : undefined,
         allergens: selectedAllergenIds.map(String),
         imageFile: itemImageFile,
         removeImage: removeImage,
@@ -454,16 +484,58 @@ const EditMenuItem: React.FC<EditMenuItemProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {t("price")} (€)
         </label>
-        <input
-          type="number"
-          step="0.01"
-          value={itemPrice}
-          onChange={(e) => setItemPrice(e.target.value)}
-          className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
-          placeholder={t("enter_price")}
-          disabled={hasSizes && selectedSizes.length > 0}
-        />
-        {hasSizes && selectedSizes.length > 0 && (
+        <div className="flex items-center mb-2 gap-2">
+          <input
+            type="checkbox"
+            checked={hasPriceRange}
+            onChange={(e) => setHasPriceRange(e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            {t("has_price_range")}
+          </span>
+        </div>
+        {hasPriceRange ? (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-600 mb-1">
+                {t("min_price")} (€)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder={t("min_price")}
+                className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-600 mb-1">
+                {t("max_price")} (€)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder={t("max_price")}
+                className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+              />
+            </div>
+          </div>
+        ) : (
+          <input
+            type="number"
+            step="0.01"
+            value={itemPrice}
+            onChange={(e) => setItemPrice(e.target.value)}
+            className="w-full text-sm p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-700"
+            placeholder={t("enter_price")}
+            disabled={hasSizes && selectedSizes.length > 0}
+          />
+        )}
+        {hasSizes && selectedSizes.length > 0 && !hasPriceRange && (
           <p className="text-xs text-gray-500 mt-1">
             {t("price_disabled_with_sizes")}
           </p>

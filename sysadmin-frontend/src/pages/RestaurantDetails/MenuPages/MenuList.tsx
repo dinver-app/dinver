@@ -1,6 +1,7 @@
 import React, { useState, memo } from "react";
 import { MenuItem, Category, Allergen } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
+// @ts-ignore
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { OrderCategoriesModal } from "../../../components/modals/OrderCategoriesModal";
 
@@ -251,9 +252,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                             </p>
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
-                            {item.price && (
+                            {(item.priceRange || item.price) && (
                               <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
-                                {item.price.toString().replace(".", ",")} €
+                                {item.priceRange ||
+                                  item.price.toString().replace(".", ",") +
+                                    " €"}
                               </span>
                             )}
                             {item.sizes && item.sizes.length > 0 && (
@@ -437,7 +440,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
                             <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
-                              {item.price.toString().replace(".", ",")} €
+                              {item.priceRange ||
+                                (item.price
+                                  ? item.price.toString().replace(".", ",") +
+                                    " €"
+                                  : "Cijena na upit")}
                             </span>
                             {item.allergens && item.allergens.length > 0 && (
                               <div className="flex items-center space-x-1">
@@ -596,7 +603,9 @@ const MenuList: React.FC<MenuListProps> = memo(
                                   className="w-4 h-4"
                                 />
                               </span>
-                              {item.name}
+                              {item.translations.find(
+                                (t) => t.language === i18n.language
+                              )?.name || item.name}
                             </li>
                           )}
                         </Draggable>

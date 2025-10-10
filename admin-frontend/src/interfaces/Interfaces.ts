@@ -118,6 +118,9 @@ export interface MenuItem {
   categoryId: string | null;
   restaurantId: string;
   price: string;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  priceRange?: string | null;
   imageUrl: string | null;
   allergens: string[];
   translations: Translation[];

@@ -685,5 +685,8 @@
   "enter_size_name": "Unesi naziv veličine",
   "size_created_successfully": "Veličina uspješno kreirana",
   "failed_to_create_size": "Neuspješno kreiranje veličine",
-  "price_disabled_with_sizes": "Cijena je onemogućena s veličinama"
+  "price_disabled_with_sizes": "Cijena je onemogućena s veličinama",
+  "has_price_range": "Ima raspon cijena",
+  "min_price": "Minimalna cijena",
+  "max_price": "Maksimalna cijena"
 }

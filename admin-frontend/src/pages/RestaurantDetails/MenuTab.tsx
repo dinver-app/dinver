@@ -131,6 +131,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
       language: string;
     }[];
     price: string;
+    minPrice?: string;
+    maxPrice?: string;
     allergens: string[];
     categoryId?: string | null;
     imageFile?: File;
@@ -146,6 +148,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           language: t.language as Language,
         })),
         price: data.price,
+        minPrice: data.minPrice,
+        maxPrice: data.maxPrice,
         restaurantId: restaurantId as string,
         allergenIds: data.allergens,
         categoryId: data.categoryId,
@@ -174,6 +178,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
         language: string;
       }[];
       price: string;
+      minPrice?: string;
+      maxPrice?: string;
       allergens: string[];
       imageFile: File | null;
       removeImage: boolean;
@@ -191,6 +197,8 @@ const MenuTab = ({ restaurantId }: { restaurantId: string | undefined }) => {
           language: t.language as Language,
         })),
         price: data.price,
+        minPrice: data.minPrice,
+        maxPrice: data.maxPrice,
         restaurantId: restaurantId as string,
         allergenIds: data.allergens,
         imageFile: data.imageFile || undefined,

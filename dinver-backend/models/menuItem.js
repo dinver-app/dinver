@@ -60,6 +60,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL,
         allowNull: true,
       },
+      minPrice: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      maxPrice: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
       imageUrl: {
         type: DataTypes.STRING,
         allowNull: true,

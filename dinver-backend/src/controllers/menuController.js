@@ -118,6 +118,12 @@ const getMenuItems = async (req, res) => {
           displayPrice = defaultSize ? defaultSize.price : itemData.price;
         }
 
+        // Format price range if minPrice and maxPrice exist
+        let priceRange = null;
+        if (itemData.minPrice !== null && itemData.maxPrice !== null) {
+          priceRange = `${parseFloat(itemData.minPrice).toFixed(2)} - ${parseFloat(itemData.maxPrice).toFixed(2)}€`;
+        }
+
         return {
           ...itemData,
           name: (userTranslation || anyTranslation)?.name || '',
@@ -128,6 +134,7 @@ const getMenuItems = async (req, res) => {
             ? getMediaUrl(itemData.imageUrl, 'image')
             : null,
           sizes: formattedSizes,
+          priceRange: priceRange,
         };
       }),
     );
@@ -184,6 +191,8 @@ const createMenuItem = async (req, res) => {
     const translations = JSON.parse(req.body.translations || '[]');
     const translatedData = await autoTranslate(translations);
     const { price, restaurantId } = req.body;
+    const minPrice = req.body.minPrice ? parseFloat(req.body.minPrice) : null;
+    const maxPrice = req.body.maxPrice ? parseFloat(req.body.maxPrice) : null;
     const allergenIds = req.body.allergenIds
       ? JSON.parse(req.body.allergenIds)
       : [];
@@ -196,6 +205,15 @@ const createMenuItem = async (req, res) => {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
+    }
+
+    // Validate price range if provided
+    if (minPrice !== null && maxPrice !== null) {
+      if (minPrice > maxPrice) {
+        return res
+          .status(400)
+          .json({ message: 'min_price_cannot_be_greater_than_max_price' });
+      }
     }
 
     // Get last position
@@ -238,7 +256,13 @@ const createMenuItem = async (req, res) => {
     }
 
     // Determine price: if sizes exist, use default size price (fallback first); else use provided price
-    let priceToSave = price;
+    let priceToSave = price && price.trim() !== '' ? price : null;
+
+    // If price range is used, set price to null (we'll use minPrice/maxPrice instead)
+    if (minPrice !== null && maxPrice !== null) {
+      priceToSave = null;
+    }
+
     if (sizesData && sizesData.length > 0) {
       const defaultIdx =
         defaultSizeIndex != null &&
@@ -250,12 +274,14 @@ const createMenuItem = async (req, res) => {
       priceToSave =
         defaultSize && defaultSize.price != null
           ? Number(defaultSize.price)
-          : price;
+          : priceToSave;
     }
 
     // Create menu item
     const menuItem = await MenuItem.create({
       price: priceToSave,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
       restaurantId,
       position: newPosition,
       allergens: allergenIds,
@@ -347,12 +373,19 @@ const createMenuItem = async (req, res) => {
       });
     }
 
+    // Format price range if minPrice and maxPrice exist
+    let priceRange = null;
+    if (createdItem.minPrice !== null && createdItem.maxPrice !== null) {
+      priceRange = `${parseFloat(createdItem.minPrice).toFixed(2)} - ${parseFloat(createdItem.maxPrice).toFixed(2)}€`;
+    }
+
     const result = {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
       imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
       sizes: formattedSizes,
+      priceRange: priceRange,
     };
 
     res.status(201).json(result);
@@ -369,6 +402,8 @@ const updateMenuItem = async (req, res) => {
     const translations = JSON.parse(req.body.translations || '[]');
     const translatedData = await autoTranslate(translations);
     const price = req.body.price;
+    const minPrice = req.body.minPrice ? parseFloat(req.body.minPrice) : null;
+    const maxPrice = req.body.maxPrice ? parseFloat(req.body.maxPrice) : null;
     const allergenIds = req.body.allergenIds
       ? JSON.parse(req.body.allergenIds)
       : undefined;
@@ -382,6 +417,15 @@ const updateMenuItem = async (req, res) => {
       return res
         .status(400)
         .json({ message: 'at_least_one_translation_required' });
+    }
+
+    // Validate price range if provided
+    if (minPrice !== null && maxPrice !== null) {
+      if (minPrice > maxPrice) {
+        return res
+          .status(400)
+          .json({ message: 'min_price_cannot_be_greater_than_max_price' });
+      }
     }
 
     const menuItem = await MenuItem.findByPk(id);
@@ -443,10 +487,24 @@ const updateMenuItem = async (req, res) => {
 
     // Compute price to persist based on sizes/default selection
     let priceToPersist = menuItem.price;
+
+    // Handle empty string price - convert to null
+    if (price !== undefined && (price === '' || price.trim() === '')) {
+      priceToPersist = null;
+    }
+
+    // If price range is used, set price to null (we'll use minPrice/maxPrice instead)
+    if (minPrice !== null && maxPrice !== null) {
+      priceToPersist = null;
+    }
+
     if (sizesData !== undefined) {
       if (sizesData === null) {
         // sizes removed; use provided price or keep existing
-        priceToPersist = price !== undefined ? price : menuItem.price;
+        priceToPersist =
+          price !== undefined && price !== '' && price.trim() !== ''
+            ? price
+            : priceToPersist || null;
       } else if (Array.isArray(sizesData) && sizesData.length > 0) {
         const defaultIdx =
           defaultSizeIndex != null &&
@@ -458,15 +516,17 @@ const updateMenuItem = async (req, res) => {
         priceToPersist =
           defaultSize && defaultSize.price != null
             ? Number(defaultSize.price)
-            : price;
+            : priceToPersist;
       }
-    } else if (price !== undefined) {
+    } else if (price !== undefined && price !== '' && price.trim() !== '') {
       priceToPersist = price;
     }
 
     // Update menu item
     await menuItem.update({
       price: priceToPersist,
+      minPrice: minPrice !== undefined ? minPrice : menuItem.minPrice,
+      maxPrice: maxPrice !== undefined ? maxPrice : menuItem.maxPrice,
       imageUrl: imageKey,
       allergens: allergenIds !== undefined ? allergenIds : menuItem.allergens,
       categoryId: categoryId !== undefined ? categoryId : menuItem.categoryId,
@@ -556,6 +616,12 @@ const updateMenuItem = async (req, res) => {
       });
     }
 
+    // Format price range if minPrice and maxPrice exist
+    let priceRange = null;
+    if (updated.minPrice !== null && updated.maxPrice !== null) {
+      priceRange = `${parseFloat(updated.minPrice).toFixed(2)} - ${parseFloat(updated.maxPrice).toFixed(2)}€`;
+    }
+
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
@@ -563,6 +629,7 @@ const updateMenuItem = async (req, res) => {
       imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
       translations: updated.translations,
       sizes: formattedSizes,
+      priceRange: priceRange,
     };
 
     res.json(result);
@@ -952,6 +1019,12 @@ const getAllMenuItemsForAdmin = async (req, res) => {
         displayPrice = defaultSize ? defaultSize.price : itemData.price;
       }
 
+      // Format price range if minPrice and maxPrice exist
+      let priceRange = null;
+      if (itemData.minPrice !== null && itemData.maxPrice !== null) {
+        priceRange = `${parseFloat(itemData.minPrice).toFixed(2)} - ${parseFloat(itemData.maxPrice).toFixed(2)}€`;
+      }
+
       return {
         ...itemData,
         name: (userTranslation || anyTranslation)?.name || '',
@@ -962,6 +1035,7 @@ const getAllMenuItemsForAdmin = async (req, res) => {
           ? getMediaUrl(itemData.imageUrl, 'image')
           : null,
         sizes: formattedSizes,
+        priceRange: priceRange,
       };
     });
 

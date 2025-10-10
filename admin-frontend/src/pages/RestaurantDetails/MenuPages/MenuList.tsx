@@ -251,7 +251,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
                             <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
-                              {item.price.toString().replace(".", ",")} €
+                              {item.priceRange ||
+                                (item.price
+                                  ? item.price.toString().replace(".", ",") +
+                                    " €"
+                                  : "Price on request")}
                             </span>
                             {item.allergens && item.allergens.length > 0 && (
                               <div className="flex items-center space-x-1">
@@ -435,7 +439,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                           )}
                           <div className="flex items-center space-x-6 mt-0.5">
                             <span className="px-2 py-0.5 bg-gray-100 text-gray-800 text-sm rounded font-semibold shadow-sm border border-gray-200">
-                              {item.price.toString().replace(".", ",")} €
+                              {item.priceRange ||
+                                (item.price
+                                  ? item.price.toString().replace(".", ",") +
+                                    " €"
+                                  : "Price on request")}
                             </span>
                             {item.allergens && item.allergens.length > 0 && (
                               <div className="flex items-center space-x-1">
