@@ -811,5 +811,8 @@
   "size_name_required": "Size name is required",
   "enter_size_name": "Enter size name",
   "size_created_successfully": "Size created successfully",
-  "failed_to_create_size": "Failed to create size"
+  "failed_to_create_size": "Failed to create size",
+  "has_price_range": "Has price range",
+  "min_price": "Min price",
+  "max_price": "Max price"
 }

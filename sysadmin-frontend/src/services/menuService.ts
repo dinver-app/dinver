@@ -38,6 +38,8 @@ export const getMenuItems = async (restaurantId: string) => {
 export const createMenuItem = async (data: {
   translations: Translation[];
   price: string;
+  minPrice?: string;
+  maxPrice?: string;
   restaurantId: string;
   allergenIds: string[];
   categoryId?: string | null;
@@ -53,6 +55,14 @@ export const createMenuItem = async (data: {
 
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
+
+  if (data.minPrice) {
+    formData.append("minPrice", data.minPrice);
+  }
+  if (data.maxPrice) {
+    formData.append("maxPrice", data.maxPrice);
+  }
+
   formData.append("restaurantId", data.restaurantId);
 
   if (data.allergenIds && data.allergenIds.length > 0) {
@@ -99,6 +109,8 @@ export const updateMenuItem = async (
   data: {
     translations: Translation[];
     price: string;
+    minPrice?: string;
+    maxPrice?: string;
     restaurantId: string;
     allergenIds: string[];
     categoryId?: string | null;
@@ -116,6 +128,14 @@ export const updateMenuItem = async (
 
   formData.append("translations", JSON.stringify(data.translations));
   formData.append("price", data.price);
+
+  if (data.minPrice) {
+    formData.append("minPrice", data.minPrice);
+  }
+  if (data.maxPrice) {
+    formData.append("maxPrice", data.maxPrice);
+  }
+
   formData.append("restaurantId", data.restaurantId);
 
   if (data.allergenIds && data.allergenIds.length > 0) {
