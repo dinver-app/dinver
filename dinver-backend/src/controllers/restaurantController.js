@@ -1025,7 +1025,14 @@ function getDetailedHoursStatus(
     const closeMinutes =
       Math.floor(parseInt(closesAtTime.replace(':', ''), 10) / 100) * 60 +
       (parseInt(closesAtTime.replace(':', ''), 10) % 100);
-    const minutesUntilClose = closeMinutes - currentMinutes;
+
+    let minutesUntilClose = closeMinutes - currentMinutes;
+
+    // If closeMinutes is less than currentMinutes, it means closing next day
+    // Add 24 hours (1440 minutes) to get correct time until closing
+    if (minutesUntilClose < 0) {
+      minutesUntilClose += 1440; // 24 hours in minutes
+    }
 
     // If closing within 60 minutes, show "closes soon" with next opening
     if (minutesUntilClose <= 60) {
