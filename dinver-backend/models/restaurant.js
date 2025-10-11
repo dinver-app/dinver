@@ -114,6 +114,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
       },
+      kitchenHours: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
       photos: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,

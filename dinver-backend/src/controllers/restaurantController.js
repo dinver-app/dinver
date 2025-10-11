@@ -334,6 +334,7 @@ const getRestaurantDetails = async (req, res) => {
         'images',
         'isClaimed',
         'customWorkingDays',
+        'kitchenHours',
         'foodTypes',
         'establishmentTypes',
         'establishmentPerks',
@@ -385,8 +386,9 @@ const getRestaurantDetails = async (req, res) => {
 
     // Calculate detailed hours status
     const customDays = restaurant.customWorkingDays?.customWorkingDays || [];
-    const hoursStatus = getDetailedHoursStatus(
+    const hoursStatus = getRestaurantAndKitchenStatus(
       restaurant.openingHours,
+      restaurant.kitchenHours,
       customDays,
     );
 
@@ -743,6 +745,145 @@ function convertCustomDayToPeriods(customDay) {
   return periods;
 }
 
+// Helper function to build weekly schedule
+function buildWeeklySchedule(hours, timeZone = 'Europe/Zagreb') {
+  if (!hours || !hours.periods) {
+    return [];
+  }
+
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+  }).format(now);
+  const weekdayToIndex = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  const currentDay = weekdayToIndex[formatter];
+
+  const dayNames = {
+    hr: [
+      'Ponedjeljak',
+      'Utorak',
+      'Srijeda',
+      'Četvrtak',
+      'Petak',
+      'Subota',
+      'Nedjelja',
+    ],
+    en: [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ],
+  };
+
+  const dayAbbreviations = {
+    hr: ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'],
+    en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  };
+
+  return hours.periods.map((period, index) => {
+    const isToday = index === currentDay;
+    const isClosed = !period.open.time || period.open.time === '';
+
+    let periods = [];
+    if (!isClosed) {
+      const openTime = formatTime24h(period.open.time);
+      const closeTime = formatTime24h(period.close.time);
+      const openTime12h = formatTime12h(period.open.time);
+      const closeTime12h = formatTime12h(period.close.time);
+
+      periods.push({
+        open: openTime,
+        close: closeTime,
+        opensAt12h: openTime12h,
+        closesAt12h: closeTime12h,
+      });
+
+      // Add shifts if they exist
+      if (period.shifts && period.shifts.length > 0) {
+        period.shifts.forEach((shift) => {
+          if (shift.open.time && shift.close.time) {
+            periods.push({
+              open: formatTime24h(shift.open.time),
+              close: formatTime24h(shift.close.time),
+              opensAt12h: formatTime12h(shift.open.time),
+              closesAt12h: formatTime12h(shift.close.time),
+            });
+          }
+        });
+      }
+    }
+
+    return {
+      day: dayNames.hr[index],
+      dayEn: dayNames.en[index],
+      dayAbbr: dayAbbreviations.hr[index],
+      dayAbbrEn: dayAbbreviations.en[index],
+      isToday,
+      periods,
+      isClosed,
+    };
+  });
+}
+
+// Wrapper function to get both restaurant and kitchen status
+function getRestaurantAndKitchenStatus(
+  openingHours,
+  kitchenHours,
+  customWorkingDays,
+  timeZone = 'Europe/Zagreb',
+) {
+  // Get restaurant status
+  const restaurantToday = getDetailedHoursStatus(
+    openingHours,
+    customWorkingDays,
+    timeZone,
+  );
+
+  // Get kitchen status
+  const kitchenToday = getDetailedHoursStatus(
+    kitchenHours,
+    customWorkingDays,
+    timeZone,
+  );
+
+  // Build weekly schedules
+  const restaurantWeek = buildWeeklySchedule(openingHours, timeZone);
+  const kitchenWeek = buildWeeklySchedule(kitchenHours, timeZone);
+
+  // Check if kitchen hours exist
+  const hasKitchenHours =
+    kitchenHours &&
+    kitchenHours.periods &&
+    kitchenHours.periods.some(
+      (period) => period.open.time && period.open.time !== '',
+    );
+
+  return {
+    restaurant: {
+      today: restaurantToday,
+      week: restaurantWeek,
+    },
+    kitchen: {
+      today: kitchenToday,
+      week: kitchenWeek,
+    },
+    hasKitchenHours,
+  };
+}
+
 // Main function to get detailed hours status
 function getDetailedHoursStatus(
   openingHours,
@@ -979,7 +1120,8 @@ function getDetailedHoursStatus(
   // If closed, find next opening time
   let nextOpenTime = null;
   let nextOpenDay = null;
-  let nextOpenDayName = null;
+  let nextOpenDayNameEn = null;
+  let nextOpenDayNameHr = null;
 
   // Check remaining periods today
   for (let day = currentDay; day < 7; day++) {
@@ -991,14 +1133,17 @@ function getDetailedHoursStatus(
         // Opens later today
         nextOpenTime = formatTime24h(period.open.time);
         nextOpenDay = 'today';
-        nextOpenDayName = 'danas';
+        nextOpenDayNameEn = 'today';
+        nextOpenDayNameHr = 'danas';
         break;
       } else if (day > currentDay) {
         // Opens on a future day
         nextOpenTime = formatTime24h(period.open.time);
         nextOpenDay =
-          day === (currentDay + 1) % 7 ? 'tomorrow' : getDayName(day, 'hr');
-        nextOpenDayName =
+          day === (currentDay + 1) % 7 ? 'tomorrow' : getDayName(day, 'en');
+        nextOpenDayNameEn =
+          day === (currentDay + 1) % 7 ? 'tomorrow' : getDayName(day, 'en');
+        nextOpenDayNameHr =
           day === (currentDay + 1) % 7 ? 'sutra' : getDayName(day, 'hr');
         break;
       }
@@ -1012,7 +1157,8 @@ function getDetailedHoursStatus(
       if (period && period.open.time !== '') {
         nextOpenTime = formatTime24h(period.open.time);
         nextOpenDay = 'next week';
-        nextOpenDayName = getDayName(day, 'hr');
+        nextOpenDayNameEn = getDayName(day, 'en');
+        nextOpenDayNameHr = getDayName(day, 'hr');
         break;
       }
     }
@@ -1027,8 +1173,8 @@ function getDetailedHoursStatus(
     messageEn = `Closed ⋅ Opens tomorrow at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
     messageHr = `Zatvoreno ⋅ Otvara se sutra u ${nextOpenTime}`;
   } else {
-    messageEn = `Closed ⋅ Opens ${nextOpenDayName} at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
-    messageHr = `Zatvoreno ⋅ Otvara se ${nextOpenDayName} u ${nextOpenTime}`;
+    messageEn = `Closed ⋅ Opens ${nextOpenDayNameEn} at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
+    messageHr = `Zatvoreno ⋅ Otvara se ${nextOpenDayNameHr} u ${nextOpenTime}`;
   }
 
   return {
@@ -1152,7 +1298,7 @@ const generateSlug = async (name) => {
 async function updateWorkingHours(req, res) {
   try {
     const { id } = req.params;
-    const { opening_hours } = req.body;
+    const { opening_hours, kitchen_hours } = req.body;
 
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) {
@@ -1160,11 +1306,20 @@ async function updateWorkingHours(req, res) {
     }
 
     const oldOpeningHours = restaurant.get('openingHours');
+    const oldKitchenHours = restaurant.get('kitchenHours');
 
-    await restaurant.update({ openingHours: opening_hours });
+    const updates = {};
+    if (opening_hours !== undefined) {
+      updates.openingHours = opening_hours;
+    }
+    if (kitchen_hours !== undefined) {
+      updates.kitchenHours = kitchen_hours;
+    }
 
-    // Log the update action
-    if (oldOpeningHours !== opening_hours) {
+    await restaurant.update(updates);
+
+    // Log the update action for opening hours
+    if (opening_hours !== undefined && oldOpeningHours !== opening_hours) {
       await logAudit({
         userId: req.user ? req.user.id : null,
         action: ActionTypes.UPDATE,
@@ -1173,6 +1328,23 @@ async function updateWorkingHours(req, res) {
         restaurantId: restaurant.id,
         changes: { old: oldOpeningHours, new: opening_hours },
       });
+    }
+
+    // Log the update action for kitchen hours
+    if (kitchen_hours !== undefined) {
+      const oldValue = oldKitchenHours || null;
+      const newValue = kitchen_hours || null;
+
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        await logAudit({
+          userId: req.user ? req.user.id : null,
+          action: ActionTypes.UPDATE,
+          entity: Entities.WORKING_HOURS,
+          entityId: restaurant.id,
+          restaurantId: restaurant.id,
+          changes: { old: oldValue, new: newValue },
+        });
+      }
     }
 
     res.json({ message: 'Working hours updated successfully', restaurant });
@@ -1456,6 +1628,7 @@ const getRestaurantById = async (req, res) => {
         'images',
         'isClaimed',
         'customWorkingDays',
+        'kitchenHours',
         'foodTypes',
         'establishmentTypes',
         'establishmentPerks',
@@ -2343,6 +2516,7 @@ const getFullRestaurantDetails = async (req, res) => {
         'email',
         'images',
         'openingHours',
+        'kitchenHours',
         'customWorkingDays',
         'subdomain',
         'virtualTourUrl',
@@ -2483,8 +2657,9 @@ const getFullRestaurantDetails = async (req, res) => {
       : { customWorkingDays: [] };
 
     // Calculate detailed hours status
-    const hoursStatus = getDetailedHoursStatus(
+    const hoursStatus = getRestaurantAndKitchenStatus(
       restaurant.openingHours,
+      restaurant.kitchenHours,
       filteredCustomWorkingDays.customWorkingDays,
     );
 
