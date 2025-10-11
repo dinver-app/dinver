@@ -1086,13 +1086,13 @@ function getDetailedHoursStatus(
       let messageEn, messageHr;
       if (nextOpenDay === 'today') {
         messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))}`;
-        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se u ${nextOpenTime}`;
       } else if (nextOpenDay === 'tomorrow') {
         messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))} ${getDayAbbreviation((currentDay + 1) % 7, 'en')}`;
-        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime} ${getDayAbbreviation((currentDay + 1) % 7, 'hr')}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se u ${nextOpenDayNameHr} u ${nextOpenTime} `;
       } else {
         messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))} ${nextOpenDayAbbrev}`;
-        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime} ${nextOpenDayAbbrev}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se u ${nextOpenDayNameHr} u ${nextOpenTime} `;
       }
 
       return {
@@ -1181,7 +1181,7 @@ function getDetailedHoursStatus(
     messageHr = `Zatvoreno ⋅ Otvara se sutra u ${nextOpenTime}`;
   } else {
     messageEn = `Closed ⋅ Opens ${nextOpenDayNameEn} at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
-    messageHr = `Zatvoreno ⋅ Otvara se ${nextOpenDayNameHr} u ${nextOpenTime}`;
+    messageHr = `Zatvoreno ⋅ Otvara se u ${nextOpenDayNameHr} u ${nextOpenTime}`;
   }
 
   return {
