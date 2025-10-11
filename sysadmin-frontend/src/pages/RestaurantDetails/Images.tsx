@@ -199,6 +199,7 @@ const Images = ({
             >
               &times;
             </button>
+            // @ts-ignore
             <ImageGallery
               items={images.map((image) => ({ original: image }))}
               startIndex={currentImageIndex}
@@ -234,6 +235,7 @@ const Images = ({
                       className="space-y-2"
                     >
                       {reorderedImages.map((image, index) => (
+                        // @ts-ignore
                         <Draggable
                           key={image}
                           draggableId={image}

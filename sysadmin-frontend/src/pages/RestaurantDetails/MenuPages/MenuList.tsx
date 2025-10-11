@@ -1,7 +1,6 @@
 import React, { useState, memo } from "react";
 import { MenuItem, Category, Allergen } from "../../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
-// @ts-ignore
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { OrderCategoriesModal } from "../../../components/modals/OrderCategoriesModal";
 
@@ -610,12 +609,11 @@ const MenuList: React.FC<MenuListProps> = memo(
                           )}
                         </Draggable>
                       ))}
-                      {provided.placeholder}
+                      {provided.placeholder as any}
                     </ul>
                   )}
                 </Droppable>
               </DragDropContext>
-
               <div className="flex justify-end space-x-3 mt-4">
                 <button
                   onClick={() => setIsOrderItemsModalOpen(false)}

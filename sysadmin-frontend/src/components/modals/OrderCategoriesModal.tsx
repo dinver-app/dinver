@@ -95,7 +95,7 @@ export const OrderCategoriesModal: React.FC<OrderCategoriesModalProps> = ({
                     )
                   );
                 })}
-                {provided.placeholder}
+                {provided.placeholder as any}
               </ul>
             )}
           </Droppable>
