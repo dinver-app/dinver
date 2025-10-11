@@ -368,6 +368,11 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     });
   };
 
+  const handleClosed = (dayIndex: number) => {
+    handleTimeChange(dayIndex, "open", "");
+    handleTimeChange(dayIndex, "close", "");
+  };
+
   const handleKitchenClosed = (dayIndex: number) => {
     handleKitchenTimeChange(dayIndex, "open", "");
     handleKitchenTimeChange(dayIndex, "close", "");
