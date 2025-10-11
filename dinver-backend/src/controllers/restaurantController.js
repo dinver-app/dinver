@@ -676,6 +676,15 @@ function formatTime12h(hhmm) {
   }
 }
 
+// Helper function to get day abbreviations
+function getDayAbbreviation(dayIndex, language = 'hr') {
+  const dayAbbreviations = {
+    hr: ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'],
+    en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  };
+  return dayAbbreviations[language][dayIndex] || '';
+}
+
 // Helper function to get day names
 function getDayName(dayIndex, language = 'hr') {
   const dayNames = {
@@ -792,6 +801,7 @@ function getDetailedHoursStatus(
         closesAt: null,
         opensAt: null,
         opensDay: null,
+        closesSoon: false,
       };
     }
     periodsToUse = openingHours.periods;
@@ -819,6 +829,7 @@ function getDetailedHoursStatus(
       closesAt: null,
       opensAt: null,
       opensDay: null,
+      closesSoon: false,
     };
   }
 
@@ -865,8 +876,92 @@ function getDetailedHoursStatus(
     if (isCurrentlyOpen) break;
   }
 
-  // If currently open, return open status
+  // If currently open, check if closing soon
   if (isCurrentlyOpen) {
+    // Calculate minutes until closing
+    const currentMinutes =
+      Math.floor(currentTime / 100) * 60 + (currentTime % 100);
+    const closeMinutes =
+      Math.floor(parseInt(closesAtTime.replace(':', ''), 10) / 100) * 60 +
+      (parseInt(closesAtTime.replace(':', ''), 10) % 100);
+    const minutesUntilClose = closeMinutes - currentMinutes;
+
+    // If closing within 60 minutes, show "closes soon" with next opening
+    if (minutesUntilClose <= 60) {
+      // Find next opening time
+      let nextOpenTime = null;
+      let nextOpenDay = null;
+      let nextOpenDayAbbrev = null;
+
+      // Check remaining periods today
+      for (let day = currentDay; day < 7; day++) {
+        const period = periodsToUse[day];
+        if (period && period.open.time !== '') {
+          const openTime = parseInt(period.open.time, 10);
+
+          if (day === currentDay && openTime > currentTime) {
+            // Opens later today
+            nextOpenTime = formatTime24h(period.open.time);
+            nextOpenDay = 'today';
+            nextOpenDayAbbrev = 'danas';
+            break;
+          } else if (day > currentDay) {
+            // Opens on a future day
+            nextOpenTime = formatTime24h(period.open.time);
+            nextOpenDay =
+              day === (currentDay + 1) % 7
+                ? 'tomorrow'
+                : getDayAbbreviation(day, 'hr');
+            nextOpenDayAbbrev =
+              day === (currentDay + 1) % 7
+                ? 'sutra'
+                : getDayAbbreviation(day, 'hr');
+            break;
+          }
+        }
+      }
+
+      // If not found in remaining days, check from beginning of week
+      if (!nextOpenTime) {
+        for (let day = 0; day <= currentDay; day++) {
+          const period = periodsToUse[day];
+          if (period && period.open.time !== '') {
+            nextOpenTime = formatTime24h(period.open.time);
+            nextOpenDay = 'next week';
+            nextOpenDayAbbrev = getDayAbbreviation(day, 'hr');
+            break;
+          }
+        }
+      }
+
+      // Format closes soon message
+      let messageEn, messageHr;
+      if (nextOpenDay === 'today') {
+        messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime}`;
+      } else if (nextOpenDay === 'tomorrow') {
+        messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))} ${getDayAbbreviation((currentDay + 1) % 7, 'en')}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime} ${getDayAbbreviation((currentDay + 1) % 7, 'hr')}`;
+      } else {
+        messageEn = `Closes soon ⋅ ${formatTime12h(closesAtTime.replace(':', ''))} ⋅ Opens ${formatTime12h(nextOpenTime.replace(':', ''))} ${nextOpenDayAbbrev}`;
+        messageHr = `Zatvara se uskoro ⋅ ${closesAtTime} ⋅ Otvara se ${nextOpenTime} ${nextOpenDayAbbrev}`;
+      }
+
+      return {
+        isOpen: true,
+        status: 'closes_soon',
+        message: {
+          en: messageEn,
+          hr: messageHr,
+        },
+        closesAt: closesAtTime,
+        opensAt: nextOpenTime,
+        opensDay: nextOpenDay,
+        closesSoon: true,
+      };
+    }
+
+    // Regular open status
     return {
       isOpen: true,
       status: 'open',
@@ -877,6 +972,7 @@ function getDetailedHoursStatus(
       closesAt: closesAtTime,
       opensAt: null,
       opensDay: null,
+      closesSoon: false,
     };
   }
 
@@ -945,6 +1041,7 @@ function getDetailedHoursStatus(
     closesAt: null,
     opensAt: nextOpenTime,
     opensDay: nextOpenDay,
+    closesSoon: false,
   };
 }
 
