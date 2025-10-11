@@ -32,6 +32,7 @@ export interface Restaurant {
   priceLevel?: number;
   isOpenNow?: boolean;
   openingHours?: any;
+  kitchenHours?: any;
   foodTypes?: number[];
   establishmentTypes?: number[];
   establishmentPerks?: number[];

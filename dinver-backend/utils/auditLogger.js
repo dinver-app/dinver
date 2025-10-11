@@ -42,16 +42,34 @@ function deepCompare(oldObj, newObj) {
   const changes = { old: {}, new: {} };
 
   function compare(oldItem, newItem, path = '') {
+    // Handle null and undefined cases first
+    if (oldItem === null || oldItem === undefined) {
+      if (newItem !== null && newItem !== undefined) {
+        changes.new[path || 'value'] = newItem;
+      }
+      return;
+    }
+
+    if (newItem === null || newItem === undefined) {
+      if (oldItem !== null && oldItem !== undefined) {
+        changes.old[path || 'value'] = oldItem;
+      }
+      return;
+    }
+
+    // Now handle objects
     if (typeof oldItem === 'object' && typeof newItem === 'object') {
       for (const key in oldItem) {
-        if (newItem.hasOwnProperty(key)) {
-          compare(oldItem[key], newItem[key], path ? `${path}.${key}` : key);
-        } else {
-          changes.old[path ? `${path}.${key}` : key] = oldItem[key];
+        if (oldItem.hasOwnProperty(key)) {
+          if (newItem.hasOwnProperty(key)) {
+            compare(oldItem[key], newItem[key], path ? `${path}.${key}` : key);
+          } else {
+            changes.old[path ? `${path}.${key}` : key] = oldItem[key];
+          }
         }
       }
       for (const key in newItem) {
-        if (!oldItem.hasOwnProperty(key)) {
+        if (newItem.hasOwnProperty(key) && !oldItem.hasOwnProperty(key)) {
           changes.new[path ? `${path}.${key}` : key] = newItem[key];
         }
       }

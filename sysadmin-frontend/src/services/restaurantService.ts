@@ -66,11 +66,16 @@ export const deleteRestaurantThumbnail = async (id: string) => {
   }
 };
 
-export const updateWorkingHours = async (id: string, workingHours: any) => {
+export const updateWorkingHours = async (
+  id: string,
+  workingHours: any,
+  kitchenHours?: any
+) => {
   const response = await apiClient.put(
     `api/sysadmin/restaurants/${id}/working-hours`,
     {
       opening_hours: workingHours,
+      ...(kitchenHours !== undefined && { kitchen_hours: kitchenHours }),
     }
   );
   return response.data;

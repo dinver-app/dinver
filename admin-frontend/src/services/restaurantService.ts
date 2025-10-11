@@ -21,11 +21,16 @@ export const updateRestaurant = async (id: string, updatedData: any) => {
   }
 };
 
-export const updateWorkingHours = async (id: string, workingHours: any) => {
+export const updateWorkingHours = async (
+  id: string,
+  workingHours: any,
+  kitchenHours?: any
+) => {
   const response = await apiClient.put(
     `/api/admin/restaurants/${id}/working-hours`,
     {
       opening_hours: workingHours,
+      ...(kitchenHours !== undefined && { kitchen_hours: kitchenHours }),
     }
   );
   return response.data;

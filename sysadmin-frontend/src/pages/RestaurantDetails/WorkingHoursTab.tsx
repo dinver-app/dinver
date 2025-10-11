@@ -79,7 +79,44 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
     return initialHours;
   });
 
+  const [kitchenHours, setKitchenHours] = useState<DaySchedule[]>(() => {
+    const initialHours: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
+      open: { day: i, time: "" },
+      close: { day: i, time: "" },
+      shifts: [] as Shift[],
+    }));
+
+    if (restaurant.kitchenHours?.periods) {
+      JSON.parse(JSON.stringify(restaurant.kitchenHours.periods)).forEach(
+        (period: any) => {
+          const p = period as {
+            open: TimePoint;
+            close: TimePoint;
+            shifts?: Shift[];
+          };
+          initialHours[p.open.day] = {
+            open: p.open,
+            close: p.close,
+            shifts: (p.shifts || []) as Shift[],
+          };
+        }
+      );
+    }
+
+    return initialHours;
+  });
+
+  const [kitchenHoursEnabled, setKitchenHoursEnabled] = useState(
+    Boolean(
+      restaurant.kitchenHours?.periods?.some(
+        (p: any) => p.open.time && p.open.time !== ""
+      )
+    )
+  );
+
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
+
+  const [isDirty, setIsDirty] = useState(false);
 
   const [customWorkingDays, setCustomWorkingDays] = useState<
     CustomWorkingDay[]
@@ -98,29 +135,6 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const [isSplitShift, setIsSplitShift] = useState(
     newCustomDay.times.length > 1
   );
-
-  useEffect(() => {
-    const handleAutoSave = async () => {
-      setSaveStatus(t("saving"));
-      try {
-        await updateWorkingHours(restaurant.id || "", {
-          periods: workingHours,
-        });
-        onUpdate({
-          ...restaurant,
-          openingHours: { periods: workingHours },
-        });
-        setSaveStatus(t("all_changes_saved"));
-      } catch (error) {
-        console.error("Failed to update working hours", error);
-        setSaveStatus(t("failed_to_save_changes"));
-      }
-    };
-
-    if (isFormModified()) {
-      handleAutoSave();
-    }
-  }, [workingHours]);
 
   useEffect(() => {
     if (
@@ -170,8 +184,69 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
       ? restaurant.openingHours?.periods
       : restaurant.openingHours;
 
-    return JSON.stringify(workingHours) !== restaurantOpeningHours;
+    return (
+      JSON.stringify(workingHours) !== JSON.stringify(restaurantOpeningHours)
+    );
   };
+
+  const isKitchenFormModified = () => {
+    const restaurantKitchenHours = restaurant.kitchenHours?.periods;
+
+    // Check if enabled state changed
+    const wasEnabled = Boolean(
+      restaurant.kitchenHours?.periods?.some(
+        (p: any) => p.open.time && p.open.time !== ""
+      )
+    );
+
+    // If enabled state changed, it's modified
+    if (wasEnabled !== kitchenHoursEnabled) {
+      return true;
+    }
+
+    // If disabled and was disabled, no modification
+    if (!kitchenHoursEnabled) {
+      return false;
+    }
+
+    // If enabled, check if content changed
+    if (!restaurantKitchenHours || restaurantKitchenHours.length === 0) {
+      const hasAnyTime = kitchenHours.some(
+        (period) => period.open.time || period.close.time
+      );
+      return hasAnyTime;
+    }
+
+    return (
+      JSON.stringify(kitchenHours) !== JSON.stringify(restaurantKitchenHours)
+    );
+  };
+
+  const handleSave = async () => {
+    setSaveStatus(t("saving"));
+    try {
+      await updateWorkingHours(
+        restaurant.id || "",
+        { periods: workingHours },
+        kitchenHoursEnabled ? { periods: kitchenHours } : null
+      );
+      onUpdate({
+        ...restaurant,
+        openingHours: { periods: workingHours },
+        kitchenHours: kitchenHoursEnabled ? { periods: kitchenHours } : null,
+      });
+      setSaveStatus(t("all_changes_saved"));
+      setIsDirty(false);
+    } catch (error) {
+      console.error("Failed to update working hours", error);
+      setSaveStatus(t("failed_to_save_changes"));
+    }
+  };
+
+  useEffect(() => {
+    const hasChanges = isFormModified() || isKitchenFormModified();
+    setIsDirty(hasChanges);
+  }, [workingHours, kitchenHours, kitchenHoursEnabled]);
 
   const handleTimeChange = (
     dayIndex: number,
@@ -234,6 +309,69 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
   const handleClosed = (dayIndex: number) => {
     handleTimeChange(dayIndex, "open", "");
     handleTimeChange(dayIndex, "close", "");
+  };
+
+  const handleKitchenTimeChange = (
+    dayIndex: number,
+    type: "open" | "close",
+    time: string,
+    shiftIndex: number = 0
+  ) => {
+    setKitchenHours((prev) => {
+      const updated = [...prev];
+      if (!updated[dayIndex]) {
+        updated[dayIndex] = {
+          open: { day: dayIndex, time: "" },
+          close: { day: dayIndex, time: "" },
+          shifts: [],
+        };
+      }
+      const formattedTime = unformatTime(time);
+      if (shiftIndex === 0) {
+        updated[dayIndex][type].time = formattedTime;
+        if (type === "open") {
+          updated[dayIndex].open.day = dayIndex;
+        }
+        if (type === "close") {
+          const openTime = parseInt(updated[dayIndex].open.time, 10);
+          if (parseInt(formattedTime, 10) < openTime) {
+            updated[dayIndex][type].day = (dayIndex + 1) % 7;
+          } else {
+            updated[dayIndex][type].day = dayIndex;
+          }
+        }
+      } else {
+        if (!updated[dayIndex].shifts[shiftIndex - 1]) {
+          updated[dayIndex].shifts[shiftIndex - 1] = {
+            open: { day: dayIndex, time: "" },
+            close: { day: dayIndex, time: "" },
+          } as Shift;
+        }
+        updated[dayIndex].shifts[shiftIndex - 1][type].time = formattedTime;
+        if (type === "open") {
+          updated[dayIndex].shifts[shiftIndex - 1].open.day = dayIndex;
+        }
+        if (type === "close") {
+          const openTime = parseInt(
+            updated[dayIndex].shifts[shiftIndex - 1].open.time,
+            10
+          );
+          if (parseInt(formattedTime, 10) < openTime) {
+            updated[dayIndex].shifts[shiftIndex - 1][type].day =
+              (dayIndex + 1) % 7;
+          } else {
+            updated[dayIndex].shifts[shiftIndex - 1][type].day = dayIndex;
+          }
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  const handleKitchenClosed = (dayIndex: number) => {
+    handleKitchenTimeChange(dayIndex, "open", "");
+    handleKitchenTimeChange(dayIndex, "close", "");
   };
 
   const handleAddCustomDay = async () => {
@@ -410,7 +548,7 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               </svg>
               {saveStatus}
             </span>
-          ) : (
+          ) : !isDirty ? (
             <span className="text-sm text-green-600 flex items-center">
               <svg
                 className="h-4 w-4 mr-2"
@@ -425,7 +563,14 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               </svg>
               {saveStatus}
             </span>
+          ) : (
+            <span className="text-sm text-amber-600 flex items-center">
+              {t("unsaved_changes")}
+            </span>
           )}
+          <button onClick={handleSave} className="secondary-button ml-4">
+            {t("save")}
+          </button>
         </div>
       </div>
 
@@ -574,6 +719,193 @@ const WorkingHoursTab = ({ restaurant, onUpdate }: WorkingHoursTabProps) => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Kitchen Hours */}
+        <div className="border-b border-gray-200 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-800">
+              {t("kitchen_hours")}
+            </h3>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={kitchenHoursEnabled}
+                onChange={(e) => {
+                  const isEnabled = e.target.checked;
+                  setKitchenHoursEnabled(isEnabled);
+
+                  if (!isEnabled) {
+                    // When disabling, clear the kitchen hours
+                    setKitchenHours(
+                      Array.from({ length: 7 }, (_, i) => ({
+                        open: { day: i, time: "" },
+                        close: { day: i, time: "" },
+                        shifts: [] as Shift[],
+                      }))
+                    );
+                  }
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 text-sm text-gray-700">
+                {t("enable_kitchen_hours")}
+              </label>
+            </div>
+          </div>
+
+          {kitchenHoursEnabled && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {daysOfWeek.map((day, index) => (
+                <div
+                  key={day}
+                  className={`flex items-center p-4 ${
+                    index !== daysOfWeek.length - 1
+                      ? "border-b border-gray-200"
+                      : ""
+                  } hover:bg-gray-50 transition-colors`}
+                >
+                  <div className="w-32 font-medium text-gray-700">{day}</div>
+
+                  {!kitchenHours[index].open.time &&
+                  !kitchenHours[index].close.time ? (
+                    <div className="flex flex-1 items-center">
+                      <span className="text-sm text-gray-500 italic">
+                        {t("closed")}
+                      </span>
+                      <button
+                        onClick={() => {
+                          handleKitchenTimeChange(index, "open", "0900");
+                          handleKitchenTimeChange(index, "close", "1700");
+                        }}
+                        className="ml-4 text-sm px-3 py-1 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                      >
+                        {t("add_hours")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          value={formatTime(
+                            kitchenHours[index].open.time || ""
+                          )}
+                          onChange={(e) =>
+                            handleKitchenTimeChange(
+                              index,
+                              "open",
+                              e.target.value
+                            )
+                          }
+                          className="py-1.5 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                        <span className="text-gray-500">-</span>
+                        <input
+                          type="time"
+                          value={formatTime(
+                            kitchenHours[index].close.time || ""
+                          )}
+                          onChange={(e) =>
+                            handleKitchenTimeChange(
+                              index,
+                              "close",
+                              e.target.value
+                            )
+                          }
+                          className="py-1.5 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                      </div>
+
+                      {kitchenHours[index].shifts.length > 0 && (
+                        <>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={formatTime(
+                                kitchenHours[index].shifts[0].open.time || ""
+                              )}
+                              onChange={(e) =>
+                                handleKitchenTimeChange(
+                                  index,
+                                  "open",
+                                  e.target.value,
+                                  1
+                                )
+                              }
+                              className="py-1.5 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            />
+                            <span className="text-gray-500">-</span>
+                            <input
+                              type="time"
+                              value={formatTime(
+                                kitchenHours[index].shifts[0].close.time || ""
+                              )}
+                              onChange={(e) =>
+                                handleKitchenTimeChange(
+                                  index,
+                                  "close",
+                                  e.target.value,
+                                  1
+                                )
+                              }
+                              className="py-1.5 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex ml-auto gap-2">
+                        <button
+                          onClick={() => {
+                            setKitchenHours((prev) => {
+                              const updated = [...prev];
+                              if (updated[index].shifts.length > 0) {
+                                updated[index].shifts = [];
+                              } else {
+                                updated[index].shifts = [
+                                  {
+                                    open: { day: index, time: "" },
+                                    close: { day: index, time: "" },
+                                  } as Shift,
+                                ];
+                              }
+                              return updated;
+                            });
+                          }}
+                          className={`text-xs px-3 py-1.5 rounded-md ${
+                            kitchenHours[index].shifts.length > 0
+                              ? "text-white bg-blue-600 hover:bg-blue-700"
+                              : "text-blue-600 bg-white border border-blue-300 hover:bg-blue-50"
+                          }`}
+                        >
+                          {kitchenHours[index].shifts.length > 0
+                            ? t("remove_split")
+                            : t("split_shift")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleKitchenClosed(index);
+                            setKitchenHours((prev) => {
+                              const updated = [...prev];
+                              updated[index].shifts = [];
+                              updated[index].open.time = "";
+                              updated[index].close.time = "";
+                              return updated;
+                            });
+                          }}
+                          className="text-xs text-red-600 border border-red-300 bg-white px-3 py-1.5 rounded-md hover:bg-red-50"
+                        >
+                          {t("mark_closed")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Custom Working Days */}
