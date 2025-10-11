@@ -383,6 +383,16 @@ const getRestaurantDetails = async (req, res) => {
       delete restaurantData.showWifiCredentials;
     }
 
+    // Calculate detailed hours status
+    const customDays = restaurant.customWorkingDays?.customWorkingDays || [];
+    const hoursStatus = getDetailedHoursStatus(
+      restaurant.openingHours,
+      customDays,
+    );
+
+    // Add hours status to response
+    restaurantData.hoursStatus = hoursStatus;
+
     res.json(restaurantData);
   } catch (error) {
     res
@@ -640,6 +650,303 @@ const deleteRestaurant = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete restaurant' });
   }
 };
+
+// Helper function to format time from HHMM to HH:MM
+function formatTime24h(hhmm) {
+  if (!hhmm || hhmm === '') return '';
+  const time = hhmm.toString().padStart(4, '0');
+  return `${time.substring(0, 2)}:${time.substring(2, 4)}`;
+}
+
+// Helper function to format time from HHMM to 12-hour format
+function formatTime12h(hhmm) {
+  if (!hhmm || hhmm === '') return '';
+  const time = hhmm.toString().padStart(4, '0');
+  const hour = parseInt(time.substring(0, 2), 10);
+  const minute = time.substring(2, 4);
+
+  if (hour === 0) {
+    return `12:${minute} AM`;
+  } else if (hour < 12) {
+    return `${hour}:${minute} AM`;
+  } else if (hour === 12) {
+    return `12:${minute} PM`;
+  } else {
+    return `${hour - 12}:${minute} PM`;
+  }
+}
+
+// Helper function to get day names
+function getDayName(dayIndex, language = 'hr') {
+  const dayNames = {
+    hr: [
+      'Ponedjeljak',
+      'Utorak',
+      'Srijeda',
+      'Četvrtak',
+      'Petak',
+      'Subota',
+      'Nedjelja',
+    ],
+    en: [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ],
+  };
+  return dayNames[language][dayIndex] || '';
+}
+
+// Helper function to convert custom working day times to periods format
+function convertCustomDayToPeriods(customDay) {
+  if (!customDay || !customDay.times || customDay.times.length === 0) {
+    return null;
+  }
+
+  const periods = [];
+  customDay.times.forEach((timeSlot) => {
+    if (timeSlot.open && timeSlot.close) {
+      // Convert HH:MM to HHMM format
+      const openTime = timeSlot.open.replace(':', '');
+      const closeTime = timeSlot.close.replace(':', '');
+
+      // For custom days, we assume same day unless it spans midnight
+      const openDay = 0; // We'll determine the actual day from the date
+      let closeDay = 0;
+
+      // Check if it spans midnight
+      if (parseInt(closeTime, 10) < parseInt(openTime, 10)) {
+        closeDay = 1; // Next day
+      }
+
+      periods.push({
+        open: { day: openDay, time: openTime },
+        close: { day: closeDay, time: closeTime },
+        shifts: [],
+      });
+    }
+  });
+
+  return periods;
+}
+
+// Main function to get detailed hours status
+function getDetailedHoursStatus(
+  openingHours,
+  customWorkingDays,
+  timeZone = 'Europe/Zagreb',
+) {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const [hour, minute] = formatter.format(now).split(':');
+  const weekdayShort = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+  }).format(now);
+  const weekdayToIndex = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  const currentDay = weekdayToIndex[weekdayShort];
+  const currentTime = parseInt(hour, 10) * 100 + parseInt(minute, 10);
+  const todayStr = now.toISOString().slice(0, 10);
+
+  // Check for custom working day override
+  let periodsToUse = null;
+  let isCustomDay = false;
+
+  if (customWorkingDays && Array.isArray(customWorkingDays)) {
+    const todayCustomDay = customWorkingDays.find(
+      (day) => day.date === todayStr,
+    );
+    if (todayCustomDay) {
+      periodsToUse = convertCustomDayToPeriods(todayCustomDay);
+      isCustomDay = true;
+    }
+  }
+
+  // If no custom day, use regular opening hours
+  if (!periodsToUse) {
+    if (!openingHours || !openingHours.periods) {
+      return {
+        isOpen: false,
+        status: 'undefined',
+        message: {
+          en: 'Hours not available',
+          hr: 'Radno vrijeme nije dostupno',
+        },
+        closesAt: null,
+        opensAt: null,
+        opensDay: null,
+      };
+    }
+    periodsToUse = openingHours.periods;
+  }
+
+  // Check if all periods are empty (closed permanently)
+  const allTimesEmpty = periodsToUse.every(
+    (period) =>
+      period.open.time === '' &&
+      period.close.time === '' &&
+      (!period.shifts ||
+        period.shifts.every(
+          (shift) => shift.open.time === '' && shift.close.time === '',
+        )),
+  );
+
+  if (allTimesEmpty) {
+    return {
+      isOpen: false,
+      status: 'undefined',
+      message: {
+        en: 'Closed',
+        hr: 'Zatvoreno',
+      },
+      closesAt: null,
+      opensAt: null,
+      opensDay: null,
+    };
+  }
+
+  // Check if currently open
+  let isCurrentlyOpen = false;
+  let closesAtTime = null;
+
+  for (const period of periodsToUse) {
+    const periodsToCheck = [
+      { open: period.open, close: period.close },
+      ...(period.shifts || []),
+    ];
+
+    for (const { open, close } of periodsToCheck) {
+      const openDay = open?.day;
+      const openTime = parseInt(open?.time, 10);
+      const closeDay = close?.day;
+      const closeTime = parseInt(close?.time, 10);
+
+      if (openDay === closeDay) {
+        if (
+          currentDay === openDay &&
+          currentTime >= openTime &&
+          currentTime < closeTime
+        ) {
+          isCurrentlyOpen = true;
+          closesAtTime = formatTime24h(closeTime.toString());
+          break;
+        }
+      } else {
+        if (
+          (currentDay === openDay && currentTime >= openTime) ||
+          (currentDay === closeDay && currentTime < closeTime) ||
+          (currentDay > openDay && currentDay < closeDay) ||
+          (openDay > closeDay &&
+            (currentDay > openDay || currentDay < closeDay))
+        ) {
+          isCurrentlyOpen = true;
+          closesAtTime = formatTime24h(closeTime.toString());
+          break;
+        }
+      }
+    }
+    if (isCurrentlyOpen) break;
+  }
+
+  // If currently open, return open status
+  if (isCurrentlyOpen) {
+    return {
+      isOpen: true,
+      status: 'open',
+      message: {
+        en: `Open ⋅ Closes at ${formatTime12h(closesAtTime.replace(':', ''))}`,
+        hr: `Otvoreno ⋅ Zatvara se u ${closesAtTime}`,
+      },
+      closesAt: closesAtTime,
+      opensAt: null,
+      opensDay: null,
+    };
+  }
+
+  // If closed, find next opening time
+  let nextOpenTime = null;
+  let nextOpenDay = null;
+  let nextOpenDayName = null;
+
+  // Check remaining periods today
+  for (let day = currentDay; day < 7; day++) {
+    const period = periodsToUse[day];
+    if (period && period.open.time !== '') {
+      const openTime = parseInt(period.open.time, 10);
+
+      if (day === currentDay && openTime > currentTime) {
+        // Opens later today
+        nextOpenTime = formatTime24h(period.open.time);
+        nextOpenDay = 'today';
+        nextOpenDayName = 'danas';
+        break;
+      } else if (day > currentDay) {
+        // Opens on a future day
+        nextOpenTime = formatTime24h(period.open.time);
+        nextOpenDay =
+          day === (currentDay + 1) % 7 ? 'tomorrow' : getDayName(day, 'hr');
+        nextOpenDayName =
+          day === (currentDay + 1) % 7 ? 'sutra' : getDayName(day, 'hr');
+        break;
+      }
+    }
+  }
+
+  // If not found in remaining days, check from beginning of week
+  if (!nextOpenTime) {
+    for (let day = 0; day <= currentDay; day++) {
+      const period = periodsToUse[day];
+      if (period && period.open.time !== '') {
+        nextOpenTime = formatTime24h(period.open.time);
+        nextOpenDay = 'next week';
+        nextOpenDayName = getDayName(day, 'hr');
+        break;
+      }
+    }
+  }
+
+  // Format message based on when it opens next
+  let messageEn, messageHr;
+  if (nextOpenDay === 'today') {
+    messageEn = `Closed ⋅ Opens at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
+    messageHr = `Zatvoreno ⋅ Otvara se u ${nextOpenTime}`;
+  } else if (nextOpenDay === 'tomorrow') {
+    messageEn = `Closed ⋅ Opens tomorrow at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
+    messageHr = `Zatvoreno ⋅ Otvara se sutra u ${nextOpenTime}`;
+  } else {
+    messageEn = `Closed ⋅ Opens ${nextOpenDayName} at ${formatTime12h(nextOpenTime.replace(':', ''))}`;
+    messageHr = `Zatvoreno ⋅ Otvara se ${nextOpenDayName} u ${nextOpenTime}`;
+  }
+
+  return {
+    isOpen: false,
+    status: 'closed',
+    message: {
+      en: messageEn,
+      hr: messageHr,
+    },
+    closesAt: null,
+    opensAt: nextOpenTime,
+    opensDay: nextOpenDay,
+  };
+}
 
 function isRestaurantOpen(openingHours, timeZone = 'Europe/Zagreb') {
   const now = new Date();
@@ -2078,6 +2385,12 @@ const getFullRestaurantDetails = async (req, res) => {
         }
       : { customWorkingDays: [] };
 
+    // Calculate detailed hours status
+    const hoursStatus = getDetailedHoursStatus(
+      restaurant.openingHours,
+      filteredCustomWorkingDays.customWorkingDays,
+    );
+
     // Transform final restaurant data
     const finalRestaurantData = {
       ...restaurantWithTranslations,
@@ -2090,6 +2403,7 @@ const getFullRestaurantDetails = async (req, res) => {
       totalReviews,
       ratings,
       customWorkingDays: filteredCustomWorkingDays,
+      hoursStatus,
     };
 
     // Always include rating and userRatingsTotal from the Restaurant model
