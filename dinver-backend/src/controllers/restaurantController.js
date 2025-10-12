@@ -1593,9 +1593,45 @@ const updateImageOrder = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    await restaurant.update({ images });
+    // Extract S3 keys from images array (can be URLs or keys)
+    const imageKeys = images.map((imageItem) => {
+      // Check if it's already a key (doesn't contain http/https)
+      if (!imageItem.startsWith('http')) {
+        return imageItem; // Already a key
+      }
 
-    res.json({ message: 'Image order updated successfully', images });
+      // It's a URL - find matching key from existing restaurant images
+      const existingKey = restaurant.images.find(
+        (key) => getMediaUrl(key, 'image') === imageItem,
+      );
+
+      if (existingKey) {
+        return existingKey;
+      }
+
+      // If not found in existing keys, try to extract key from URL
+      // CloudFront URL format: https://domain/path/to/image.jpg?query=params
+      // We need just: path/to/image.jpg
+      try {
+        const url = new URL(imageItem);
+        // Remove leading slash and return the path
+        return url.pathname.substring(1);
+      } catch (e) {
+        // If URL parsing fails, return as is (fallback)
+        return imageItem;
+      }
+    });
+
+    // Update with keys only
+    await restaurant.update({ images: imageKeys });
+
+    // Transform keys back to URLs for response
+    const responseImages = imageKeys.map((key) => getMediaUrl(key, 'image'));
+
+    res.json({
+      message: 'Image order updated successfully',
+      images: responseImages,
+    });
   } catch (error) {
     console.error('Error updating image order:', error);
     res.status(500).json({ error: 'Failed to update image order' });
