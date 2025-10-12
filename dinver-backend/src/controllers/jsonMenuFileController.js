@@ -9,9 +9,57 @@ const {
   DrinkCategory,
   DrinkItemTranslation,
   DrinkCategoryTranslation,
+  Size,
+  SizeTranslation,
+  MenuItemSize,
 } = require('../../models');
 const { autoTranslate } = require('../../utils/translate');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { Sequelize } = require('sequelize');
+
+// Helper function to find or create a size for a restaurant
+const findOrCreateSize = async (restaurantId, sizeName) => {
+  // Try to find existing (case-insensitive)
+  const existingSize = await Size.findOne({
+    where: { restaurantId },
+    include: [
+      {
+        model: SizeTranslation,
+        as: 'translations',
+        where: Sequelize.where(
+          Sequelize.fn('LOWER', Sequelize.col('translations.name')),
+          Sequelize.fn('LOWER', sizeName.trim()),
+        ),
+      },
+    ],
+  });
+
+  if (existingSize) {
+    console.log(`Found existing size: ${sizeName} (ID: ${existingSize.id})`);
+    return { sizeId: existingSize.id, wasCreated: false };
+  }
+
+  // Create new size
+  console.log(`Creating new size: ${sizeName}`);
+  const translations = [
+    { language: 'hr', name: sizeName },
+    { language: 'en', name: sizeName },
+  ];
+
+  const translatedData = await autoTranslate(translations);
+  const size = await Size.create({ restaurantId, isActive: true });
+
+  for (const translation of translatedData) {
+    await SizeTranslation.create({
+      sizeId: size.id,
+      language: translation.language,
+      name: translation.name,
+    });
+  }
+
+  console.log(`Created size: ${sizeName} (ID: ${size.id})`);
+  return { sizeId: size.id, wasCreated: true };
+};
 
 // Get all JSON menu files for a restaurant
 const getRestaurantJsonFiles = async (req, res) => {
@@ -195,6 +243,7 @@ const importMenuFromJsonFile = async (req, res) => {
       menuType,
       categories: { created: 0, existing: 0 },
       items: { created: 0, errors: 0 },
+      sizes: { created: 0, existing: 0 },
       errors: [],
     };
 
@@ -301,6 +350,43 @@ const importMenuFromJsonFile = async (req, res) => {
       }
     }
 
+    // Pre-process sizes: collect all unique size names and create them
+    const uniqueSizeNames = new Set();
+    if (jsonContent.items && Array.isArray(jsonContent.items)) {
+      for (const itemData of jsonContent.items) {
+        if (itemData.sizes && Array.isArray(itemData.sizes)) {
+          for (const size of itemData.sizes) {
+            if (size.name) {
+              uniqueSizeNames.add(size.name.trim());
+            }
+          }
+        }
+      }
+    }
+
+    console.log(
+      `Found ${uniqueSizeNames.size} unique sizes:`,
+      Array.from(uniqueSizeNames),
+    );
+
+    // Create/find all sizes and build a map
+    const sizeMap = {}; // { "Normal": "uuid-123", "Jumbo": "uuid-456" }
+    for (const sizeName of uniqueSizeNames) {
+      const { sizeId, wasCreated } = await findOrCreateSize(
+        restaurant.id,
+        sizeName,
+      );
+      sizeMap[sizeName] = sizeId;
+
+      if (wasCreated) {
+        results.sizes.created++;
+      } else {
+        results.sizes.existing++;
+      }
+    }
+
+    console.log('Size map created:', sizeMap);
+
     // Process items
     if (jsonContent.items && Array.isArray(jsonContent.items)) {
       for (const itemData of jsonContent.items) {
@@ -370,10 +456,55 @@ const importMenuFromJsonFile = async (req, res) => {
           const lastPosition = existingItems[0]?.position ?? -1;
           const newPosition = lastPosition + 1;
 
+          // Determine if item has sizes
+          const hasSizes =
+            itemData.sizes &&
+            Array.isArray(itemData.sizes) &&
+            itemData.sizes.length > 0;
+
+          console.log(
+            `Item ${itemData.name.hr} has sizes:`,
+            hasSizes,
+            itemData.sizes,
+          );
+
+          // Validate sizes if provided
+          if (hasSizes) {
+            // Ensure at least one size has isDefault: true
+            const hasDefault = itemData.sizes.some(
+              (size) => size.isDefault === true,
+            );
+            if (!hasDefault) {
+              // Make first size default
+              itemData.sizes[0].isDefault = true;
+            }
+
+            // Validate all sizes before proceeding
+            let hasInvalidSize = false;
+            for (const size of itemData.sizes) {
+              if (
+                !size.name ||
+                typeof size.price !== 'number' ||
+                size.price < 0
+              ) {
+                results.errors.push(
+                  `Invalid size data for item: ${itemData.name.hr} - size: ${JSON.stringify(size)}`,
+                );
+                hasInvalidSize = true;
+                break;
+              }
+            }
+
+            if (hasInvalidSize) {
+              results.items.errors++;
+              continue; // Skip this item entirely
+            }
+          }
+
           const item = await (
             menuType === 'food' ? MenuItem : DrinkItem
           ).create({
-            price: itemData.price,
+            price: hasSizes ? null : itemData.price, // Set to null if sizes exist
             restaurantId: restaurant.id,
             position: newPosition,
             categoryId,
@@ -392,6 +523,48 @@ const importMenuFromJsonFile = async (req, res) => {
               name: translation.name,
               description: translation.description || '',
             });
+          }
+
+          // Link sizes using the pre-built map
+          if (hasSizes) {
+            console.log(
+              `Linking ${itemData.sizes.length} sizes for item ${itemData.name.hr}`,
+            );
+            for (let i = 0; i < itemData.sizes.length; i++) {
+              const sizeData = itemData.sizes[i];
+              const sizeId = sizeMap[sizeData.name.trim()]; // Get ID from map
+
+              if (!sizeId) {
+                results.errors.push(
+                  `Size ${sizeData.name} not found for item ${itemData.name.hr}`,
+                );
+                continue;
+              }
+
+              try {
+                await MenuItemSize.create({
+                  menuItemId: item.id,
+                  sizeId: sizeId, // Use the ID from map
+                  price: Number(sizeData.price),
+                  isDefault: sizeData.isDefault || false,
+                  position: i,
+                });
+
+                console.log(
+                  `Successfully linked size ${sizeData.name} (ID: ${sizeId}) to item ${itemData.name.hr}`,
+                );
+              } catch (error) {
+                console.error(
+                  `Error linking size for item ${itemData.name.hr}:`,
+                  error,
+                );
+                results.errors.push(
+                  `Size linking error for item ${itemData.name.hr}: ${error.message}`,
+                );
+              }
+            }
+          } else {
+            console.log(`Item ${itemData.name.hr} has no sizes`);
           }
 
           results.items.created++;
