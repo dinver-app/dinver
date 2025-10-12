@@ -16,47 +16,40 @@ const {
 } = require('../../models');
 const { autoTranslate } = require('../../utils/translate');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { Sequelize } = require('sequelize');
 
 // Helper function to find or create a size for a restaurant
 const findOrCreateSize = async (restaurantId, sizeName) => {
-  // Check if size already exists for this restaurant
+  // Try to find existing (case-insensitive)
   const existingSize = await Size.findOne({
     where: { restaurantId },
     include: [
       {
         model: SizeTranslation,
         as: 'translations',
-        where: {
-          name: sizeName,
-        },
+        where: Sequelize.where(
+          Sequelize.fn('LOWER', Sequelize.col('translations.name')),
+          Sequelize.fn('LOWER', sizeName.trim()),
+        ),
       },
     ],
   });
 
   if (existingSize) {
-    return existingSize.id;
+    console.log(`Found existing size: ${sizeName} (ID: ${existingSize.id})`);
+    return { sizeId: existingSize.id, wasCreated: false };
   }
 
-  // Create new size with translations
+  // Create new size
+  console.log(`Creating new size: ${sizeName}`);
   const translations = [
-    {
-      language: 'hr',
-      name: sizeName,
-    },
-    {
-      language: 'en',
-      name: sizeName,
-    },
+    { language: 'hr', name: sizeName },
+    { language: 'en', name: sizeName },
   ];
 
   const translatedData = await autoTranslate(translations);
+  const size = await Size.create({ restaurantId, isActive: true });
 
-  const size = await Size.create({
-    restaurantId,
-    isActive: true,
-  });
-
-  // Create translations
   for (const translation of translatedData) {
     await SizeTranslation.create({
       sizeId: size.id,
@@ -65,7 +58,8 @@ const findOrCreateSize = async (restaurantId, sizeName) => {
     });
   }
 
-  return size.id;
+  console.log(`Created size: ${sizeName} (ID: ${size.id})`);
+  return { sizeId: size.id, wasCreated: true };
 };
 
 // Import menu from JSON file for a specific restaurant
@@ -316,6 +310,12 @@ const importMenuFromJson = async (req, res) => {
                 Array.isArray(itemData.sizes) &&
                 itemData.sizes.length > 0;
 
+              console.log(
+                `Item ${itemData.name.hr} has sizes:`,
+                hasSizes,
+                itemData.sizes,
+              );
+
               // Validate sizes if provided
               if (hasSizes) {
                 // Ensure at least one size has isDefault: true
@@ -327,7 +327,8 @@ const importMenuFromJson = async (req, res) => {
                   itemData.sizes[0].isDefault = true;
                 }
 
-                // Validate size data
+                // Validate all sizes before proceeding
+                let hasInvalidSize = false;
                 for (const size of itemData.sizes) {
                   if (
                     !size.name ||
@@ -335,11 +336,16 @@ const importMenuFromJson = async (req, res) => {
                     size.price < 0
                   ) {
                     fileResult.errors.push(
-                      `Invalid size data for item: ${itemData.name.hr}`,
+                      `Invalid size data for item: ${itemData.name.hr} - size: ${JSON.stringify(size)}`,
                     );
-                    fileResult.items.errors++;
-                    continue;
+                    hasInvalidSize = true;
+                    break;
                   }
+                }
+
+                if (hasInvalidSize) {
+                  fileResult.items.errors++;
+                  continue; // Skip this item entirely
                 }
               }
 
@@ -371,12 +377,20 @@ const importMenuFromJson = async (req, res) => {
 
               // Create sizes if provided
               if (hasSizes) {
+                console.log(
+                  `Creating ${itemData.sizes.length} sizes for item ${itemData.name.hr}`,
+                );
                 for (let i = 0; i < itemData.sizes.length; i++) {
                   const sizeData = itemData.sizes[i];
+                  console.log(`Processing size ${i}:`, sizeData);
                   try {
-                    const sizeId = await findOrCreateSize(
+                    const { sizeId, wasCreated } = await findOrCreateSize(
                       restaurant.id,
                       sizeData.name,
+                    );
+
+                    console.log(
+                      `Size ${sizeData.name} - ID: ${sizeId}, wasCreated: ${wasCreated}`,
                     );
 
                     await MenuItemSize.create({
@@ -387,32 +401,27 @@ const importMenuFromJson = async (req, res) => {
                       position: i,
                     });
 
-                    // Track size creation (we'll check if it was created or existing)
-                    const sizeExists = await Size.findByPk(sizeId, {
-                      include: [{ model: SizeTranslation, as: 'translations' }],
-                    });
+                    console.log(
+                      `Successfully linked size ${sizeData.name} to item ${itemData.name.hr}`,
+                    );
 
-                    if (
-                      sizeExists.translations.some(
-                        (t) => t.name === sizeData.name,
-                      )
-                    ) {
-                      // Check if this is a newly created size by checking creation time
-                      const isNewSize =
-                        new Date() - sizeExists.createdAt < 5000; // 5 seconds tolerance
-                      if (isNewSize) {
-                        fileResult.sizes.created++;
-                      } else {
-                        fileResult.sizes.existing++;
-                      }
+                    if (wasCreated) {
+                      fileResult.sizes.created++;
+                    } else {
+                      fileResult.sizes.existing++;
                     }
                   } catch (error) {
-                    console.error('Error creating size for item:', error);
+                    console.error(
+                      `Error creating size for item ${itemData.name.hr}:`,
+                      error,
+                    );
                     fileResult.errors.push(
                       `Size error for item ${itemData.name.hr}: ${error.message}`,
                     );
                   }
                 }
+              } else {
+                console.log(`Item ${itemData.name.hr} has no sizes`);
               }
 
               fileResult.items.created++;
