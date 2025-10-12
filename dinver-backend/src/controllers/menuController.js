@@ -651,7 +651,7 @@ const deleteMenuItem = async (req, res) => {
     // Prevent deletion if item is referenced by coupons
     const referencingCoupons = await Coupon.findAll({
       where: { rewardItemId: id },
-      attributes: ['id', 'title', 'status', 'type'],
+      attributes: ['id', 'source', 'status', 'type'],
     });
     if (referencingCoupons.length > 0) {
       return res.status(409).json({
@@ -864,7 +864,7 @@ const deleteCategory = async (req, res) => {
     if (itemIds.length > 0) {
       const referencingCoupons = await Coupon.findAll({
         where: { rewardItemId: { [Op.in]: itemIds } },
-        attributes: ['id', 'title', 'status', 'type', 'rewardItemId'],
+        attributes: ['id', 'source', 'status', 'type', 'rewardItemId'],
       });
       if (referencingCoupons.length > 0) {
         return res.status(409).json({
