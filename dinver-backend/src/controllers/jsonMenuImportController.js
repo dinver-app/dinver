@@ -10,9 +10,63 @@ const {
   DrinkItemTranslation,
   DrinkCategoryTranslation,
   Restaurant,
+  Size,
+  SizeTranslation,
+  MenuItemSize,
 } = require('../../models');
 const { autoTranslate } = require('../../utils/translate');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+
+// Helper function to find or create a size for a restaurant
+const findOrCreateSize = async (restaurantId, sizeName) => {
+  // Check if size already exists for this restaurant
+  const existingSize = await Size.findOne({
+    where: { restaurantId },
+    include: [
+      {
+        model: SizeTranslation,
+        as: 'translations',
+        where: {
+          name: sizeName,
+        },
+      },
+    ],
+  });
+
+  if (existingSize) {
+    return existingSize.id;
+  }
+
+  // Create new size with translations
+  const translations = [
+    {
+      language: 'hr',
+      name: sizeName,
+    },
+    {
+      language: 'en',
+      name: sizeName,
+    },
+  ];
+
+  const translatedData = await autoTranslate(translations);
+
+  const size = await Size.create({
+    restaurantId,
+    isActive: true,
+  });
+
+  // Create translations
+  for (const translation of translatedData) {
+    await SizeTranslation.create({
+      sizeId: size.id,
+      language: translation.language,
+      name: translation.name,
+    });
+  }
+
+  return size.id;
+};
 
 // Import menu from JSON file for a specific restaurant
 const importMenuFromJson = async (req, res) => {
@@ -63,6 +117,7 @@ const importMenuFromJson = async (req, res) => {
       files: [],
       categories: { created: 0, existing: 0 },
       items: { created: 0, errors: 0 },
+      sizes: { created: 0, existing: 0 },
       errors: [],
     };
 
@@ -77,6 +132,7 @@ const importMenuFromJson = async (req, res) => {
           filename: jsonFile,
           categories: { created: 0, existing: 0 },
           items: { created: 0, errors: 0 },
+          sizes: { created: 0, existing: 0 },
           errors: [],
         };
 
@@ -254,10 +310,43 @@ const importMenuFromJson = async (req, res) => {
               const lastPosition = existingItems[0]?.position ?? -1;
               const newPosition = lastPosition + 1;
 
+              // Determine if item has sizes
+              const hasSizes =
+                itemData.sizes &&
+                Array.isArray(itemData.sizes) &&
+                itemData.sizes.length > 0;
+
+              // Validate sizes if provided
+              if (hasSizes) {
+                // Ensure at least one size has isDefault: true
+                const hasDefault = itemData.sizes.some(
+                  (size) => size.isDefault === true,
+                );
+                if (!hasDefault) {
+                  // Make first size default
+                  itemData.sizes[0].isDefault = true;
+                }
+
+                // Validate size data
+                for (const size of itemData.sizes) {
+                  if (
+                    !size.name ||
+                    typeof size.price !== 'number' ||
+                    size.price < 0
+                  ) {
+                    fileResult.errors.push(
+                      `Invalid size data for item: ${itemData.name.hr}`,
+                    );
+                    fileResult.items.errors++;
+                    continue;
+                  }
+                }
+              }
+
               const item = await (
                 menuType === 'food' ? MenuItem : DrinkItem
               ).create({
-                price: itemData.price,
+                price: hasSizes ? null : itemData.price, // Set to null if sizes exist
                 restaurantId: restaurant.id,
                 position: newPosition,
                 categoryId,
@@ -278,6 +367,52 @@ const importMenuFromJson = async (req, res) => {
                   name: translation.name,
                   description: translation.description || '',
                 });
+              }
+
+              // Create sizes if provided
+              if (hasSizes) {
+                for (let i = 0; i < itemData.sizes.length; i++) {
+                  const sizeData = itemData.sizes[i];
+                  try {
+                    const sizeId = await findOrCreateSize(
+                      restaurant.id,
+                      sizeData.name,
+                    );
+
+                    await MenuItemSize.create({
+                      menuItemId: item.id,
+                      sizeId: sizeId,
+                      price: Number(sizeData.price),
+                      isDefault: sizeData.isDefault || false,
+                      position: i,
+                    });
+
+                    // Track size creation (we'll check if it was created or existing)
+                    const sizeExists = await Size.findByPk(sizeId, {
+                      include: [{ model: SizeTranslation, as: 'translations' }],
+                    });
+
+                    if (
+                      sizeExists.translations.some(
+                        (t) => t.name === sizeData.name,
+                      )
+                    ) {
+                      // Check if this is a newly created size by checking creation time
+                      const isNewSize =
+                        new Date() - sizeExists.createdAt < 5000; // 5 seconds tolerance
+                      if (isNewSize) {
+                        fileResult.sizes.created++;
+                      } else {
+                        fileResult.sizes.existing++;
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error creating size for item:', error);
+                    fileResult.errors.push(
+                      `Size error for item ${itemData.name.hr}: ${error.message}`,
+                    );
+                  }
+                }
               }
 
               fileResult.items.created++;
@@ -309,6 +444,8 @@ const importMenuFromJson = async (req, res) => {
         results.categories.existing += fileResult.categories.existing;
         results.items.created += fileResult.items.created;
         results.items.errors += fileResult.items.errors;
+        results.sizes.created += fileResult.sizes.created;
+        results.sizes.existing += fileResult.sizes.existing;
         results.errors.push(...fileResult.errors);
 
         results.files.push(fileResult);
@@ -319,6 +456,7 @@ const importMenuFromJson = async (req, res) => {
           error: error.message,
           categories: { created: 0, existing: 0 },
           items: { created: 0, errors: 0 },
+          sizes: { created: 0, existing: 0 },
           errors: [error.message],
         });
       }
