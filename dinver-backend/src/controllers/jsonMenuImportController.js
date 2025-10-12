@@ -233,6 +233,43 @@ const importMenuFromJson = async (req, res) => {
           }
         }
 
+        // Pre-process sizes: collect all unique size names and create them
+        const uniqueSizeNames = new Set();
+        if (menuData.items && Array.isArray(menuData.items)) {
+          for (const itemData of menuData.items) {
+            if (itemData.sizes && Array.isArray(itemData.sizes)) {
+              for (const size of itemData.sizes) {
+                if (size.name) {
+                  uniqueSizeNames.add(size.name.trim());
+                }
+              }
+            }
+          }
+        }
+
+        console.log(
+          `Found ${uniqueSizeNames.size} unique sizes:`,
+          Array.from(uniqueSizeNames),
+        );
+
+        // Create/find all sizes and build a map
+        const sizeMap = {}; // { "Normal": "uuid-123", "Jumbo": "uuid-456" }
+        for (const sizeName of uniqueSizeNames) {
+          const { sizeId, wasCreated } = await findOrCreateSize(
+            restaurant.id,
+            sizeName,
+          );
+          sizeMap[sizeName] = sizeId;
+
+          if (wasCreated) {
+            fileResult.sizes.created++;
+          } else {
+            fileResult.sizes.existing++;
+          }
+        }
+
+        console.log('Size map created:', sizeMap);
+
         // Process items
         if (menuData.items && Array.isArray(menuData.items)) {
           for (const itemData of menuData.items) {
@@ -375,48 +412,41 @@ const importMenuFromJson = async (req, res) => {
                 });
               }
 
-              // Create sizes if provided
+              // Link sizes using the pre-built map
               if (hasSizes) {
                 console.log(
-                  `Creating ${itemData.sizes.length} sizes for item ${itemData.name.hr}`,
+                  `Linking ${itemData.sizes.length} sizes for item ${itemData.name.hr}`,
                 );
                 for (let i = 0; i < itemData.sizes.length; i++) {
                   const sizeData = itemData.sizes[i];
-                  console.log(`Processing size ${i}:`, sizeData);
+                  const sizeId = sizeMap[sizeData.name.trim()]; // Get ID from map
+
+                  if (!sizeId) {
+                    fileResult.errors.push(
+                      `Size ${sizeData.name} not found for item ${itemData.name.hr}`,
+                    );
+                    continue;
+                  }
+
                   try {
-                    const { sizeId, wasCreated } = await findOrCreateSize(
-                      restaurant.id,
-                      sizeData.name,
-                    );
-
-                    console.log(
-                      `Size ${sizeData.name} - ID: ${sizeId}, wasCreated: ${wasCreated}`,
-                    );
-
                     await MenuItemSize.create({
                       menuItemId: item.id,
-                      sizeId: sizeId,
+                      sizeId: sizeId, // Use the ID from map
                       price: Number(sizeData.price),
                       isDefault: sizeData.isDefault || false,
                       position: i,
                     });
 
                     console.log(
-                      `Successfully linked size ${sizeData.name} to item ${itemData.name.hr}`,
+                      `Successfully linked size ${sizeData.name} (ID: ${sizeId}) to item ${itemData.name.hr}`,
                     );
-
-                    if (wasCreated) {
-                      fileResult.sizes.created++;
-                    } else {
-                      fileResult.sizes.existing++;
-                    }
                   } catch (error) {
                     console.error(
-                      `Error creating size for item ${itemData.name.hr}:`,
+                      `Error linking size for item ${itemData.name.hr}:`,
                       error,
                     );
                     fileResult.errors.push(
-                      `Size error for item ${itemData.name.hr}: ${error.message}`,
+                      `Size linking error for item ${itemData.name.hr}: ${error.message}`,
                     );
                   }
                 }
