@@ -1,11 +1,13 @@
 const { NewsletterSubscriber } = require('../../models');
-const mailgun = require('mailgun-js');
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
 const { format } = require('date-fns');
 const { hr } = require('date-fns/locale');
 
-const mg = mailgun({
-  apiKey: process.env.MAILGUN_API_KEY,
-  domain: process.env.MAILGUN_DOMAIN,
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY,
 });
 
 const LOGO_URL =
@@ -153,7 +155,7 @@ const sendNewsletterEmail = async (to, template) => {
   };
 
   try {
-    await mg.messages().send(emailData);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, emailData);
     console.log(`Newsletter ${template} email sent successfully to ${to}`);
   } catch (error) {
     console.error('Error sending newsletter email:', error);

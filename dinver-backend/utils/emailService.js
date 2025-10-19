@@ -1,11 +1,13 @@
-const mailgun = require('mailgun-js');
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
 const { format } = require('date-fns');
 
 // Mailgun konfiguracija
+const mailgun = new Mailgun(formData);
 const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
+  ? mailgun.client({
+      username: 'api',
+      key: process.env.MAILGUN_API_KEY,
     })
   : null;
 
@@ -168,7 +170,7 @@ const sendVerificationEmail = async (email, verificationLink) => {
   }
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Verification email sent successfully');
   } catch (error) {
     console.error('Error sending verification email:', error);
@@ -397,7 +399,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
   }
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Reservation email sent successfully');
   } catch (error) {
     console.error('Error sending reservation email:', error);
@@ -436,7 +438,7 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   }
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Password reset email sent successfully');
   } catch (error) {
     console.error('Error sending password reset email:', error);

@@ -3812,10 +3812,12 @@ ${new Date().toLocaleString('hr-HR', {
     `.trim();
 
     // Send email using the same mailgun setup as in claimLogController
-    const mailgun = require('mailgun-js');
-    const mg = mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
+    const formData = require('form-data');
+    const Mailgun = require('mailgun.js');
+    const mailgun = new Mailgun(formData);
+    const mg = mailgun.client({
+      username: 'api',
+      key: process.env.MAILGUN_API_KEY,
     });
 
     const emailData = {
@@ -3825,7 +3827,7 @@ ${new Date().toLocaleString('hr-HR', {
       text: emailContent,
     };
 
-    await mg.messages().send(emailData);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, emailData);
 
     res.json({
       message: 'Claim form submitted successfully',

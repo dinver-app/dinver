@@ -1,10 +1,12 @@
 const { QRPrintRequest, User, Restaurant } = require('../../models');
 const { createEmailTemplate } = require('../../utils/emailService');
-const mailgun = require('mailgun-js');
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
 const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
+  ? mailgun.client({
+      username: 'api',
+      key: process.env.MAILGUN_API_KEY,
     })
   : null;
 
@@ -92,7 +94,7 @@ const createQRPrintRequest = async (req, res) => {
       console.log('DEV: QR print zahtjev mail', data);
     } else {
       try {
-        await mg.messages().send(data);
+        await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
       } catch (err) {
         console.error('Greška kod slanja maila za QR print zahtjev:', err);
         // Nije fatalno za korisnika, ali možeš logirati ili javiti adminu
