@@ -1,129 +1,54 @@
+'use strict';
+
 const db = require('../../../models');
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../../config/cdn');
-const { createEnhancedSearchVariations, latinize } = require('./variations');
+const { createEnhancedSearchVariations } = require('./utils/variations');
+const {
+  createILIKEConditions,
+  calculateItemScore,
+  getItemPrice,
+} = require('./utils/searchTextHelper');
 
 const MAX_LIMIT = 50;
 
-function normalizeDiacritics(text) {
-  return latinize(text?.toLowerCase() || '');
-}
+async function searchMatchingCategories(
+  restaurantId,
+  searchTerms,
+  includeFood,
+) {
+  if (!searchTerms || searchTerms.length === 0) {
+    return [];
+  }
 
-function createSearchConditions(searchTerms) {
-  if (!searchTerms?.length) return undefined;
+  const CategoryModel = includeFood ? db.MenuCategory : db.DrinkCategory;
+  const TranslationModel = includeFood
+    ? db.MenuCategoryTranslation
+    : db.DrinkCategoryTranslation;
 
-  const conditions = [];
-
-  searchTerms.forEach((term) => {
-    const cleanTerm = term.replace(/[%_]/g, '');
-    const normalizedTerm = normalizeDiacritics(cleanTerm);
-
-    if (cleanTerm) {
-      conditions.push(
-        { name: { [Op.iLike]: `%${cleanTerm}%` } },
-        { description: { [Op.iLike]: `%${cleanTerm}%` } },
-      );
-
-      conditions.push(
-        db.sequelize.where(
-          db.sequelize.fn(
-            'LOWER',
-            db.sequelize.fn(
-              'TRANSLATE',
-              db.sequelize.col('translations.name'),
-              'čćđšžČĆĐŠŽàáâãäåèéêëìíîïòóôõöùúûüñ',
-              'ccdszCCDSZaaaaaaeeeeiiiioooouuuun',
-            ),
-          ),
-          { [Op.iLike]: `%${normalizedTerm}%` },
+  const matchingCategories = await CategoryModel.findAll({
+    where: { restaurantId, isActive: true },
+    include: [
+      {
+        model: TranslationModel,
+        as: 'translations',
+        attributes: ['language', 'name', 'description'],
+        where: createILIKEConditions(
+          { Op, sequelize: db.sequelize },
+          'translations',
+          ['name', 'description'],
+          searchTerms,
         ),
-        db.sequelize.where(
-          db.sequelize.fn(
-            'LOWER',
-            db.sequelize.fn(
-              'TRANSLATE',
-              db.sequelize.col('translations.description'),
-              'čćđšžČĆĐŠŽàáâãäåèéêëìíîïòóôõöùúûüñ',
-              'ccdszCCDSZaaaaaaeeeeiiiioooouuuun',
-            ),
-          ),
-          { [Op.iLike]: `%${normalizedTerm}%` },
-        ),
-      );
-    }
+        required: true,
+      },
+    ],
+    attributes: ['id'],
   });
 
-  return { [Op.or]: conditions };
+  return matchingCategories.map((cat) => cat.id);
 }
 
-function calculateTextScore(text, searchTerms) {
-  if (!text || !searchTerms?.length) return 0;
-
-  const normalizedText = normalizeDiacritics(text);
-  let score = 0;
-
-  for (const term of searchTerms) {
-    const normalizedTerm = normalizeDiacritics(term.replace(/[%_]/g, ''));
-    if (normalizedText.includes(normalizedTerm)) {
-      score += normalizedTerm.length / text.length;
-    }
-  }
-
-  return Math.min(score, 1);
-}
-
-function exactWordHit(text, term) {
-  if (!text || !term) return false;
-  const t = latinize(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const normalized = latinize(text);
-  return new RegExp(`\\b${t}\\b`, 'i').test(normalized);
-}
-
-function calculateItemScore(item, searchTerms) {
-  if (!searchTerms?.length) return 0;
-
-  const hrTranslation = item.translations?.find((t) => t.language === 'hr');
-  const enTranslation = item.translations?.find((t) => t.language === 'en');
-
-  const nameScoreHr =
-    calculateTextScore(hrTranslation?.name, searchTerms) * 1.0;
-  const nameScoreEn =
-    calculateTextScore(enTranslation?.name, searchTerms) * 1.0;
-  const descScoreHr =
-    calculateTextScore(hrTranslation?.description, searchTerms) * 0.7;
-  const descScoreEn =
-    calculateTextScore(enTranslation?.description, searchTerms) * 0.7;
-
-  const exactHr = searchTerms.some((t) => exactWordHit(hrTranslation?.name, t));
-  const exactEn = searchTerms.some((t) => exactWordHit(enTranslation?.name, t));
-  const exactBoost = exactHr || exactEn ? 0.15 : 0;
-
-  return Math.min(
-    1,
-    Math.max(nameScoreHr, nameScoreEn, descScoreHr, descScoreEn) + exactBoost,
-  );
-}
-
-function getItemPrice(item) {
-  if (item.price !== null && item.price !== undefined) {
-    return Number(parseFloat(item.price).toFixed(2));
-  }
-
-  if (item.sizes && item.sizes.length > 0) {
-    const validPrices = item.sizes
-      .map((size) => Number.parseFloat(size.price))
-      .filter(Number.isFinite);
-
-    if (validPrices.length > 0) {
-      const minPrice = Math.min(...validPrices);
-      return Number(minPrice.toFixed(2));
-    }
-  }
-
-  return null;
-}
-
-async function searchMenuItems(restaurantId, searchTerms, includeFood) {
+async function searchMenuItemsByText(restaurantId, searchTerms, includeFood) {
   const Model = includeFood ? db.MenuItem : db.DrinkItem;
   const TranslationModel = includeFood
     ? db.MenuItemTranslation
@@ -134,8 +59,13 @@ async function searchMenuItems(restaurantId, searchTerms, includeFood) {
       model: TranslationModel,
       as: 'translations',
       attributes: ['language', 'name', 'description'],
-      where: createSearchConditions(searchTerms),
-      required: searchTerms?.length > 0,
+      where: createILIKEConditions(
+        { Op, sequelize: db.sequelize },
+        'translations',
+        ['name', 'description'],
+        searchTerms,
+      ),
+      required: true,
     },
   ];
 
@@ -150,6 +80,50 @@ async function searchMenuItems(restaurantId, searchTerms, includeFood) {
 
   return await Model.findAll({
     where: { restaurantId, isActive: true },
+    include: includeOptions,
+    order: [
+      ['position', 'ASC'],
+      ['id', 'ASC'],
+    ],
+    limit: Number(process.env.SEARCH_HARD_LIMIT || 1000),
+    distinct: true,
+    subQuery: false,
+  });
+}
+async function getItemsByCategory(restaurantId, categoryIds, includeFood) {
+  if (categoryIds.length === 0) {
+    return [];
+  }
+
+  const Model = includeFood ? db.MenuItem : db.DrinkItem;
+  const TranslationModel = includeFood
+    ? db.MenuItemTranslation
+    : db.DrinkItemTranslation;
+
+  const includeOptions = [
+    {
+      model: TranslationModel,
+      as: 'translations',
+      attributes: ['language', 'name', 'description'],
+      required: false,
+    },
+  ];
+
+  if (includeFood) {
+    includeOptions.push({
+      model: db.MenuItemSize,
+      as: 'sizes',
+      required: false,
+      attributes: ['id', 'price', 'isDefault', 'position'],
+    });
+  }
+
+  return await Model.findAll({
+    where: {
+      restaurantId,
+      categoryId: { [Op.in]: categoryIds },
+      isActive: true,
+    },
     include: includeOptions,
     order: [
       ['position', 'ASC'],
@@ -201,39 +175,112 @@ module.exports.searchRestaurantMenuItems =
 
       const cappedLimit = Math.min(Number(limit) || 50, MAX_LIMIT);
       const cappedOffset = Math.max(Number(offset) || 0, 0);
-      const hasQuery = typeof query === 'string' && query.trim().length > 0;
 
+      const hasQuery = typeof query === 'string' && query.trim().length > 0;
       let searchTerms = [];
       if (hasQuery) {
-        const { variants } = createEnhancedSearchVariations(query, {
-          max: 10,
-        });
+        const { variants } = createEnhancedSearchVariations(query, { max: 10 });
         searchTerms = [query, ...variants].slice(0, 10);
       }
 
-      const promises = [];
-      if (includeFood) {
-        promises.push(searchMenuItems(restaurantId, searchTerms, true));
-      }
-      if (includeDrinks) {
-        promises.push(searchMenuItems(restaurantId, searchTerms, false));
+      let foodItems = [];
+      let drinkItems = [];
+
+      if (hasQuery) {
+        const promises = [];
+        let matchingFoodCategoryIds = [];
+        let matchingDrinkCategoryIds = [];
+
+        if (includeFood) {
+          promises.push(
+            searchMatchingCategories(restaurantId, searchTerms, true),
+          );
+        }
+        if (includeDrinks) {
+          promises.push(
+            searchMatchingCategories(restaurantId, searchTerms, false),
+          );
+        }
+
+        const categoryResults = await Promise.all(promises);
+        let catIndex = 0;
+        if (includeFood) {
+          matchingFoodCategoryIds = categoryResults[catIndex++];
+        }
+        if (includeDrinks) {
+          matchingDrinkCategoryIds = categoryResults[catIndex++];
+        }
+
+        const itemPromises = [];
+
+        if (includeFood) {
+          itemPromises.push(
+            searchMenuItemsByText(restaurantId, searchTerms, true),
+          );
+          if (matchingFoodCategoryIds.length > 0) {
+            itemPromises.push(
+              getItemsByCategory(restaurantId, matchingFoodCategoryIds, true),
+            );
+          }
+        }
+
+        if (includeDrinks) {
+          itemPromises.push(
+            searchMenuItemsByText(restaurantId, searchTerms, false),
+          );
+          if (matchingDrinkCategoryIds.length > 0) {
+            itemPromises.push(
+              getItemsByCategory(restaurantId, matchingDrinkCategoryIds, false),
+            );
+          }
+        }
+
+        const results = await Promise.all(itemPromises);
+        let resultIndex = 0;
+
+        if (includeFood) {
+          const textMatchedFood = results[resultIndex++];
+          const categoryMatchedFood =
+            matchingFoodCategoryIds.length > 0 ? results[resultIndex++] : [];
+
+          const foodItemsMap = new Map();
+          [...textMatchedFood, ...categoryMatchedFood].forEach((item) => {
+            if (!foodItemsMap.has(item.id)) {
+              foodItemsMap.set(item.id, item);
+            }
+          });
+          foodItems = Array.from(foodItemsMap.values());
+        }
+
+        if (includeDrinks) {
+          const textMatchedDrinks = results[resultIndex++];
+          const categoryMatchedDrinks =
+            matchingDrinkCategoryIds.length > 0 ? results[resultIndex++] : [];
+
+          // Combine and deduplicate by ID
+          const drinkItemsMap = new Map();
+          [...textMatchedDrinks, ...categoryMatchedDrinks].forEach((item) => {
+            if (!drinkItemsMap.has(item.id)) {
+              drinkItemsMap.set(item.id, item);
+            }
+          });
+          drinkItems = Array.from(drinkItemsMap.values());
+        }
       }
 
-      const results = await Promise.all(promises);
       let allItems = [];
-
       if (includeFood && includeDrinks) {
         allItems = [
-          ...results[0].map((item) => ({ ...item.toJSON(), type: 'food' })),
-          ...results[1].map((item) => ({ ...item.toJSON(), type: 'drink' })),
+          ...foodItems.map((item) => ({ ...item.toJSON(), type: 'food' })),
+          ...drinkItems.map((item) => ({ ...item.toJSON(), type: 'drink' })),
         ];
       } else if (includeFood) {
-        allItems = results[0].map((item) => ({
+        allItems = foodItems.map((item) => ({
           ...item.toJSON(),
           type: 'food',
         }));
       } else {
-        allItems = results[0].map((item) => ({
+        allItems = drinkItems.map((item) => ({
           ...item.toJSON(),
           type: 'drink',
         }));
@@ -250,6 +297,7 @@ module.exports.searchRestaurantMenuItems =
         : sort === 'price_desc'
           ? 'price_desc'
           : 'price_asc';
+
       itemsWithScores.sort((a, b) => {
         if (sortKey === 'price_asc') {
           const pa = a.calculatedPrice,

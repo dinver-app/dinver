@@ -1,6 +1,5 @@
 'use strict';
-const { chatAgent } = require('../dinver-ai/agent');
-const { fetchRestaurantDetails } = require('../dinver-ai/dataAccess');
+const { chatAgent } = require('../ai');
 const { v4: uuidv4 } = require('uuid');
 const { AiThread, AiMessage } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
@@ -13,26 +12,25 @@ async function findOrCreateActiveThread({
 }) {
   const now = new Date();
 
-  // Ako je poslan threadId, pokušaj pronaći postojeći thread
   if (threadId) {
+    const whereClause = {
+      id: threadId,
+      isReadOnly: false,
+    };
+    if (userId) whereClause.userId = userId;
+
     let t = await AiThread.findOne({
-      where: {
-        id: threadId,
-        userId,
-        isReadOnly: false,
-      },
+      where: whereClause,
     });
+
     const expired =
       t && t.expiresAt && new Date(t.expiresAt).getTime() < now.getTime();
-    if (t && !expired) {
-      return t;
-    }
-    // Ako thread ne postoji ili je istekao, kreiraj novi s istim ID-om
+    if (t && !expired) return t;
+
     if (t && expired) {
-      // Thread je istekao, kreiraj novi
       return await AiThread.create({
         id: uuidv4(),
-        userId,
+        userId: userId || null,
         restaurantId: restaurantId || null,
         title: (titleSeed || '').toString().slice(0, 120) || null,
         isReadOnly: false,
@@ -43,10 +41,9 @@ async function findOrCreateActiveThread({
     }
   }
 
-  // Ako nema threadId ili thread ne postoji, kreiraj novi
   return await AiThread.create({
-    id: threadId || uuidv4(),
-    userId,
+    id: uuidv4(), 
+    userId: userId || null,
     restaurantId: restaurantId || null,
     title: (titleSeed || '').toString().slice(0, 120) || null,
     isReadOnly: false,
@@ -91,9 +88,49 @@ module.exports = {
         return res.status(400).json({ error: 'message is required' });
       }
 
-      const userId = req.user?.id; // iz JWT middleware-a
+      const userId = req.user?.id;
 
       if (!threadId) threadId = uuidv4();
+
+      let conversationHistory = [];
+      let contextRestaurantId = restaurantId;
+
+      if (threadId) {
+        const whereClause = { id: threadId };
+        if (userId) whereClause.userId = userId;
+
+        const existingThread = await AiThread.findOne({
+          where: whereClause,
+        });
+
+        if (existingThread) {
+          const messages = await AiMessage.findAll({
+            where: { threadId },
+            order: [['createdAt', 'ASC']],
+            attributes: ['role', 'text', 'reply'],
+          });
+
+          conversationHistory = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.text,
+          }));
+
+          if (!contextRestaurantId && messages.length > 0) {
+            const lastAssistantMsg = messages
+              .filter((m) => m.role === 'assistant')
+              .reverse()
+              .find((m) => m.reply?.restaurantId);
+
+            if (lastAssistantMsg?.reply?.restaurantId) {
+              contextRestaurantId = lastAssistantMsg.reply.restaurantId;
+              console.log(
+                '[Chat] Extracted restaurantId from context:',
+                contextRestaurantId,
+              );
+            }
+          }
+        }
+      }
 
       const reply = await chatAgent({
         message,
@@ -102,7 +139,9 @@ module.exports = {
         longitude,
         radiusKm,
         threadId,
-        forcedRestaurantId: restaurantId,
+        forcedRestaurantId: contextRestaurantId,
+        userId,
+        conversationHistory,
       });
 
       const normalized =
@@ -110,38 +149,25 @@ module.exports = {
           ? reply
           : { text: String(reply || '') };
 
-      if (normalized.restaurantId && !normalized.restaurantName) {
-        try {
-          const details = await fetchRestaurantDetails(normalized.restaurantId);
-          if (details?.name) normalized.restaurantName = details.name;
-        } catch {}
-      }
+      const dbThread = await findOrCreateActiveThread({
+        userId,
+        restaurantId: contextRestaurantId,
+        titleSeed: message,
+        threadId,
+      });
 
-      // Spremi u bazu samo ako je korisnik logiran
-      let finalThreadId = threadId;
-      if (userId) {
-        const dbThread = await findOrCreateActiveThread({
-          userId,
-          restaurantId,
-          titleSeed: message,
-          threadId,
-        });
+      const normalizedForDb = JSON.parse(JSON.stringify(normalized));
 
-        // Create a copy for database storage with raw keys (not transformed URLs)
-        const normalizedForDb = JSON.parse(JSON.stringify(normalized));
+      await appendDbMessage(dbThread, 'user', message);
+      await appendDbMessage(
+        dbThread,
+        'assistant',
+        normalizedForDb.text,
+        normalizedForDb,
+      );
 
-        await appendDbMessage(dbThread, 'user', message);
-        await appendDbMessage(
-          dbThread,
-          'assistant',
-          normalizedForDb.text,
-          normalizedForDb,
-        );
-        // Koristi ID iz baze umjesto originalnog threadId
-        finalThreadId = dbThread.id;
-      }
+      const finalThreadId = dbThread.id;
 
-      // Transform thumbnailUrls in response (raw keys to CloudFront URLs)
       if (normalized.restaurants && Array.isArray(normalized.restaurants)) {
         normalized.restaurants = normalized.restaurants.map((restaurant) => ({
           ...restaurant,
@@ -256,11 +282,9 @@ module.exports = {
         attributes: ['id', 'role', 'text', 'reply', 'createdAt'],
       });
 
-      // Transform thumbnailUrls in reply objects (raw keys to CloudFront URLs)
       const transformedMessages = messages.map((msg) => {
         const messageData = msg.toJSON();
         if (messageData.reply && typeof messageData.reply === 'object') {
-          // Transform restaurants array
           if (
             messageData.reply.restaurants &&
             Array.isArray(messageData.reply.restaurants)
@@ -276,7 +300,6 @@ module.exports = {
               }),
             );
           }
-          // Transform items array
           if (
             messageData.reply.items &&
             Array.isArray(messageData.reply.items)
@@ -290,7 +313,6 @@ module.exports = {
                   : item.thumbnailUrl,
             }));
           }
-          // Transform single restaurant
           if (
             messageData.reply.restaurant &&
             messageData.reply.restaurant.thumbnailUrl &&

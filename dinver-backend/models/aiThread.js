@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
       },
       restaurantId: {
         type: DataTypes.UUID,

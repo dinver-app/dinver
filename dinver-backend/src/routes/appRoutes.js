@@ -27,7 +27,9 @@ const analyticsRoutes = require('./appRoutes/analyticsRoutes');
 const pushNotificationRoutes = require('./appRoutes/pushNotificationRoutes');
 const referralRoutes = require('./appRoutes/referralRoutes');
 const aiRoutes = require('./appRoutes/aiRoutes');
-const aiMenuSearch = require('./appRoutes/ai/menuSearchRoutes');
+const aiMenuSearchRoutes = require('./appRoutes/ai/menuSearchRoutes');
+const taxonomy = require('./appRoutes/ai/taxonomyRoutes');
+
 const router = express.Router();
 
 router.use(authRoutes);
@@ -58,6 +60,8 @@ router.use(analyticsRoutes);
 router.use(pushNotificationRoutes);
 router.use(referralRoutes);
 router.use(aiRoutes);
-router.use(aiMenuSearch);
+router.use(aiMenuSearchRoutes);
+router.use(taxonomy);
+
 
 module.exports = router;
