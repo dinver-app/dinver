@@ -7,6 +7,7 @@ const mg = process.env.MAILGUN_API_KEY
   ? mailgun({
       apiKey: process.env.MAILGUN_API_KEY,
       domain: process.env.MAILGUN_DOMAIN,
+      host: 'api.eu.mailgun.net', // EU region
     })
   : null;
 
@@ -114,6 +115,13 @@ const createPremiumEmailTemplate = (content) => {
           }
           .button:hover {
             background-color: #0a4a3a !important;
+            color: #ffffff !important;
+          }
+          .button:visited {
+            color: #ffffff !important;
+          }
+          .button:active {
+            color: #ffffff !important;
           }
           .footer {
             background-color: #1a1a1a;
@@ -177,7 +185,7 @@ const createPremiumEmailTemplate = (content) => {
         .button {
           display: inline-block;
           background-color: #0C5A48;
-          color: #ffffff;
+          color: #ffffff !important;
           padding: 16px 32px;
           text-decoration: none;
           border-radius: 8px;
@@ -191,6 +199,15 @@ const createPremiumEmailTemplate = (content) => {
         
         .button:hover {
           background-color: #0a4a3a;
+          color: #ffffff !important;
+        }
+        
+        .button:visited {
+          color: #ffffff !important;
+        }
+        
+        .button:active {
+          color: #ffffff !important;
         }
         
         .button-large {
