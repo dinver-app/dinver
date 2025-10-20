@@ -80,6 +80,8 @@ module.exports = (sequelize, DataTypes) => {
           'referral_visit_referrer',
           // Points deduction (spending)
           'points_spent_coupon',
+          // Receipt validation
+          'receipt_upload',
         ),
         allowNull: false,
       },

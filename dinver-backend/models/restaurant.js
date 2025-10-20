@@ -271,6 +271,13 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'URL for virtual tour iframe (e.g., Kuula.co embed URL)',
       },
+      oib: {
+        type: DataTypes.STRING(11),
+        allowNull: true,
+        unique: true,
+        comment:
+          'OIB (Osobni identifikacijski broj) for fiscal receipt matching',
+      },
     },
     {
       sequelize,
