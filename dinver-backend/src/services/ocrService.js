@@ -7,8 +7,9 @@ const openai = new OpenAI({
 
 /**
  * Extract receipt data from image using OpenAI Vision API
+ * Returns structured fields and confidences for each
  * @param {Buffer} imageBuffer - Image buffer
- * @returns {Object|null} Extracted data or null if failed
+ * @returns {Object|null} { fields, confidence } or null
  */
 const extractReceiptData = async (imageBuffer) => {
   try {
@@ -21,44 +22,48 @@ const extractReceiptData = async (imageBuffer) => {
     const base64Image = imageBuffer.toString('base64');
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // Using gpt-4o for better vision capabilities
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Extract the following information from this Croatian fiscal receipt image:
-1. OIB (Osobni identifikacijski broj) - 11 digits
-2. JIR (Jedinstveni identifikator računa) - usually a long string
-3. ZKI (Završni kontrolni identifikator) - usually a long string
-4. Total amount in EUR (look for "UKUPNO" or similar)
-5. Issue date in YYYY-MM-DD format
-6. Issue time in HH:MM format
-
-Return the data as a JSON object with these exact keys:
+              text: `You are reading a Croatian fiscal receipt image. Extract fields and confidences.
+Return STRICT JSON only in this shape (no prose):
 {
-  "oib": "string or null",
-  "jir": "string or null", 
-  "zki": "string or null",
-  "totalAmount": number or null,
-  "issueDate": "YYYY-MM-DD or null",
-  "issueTime": "HH:MM or null"
+  "fields": {
+    "oib": "11 digit string or null",
+    "jir": "string or null",
+    "zki": "string or null",
+    "totalAmount": number or null,
+    "issueDate": "YYYY-MM-DD or null",
+    "issueTime": "HH:MM or null",
+    "name": "string or null",
+    "address": "string or null"
+  },
+  "confidence": {
+    "oib": 0-1,
+    "jir": 0-1,
+    "zki": 0-1,
+    "totalAmount": 0-1,
+    "issueDate": 0-1,
+    "issueTime": 0-1,
+    "name": 0-1,
+    "address": 0-1
+  }
 }
-
-If any field cannot be found, set it to null. Only return valid JSON.`,
+Rules: If missing/unclear, set null. Total is in EUR (look for "UKUPNO").`,
             },
             {
               type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
             },
           ],
         },
       ],
-      max_tokens: 500,
-      temperature: 0.1, // Low temperature for more consistent results
+      max_tokens: 700,
+      temperature: 0.1,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -68,20 +73,35 @@ If any field cannot be found, set it to null. Only return valid JSON.`,
     }
 
     // Parse JSON response
-    const extractedData = JSON.parse(content);
+    const parsed = JSON.parse(content);
+    const f = parsed?.fields || {};
+    const c = parsed?.confidence || {};
 
-    // Validate and clean the data
-    const cleanedData = {
-      oib: validateOIB(extractedData.oib),
-      jir: validateString(extractedData.jir),
-      zki: validateString(extractedData.zki),
-      totalAmount: validateAmount(extractedData.totalAmount),
-      issueDate: validateDate(extractedData.issueDate),
-      issueTime: validateTime(extractedData.issueTime),
+    const cleanedFields = {
+      oib: validateOIB(f.oib),
+      jir: validateString(f.jir),
+      zki: validateString(f.zki),
+      totalAmount: validateAmount(f.totalAmount),
+      issueDate: validateDate(f.issueDate),
+      issueTime: validateTime(f.issueTime),
+      name: validateString(f.name),
+      address: validateString(f.address),
     };
 
-    console.log('OCR extracted data:', cleanedData);
-    return cleanedData;
+    const cleanedConfidence = {
+      oib: Number.isFinite(c.oib) ? Number(c.oib) : null,
+      jir: Number.isFinite(c.jir) ? Number(c.jir) : null,
+      zki: Number.isFinite(c.zki) ? Number(c.zki) : null,
+      totalAmount: Number.isFinite(c.totalAmount)
+        ? Number(c.totalAmount)
+        : null,
+      issueDate: Number.isFinite(c.issueDate) ? Number(c.issueDate) : null,
+      issueTime: Number.isFinite(c.issueTime) ? Number(c.issueTime) : null,
+      name: Number.isFinite(c.name) ? Number(c.name) : null,
+      address: Number.isFinite(c.address) ? Number(c.address) : null,
+    };
+
+    return { fields: cleanedFields, confidence: cleanedConfidence };
   } catch (error) {
     console.error('Error in OCR service:', error);
     return null;

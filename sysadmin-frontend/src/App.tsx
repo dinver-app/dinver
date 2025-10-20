@@ -19,6 +19,7 @@ import Referrals from "./pages/Referrals";
 import QRPrintRequests from "./pages/QRPrintRequests";
 import Types from "./pages/Types";
 import Receipts from "./pages/Receipts";
+import ReceiptDetails from "./pages/ReceiptDetails";
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
             <Route path="/qr-print-requests" element={<QRPrintRequests />} />
             <Route path="/types" element={<Types />} />
             <Route path="/receipts" element={<Receipts />} />
+            <Route path="/receipts/:id" element={<ReceiptDetails />} />
           </Route>
         </Routes>
       </Router>

@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import {
   receiptService,
   Receipt,
   ReceiptFilters,
 } from "../services/receiptService";
-import ReceiptDetailModal from "../components/ReceiptDetailModal";
 import toast from "react-hot-toast";
 
 const Receipts: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
-  const [showModal, setShowModal] = useState(false);
   const [filters, setFilters] = useState<ReceiptFilters>({
     page: 1,
     limit: 50,
@@ -23,6 +20,7 @@ const Receipts: React.FC = () => {
     totalPages: 0,
     currentPage: 1,
   });
+  const navigate = useNavigate();
 
   const fetchReceipts = async () => {
     try {
@@ -60,24 +58,8 @@ const Receipts: React.FC = () => {
   };
 
   const handleReceiptClick = async (receipt: Receipt) => {
-    try {
-      const fullReceipt = await receiptService.getReceiptById(receipt.id);
-      setSelectedReceipt(fullReceipt);
-      setShowModal(true);
-    } catch (err) {
-      toast.error("Failed to load receipt details");
-    }
-  };
-
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedReceipt(null);
-  };
-
-  const handleReceiptUpdate = () => {
-    // Refresh the receipts list
-    fetchReceipts();
-    toast.success("Receipt updated successfully");
+    // Client-side navigation preserves app state and is faster
+    navigate(`/receipts/${receipt.id}`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -381,14 +363,7 @@ const Receipts: React.FC = () => {
         )}
       </div>
 
-      {/* Receipt Detail Modal */}
-      {showModal && selectedReceipt && (
-        <ReceiptDetailModal
-          receipt={selectedReceipt}
-          onClose={handleModalClose}
-          onUpdate={handleReceiptUpdate}
-        />
-      )}
+      {/* Detail modal no longer used; navigation opens full page */}
     </div>
   );
 };

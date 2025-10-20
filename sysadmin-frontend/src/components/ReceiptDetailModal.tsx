@@ -7,17 +7,21 @@ import {
   RejectReceiptData,
 } from "../services/receiptService";
 import toast from "react-hot-toast";
+import RestaurantPickerModal from "./RestaurantPickerModal";
+import { RestaurantLite } from "../services/restaurantAdminService";
 
 interface ReceiptDetailModalProps {
   receipt: Receipt;
   onClose: () => void;
   onUpdate: () => void;
+  mode?: "modal" | "page";
 }
 
 const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
   receipt,
   onClose,
   onUpdate,
+  mode = "modal",
 }) => {
   const [formData, setFormData] = useState<UpdateReceiptData>({
     oib: receipt.oib || "",
@@ -28,11 +32,12 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
     issueTime: receipt.issueTime || "",
     restaurantId: receipt.restaurantId || "",
   });
-  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [_, setRestaurants] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Calculate points preview
   const pointsPreview = Math.floor((formData.totalAmount || 0) / 10);
@@ -108,6 +113,15 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
     }
   };
 
+  const handleRestaurantPicked = (r: RestaurantLite) => {
+    setFormData((prev) => ({
+      ...prev,
+      restaurantId: r.id,
+      oib: r.oib || prev.oib,
+    }));
+    setPickerOpen(false);
+  };
+
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       toast.error("Rejection reason is required");
@@ -155,33 +169,16 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
     );
   };
 
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
-        <div className="mt-3">
+  // Page mode rendering retained for backwards compat, but this component is deprecated in favor of `ReceiptDetailsContent`.
+  if (mode === "page") {
+    return (
+      <div className="p-6">
+        <div className="bg-white rounded-md shadow p-5">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium text-gray-900">
               Receipt Details - {receipt.status.toUpperCase()}
             </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -234,13 +231,19 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
                     <strong>Submitted:</strong>{" "}
                     {formatDate(receipt.submittedAt)}
                   </p>
-                  {receipt.locationLat && receipt.locationLng && (
-                    <p>
-                      <strong>Location:</strong>{" "}
-                      {receipt.locationLat.toFixed(6)},{" "}
-                      {receipt.locationLng.toFixed(6)}
-                    </p>
-                  )}
+                  {receipt.locationLat != null &&
+                    receipt.locationLng != null && (
+                      <p>
+                        <strong>Location:</strong>{" "}
+                        {Number.isFinite(Number(receipt.locationLat))
+                          ? Number(receipt.locationLat).toFixed(6)
+                          : String(receipt.locationLat)}
+                        ,{" "}
+                        {Number.isFinite(Number(receipt.locationLng))
+                          ? Number(receipt.locationLng).toFixed(6)
+                          : String(receipt.locationLng)}
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -365,21 +368,22 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Restaurant *
                   </label>
-                  <select
-                    value={formData.restaurantId}
-                    onChange={(e) =>
-                      handleInputChange("restaurantId", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select restaurant...</option>
-                    {restaurants.map((restaurant) => (
-                      <option key={restaurant.id} value={restaurant.id}>
-                        {restaurant.name}{" "}
-                        {restaurant.oib && `(${restaurant.oib})`}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      disabled
+                      value={formData.restaurantId || ""}
+                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-gray-600"
+                      placeholder="No restaurant selected"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      Choose
+                    </button>
+                  </div>
                 </div>
 
                 {/* Points Preview */}
@@ -397,7 +401,7 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="mt-6 flex justify-between">
+          <div className="mt-6 flex justify-between sticky bottom-0 bg-white py-3 border-t">
             <div className="flex space-x-3">
               <button
                 onClick={handleSaveChanges}
@@ -426,13 +430,6 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
                 </>
               )}
             </div>
-
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-            >
-              Close
-            </button>
           </div>
 
           {/* Rejection Form */}
@@ -465,10 +462,29 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
               </div>
             </div>
           )}
+
+          <RestaurantPickerModal
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onSelect={handleRestaurantPicked}
+            userLat={
+              typeof receipt.locationLat === "number"
+                ? receipt.locationLat
+                : undefined
+            }
+            userLng={
+              typeof receipt.locationLng === "number"
+                ? receipt.locationLng
+                : undefined
+            }
+          />
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Modal mode is deprecated and intentionally removed.
+  return null;
 };
 
 export default ReceiptDetailModal;

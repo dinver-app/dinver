@@ -36,6 +36,8 @@ const Entities = {
   USER_POINTS: 'user_points',
   PUSH_TOKEN: 'push_token',
   PUSH_NOTIFICATION: 'push_notification',
+  // Receipt validation entities
+  RECEIPT: 'receipt',
 };
 
 function deepCompare(oldObj, newObj) {

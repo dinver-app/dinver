@@ -45,22 +45,64 @@ const uploadReceipt = async (req, res) => {
       });
     }
 
-    // Upload image to S3
+    // Optional server-side compression using sharp
+    const sharp = require('sharp');
+    const inputBuffer = file.buffer;
+    let processedBuffer = inputBuffer;
+    let contentType = 'image/jpeg';
+    let imageMeta = null;
+    try {
+      const image = sharp(inputBuffer, { failOn: 'none' });
+      const metadata = await image.metadata();
+      const width = metadata.width || 0;
+      const pipeline = image.rotate();
+      if (width > 1600) {
+        pipeline.resize({ width: 1600 });
+      }
+      processedBuffer = await pipeline
+        .jpeg({ quality: 80, mozjpeg: true })
+        .toBuffer();
+      contentType = 'image/jpeg';
+      // overwrite file buffer so upload util uses compressed bytes
+      file.buffer = processedBuffer;
+      file.mimetype = contentType;
+      file.originalname =
+        (file.originalname || 'receipt').replace(/\.[^.]+$/, '') + '.jpg';
+
+      imageMeta = {
+        width: metadata.width || null,
+        height: metadata.height || null,
+        bytes: processedBuffer.length,
+        contentType,
+      };
+    } catch (e) {
+      console.warn(
+        'Image compression failed, using original buffer:',
+        e?.message,
+      );
+    }
+
+    // Upload image to S3 (uses possibly compressed buffer)
     const folder = `receipts/${userId}`;
     const imageKey = await uploadToS3(file, folder);
 
     // Try OCR extraction (non-blocking)
     let ocrData = null;
-    let extractedData = null;
+    let extracted = null;
 
     try {
-      extractedData = await extractReceiptData(file.buffer);
-      if (extractedData) {
-        ocrData = extractedData;
+      extracted = await extractReceiptData(processedBuffer);
+      if (extracted) {
+        ocrData = imageMeta ? { ...extracted, meta: imageMeta } : extracted;
+      } else if (imageMeta) {
+        ocrData = { meta: imageMeta };
       }
     } catch (ocrError) {
       console.error('OCR extraction failed:', ocrError);
       // Continue without OCR data
+      if (imageMeta) {
+        ocrData = { meta: imageMeta };
+      }
     }
 
     // Create receipt record
@@ -73,12 +115,12 @@ const uploadReceipt = async (req, res) => {
       status: 'pending',
       ocrData,
       // Pre-populate fields if OCR was successful
-      oib: extractedData?.oib || null,
-      jir: extractedData?.jir || null,
-      zki: extractedData?.zki || null,
-      totalAmount: extractedData?.totalAmount || null,
-      issueDate: extractedData?.issueDate || null,
-      issueTime: extractedData?.issueTime || null,
+      oib: extracted?.fields?.oib || null,
+      jir: extracted?.fields?.jir || null,
+      zki: extracted?.fields?.zki || null,
+      totalAmount: extracted?.fields?.totalAmount || null,
+      issueDate: extracted?.fields?.issueDate || null,
+      issueTime: extracted?.fields?.issueTime || null,
     });
 
     // Log audit
@@ -271,6 +313,19 @@ const getReceiptById = async (req, res) => {
 
     const receiptData = receipt.toJSON();
     receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+    // Add image meta and OCR confidence if available
+    const meta = receipt.ocrData?.meta || null;
+    receiptData.imageMeta = meta
+      ? {
+          width: meta.width || null,
+          height: meta.height || null,
+          bytes: meta.bytes || null,
+          contentType: meta.contentType || null,
+        }
+      : null;
+    receiptData.ocr = {
+      confidence: receipt.ocrData?.confidence || null,
+    };
 
     res.json(receiptData);
   } catch (error) {
