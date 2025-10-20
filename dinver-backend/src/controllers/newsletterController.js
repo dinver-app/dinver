@@ -6,6 +6,7 @@ const { hr } = require('date-fns/locale');
 const mg = mailgun({
   apiKey: process.env.MAILGUN_API_KEY,
   domain: process.env.MAILGUN_DOMAIN,
+  host: 'api.eu.mailgun.net', // EU region
 });
 
 const LOGO_URL =
