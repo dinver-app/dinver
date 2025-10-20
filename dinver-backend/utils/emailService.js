@@ -1,5 +1,6 @@
 const mailgun = require('mailgun-js');
 const { format } = require('date-fns');
+const crypto = require('crypto');
 
 // Mailgun konfiguracija
 const mg = process.env.MAILGUN_API_KEY
@@ -17,105 +18,323 @@ const formatTime = (timeStr) => {
   return timeStr.substring(0, 5); // Format HH:mm from HH:mm:ss
 };
 
-// Common HTML email template
-const createEmailTemplate = (content) => {
+// Generate RFC 2822-compliant Message-ID for a given domain
+const generateMessageId = (domain = 'dinver.eu') => {
+  const id = crypto.randomBytes(16).toString('hex');
+  return `<${id}@${domain}>`;
+};
+
+// Create a plain-text approximation from HTML for better spam scoring
+const htmlToPlainText = (html) => {
+  if (!html) return '';
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/?(br|p|div|li|tr|h[1-6])[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+// Attach anti-spam headers and Mailgun options
+const addAntiSpamHeaders = (data, { refId }) => {
+  const headers = {
+    'h:Message-ID': generateMessageId(),
+    'h:Reply-To': 'support@dinver.eu',
+    // While List-Unsubscribe is typically for marketing, adding it improves deliverability signals.
+    'h:List-Unsubscribe': '<mailto:support@dinver.eu?subject=unsubscribe>',
+  };
+
+  return {
+    ...data,
+    ...headers,
+    'h:X-Entity-Ref-ID': refId || `ref-${Date.now()}`,
+    'o:dkim': 'yes',
+    'o:tracking': 'yes',
+    'o:tracking-clicks': 'yes',
+    'o:tracking-opens': 'yes',
+  };
+};
+
+// Premium HTML email template with dark mode support
+const createPremiumEmailTemplate = (content) => {
   return `
     <!DOCTYPE html>
     <html lang="hr">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
       <title>Dinver</title>
       <style>
+        /* Reset and base styles */
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           line-height: 1.6;
-          color: #333;
+          color: #1a1a1a;
           margin: 0;
           padding: 0;
-          background-color: #f5f5f5;
+          background-color: #ffffff;
           -webkit-text-size-adjust: 100%;
           -ms-text-size-adjust: 100%;
         }
+        
+        /* Dark mode styles */
+        @media (prefers-color-scheme: dark) {
+          body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+          }
+          .container {
+            background-color: #2d2d2d;
+            border: 1px solid #404040;
+          }
+          .header {
+            background-color: #1a1a1a !important;
+            border-bottom: 1px solid #404040;
+          }
+          .logo {
+            color: #ffffff !important;
+          }
+          .content {
+            background-color: #2d2d2d;
+          }
+          .card {
+            background-color: #404040;
+            border: 1px solid #555555;
+          }
+          .button {
+            background-color: #0C5A48 !important;
+            color: #ffffff !important;
+          }
+          .button:hover {
+            background-color: #0a4a3a !important;
+          }
+          .footer {
+            background-color: #1a1a1a;
+            border-top: 1px solid #404040;
+            color: #cccccc;
+          }
+          .footer a {
+            color: #0C5A48;
+          }
+          .link-container {
+            background-color: #404040;
+            border: 1px solid #555555;
+            color: #cccccc;
+          }
+          h2, h3 {
+            color: #ffffff;
+          }
+          .text-muted {
+            color: #999999;
+          }
+        }
+        
         .container {
           max-width: 600px;
           margin: 0 auto;
           background-color: #ffffff;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e5e7eb;
         }
+        
         .header {
-          background-color: #4CAF50 !important;
-          color: white !important;
-          padding: 20px;
+          background-color: #ffffff;
+          padding: 32px 24px 24px;
           text-align: center;
+          border-bottom: 1px solid #e5e7eb;
         }
+        
         .logo {
-          font-size: 28px;
-          font-weight: bold;
-          letter-spacing: 1px;
-          color: white !important;
+          font-size: 32px;
+          font-weight: 700;
+          letter-spacing: -0.5px;
+          color: #1a1a1a;
+          margin: 0;
         }
+        
         .content {
-          padding: 30px;
+          padding: 40px 32px;
+          background-color: #ffffff;
         }
-        .reservation-details {
-          background-color: #f8f9fa;
-          border-left: 4px solid #4CAF50;
-          border-radius: 4px;
-          padding: 20px;
-          margin: 20px 0;
+        
+        .card {
+          background-color: #f9fafb;
+          border-radius: 8px;
+          padding: 24px;
+          margin: 24px 0;
+          border: 1px solid #e5e7eb;
         }
+        
         .button {
           display: inline-block;
-          background-color: #4CAF50 !important;
-          color: white !important;
-          padding: 14px 24px;
-          text-decoration: none !important;
-          border-radius: 4px;
-          font-weight: bold;
-          margin: 20px 0;
+          background-color: #0C5A48;
+          color: #ffffff;
+          padding: 16px 32px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          margin: 24px 0;
           text-align: center;
           border: 0;
+          transition: background-color 0.2s ease;
         }
-        a.button {
-          color: white !important;
-          text-decoration: none !important;
+        
+        .button:hover {
+          background-color: #0a4a3a;
         }
+        
+        .button-large {
+          padding: 18px 40px;
+          font-size: 18px;
+        }
+        
         .footer {
-          background-color: #f8f8f8;
-          padding: 20px;
+          background-color: #f9fafb;
+          padding: 32px 24px;
           text-align: center;
-          color: #666;
+          color: #6b7280;
           font-size: 14px;
-          border-top: 1px solid #eaeaea;
+          border-top: 1px solid #e5e7eb;
         }
+        
+        .footer p {
+          margin: 8px 0;
+        }
+        
+        .footer a {
+          color: #0C5A48;
+          text-decoration: none;
+        }
+        
+        h1 {
+          font-size: 28px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin: 0 0 16px 0;
+          line-height: 1.3;
+        }
+        
         h2 {
-          color: #4CAF50;
-          margin-top: 0;
+          font-size: 24px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin: 0 0 16px 0;
+          line-height: 1.3;
         }
+        
         h3 {
-          color: #4CAF50;
-          margin-bottom: 15px;
+          font-size: 18px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin: 0 0 12px 0;
         }
+        
         p {
-          margin: 0 0 15px;
+          margin: 0 0 16px 0;
+          font-size: 16px;
+          line-height: 1.6;
         }
+        
+        .text-muted {
+          color: #6b7280;
+          font-size: 14px;
+        }
+        
         .link-container {
           word-break: break-all;
-          margin: 15px 0;
-          padding: 10px;
-          background-color: #f5f5f5;
-          border-radius: 4px;
+          margin: 16px 0;
+          padding: 16px;
+          background-color: #f3f4f6;
+          border-radius: 6px;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          font-size: 14px;
+          border: 1px solid #e5e7eb;
         }
+        
+        .detail-row {
+          display: flex;
+          align-items: center;
+          margin: 12px 0;
+          padding: 8px 0;
+        }
+        
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
+          min-width: 120px;
+          margin-right: 16px;
+        }
+        
+        .detail-value {
+          color: #1a1a1a;
+          flex: 1;
+        }
+        
+        .icon {
+          width: 20px;
+          height: 20px;
+          margin-right: 12px;
+          opacity: 0.7;
+        }
+        
+        .text-center {
+          text-align: center;
+        }
+        
+        .mb-0 {
+          margin-bottom: 0;
+        }
+        
+        .mt-0 {
+          margin-top: 0;
+        }
+        
         @media only screen and (max-width: 600px) {
           .container {
             width: 100%;
             border-radius: 0;
+            margin: 0;
           }
           .content {
-            padding: 20px;
+            padding: 24px 20px;
+          }
+          .header {
+            padding: 24px 20px 20px;
+          }
+          .footer {
+            padding: 24px 20px;
+          }
+          .logo {
+            font-size: 28px;
+          }
+          h1 {
+            font-size: 24px;
+          }
+          h2 {
+            font-size: 20px;
+          }
+          .button {
+            padding: 14px 28px;
+            font-size: 16px;
+          }
+          .detail-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .detail-label {
+            min-width: auto;
+            margin-right: 0;
+            margin-bottom: 4px;
           }
         }
       </style>
@@ -129,8 +348,12 @@ const createEmailTemplate = (content) => {
           ${content}
         </div>
         <div class="footer">
-          <p>&copy; ${new Date().getFullYear()} Dinver. Sva prava pridržana.</p>
-          <p>Dinver je moderna platforma za pronalazak i odabir restorana.</p>
+          <p class="mb-0">&copy; ${new Date().getFullYear()} Dinver. Sva prava pridržana.</p>
+          <p class="mb-0">Dinver je moderna platforma za pronalazak i odabir restorana.</p>
+          <p class="mb-0 mt-0">
+            <a href="mailto:support@dinver.eu?subject=unsubscribe">Odjavi se</a> | 
+            <a href="mailto:support@dinver.eu">Kontakt</a>
+          </p>
         </div>
       </div>
     </body>
@@ -138,27 +361,49 @@ const createEmailTemplate = (content) => {
   `;
 };
 
+// Legacy template for backward compatibility
+const createEmailTemplate = (content) => {
+  return createPremiumEmailTemplate(content);
+};
+
 const sendVerificationEmail = async (email, verificationLink) => {
   const htmlContent = `
-    <h2>Dobrodošli u Dinver!</h2>
-    <p>Molimo potvrdite Vašu e-mail adresu klikom na gumb ispod:</p>
-    <div style="text-align: center;">
-      <a href="${verificationLink}" class="button" style="display: inline-block; background-color: #4CAF50 !important; color: white !important; padding: 14px 24px; text-decoration: none !important; border-radius: 4px; font-weight: bold; margin: 20px 0; text-align: center; border: 0;">Potvrdi Email</a>
+    <div class="text-center">
+      <h1>Dobrodošli u Dinver!</h1>
+      <p>Hvala vam što ste se registrirali. Da biste aktivirali svoj račun, molimo potvrdite svoju e-mail adresu.</p>
+      
+      <div style="margin: 32px 0;">
+        <a href="${verificationLink}" class="button button-large">Potvrdi e-mail adresu</a>
+      </div>
+      
+      <p class="text-muted">Ovaj link će isteći za 24 sata.</p>
+      
+      <div class="card" style="margin-top: 32px;">
+        <p class="text-muted mb-0">Ako gumb ne radi, kopirajte i zalijepite ovaj link u svoj preglednik:</p>
+        <div class="link-container">
+          ${verificationLink}
+        </div>
+      </div>
+      
+      <p class="text-muted">Ako niste kreirali račun, možete sigurno ignorirati ovaj e-mail.</p>
     </div>
-    <p>Ili kopirajte i zalijepite ovaj link u Vaš preglednik:</p>
-    <div class="link-container">
-      ${verificationLink}
-    </div>
-    <p>Ovaj link će isteći za 24 sata.</p>
   `;
 
-  const data = {
+  let data = {
     from: 'Dinver <noreply@dinver.eu>',
     to: email,
     subject: 'Potvrda vaše e-mail adrese',
     text: `Dobrodošli u Dinver! Molimo potvrdite Vašu e-mail adresu klikom na sljedeći link: ${verificationLink}. Ovaj link će isteći za 24 sata.`,
     html: createEmailTemplate(htmlContent),
   };
+
+  // Ensure text version is robust
+  if (!data.text || data.text.length < 40) {
+    data.text = htmlToPlainText(htmlContent);
+  }
+
+  // Add headers and Mailgun options
+  data = addAntiSpamHeaders(data, { refId: `verify-${Date.now()}` });
 
   if (process.env.NODE_ENV === 'development' || !mg) {
     console.log('Development mode: Email would be sent');
@@ -205,17 +450,41 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           : '');
 
       htmlContent = `
-        <h2>Rezervacija potvrđena</h2>
-        <p>Vaša rezervacija u restoranu <strong>"${reservation.restaurant.name}"</strong> je potvrđena.</p>
-        <div class="reservation-details">
-          <h3>Detalji rezervacije</h3>
-          <p><strong>Restoran:</strong> "${reservation.restaurant.name}"</p>
-          <p><strong>Datum:</strong> ${formattedDate}</p>
-          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
-          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
-          ${reservation.noteFromOwner ? `<p><strong>Poruka od restorana:</strong> ${reservation.noteFromOwner}</p>` : ''}
+        <div class="text-center">
+          <h1>✅ Rezervacija potvrđena</h1>
+          <p>Vaša rezervacija je uspješno potvrđena!</p>
         </div>
-        <p>Veselimo se Vašem dolasku!</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+          ${
+            reservation.noteFromOwner
+              ? `
+          <div class="detail-row">
+            <span class="detail-label">💬 Poruka:</span>
+            <span class="detail-value">${reservation.noteFromOwner}</span>
+          </div>
+          `
+              : ''
+          }
+        </div>
+        
+        <div class="text-center">
+          <p>Veselimo se vašem dolasku!</p>
+          <p class="text-muted">Ako imate pitanja, kontaktirajte restoran direktno.</p>
+        </div>
       `;
       break;
 
@@ -228,18 +497,41 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           : '');
 
       htmlContent = `
-        <h2>Rezervacija odbijena</h2>
-        <p>Nažalost, Vaša rezervacija u restoranu <strong>"${reservation.restaurant.name}"</strong> za ${formattedDate} u ${formattedTime} je odbijena.</p>
-        ${
-          reservation.noteFromOwner
-            ? `
-        <div class="reservation-details">
-          <p><strong>Razlog:</strong> ${reservation.noteFromOwner}</p>
+        <div class="text-center">
+          <h1>❌ Rezervacija odbijena</h1>
+          <p>Nažalost, vaša rezervacija nije mogla biti prihvaćena.</p>
         </div>
-        `
-            : ''
-        }
-        <p>Pozivamo Vas da pokušate rezervirati drugi termin ili drugi restoran putem Dinver platforme.</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+          ${
+            reservation.noteFromOwner
+              ? `
+          <div class="detail-row">
+            <span class="detail-label">💬 Razlog:</span>
+            <span class="detail-value">${reservation.noteFromOwner}</span>
+          </div>
+          `
+              : ''
+          }
+        </div>
+        
+        <div class="text-center">
+          <p>Pozivamo vas da pokušate rezervirati drugi termin ili drugi restoran putem Dinver platforme.</p>
+          <p class="text-muted">Hvala vam na razumijevanju.</p>
+        </div>
       `;
       break;
 
@@ -253,16 +545,41 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
         `Molimo vas da potvrdite ili odbijete ovaj prijedlog kroz aplikaciju.`;
 
       htmlContent = `
-        <h2>Prijedlog alternativnog termina</h2>
-        <p>Restoran <strong>"${reservation.restaurant.name}"</strong> predlaže alternativni termin za Vašu rezervaciju:</p>
-        <div class="reservation-details">
-          <h3>Predloženi termin</h3>
-          <p><strong>Novi datum:</strong> ${formattedSuggestedDate}</p>
-          <p><strong>Novo vrijeme:</strong> ${formattedSuggestedTime}</p>
-          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
-          ${reservation.noteFromOwner ? `<p><strong>Poruka od restorana:</strong> ${reservation.noteFromOwner}</p>` : ''}
+        <div class="text-center">
+          <h1>🔄 Prijedlog alternativnog termina</h1>
+          <p>Restoran predlaže alternativni termin za vašu rezervaciju.</p>
         </div>
-        <p>Molimo Vas da potvrdite ili odbijete ovaj prijedlog kroz Dinver aplikaciju.</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Novi datum:</span>
+            <span class="detail-value">${formattedSuggestedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Novo vrijeme:</span>
+            <span class="detail-value">${formattedSuggestedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+          ${
+            reservation.noteFromOwner
+              ? `
+          <div class="detail-row">
+            <span class="detail-label">💬 Poruka:</span>
+            <span class="detail-value">${reservation.noteFromOwner}</span>
+          </div>
+          `
+              : ''
+          }
+        </div>
+        
+        <div class="text-center">
+          <p>Molimo vas da potvrdite ili odbijete ovaj prijedlog kroz Dinver aplikaciju.</p>
+          <p class="text-muted">Imate ograničeno vrijeme za odgovor.</p>
+        </div>
       `;
       break;
 
@@ -277,16 +594,31 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
         `Broj gostiju: ${reservation.guests}`;
 
       htmlContent = `
-        <h2>Potvrđen alternativni termin</h2>
-        <p>Uspješno ste prihvatili alternativni termin za rezervaciju u restoranu <strong>"${reservation.restaurant.name}"</strong>.</p>
-        <div class="reservation-details">
-          <h3>Novi detalji rezervacije</h3>
-          <p><strong>Restoran:</strong> "${reservation.restaurant.name}"</p>
-          <p><strong>Datum:</strong> ${formattedDate}</p>
-          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
-          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
+        <div class="text-center">
+          <h1>✅ Alternativni termin potvrđen</h1>
+          <p>Uspješno ste prihvatili alternativni termin!</p>
         </div>
-        <p>Veselimo se Vašem dolasku!</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <p>Veselimo se vašem dolasku!</p>
+          <p class="text-muted">Ako imate pitanja, kontaktirajte restoran direktno.</p>
+        </div>
       `;
       break;
 
@@ -295,9 +627,31 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
       text = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana.`;
 
       htmlContent = `
-        <h2>Rezervacija otkazana</h2>
-        <p>Vaša rezervacija u restoranu <strong>"${reservation.restaurant.name}"</strong> za ${formattedDate} u ${formattedTime} je otkazana.</p>
-        <p>Uvijek možete napraviti novu rezervaciju putem Dinver platforme.</p>
+        <div class="text-center">
+          <h1>🚫 Rezervacija otkazana</h1>
+          <p>Vaša rezervacija je otkazana.</p>
+        </div>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <p>Uvijek možete napraviti novu rezervaciju putem Dinver platforme.</p>
+          <p class="text-muted">Hvala vam na razumijevanju.</p>
+        </div>
       `;
       break;
 
@@ -310,18 +664,41 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           : '');
 
       htmlContent = `
-        <h2>Rezervacija otkazana od strane restorana</h2>
-        <p>Vaša rezervacija u restoranu <strong>"${reservation.restaurant.name}"</strong> za ${formattedDate} u ${formattedTime} je otkazana od strane restorana.</p>
-        ${
-          reservation.cancellationReason
-            ? `
-        <div class="reservation-details">
-          <p><strong>Razlog:</strong> ${reservation.cancellationReason}</p>
+        <div class="text-center">
+          <h1>🚫 Rezervacija otkazana</h1>
+          <p>Restoran je otkazao vašu rezervaciju.</p>
         </div>
-        `
-            : ''
-        }
-        <p>Pozivamo Vas da pokušate rezervirati drugi termin ili drugi restoran putem Dinver platforme.</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+          ${
+            reservation.cancellationReason
+              ? `
+          <div class="detail-row">
+            <span class="detail-label">💬 Razlog:</span>
+            <span class="detail-value">${reservation.cancellationReason}</span>
+          </div>
+          `
+              : ''
+          }
+        </div>
+        
+        <div class="text-center">
+          <p>Pozivamo vas da pokušate rezervirati drugi termin ili drugi restoran putem Dinver platforme.</p>
+          <p class="text-muted">Hvala vam na razumijevanju.</p>
+        </div>
       `;
       break;
 
@@ -338,17 +715,31 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
         `Imate 14 dana za napisati recenziju. Vaše mišljenje je važno i pomaže drugim korisnicima u odabiru restorana.`;
 
       htmlContent = `
-        <h2>Hvala na posjetu!</h2>
-        <p>Hvala što ste posjetili restoran <strong>"${reservation.restaurant.name}"</strong>!</p>
-        <div class="reservation-details">
-          <h3>Detalji posjete</h3>
-          <p><strong>Restoran:</strong> "${reservation.restaurant.name}"</p>
-          <p><strong>Datum:</strong> ${formattedDate}</p>
-          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
-          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
+        <div class="text-center">
+          <h1>🍽️ Hvala na posjetu!</h1>
+          <p>Nadamo se da ste uživali u svom boravku.</p>
         </div>
-        <p>Nadamo se da ste uživali u svom boravku. Podijelite svoje iskustvo s drugima - napišite recenziju kroz Dinver aplikaciju.</p>
-        <p>Imate 14 dana za napisati recenziju. Vaše mišljenje je važno i pomaže drugim korisnicima u odabiru restorana.</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">${reservation.restaurant.name}</h3>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <p>Podijelite svoje iskustvo s drugima - napišite recenziju kroz Dinver aplikaciju.</p>
+          <p class="text-muted">Imate 14 dana za napisati recenziju. Vaše mišljenje je važno i pomaže drugim korisnicima u odabiru restorana.</p>
+        </div>
       `;
       break;
 
@@ -363,16 +754,49 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           ? `Napomena korisnika: ${reservation.noteFromUser}\n`
           : '');
       htmlContent = `
-        <h2>Nova rezervacija</h2>
-        <p>Korisnik <strong>${reservation.user.firstName} ${reservation.user.lastName}</strong> (<a href="mailto:${reservation.user.email}">${reservation.user.email}</a>) je napravio novu rezervaciju u vašem restoranu <strong>"${reservation.restaurant.name}"</strong>.</p>
-        <div class="reservation-details">
-          <h3>Detalji rezervacije</h3>
-          <p><strong>Datum:</strong> ${formattedDate}</p>
-          <p><strong>Vrijeme:</strong> ${formattedTime}</p>
-          <p><strong>Broj gostiju:</strong> ${reservation.guests}</p>
-          ${reservation.noteFromUser && reservation.noteFromUser.trim() !== '' ? `<p><strong>Napomena korisnika:</strong> ${reservation.noteFromUser}</p>` : ''}
+        <div class="text-center">
+          <h1>📋 Nova rezervacija</h1>
+          <p>Imate novu rezervaciju u vašem restoranu.</p>
         </div>
-        <p>Prijavite se u Dinver admin panel za upravljanje rezervacijama.</p>
+        
+        <div class="card">
+          <h3 style="margin-top: 0;">Detalji rezervacije</h3>
+          <div class="detail-row">
+            <span class="detail-label">👤 Korisnik:</span>
+            <span class="detail-value">${reservation.user.firstName} ${reservation.user.lastName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📧 Email:</span>
+            <span class="detail-value"><a href="mailto:${reservation.user.email}">${reservation.user.email}</a></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+          ${
+            reservation.noteFromUser && reservation.noteFromUser.trim() !== ''
+              ? `
+          <div class="detail-row">
+            <span class="detail-label">💬 Napomena:</span>
+            <span class="detail-value">${reservation.noteFromUser}</span>
+          </div>
+          `
+              : ''
+          }
+        </div>
+        
+        <div class="text-center">
+          <p>Prijavite se u Dinver admin panel za upravljanje rezervacijama.</p>
+          <p class="text-muted">Molimo odgovorite na rezervaciju što prije.</p>
+        </div>
       `;
       break;
 
@@ -380,7 +804,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
       throw new Error('Invalid email type');
   }
 
-  const data = {
+  let data = {
     from: 'Dinver <noreply@dinver.eu>',
     to,
     subject,
@@ -396,6 +820,16 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
     return;
   }
 
+  // Strengthen text part if necessary
+  if (!data.text || data.text.length < 40) {
+    data.text = htmlToPlainText(htmlContent || text);
+  }
+
+  // Add headers and Mailgun options
+  data = addAntiSpamHeaders(data, {
+    refId: `reservation-${type}-${Date.now()}`,
+  });
+
   try {
     await mg.messages().send(data);
     console.log('Reservation email sent successfully');
@@ -407,20 +841,31 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
 
 const sendPasswordResetEmail = async (email, resetLink) => {
   const htmlContent = `
-    <h2>Zahtjev za resetiranje lozinke</h2>
-    <p>Zatražili ste resetiranje lozinke. Kliknite na gumb ispod za postavljanje nove lozinke:</p>
-    <div style="text-align: center;">
-      <a href="${resetLink}" class="button" style="display: inline-block; background-color: #4CAF50 !important; color: white !important; padding: 14px 24px; text-decoration: none !important; border-radius: 4px; font-weight: bold; margin: 20px 0; text-align: center; border: 0;">Resetiraj Lozinku</a>
+    <div class="text-center">
+      <h1>Resetiranje lozinke</h1>
+      <p>Primili smo zahtjev za resetiranje lozinke za vaš Dinver račun.</p>
+      
+      <div style="margin: 32px 0;">
+        <a href="${resetLink}" class="button button-large">Resetiraj lozinku</a>
+      </div>
+      
+      <p class="text-muted">Ovaj link će isteći za 1 sat.</p>
+      
+      <div class="card" style="margin-top: 32px;">
+        <p class="text-muted mb-0">Ako gumb ne radi, kopirajte i zalijepite ovaj link u svoj preglednik:</p>
+        <div class="link-container">
+          ${resetLink}
+        </div>
+      </div>
+      
+      <div class="card" style="margin-top: 24px; background-color: #fef3cd; border-color: #fbbf24;">
+        <p class="mb-0" style="color: #92400e; font-weight: 600;">⚠️ Sigurnosni savjet</p>
+        <p class="mb-0" style="color: #92400e;">Ako niste zatražili resetiranje lozinke, molimo ignorirajte ovaj e-mail. Vaša lozinka ostaje nepromijenjena.</p>
+      </div>
     </div>
-    <p>Ili kopirajte i zalijepite ovaj link u Vaš preglednik:</p>
-    <div class="link-container">
-      ${resetLink}
-    </div>
-    <p>Ovaj link će isteći za 1 sat.</p>
-    <p>Ako niste zatražili resetiranje lozinke, molimo ignorirajte ovaj e-mail.</p>
   `;
 
-  const data = {
+  let data = {
     from: 'Dinver <noreply@dinver.eu>',
     to: email,
     subject: 'Resetiranje lozinke',
@@ -434,6 +879,14 @@ const sendPasswordResetEmail = async (email, resetLink) => {
     console.log('Reset Link:', resetLink);
     return;
   }
+
+  // Strengthen text part if necessary
+  if (!data.text || data.text.length < 40) {
+    data.text = htmlToPlainText(htmlContent);
+  }
+
+  // Add headers and Mailgun options
+  data = addAntiSpamHeaders(data, { refId: `pwd-reset-${Date.now()}` });
 
   try {
     await mg.messages().send(data);
