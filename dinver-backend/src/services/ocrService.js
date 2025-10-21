@@ -30,7 +30,10 @@ const extractReceiptData = async (imageBuffer) => {
             {
               type: 'text',
               text: `You are reading a Croatian fiscal receipt image. Extract fields and confidences.
-Return STRICT JSON only in this shape (no prose):
+
+IMPORTANT: Return ONLY valid JSON, no markdown, no code blocks, no explanations.
+
+Return this exact JSON structure:
 {
   "fields": {
     "oib": "11 digit string or null",
@@ -53,6 +56,7 @@ Return STRICT JSON only in this shape (no prose):
     "address": 0-1
   }
 }
+
 Rules: If missing/unclear, set null. Total is in EUR (look for "UKUPNO").`,
             },
             {
@@ -72,8 +76,25 @@ Rules: If missing/unclear, set null. Total is in EUR (look for "UKUPNO").`,
       return null;
     }
 
+    // Clean the content - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+
+    // Remove markdown code blocks (```json ... ```)
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent
+        .replace(/^```json\s*/, '')
+        .replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '');
+    }
+
+    // Remove any remaining markdown formatting
+    cleanedContent = cleanedContent.trim();
+
     // Parse JSON response
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(cleanedContent);
     const f = parsed?.fields || {};
     const c = parsed?.confidence || {};
 

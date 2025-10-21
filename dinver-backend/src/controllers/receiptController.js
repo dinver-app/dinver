@@ -4,6 +4,7 @@ const {
   Restaurant,
   UserSysadmin,
   UserPointsHistory,
+  Reservation,
 } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
@@ -234,7 +235,7 @@ const getAllReceipts = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'oib'],
+          attributes: ['id', 'name', 'address', 'place', 'oib'],
         },
         {
           model: UserSysadmin,
@@ -290,7 +291,7 @@ const getReceiptById = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'oib'],
+          attributes: ['id', 'name', 'address', 'place', 'oib'],
         },
         {
           model: UserSysadmin,
@@ -326,6 +327,71 @@ const getReceiptById = async (req, res) => {
     receiptData.ocr = {
       confidence: receipt.ocrData?.confidence || null,
     };
+
+    // Ensure OIB is included in the response
+    receiptData.oib = receipt.oib;
+
+    // Auto-match restaurant by OIB if not already set
+    if (!receipt.restaurantId && receipt.oib) {
+      const matchingRestaurant = await Restaurant.findOne({
+        where: { oib: receipt.oib },
+        attributes: ['id', 'name', 'address', 'place', 'oib'],
+      });
+
+      if (matchingRestaurant) {
+        // Update the receipt with the found restaurant
+        await receipt.update({ restaurantId: matchingRestaurant.id });
+        receiptData.restaurantId = matchingRestaurant.id;
+        receiptData.restaurant = {
+          id: matchingRestaurant.id,
+          name: matchingRestaurant.name,
+          address: matchingRestaurant.address,
+          place: matchingRestaurant.place,
+          oib: matchingRestaurant.oib,
+        };
+      }
+    }
+
+    // Check for matching reservations if receipt has restaurant and date info
+    let matchedReservations = [];
+    let hasReservationBonus = false;
+
+    if (receipt.restaurantId && receipt.issueDate && receipt.issueTime) {
+      // Find pending reservations for this user at this restaurant on this date
+      const reservations = await Reservation.findAll({
+        where: {
+          userId: receipt.userId,
+          restaurantId: receipt.restaurantId,
+          date: receipt.issueDate,
+          status: 'pending',
+        },
+        attributes: ['id', 'date', 'time', 'guests', 'status'],
+        order: [['time', 'ASC']],
+      });
+
+      matchedReservations = reservations.map((res) => res.toJSON());
+
+      // Check if any reservation time is before receipt time
+      if (reservations.length > 0) {
+        const receiptDateTime = new Date(
+          `${receipt.issueDate}T${receipt.issueTime}`,
+        );
+
+        for (const reservation of reservations) {
+          const reservationDateTime = new Date(
+            `${reservation.date}T${reservation.time}`,
+          );
+          if (receiptDateTime > reservationDateTime) {
+            hasReservationBonus = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // Add reservation data to response
+    receiptData.matchedReservations = matchedReservations;
+    receiptData.hasReservationBonus = hasReservationBonus;
 
     res.json(receiptData);
   } catch (error) {
@@ -417,8 +483,17 @@ const updateReceiptData = async (req, res) => {
 const approveReceipt = async (req, res) => {
   try {
     const { id } = req.params;
-    const { restaurantId, totalAmount, jir, zki, oib, issueDate, issueTime } =
-      req.body;
+    const {
+      restaurantId,
+      totalAmount,
+      jir,
+      zki,
+      oib,
+      issueDate,
+      issueTime,
+      hasReservationBonus,
+      reservationId,
+    } = req.body;
 
     // Validate required fields
     if (
@@ -440,19 +515,12 @@ const approveReceipt = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id'],
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
-            },
-          ],
+          attributes: ['id', 'firstName', 'lastName', 'email'],
         },
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'oib'],
+          attributes: ['id', 'name', 'address', 'place', 'oib'],
         },
       ],
     });
@@ -475,14 +543,29 @@ const approveReceipt = async (req, res) => {
       });
     }
 
-    if (restaurant.oib !== oib) {
-      return res.status(400).json({
-        error: 'OIB se ne podudara s odabranim restoranom',
+    // When we add an oib to the restaurant, we should uncomment this check
+    // if (restaurant.oib !== oib) {
+    //   return res.status(400).json({
+    //     error: 'OIB se ne podudara s odabranim restoranom',
+    //   });
+    // }
+
+    // Find the UserSysadmin record for the current user
+    const sysadmin = await UserSysadmin.findOne({
+      where: { userId: req.user.id },
+    });
+
+    if (!sysadmin) {
+      return res.status(403).json({
+        error: 'User is not authorized as sysadmin',
       });
     }
 
-    // Calculate points
-    const pointsAwarded = Receipt.calculatePoints(parseFloat(totalAmount));
+    // Calculate points with reservation bonus if applicable
+    const pointsAwarded = Receipt.calculatePoints(
+      parseFloat(totalAmount),
+      hasReservationBonus || false,
+    );
 
     // Update receipt
     await receipt.update({
@@ -494,20 +577,30 @@ const approveReceipt = async (req, res) => {
       issueDate,
       issueTime,
       status: 'approved',
-      verifierId: req.user.id,
+      verifierId: sysadmin.id,
       verifiedAt: new Date(),
       pointsAwarded,
+      hasReservationBonus: hasReservationBonus || false,
+      reservationId: reservationId || null,
     });
 
     // Award points
     await UserPointsHistory.logPoints({
       userId: receipt.userId,
-      actionType: 'receipt_upload',
+      actionType: 'receipt_approved',
       points: pointsAwarded,
       referenceId: receipt.id,
       restaurantId: receipt.restaurantId,
       description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
+
+    // Mark reservation as completed if reservationId is provided
+    if (reservationId) {
+      await Reservation.update(
+        { status: 'completed' },
+        { where: { id: reservationId } },
+      );
+    }
 
     // Send push notification
     try {
@@ -572,14 +665,7 @@ const rejectReceipt = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id'],
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
-            },
-          ],
+          attributes: ['id', 'firstName', 'lastName', 'email'],
         },
       ],
     });
@@ -594,10 +680,21 @@ const rejectReceipt = async (req, res) => {
         .json({ error: 'Can only reject pending receipts' });
     }
 
+    // Find the UserSysadmin record for the current user
+    const sysadmin = await UserSysadmin.findOne({
+      where: { userId: req.user.id },
+    });
+
+    if (!sysadmin) {
+      return res.status(403).json({
+        error: 'User is not authorized as sysadmin',
+      });
+    }
+
     // Update receipt
     await receipt.update({
       status: 'rejected',
-      verifierId: req.user.id,
+      verifierId: sysadmin.id,
       verifiedAt: new Date(),
       rejectionReason: rejectionReason.trim(),
     });
@@ -639,6 +736,83 @@ const rejectReceipt = async (req, res) => {
   }
 };
 
+// New endpoint to check reservations for specific restaurant and date
+const checkReservations = async (req, res) => {
+  try {
+    const { receiptId, restaurantId, issueDate, issueTime } = req.query;
+
+    if (!receiptId || !restaurantId || !issueDate) {
+      return res.status(400).json({
+        error:
+          'Missing required parameters: receiptId, restaurantId, issueDate',
+      });
+    }
+
+    // Get the receipt to get userId and OIB
+    const receipt = await Receipt.findByPk(receiptId, {
+      attributes: ['userId', 'oib', 'restaurantId'],
+    });
+
+    if (!receipt) {
+      return res.status(404).json({ error: 'Receipt not found' });
+    }
+
+    // Auto-match restaurant by OIB if not already set
+    if (!receipt.restaurantId && receipt.oib) {
+      const matchingRestaurant = await Restaurant.findOne({
+        where: { oib: receipt.oib },
+        attributes: ['id', 'name', 'address', 'place', 'oib'],
+      });
+
+      if (matchingRestaurant) {
+        // Update the receipt with the found restaurant
+        await receipt.update({ restaurantId: matchingRestaurant.id });
+        // Use the found restaurant for reservation check
+        restaurantId = matchingRestaurant.id;
+      }
+    }
+
+    // Find pending reservations for this user at this restaurant on this date
+    const reservations = await Reservation.findAll({
+      where: {
+        userId: receipt.userId,
+        restaurantId: restaurantId,
+        date: issueDate,
+        status: 'pending',
+      },
+      attributes: ['id', 'date', 'time', 'guests', 'status'],
+      order: [['time', 'ASC']],
+    });
+
+    const matchedReservations = reservations.map((res) => res.toJSON());
+    let hasReservationBonus = false;
+
+    // Check if any reservation time is before receipt time
+    if (reservations.length > 0 && issueTime) {
+      const receiptDateTime = new Date(`${issueDate}T${issueTime}`);
+
+      for (const reservation of reservations) {
+        const reservationDateTime = new Date(
+          `${reservation.date}T${reservation.time}`,
+        );
+
+        if (receiptDateTime > reservationDateTime) {
+          hasReservationBonus = true;
+          break;
+        }
+      }
+    }
+
+    res.json({
+      matchedReservations,
+      hasReservationBonus,
+    });
+  } catch (error) {
+    console.error('Error checking reservations:', error);
+    res.status(500).json({ error: 'Failed to check reservations' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   getUserReceipts,
@@ -647,4 +821,5 @@ module.exports = {
   updateReceiptData,
   approveReceipt,
   rejectReceipt,
+  checkReservations,
 };

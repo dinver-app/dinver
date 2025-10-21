@@ -9,6 +9,7 @@ const {
   updateReceiptData,
   approveReceipt,
   rejectReceipt,
+  checkReservations,
 } = require('../../controllers/receiptController');
 
 const router = express.Router();
@@ -19,6 +20,12 @@ router.get(
   sysadminAuthenticateToken,
   checkSysadmin,
   getAllReceipts,
+);
+router.get(
+  '/receipts/check-reservations',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  checkReservations,
 );
 router.get(
   '/receipts/:id',

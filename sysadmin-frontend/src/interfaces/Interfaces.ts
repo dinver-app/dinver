@@ -19,6 +19,7 @@ export interface Sysadmin {
 export interface Restaurant {
   id?: string;
   name: string;
+  oib?: string;
   address: string;
   description?: string;
   workingHoursInfo?: string;

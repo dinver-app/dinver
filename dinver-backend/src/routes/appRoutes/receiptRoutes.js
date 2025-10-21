@@ -36,6 +36,7 @@ router.post(
   upload.single('image'),
   uploadReceipt,
 );
+
 router.get('/receipts', appApiKeyAuth, appAuthenticateToken, getUserReceipts);
 
 module.exports = router;

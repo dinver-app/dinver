@@ -20,6 +20,8 @@ export interface Receipt {
   verifiedAt?: string;
   rejectionReason?: string;
   pointsAwarded?: number;
+  hasReservationBonus?: boolean;
+  reservationId?: string;
   submittedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -32,6 +34,8 @@ export interface Receipt {
   restaurant?: {
     id: string;
     name: string;
+    address?: string;
+    place?: string;
     oib?: string;
   };
   verifier?: {
@@ -42,6 +46,13 @@ export interface Receipt {
       lastName: string;
     };
   };
+  matchedReservations?: Array<{
+    id: string;
+    date: string;
+    time: string;
+    guests: number;
+    status: string;
+  }>;
 }
 
 export interface ReceiptFilters {
@@ -79,6 +90,8 @@ export interface ApproveReceiptData {
   oib: string;
   issueDate: string;
   issueTime: string;
+  hasReservationBonus?: boolean;
+  reservationId?: string;
 }
 
 export interface RejectReceiptData {
@@ -134,6 +147,38 @@ class ReceiptService {
     const response = await apiClient.post(
       `/api/sysadmin/receipts/${id}/reject`,
       data
+    );
+
+    return response.data;
+  }
+
+  async checkReservations(
+    receiptId: string,
+    restaurantId: string,
+    issueDate: string,
+    issueTime?: string
+  ): Promise<{
+    matchedReservations: Array<{
+      id: string;
+      date: string;
+      time: string;
+      guests: number;
+      status: string;
+    }>;
+    hasReservationBonus: boolean;
+  }> {
+    const params = new URLSearchParams({
+      receiptId,
+      restaurantId,
+      issueDate,
+    });
+
+    if (issueTime) {
+      params.append("issueTime", issueTime);
+    }
+
+    const response = await apiClient.get(
+      `/api/sysadmin/receipts/check-reservations?${params}`
     );
 
     return response.data;

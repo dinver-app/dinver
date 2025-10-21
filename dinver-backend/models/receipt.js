@@ -23,16 +23,24 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'verifierId',
         as: 'verifier',
       });
+
+      Receipt.belongsTo(models.Reservation, {
+        foreignKey: 'reservationId',
+        as: 'reservation',
+      });
     }
 
     /**
      * Calculate points based on receipt amount
      * @param {number} amount - Total amount in EUR
-     * @returns {number} Points to award (10€ = 1 bod)
+     * @param {boolean} hasReservation - Whether user has reservation bonus
+     * @returns {number} Points to award (10€ = 1 bod, with 2 decimals)
      */
-    static calculatePoints(amount) {
+    static calculatePoints(amount, hasReservation = false) {
       if (!amount || amount <= 0) return 0;
-      return Math.floor(amount / 10);
+      const basePoints = amount / 10;
+      const points = hasReservation ? basePoints * 1.2 : basePoints;
+      return Math.round(points * 100) / 100; // Round to 2 decimals
     }
 
     /**
@@ -40,7 +48,10 @@ module.exports = (sequelize, DataTypes) => {
      * @returns {number} Points to award
      */
     getPoints() {
-      return Receipt.calculatePoints(this.totalAmount);
+      return Receipt.calculatePoints(
+        this.totalAmount,
+        this.hasReservationBonus,
+      );
     }
 
     /**
@@ -186,9 +197,26 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'Reason for rejection if applicable',
       },
       pointsAwarded: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: true,
-        comment: 'Points awarded for this receipt (calculated on approval)',
+        comment:
+          'Points awarded for this receipt (calculated on approval) - now supports decimals',
+      },
+      hasReservationBonus: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment:
+          'Whether this receipt qualifies for reservation bonus (20% extra points)',
+      },
+      reservationId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Reservations',
+          key: 'id',
+        },
+        comment: 'ID of the reservation that triggered the bonus',
       },
       submittedAt: {
         type: DataTypes.DATE,

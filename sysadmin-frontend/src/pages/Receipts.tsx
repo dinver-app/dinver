@@ -86,9 +86,16 @@ const Receipts: React.FC = () => {
     });
   };
 
-  const formatAmount = (amount?: number) => {
+  const formatAmount = (amount?: number | string) => {
     if (!amount) return "-";
-    return `${amount.toFixed(2)} €`;
+
+    // Convert to number if it's a string
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+
+    // Check if it's a valid number
+    if (isNaN(numAmount) || !isFinite(numAmount)) return "-";
+
+    return `${numAmount.toFixed(2)} €`;
   };
 
   const getPendingCount = () => {
@@ -267,7 +274,9 @@ const Receipts: React.FC = () => {
                     {receipt.restaurant?.name || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {receipt.pointsAwarded || "-"}
+                    {receipt.pointsAwarded
+                      ? receipt.pointsAwarded.toFixed(2)
+                      : "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button

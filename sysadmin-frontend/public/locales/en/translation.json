@@ -877,6 +877,11 @@
     "approve_failed": "Failed to approve receipt",
     "rejection_reason_required": "Rejection reason is required",
     "reject_success": "Receipt rejected",
-    "reject_failed": "Failed to reject receipt"
+    "reject_failed": "Failed to reject receipt",
+    "matched_reservations": "Matched Reservations",
+    "reservation": "Reservation",
+    "guests": "guests",
+    "reservation_bonus": "Reservation Bonus",
+    "reservation_bonus_desc": "Enable 20% bonus points if user has a completed reservation"
   }
 }

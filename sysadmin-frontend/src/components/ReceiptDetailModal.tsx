@@ -39,8 +39,8 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Calculate points preview
-  const pointsPreview = Math.floor((formData.totalAmount || 0) / 10);
+  // Calculate points preview with 2 decimals
+  const pointsPreview = (formData.totalAmount || 0) / 10;
 
   useEffect(() => {
     // In a real app, you'd fetch restaurants from an API
@@ -84,7 +84,7 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
       return;
     }
 
-    if (!confirm(`Award ${pointsPreview} points to user?`)) {
+    if (!confirm(`Award ${pointsPreview.toFixed(2)} points to user?`)) {
       return;
     }
 
@@ -101,7 +101,9 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
       };
 
       await receiptService.approveReceipt(receipt.id, approveData);
-      toast.success(`Receipt approved! ${pointsPreview} points awarded.`);
+      toast.success(
+        `Receipt approved! ${pointsPreview.toFixed(2)} points awarded.`
+      );
       onUpdate();
       onClose();
     } catch (error) {
@@ -392,7 +394,7 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
                     Points Preview
                   </h5>
                   <p className="text-lg font-bold text-blue-600">
-                    {pointsPreview} bodova
+                    {pointsPreview.toFixed(2)} bodova
                   </p>
                   <p className="text-xs text-blue-600">(10€ = 1 bod)</p>
                 </div>
