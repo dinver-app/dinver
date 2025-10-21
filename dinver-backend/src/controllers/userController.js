@@ -164,10 +164,13 @@ const updateUserProfile = async (req, res) => {
 
     // Posebno rukovanje email adresom ako je poslana
     if (email !== undefined && email !== user.email) {
+      // Normalize email to lowercase for consistency
+      const normalizedEmail = email.toLowerCase().trim();
+
       // Provjeri postoji li već taj email kod drugog korisnika
       const existingUser = await User.findOne({
         where: {
-          email: email,
+          email: normalizedEmail,
           id: { [Op.ne]: userId }, // isključi trenutnog korisnika
         },
       });
@@ -178,7 +181,7 @@ const updateUserProfile = async (req, res) => {
         });
       }
 
-      updates.email = email;
+      updates.email = normalizedEmail;
       emailChanged = true;
     }
 
@@ -563,9 +566,9 @@ const updatePushToken = async (req, res) => {
     // Ažuriraj push token
     await user.update({ pushToken });
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: 'Push token updated successfully',
-      pushToken 
+      pushToken,
     });
   } catch (error) {
     console.error('Error updating push token:', error);

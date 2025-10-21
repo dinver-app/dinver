@@ -15,7 +15,12 @@ const register = async (req, res) => {
     const { firstName, lastName, email, password, phone, referralCode } =
       req.body;
 
-    const existingUser = await User.findOne({ where: { email } });
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingUser = await User.findOne({
+      where: { email: normalizedEmail },
+    });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -68,7 +73,7 @@ const register = async (req, res) => {
     const user = await User.create({
       firstName: firstName,
       lastName: lastName,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       phone: phone || null,
       isPhoneVerified: false,
@@ -212,7 +217,10 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     console.log('Login attempt for email:', email);
 
-    const user = await User.findOne({ where: { email } });
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ where: { email: normalizedEmail } });
     console.log('User found:', user ? 'yes' : 'no');
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -593,11 +601,14 @@ const socialLogin = async (req, res) => {
   try {
     const { email, firstName, lastName, photoURL, provider } = req.body;
 
-    let user = await User.findOne({ where: { email } });
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim();
+
+    let user = await User.findOne({ where: { email: normalizedEmail } });
 
     if (!user) {
       user = await User.create({
-        email,
+        email: normalizedEmail,
         firstName: firstName,
         lastName: lastName,
         photoURL,
@@ -629,11 +640,14 @@ passport.use(
       try {
         let user = await User.findOne({ where: { googleId: profile.id } });
         if (!user) {
+          // Normalize email to lowercase for consistency
+          const normalizedEmail = profile.emails[0].value.toLowerCase().trim();
+
           user = await User.create({
             googleId: profile.id,
             firstName: profile.name.givenName,
             lastName: profile.name.familyName,
-            email: profile.emails[0].value,
+            email: normalizedEmail,
           });
         }
         done(null, user);
@@ -984,8 +998,11 @@ const requestPasswordReset = async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Pronađi korisnika po email adresi
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email: normalizedEmail } });
 
     // Čak i ako korisnik ne postoji, vratimo isti odgovor iz sigurnosnih razloga
     // Tako napadač ne može doznati postoji li email ili ne
