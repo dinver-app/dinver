@@ -6,6 +6,89 @@ const openai = new OpenAI({
 });
 
 /**
+ * Check if image contains a receipt using OpenAI Vision API
+ * @param {Buffer} imageBuffer - Image buffer
+ * @returns {Object} { isReceipt: boolean, confidence: number, reason: string }
+ */
+const validateReceiptImage = async (imageBuffer) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return { isReceipt: true, confidence: 1, reason: 'OCR not configured' };
+    }
+
+    const base64Image = imageBuffer.toString('base64');
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this image and determine if it contains a Croatian fiscal receipt (račun).
+
+IMPORTANT: Return ONLY valid JSON, no markdown, no code blocks, no explanations.
+
+Return this exact JSON structure:
+{
+  "isReceipt": boolean,
+  "confidence": number (0-1),
+  "reason": "string explaining why it is or isn't a receipt"
+}
+
+A receipt should contain:
+- Croatian text
+- OIB (11-digit number)
+- JIR or ZKI codes
+- Total amount (UKUPNO)
+- Date and time
+- Business name and address
+- Itemized list of products/services
+
+If the image shows a cup, food, people, random objects, or anything that's clearly not a receipt, return isReceipt: false.`,
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
+            },
+          ],
+        },
+      ],
+      max_tokens: 200,
+      temperature: 0.1,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return { isReceipt: false, confidence: 0, reason: 'No response from AI' };
+    }
+
+    // Clean the content - remove markdown code blocks if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent
+        .replace(/^```json\s*/, '')
+        .replace(/\s*```$/, '');
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '');
+    }
+
+    const parsed = JSON.parse(cleanedContent);
+    return {
+      isReceipt: Boolean(parsed.isReceipt),
+      confidence: Number(parsed.confidence) || 0,
+      reason: parsed.reason || 'Unknown',
+    };
+  } catch (error) {
+    console.error('Error validating receipt image:', error);
+    return { isReceipt: false, confidence: 0, reason: 'Validation error' };
+  }
+};
+
+/**
  * Extract receipt data from image using OpenAI Vision API
  * Returns structured fields and confidences for each
  * @param {Buffer} imageBuffer - Image buffer
@@ -17,6 +100,26 @@ const extractReceiptData = async (imageBuffer) => {
       console.log('OpenAI API key not configured, skipping OCR');
       return null;
     }
+
+    // First, validate that the image contains a receipt
+    const validation = await validateReceiptImage(imageBuffer);
+
+    if (!validation.isReceipt) {
+      console.log(
+        `Image validation failed: ${validation.reason} (confidence: ${validation.confidence})`,
+      );
+      return {
+        error: 'NOT_RECEIPT',
+        message:
+          'Slika ne sadrži račun. Molimo uslikajte račun i pokušajte ponovo.',
+        reason: validation.reason,
+        confidence: validation.confidence,
+      };
+    }
+
+    console.log(
+      `Image validated as receipt: ${validation.reason} (confidence: ${validation.confidence})`,
+    );
 
     // Convert buffer to base64
     const base64Image = imageBuffer.toString('base64');
@@ -195,4 +298,5 @@ const validateTime = (time) => {
 
 module.exports = {
   extractReceiptData,
+  validateReceiptImage,
 };

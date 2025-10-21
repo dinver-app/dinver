@@ -93,6 +93,17 @@ const uploadReceipt = async (req, res) => {
 
     try {
       extracted = await extractReceiptData(processedBuffer);
+
+      // Check if OCR returned an error indicating the image is not a receipt
+      if (extracted && extracted.error === 'NOT_RECEIPT') {
+        return res.status(400).json({
+          error: 'NOT_RECEIPT',
+          message: extracted.message,
+          reason: extracted.reason,
+          confidence: extracted.confidence,
+        });
+      }
+
       if (extracted) {
         ocrData = imageMeta ? { ...extracted, meta: imageMeta } : extracted;
       } else if (imageMeta) {
