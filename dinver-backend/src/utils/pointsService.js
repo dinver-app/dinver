@@ -12,6 +12,7 @@ const POINTS_CONFIG = {
   REFERRAL_REGISTRATION_REFERRED: 10, // Novi korisnik dobije bodove jer se registrirao preko koda
   REFERRAL_FIRST_VISIT_REFERRER: 10, // Referrer dobije bodove kada prijatelj potvrdi prvu posjetu
   POINTS_SPENT_COUPON: -1, // Zamjenska vrijednost; stvarni iznos potrošenih bodova je dinamičan (negativan)
+  RECEIPT_APPROVED: 1, // 10€ = 1 point, calculated dynamically
 };
 
 // Definicija tipova akcija (mora odgovarati ENUM vrijednostima u bazi)
@@ -26,6 +27,7 @@ const ACTION_TYPES = {
   REFERRAL_REGISTRATION_REFERRED: 'referral_registration_referred',
   REFERRAL_FIRST_VISIT_REFERRER: 'referral_visit_referrer',
   POINTS_SPENT_COUPON: 'points_spent_coupon',
+  RECEIPT_APPROVED: 'receipt_approved',
 };
 
 class PointsService {

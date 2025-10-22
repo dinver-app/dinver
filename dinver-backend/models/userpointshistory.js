@@ -47,6 +47,32 @@ module.exports = (sequelize, DataTypes) => {
         });
       }
 
+      // Update active leaderboard cycle participant points
+      try {
+        const activeLeaderboardCycle =
+          await this.sequelize.models.LeaderboardCycle.findOne({
+            where: { status: 'active' },
+          });
+
+        if (activeLeaderboardCycle) {
+          const [participant, created] =
+            await this.sequelize.models.LeaderboardCycleParticipant.findOrCreate(
+              {
+                where: { cycleId: activeLeaderboardCycle.id, userId },
+                defaults: { totalPoints: 0 },
+              },
+            );
+
+          await participant.addPoints(points);
+        }
+      } catch (error) {
+        console.error(
+          'Error updating leaderboard cycle participant points:',
+          error,
+        );
+        // Don't throw error - we don't want to break points awarding if cycle update fails
+      }
+
       return history;
     }
   }
@@ -82,6 +108,7 @@ module.exports = (sequelize, DataTypes) => {
           'points_spent_coupon',
           // Receipt validation
           'receipt_upload',
+          'receipt_approved',
         ),
         allowNull: false,
       },

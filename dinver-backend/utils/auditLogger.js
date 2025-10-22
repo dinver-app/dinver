@@ -38,6 +38,8 @@ const Entities = {
   PUSH_NOTIFICATION: 'push_notification',
   // Receipt validation entities
   RECEIPT: 'receipt',
+  // Leaderboard cycle entities
+  LEADERBOARD_CYCLE: 'leaderboard_cycle',
 };
 
 function deepCompare(oldObj, newObj) {
