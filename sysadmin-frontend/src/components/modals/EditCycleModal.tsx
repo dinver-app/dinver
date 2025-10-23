@@ -39,11 +39,10 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
 
   useEffect(() => {
     if (cycle) {
-      // Convert ISO dates to datetime-local format (no timezone conversion)
+      // Convert ISO dates to datetime-local format (treat as local time)
       const formatDateForInput = (isoDate: string) => {
-        const date = new Date(isoDate);
-        // Display as local time without timezone conversion
-        return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+        // Remove 'Z' to treat as local time, not UTC
+        return isoDate.replace("Z", "").slice(0, 16); // YYYY-MM-DDTHH:MM
       };
 
       setFormData({

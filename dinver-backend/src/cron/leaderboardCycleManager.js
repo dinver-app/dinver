@@ -11,15 +11,6 @@ const {
 const { Op } = require('sequelize');
 
 /**
- * Get current time in local timezone (same as stored in database)
- */
-function getCurrentTime() {
-  const now = new Date();
-  // Convert to local time by adjusting for timezone offset
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-}
-
-/**
  * Check and update cycle statuses
  * This function should be called by the cron job
  */
@@ -45,7 +36,7 @@ async function checkAndUpdateCycles() {
 async function activateScheduledCycles() {
   try {
     // Use current time for cycle activation
-    const now = getCurrentTime();
+    const now = new Date();
     console.log(`Checking for cycles to activate at: ${now.toISOString()}`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
@@ -77,7 +68,7 @@ async function activateScheduledCycles() {
 async function completeActiveCycles() {
   try {
     // Use current time for cycle completion
-    const now = getCurrentTime();
+    const now = new Date();
     console.log(`Checking for cycles to complete at: ${now.toISOString()}`);
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
