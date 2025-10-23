@@ -45,12 +45,16 @@ module.exports = (sequelize, DataTypes) => {
 
     // Check if cycle has ended (past end date)
     hasEnded() {
-      return new Date() > new Date(this.endDate);
+      const now = new Date();
+      const end = new Date(this.endDate);
+      return now > end;
     }
 
     // Check if cycle should start (past start date)
     shouldStart() {
-      return new Date() >= new Date(this.startDate);
+      const now = new Date();
+      const start = new Date(this.startDate);
+      return now >= start;
     }
 
     // Get cycle duration in days
