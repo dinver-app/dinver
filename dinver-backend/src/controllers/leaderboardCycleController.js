@@ -419,11 +419,15 @@ const updateCycle = async (req, res) => {
     // Add dates with local time conversion if provided
     if (startDate) {
       const start = new Date(startDate);
-      updateData.startDate = new Date(start.getTime() - start.getTimezoneOffset() * 60000);
+      updateData.startDate = new Date(
+        start.getTime() - start.getTimezoneOffset() * 60000,
+      );
     }
     if (endDate) {
       const end = new Date(endDate);
-      updateData.endDate = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
+      updateData.endDate = new Date(
+        end.getTime() - end.getTimezoneOffset() * 60000,
+      );
     }
 
     await cycle.update(updateData);
