@@ -38,17 +38,10 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates - convert from UTC to local time for storage
-    // Frontend sends datetime-local values as UTC, we need to convert to local time
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Validate dates - treat as timezone-naive (no conversion needed)
+    const startLocal = new Date(startDate);
+    const endLocal = new Date(endDate);
     const now = new Date();
-
-    // Convert UTC to local time by adjusting for timezone offset
-    const startLocal = new Date(
-      start.getTime() - start.getTimezoneOffset() * 60000,
-    );
-    const endLocal = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
 
     console.log(
       `Creating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
@@ -356,17 +349,9 @@ const updateCycle = async (req, res) => {
 
     // Validate dates if provided
     if (startDate || endDate) {
-      const start = new Date(startDate || cycle.startDate);
-      const end = new Date(endDate || cycle.endDate);
+      const startLocal = new Date(startDate || cycle.startDate);
+      const endLocal = new Date(endDate || cycle.endDate);
       const now = new Date();
-
-      // Convert UTC to local time by adjusting for timezone offset
-      const startLocal = new Date(
-        start.getTime() - start.getTimezoneOffset() * 60000,
-      );
-      const endLocal = new Date(
-        end.getTime() - end.getTimezoneOffset() * 60000,
-      );
 
       console.log(
         `Updating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
@@ -416,18 +401,12 @@ const updateCycle = async (req, res) => {
       headerImageUrl: headerImageUrl,
     };
 
-    // Add dates with local time conversion if provided
+    // Add dates without timezone conversion if provided
     if (startDate) {
-      const start = new Date(startDate);
-      updateData.startDate = new Date(
-        start.getTime() - start.getTimezoneOffset() * 60000,
-      );
+      updateData.startDate = new Date(startDate);
     }
     if (endDate) {
-      const end = new Date(endDate);
-      updateData.endDate = new Date(
-        end.getTime() - end.getTimezoneOffset() * 60000,
-      );
+      updateData.endDate = new Date(endDate);
     }
 
     await cycle.update(updateData);
