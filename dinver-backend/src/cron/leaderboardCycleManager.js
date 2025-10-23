@@ -35,13 +35,24 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    // Use current local time as timezone-naive string
+    // Use current Europe/Zagreb time as timezone-naive string
     const now = new Date();
-    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    const nowString = nowLocal.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    const nowString = now
+      .toLocaleString('sv-SE', {
+        timeZone: 'Europe/Zagreb',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      .replace(' ', 'T')
+      .slice(0, 16); // YYYY-MM-DDTHH:MM format
     console.log(
-      `Checking for cycles to activate at: ${nowString} (local time)`,
+      `Checking for cycles to activate at: ${nowString} (Europe/Zagreb time)`,
     );
+    console.log(`Current UTC time: ${now.toISOString().slice(0, 16)}`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
@@ -50,17 +61,14 @@ async function activateScheduledCycles() {
       },
     });
 
-    // Debug: Log all scheduled cycles and their start dates
+    // Debug: Log scheduled cycles for monitoring
     const allScheduledCycles = await LeaderboardCycle.findAll({
       where: { status: 'scheduled' },
     });
 
-    console.log(`Found ${allScheduledCycles.length} scheduled cycles:`);
-    allScheduledCycles.forEach((cycle) => {
-      console.log(
-        `- Cycle "${cycle.name}": startDate=${cycle.startDate}, now=${nowString}, shouldActivate=${cycle.startDate <= nowString}`,
-      );
-    });
+    if (allScheduledCycles.length > 0) {
+      console.log(`Found ${allScheduledCycles.length} scheduled cycles`);
+    }
 
     for (const cycle of cyclesToActivate) {
       console.log(`Activating cycle: ${cycle.name} (ID: ${cycle.id})`);
@@ -83,12 +91,22 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    // Use current local time as timezone-naive string
+    // Use current Europe/Zagreb time as timezone-naive string
     const now = new Date();
-    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    const nowString = nowLocal.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    const nowString = now
+      .toLocaleString('sv-SE', {
+        timeZone: 'Europe/Zagreb',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      .replace(' ', 'T')
+      .slice(0, 16); // YYYY-MM-DDTHH:MM format
     console.log(
-      `Checking for cycles to complete at: ${nowString} (local time)`,
+      `Checking for cycles to complete at: ${nowString} (Europe/Zagreb time)`,
     );
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
