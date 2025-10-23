@@ -143,13 +143,13 @@ const LeaderboardCycleDetails: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("hr-HR", {
+    const date = new Date(dateString);
+    return date.toLocaleString("hr-HR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: "Europe/Zagreb",
     });
   };
 
