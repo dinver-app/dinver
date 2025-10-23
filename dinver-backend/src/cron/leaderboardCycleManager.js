@@ -49,6 +49,18 @@ async function activateScheduledCycles() {
       },
     });
 
+    // Debug: Log all scheduled cycles and their start dates
+    const allScheduledCycles = await LeaderboardCycle.findAll({
+      where: { status: 'scheduled' },
+    });
+
+    console.log(`Found ${allScheduledCycles.length} scheduled cycles:`);
+    allScheduledCycles.forEach((cycle) => {
+      console.log(
+        `- Cycle "${cycle.name}": startDate=${cycle.startDate}, now=${now.toISOString()}, shouldActivate=${new Date(cycle.startDate) <= now}`,
+      );
+    });
+
     for (const cycle of cyclesToActivate) {
       console.log(`Activating cycle: ${cycle.name} (ID: ${cycle.id})`);
 
