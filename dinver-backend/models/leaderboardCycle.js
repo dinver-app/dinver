@@ -45,20 +45,16 @@ module.exports = (sequelize, DataTypes) => {
 
     // Check if cycle has ended (past end date)
     hasEnded() {
-      const nowLocal = new Date();
-      const nowForComparison = new Date(
-        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-      );
-      return nowForComparison > new Date(this.endDate);
+      const now = new Date();
+      const nowString = now.toISOString().slice(0, 16);
+      return nowString > this.endDate;
     }
 
     // Check if cycle should start (past start date)
     shouldStart() {
-      const nowLocal = new Date();
-      const nowForComparison = new Date(
-        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-      );
-      return nowForComparison >= new Date(this.startDate);
+      const now = new Date();
+      const nowString = now.toISOString().slice(0, 16);
+      return nowString >= this.startDate;
     }
 
     // Get cycle duration in days
@@ -70,29 +66,27 @@ module.exports = (sequelize, DataTypes) => {
 
     // Get remaining days until end
     getRemainingDays() {
-      const nowLocal = new Date();
-      const nowForComparison = new Date(
-        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-      );
-      const end = new Date(this.endDate);
-      const diff = end - nowForComparison;
+      const now = new Date();
+      const nowString = now.toISOString().slice(0, 16);
+      const end = new Date(this.endDate + ':00.000Z');
+      const nowDate = new Date(nowString + ':00.000Z');
+      const diff = end - nowDate;
       return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
     }
 
     // Get cycle progress percentage (0-100)
     getProgressPercentage() {
-      const nowLocal = new Date();
-      const nowForComparison = new Date(
-        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-      );
-      const start = new Date(this.startDate);
-      const end = new Date(this.endDate);
+      const now = new Date();
+      const nowString = now.toISOString().slice(0, 16);
+      const start = new Date(this.startDate + ':00.000Z');
+      const end = new Date(this.endDate + ':00.000Z');
+      const nowDate = new Date(nowString + ':00.000Z');
 
-      if (nowForComparison < start) return 0;
-      if (nowForComparison > end) return 100;
+      if (nowDate < start) return 0;
+      if (nowDate > end) return 100;
 
       const total = end - start;
-      const elapsed = nowForComparison - start;
+      const elapsed = nowDate - start;
       return Math.round((elapsed / total) * 100);
     }
   }
@@ -120,14 +114,14 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'S3 key for header image',
       },
       startDate: {
-        type: DataTypes.DATE,
+        type: DataTypes.STRING,
         allowNull: false,
-        comment: 'Cycle start date and time',
+        comment: 'Cycle start date and time (timezone-naive)',
       },
       endDate: {
-        type: DataTypes.DATE,
+        type: DataTypes.STRING,
         allowNull: false,
-        comment: 'Cycle end date and time',
+        comment: 'Cycle end date and time (timezone-naive)',
       },
       status: {
         type: DataTypes.ENUM('scheduled', 'active', 'completed', 'cancelled'),
