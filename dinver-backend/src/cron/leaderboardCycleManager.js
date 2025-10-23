@@ -35,8 +35,11 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    // Use current time for cycle activation
-    const now = new Date();
+    // Use current local time as UTC for cycle activation
+    const nowLocal = new Date();
+    const now = new Date(
+      nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+    );
     console.log(`Checking for cycles to activate at: ${now.toISOString()}`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
@@ -67,8 +70,11 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    // Use current time for cycle completion
-    const now = new Date();
+    // Use current local time as UTC for cycle completion
+    const nowLocal = new Date();
+    const now = new Date(
+      nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+    );
     console.log(`Checking for cycles to complete at: ${now.toISOString()}`);
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
