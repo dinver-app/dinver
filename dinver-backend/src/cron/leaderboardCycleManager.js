@@ -11,6 +11,16 @@ const {
 const { Op } = require('sequelize');
 
 /**
+ * Get current time in Europe/Zagreb timezone
+ */
+function getZagrebTime() {
+  const now = new Date();
+  // Convert to Zagreb timezone (UTC+1 or UTC+2 depending on DST)
+  const zagrebTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Zagreb"}));
+  return zagrebTime;
+}
+
+/**
  * Check and update cycle statuses
  * This function should be called by the cron job
  */
@@ -35,7 +45,9 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    const now = new Date();
+    // Use Europe/Zagreb timezone for cycle activation
+    const now = getZagrebTime();
+    console.log(`Checking for cycles to activate at: ${now.toISOString()} (Zagreb time)`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
@@ -65,7 +77,9 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    const now = new Date();
+    // Use Europe/Zagreb timezone for cycle completion
+    const now = getZagrebTime();
+    console.log(`Checking for cycles to complete at: ${now.toISOString()} (Zagreb time)`);
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {

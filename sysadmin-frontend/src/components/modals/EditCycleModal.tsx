@@ -39,10 +39,14 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
 
   useEffect(() => {
     if (cycle) {
-      // Convert ISO dates to datetime-local format
+      // Convert ISO dates to datetime-local format for Zagreb timezone
       const formatDateForInput = (isoDate: string) => {
         const date = new Date(isoDate);
-        return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+        // Convert to Zagreb timezone for display
+        const zagrebDate = new Date(
+          date.toLocaleString("en-US", { timeZone: "Europe/Zagreb" })
+        );
+        return zagrebDate.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
       };
 
       setFormData({
