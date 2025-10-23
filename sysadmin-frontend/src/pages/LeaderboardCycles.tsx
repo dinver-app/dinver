@@ -202,6 +202,7 @@ const LeaderboardCycles: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    // Display as local time without timezone conversion
     return date.toLocaleString("hr-HR", {
       day: "2-digit",
       month: "2-digit",

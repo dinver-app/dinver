@@ -11,10 +11,12 @@ const {
 const { Op } = require('sequelize');
 
 /**
- * Get current time (no timezone conversion)
+ * Get current time in local timezone (same as stored in database)
  */
 function getCurrentTime() {
-  return new Date();
+  const now = new Date();
+  // Convert to local time by adjusting for timezone offset
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000);
 }
 
 /**
