@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Review } from "../interfaces/Interfaces";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
-import { markReviewAsElite } from "../services/leaderboardCycleService";
 import { useNavigate } from "react-router-dom";
 
 const formatRating = (rating: number, language: string) => {

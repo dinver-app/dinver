@@ -687,6 +687,7 @@ const getCycleLeaderboard = async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 50 } = req.query;
+    const userId = req.user?.id; // Get current user ID
 
     const pageNum = Math.max(parseInt(page) || 1, 1);
     const limitNum = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
@@ -720,6 +721,33 @@ const getCycleLeaderboard = async (req, res) => {
       return participantData;
     });
 
+    // Get user's position and points if user is logged in
+    let userPosition = null;
+    let userPoints = 0;
+    let userRank = null;
+
+    if (userId) {
+      const userParticipant = await LeaderboardCycleParticipant.findOne({
+        where: {
+          cycleId: id,
+          userId: userId,
+        },
+      });
+
+      if (userParticipant && userParticipant.totalPoints > 0) {
+        userPoints = userParticipant.totalPoints;
+
+        // Get user's rank among all participants with points
+        userRank = await LeaderboardCycleParticipant.count({
+          where: {
+            cycleId: id,
+            totalPoints: { [Op.gt]: userPoints },
+          },
+        });
+        userPosition = userRank + 1;
+      }
+    }
+
     res.json({
       leaderboard,
       pagination: {
@@ -728,6 +756,14 @@ const getCycleLeaderboard = async (req, res) => {
         total: participants.count,
         totalPages: Math.ceil(participants.count / limitNum),
       },
+      userStats: userId
+        ? {
+            position: userPosition,
+            points: userPoints,
+            formattedPoints: userPoints > 0 ? userPoints.toFixed(2) : '0.00',
+            isParticipating: userPoints > 0,
+          }
+        : null,
     });
   } catch (error) {
     console.error('Error getting cycle leaderboard:', error);

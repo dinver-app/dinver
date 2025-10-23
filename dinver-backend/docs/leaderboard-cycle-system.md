@@ -249,7 +249,8 @@ CREATE TABLE "LeaderboardCycleWinners" (
 
 **GET** `/api/app/leaderboard-cycles/:id/leaderboard`
 
-- **Description**: Get public leaderboard for a cycle
+- **Description**: Get public leaderboard for a cycle with user's position
+- **Headers**: `Authorization: Bearer <token>` (optional - for user stats)
 - **Query Parameters**: `page`, `limit`
 - **Response**:
 
@@ -259,7 +260,7 @@ CREATE TABLE "LeaderboardCycleWinners" (
     {
       "id": "uuid",
       "rank": 1,
-      "totalPoints": 15.50,
+      "totalPoints": 15.5,
       "formattedPoints": "15.50",
       "userName": "John Doe",
       "user": {
@@ -271,9 +272,22 @@ CREATE TABLE "LeaderboardCycleWinners" (
       }
     }
   ],
-  "pagination": { ... }
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 25,
+    "totalPages": 1
+  },
+  "userStats": {
+    "position": 5,
+    "points": 8.25,
+    "formattedPoints": "8.25",
+    "isParticipating": true
+  }
 }
 ```
+
+**Note**: `userStats` is only returned if user is authenticated. If user is not participating or has 0 points, `position` will be `null` and `isParticipating` will be `false`.
 
 #### Cycle History
 
@@ -450,17 +464,31 @@ const days = Math.ceil(remainingTime / (1000 * 60 * 60 * 24));
 #### 2. Leaderboard Integration
 
 ```typescript
-// Fetch leaderboard
+// Fetch leaderboard with user stats
 const response = await fetch(
   `/api/app/leaderboard-cycles/${cycleId}/leaderboard?page=1&limit=50`,
+  {
+    headers: { Authorization: `Bearer ${token}` },
+  },
 );
-const { leaderboard } = await response.json();
+const { leaderboard, userStats } = await response.json();
 
-// Display with user highlighting
+// Display leaderboard
 leaderboard.forEach((participant, index) => {
   const isCurrentUser = participant.user.id === currentUserId;
   // Highlight current user's row
 });
+
+// Display user's position separately
+if (userStats) {
+  if (userStats.isParticipating) {
+    console.log(
+      `You are ranked #${userStats.position} with ${userStats.formattedPoints} points`,
+    );
+  } else {
+    console.log('You are not participating in this cycle');
+  }
+}
 ```
 
 #### 3. Real-time Updates
