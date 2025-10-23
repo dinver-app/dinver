@@ -38,23 +38,29 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates - store exactly as received from frontend
-    // Frontend sends datetime-local values which we store as-is
+    // Validate dates - convert from UTC to local time for storage
+    // Frontend sends datetime-local values as UTC, we need to convert to local time
     const start = new Date(startDate);
     const end = new Date(endDate);
     const now = new Date();
 
+    // Convert UTC to local time by adjusting for timezone offset
+    const startLocal = new Date(
+      start.getTime() - start.getTimezoneOffset() * 60000,
+    );
+    const endLocal = new Date(end.getTime() - end.getTimezoneOffset() * 60000);
+
     console.log(
-      `Creating cycle with start: ${start.toISOString()}, end: ${end.toISOString()}`,
+      `Creating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
     );
 
-    if (start <= now) {
+    if (startLocal <= now) {
       return res.status(400).json({
         error: 'Start date must be in the future',
       });
     }
 
-    if (end <= start) {
+    if (endLocal <= startLocal) {
       return res.status(400).json({
         error: 'End date must be after start date',
       });
@@ -67,13 +73,13 @@ const createCycle = async (req, res) => {
         [Op.or]: [
           // New cycle starts before existing cycle ends
           {
-            startDate: { [Op.lte]: endDate },
-            endDate: { [Op.gte]: startDate },
+            startDate: { [Op.lte]: endLocal },
+            endDate: { [Op.gte]: startLocal },
           },
           // New cycle ends after existing cycle starts
           {
-            startDate: { [Op.lte]: endDate },
-            endDate: { [Op.gte]: startDate },
+            startDate: { [Op.lte]: endLocal },
+            endDate: { [Op.gte]: startLocal },
           },
         ],
       },
@@ -120,8 +126,8 @@ const createCycle = async (req, res) => {
       name,
       description,
       headerImageUrl,
-      startDate,
-      endDate,
+      startDate: startLocal,
+      endDate: endLocal,
       numberOfWinners: parseInt(numberOfWinners),
       guaranteeFirstPlace:
         guaranteeFirstPlace === 'true' || guaranteeFirstPlace === true,
@@ -354,17 +360,25 @@ const updateCycle = async (req, res) => {
       const end = new Date(endDate || cycle.endDate);
       const now = new Date();
 
-      console.log(
-        `Updating cycle with start: ${start.toISOString()}, end: ${end.toISOString()}`,
+      // Convert UTC to local time by adjusting for timezone offset
+      const startLocal = new Date(
+        start.getTime() - start.getTimezoneOffset() * 60000,
+      );
+      const endLocal = new Date(
+        end.getTime() - end.getTimezoneOffset() * 60000,
       );
 
-      if (start <= now && cycle.status === 'scheduled') {
+      console.log(
+        `Updating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
+      );
+
+      if (startLocal <= now && cycle.status === 'scheduled') {
         return res.status(400).json({
           error: 'Start date must be in the future for scheduled cycles',
         });
       }
 
-      if (end <= start) {
+      if (endLocal <= startLocal) {
         return res.status(400).json({
           error: 'End date must be after start date',
         });
@@ -388,11 +402,10 @@ const updateCycle = async (req, res) => {
       headerImageUrl = await uploadToS3(file, folder);
     }
 
-    await cycle.update({
+    // Update the cycle with local time conversion for dates
+    const updateData = {
       name: name || cycle.name,
       description: description !== undefined ? description : cycle.description,
-      startDate: startDate || cycle.startDate,
-      endDate: endDate || cycle.endDate,
       numberOfWinners: numberOfWinners
         ? parseInt(numberOfWinners)
         : cycle.numberOfWinners,
@@ -401,7 +414,23 @@ const updateCycle = async (req, res) => {
           ? guaranteeFirstPlace
           : cycle.guaranteeFirstPlace,
       headerImageUrl: headerImageUrl,
-    });
+    };
+
+    // Add dates with local time conversion if provided
+    if (startDate) {
+      const start = new Date(startDate);
+      updateData.startDate = new Date(
+        start.getTime() - start.getTimezoneOffset() * 60000,
+      );
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      updateData.endDate = new Date(
+        end.getTime() - end.getTimezoneOffset() * 60000,
+      );
+    }
+
+    await cycle.update(updateData);
 
     // Log audit
     await logAudit({

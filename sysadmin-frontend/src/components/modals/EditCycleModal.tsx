@@ -42,6 +42,7 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
       // Convert ISO dates to datetime-local format (no timezone conversion)
       const formatDateForInput = (isoDate: string) => {
         const date = new Date(isoDate);
+        // Display as local time without timezone conversion
         return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
       };
 
