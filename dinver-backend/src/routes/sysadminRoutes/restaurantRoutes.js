@@ -5,6 +5,10 @@ const {
   sysadminAuthenticateToken,
   checkSysadmin,
 } = require('../../middleware/roleMiddleware');
+const {
+  searchRestaurants,
+  nearbyRestaurants,
+} = require('../../controllers/restaurantSearchController');
 const upload = require('../../../utils/uploadMiddleware');
 
 const router = express.Router();
@@ -28,6 +32,22 @@ router.get(
   sysadminAuthenticateToken,
   checkSysadmin,
   restaurantController.getAllRestaurants,
+);
+
+// Sysadmin lightweight search (name/address/place/oib)
+router.get(
+  '/restaurants/search',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  searchRestaurants,
+);
+
+// Sysadmin nearby using Haversine
+router.get(
+  '/restaurants/nearby',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  nearbyRestaurants,
 );
 
 router.get('/restaurants/:slug', restaurantController.getRestaurantDetails);

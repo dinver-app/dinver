@@ -1069,14 +1069,8 @@ const claimCoupon = async (req, res) => {
 
     // Deduct points for coupons with POINTS_AT_LEAST condition (both DINVER and RESTAURANT)
     if (coupon.conditionKind === 'POINTS_AT_LEAST') {
-      const pointsService = new PointsService(sequelize);
-      const pointsToDeduct = coupon.conditionValue;
-      await pointsService.spendPointsForCoupon(
-        userId,
-        coupon.id,
-        pointsToDeduct,
-        coupon.restaurantId || null,
-      );
+      // Note: Coupon points spending removed as per points system overhaul
+      // Coupon system will be removed completely
       // Keep audit for transparency (optional in addition to history log)
       const userPoints = await UserPoints.findOne({ where: { userId } });
       await logAudit({

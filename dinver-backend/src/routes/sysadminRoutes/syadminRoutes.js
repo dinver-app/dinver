@@ -127,6 +127,13 @@ router.get(
   sysadminController.getAllReviewsForClaimedRestaurants,
 );
 
+router.get(
+  '/reviews/:id',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  sysadminController.getReviewById,
+);
+
 // JSON Menu File Management Routes
 router.get(
   '/restaurants/:restaurantId/json-files',

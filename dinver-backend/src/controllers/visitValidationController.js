@@ -184,13 +184,8 @@ const adminScanUserToken = async (req, res) => {
       expiresAt: new Date(Date.now() - 1000),
     });
 
-    // Award points
-    const pointsService = new PointsService(sequelize);
-    await pointsService.addVisitPoints(
-      userId,
-      restaurantId,
-      isReservationValid,
-    );
+    // Note: Visit points removed as per points system overhaul
+    // QR visits no longer award points
 
     // Referral first visit
     try {

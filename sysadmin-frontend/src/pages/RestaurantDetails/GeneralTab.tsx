@@ -34,6 +34,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     ttUrl: restaurant.ttUrl || "",
     phone: restaurant.phone || "",
     email: restaurant.email || "",
+    oib: restaurant.oib || "",
     wifiSsid: restaurant.wifiSsid || "",
     wifiPassword: restaurant.wifiPassword || "",
     showWifiCredentials: restaurant.showWifiCredentials || false,
@@ -169,6 +170,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
+      formDataToSend.append("oib", formData.oib);
       formDataToSend.append(
         "websiteUrl",
         errors.websiteUrl === "" ? formData.websiteUrl : ""
@@ -326,17 +328,34 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("name")}
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("name")}
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  OIB
+                </label>
+                <input
+                  type="text"
+                  name="oib"
+                  value={formData.oib}
+                  onChange={handleInputChange}
+                  placeholder="12345678901"
+                  pattern="[0-9]{11}"
+                  title="OIB mora imati točno 11 znamenki"
+                  className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
 
             {/* Translations */}

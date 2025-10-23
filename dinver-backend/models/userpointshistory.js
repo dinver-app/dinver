@@ -23,10 +23,13 @@ module.exports = (sequelize, DataTypes) => {
       restaurantId = null,
       description,
     }) {
+      // Round points to 2 decimal places
+      const roundedPoints = Math.round(parseFloat(points) * 100) / 100;
+
       const history = await this.create({
         userId,
         actionType,
-        points,
+        points: roundedPoints,
         referenceId,
         restaurantId,
         description,
@@ -38,13 +41,39 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       if (userPoints) {
-        await userPoints.addPoints(points);
+        await userPoints.addPoints(roundedPoints);
       } else {
         // Ako korisnik nema zapis o bodovima, kreiraj novi
         await this.sequelize.models.UserPoints.create({
           userId,
-          totalPoints: points,
+          totalPoints: roundedPoints,
         });
+      }
+
+      // Update active leaderboard cycle participant points
+      try {
+        const activeLeaderboardCycle =
+          await this.sequelize.models.LeaderboardCycle.findOne({
+            where: { status: 'active' },
+          });
+
+        if (activeLeaderboardCycle) {
+          const [participant, created] =
+            await this.sequelize.models.LeaderboardCycleParticipant.findOrCreate(
+              {
+                where: { cycleId: activeLeaderboardCycle.id, userId },
+                defaults: { totalPoints: 0 },
+              },
+            );
+
+          await participant.addPoints(roundedPoints);
+        }
+      } catch (error) {
+        console.error(
+          'Error updating leaderboard cycle participant points:',
+          error,
+        );
+        // Don't throw error - we don't want to break points awarding if cycle update fails
       }
 
       return history;
@@ -80,11 +109,14 @@ module.exports = (sequelize, DataTypes) => {
           'referral_visit_referrer',
           // Points deduction (spending)
           'points_spent_coupon',
+          // Receipt validation
+          'receipt_upload',
+          'receipt_approved',
         ),
         allowNull: false,
       },
       points: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
       referenceId: {
