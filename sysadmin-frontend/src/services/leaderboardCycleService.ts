@@ -1,0 +1,316 @@
+import { apiClient } from "./authService";
+
+export interface LeaderboardCycle {
+  id: string;
+  name: string;
+  description?: string;
+  headerImageUrl?: string;
+  startDate: string;
+  endDate: string;
+  status: "scheduled" | "active" | "completed" | "cancelled";
+  numberOfWinners: number;
+  guaranteeFirstPlace: boolean;
+  createdBy: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  creator?: {
+    id: string;
+    user?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
+  participants?: Array<{ id: string }>;
+  winners?: Array<{ id: string }>;
+  participantCount?: number;
+  winnerCount?: number;
+  creatorName?: string;
+  progressPercentage?: number;
+  remainingDays?: number;
+  durationInDays?: number;
+}
+
+export interface CycleParticipant {
+  id: string;
+  cycleId: string;
+  userId: string;
+  totalPoints: number;
+  rank?: number;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    city: string;
+  };
+  userName?: string;
+  formattedPoints?: string;
+}
+
+export interface CycleWinner {
+  id: string;
+  cycleId: string;
+  userId: string;
+  rank: number;
+  isGuaranteedWinner: boolean;
+  pointsAtSelection: number;
+  selectedAt: string;
+  notified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    city: string;
+  };
+  userName?: string;
+  rankOrdinal?: string;
+  formattedPoints?: string;
+}
+
+export interface CycleFilters {
+  status?: string;
+  page?: number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface CyclesResponse {
+  cycles: LeaderboardCycle[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface ParticipantsResponse {
+  participants: CycleParticipant[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface WinnersResponse {
+  winners: CycleWinner[];
+}
+
+export interface CreateCycleData {
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  numberOfWinners: number;
+  guaranteeFirstPlace?: boolean;
+  headerImage?: File;
+}
+
+export interface UpdateCycleData {
+  name?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  numberOfWinners?: number;
+  guaranteeFirstPlace?: boolean;
+}
+
+class LeaderboardCycleService {
+  async getCycles(filters: CycleFilters = {}): Promise<CyclesResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.status) params.append("status", filters.status);
+    if (filters.page) params.append("page", filters.page.toString());
+    if (filters.limit) params.append("limit", filters.limit.toString());
+    if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+    if (filters.dateTo) params.append("dateTo", filters.dateTo);
+
+    const response = await apiClient.get(
+      `/api/sysadmin/leaderboard-cycles?${params}`
+    );
+
+    return response.data;
+  }
+
+  async getCycleById(id: string): Promise<LeaderboardCycle> {
+    const response = await apiClient.get(
+      `/api/sysadmin/leaderboard-cycles/${id}`
+    );
+
+    return response.data;
+  }
+
+  async createCycle(
+    data: CreateCycleData
+  ): Promise<{ message: string; cycle: LeaderboardCycle }> {
+    const formData = new FormData();
+
+    formData.append("name", data.name);
+    if (data.description) formData.append("description", data.description);
+    formData.append("startDate", data.startDate);
+    formData.append("endDate", data.endDate);
+    formData.append("numberOfWinners", data.numberOfWinners.toString());
+    formData.append(
+      "guaranteeFirstPlace",
+      data.guaranteeFirstPlace ? "true" : "false"
+    );
+    if (data.headerImage) formData.append("headerImage", data.headerImage);
+
+    const response = await apiClient.post(
+      `/api/sysadmin/leaderboard-cycles`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
+  }
+
+  async updateCycle(
+    id: string,
+    data: UpdateCycleData
+  ): Promise<{ message: string }> {
+    const response = await apiClient.put(
+      `/api/sysadmin/leaderboard-cycles/${id}`,
+      data
+    );
+
+    return response.data;
+  }
+
+  async updateCycleWithImage(
+    id: string,
+    data: CreateCycleData
+  ): Promise<{ message: string; cycle: LeaderboardCycle }> {
+    const formData = new FormData();
+
+    formData.append("name", data.name);
+    if (data.description) formData.append("description", data.description);
+    formData.append("startDate", data.startDate);
+    formData.append("endDate", data.endDate);
+    formData.append("numberOfWinners", data.numberOfWinners.toString());
+    formData.append(
+      "guaranteeFirstPlace",
+      data.guaranteeFirstPlace ? "true" : "false"
+    );
+    if (data.headerImage) formData.append("headerImage", data.headerImage);
+
+    const response = await apiClient.put(
+      `/api/sysadmin/leaderboard-cycles/${id}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data;
+  }
+
+  async cancelCycle(id: string): Promise<{ message: string }> {
+    const response = await apiClient.delete(
+      `/api/sysadmin/leaderboard-cycles/${id}`
+    );
+
+    return response.data;
+  }
+
+  async completeCycle(
+    id: string
+  ): Promise<{ message: string; winners: number }> {
+    const response = await apiClient.post(
+      `/api/sysadmin/leaderboard-cycles/${id}/complete`
+    );
+
+    return response.data;
+  }
+
+  async getParticipants(
+    cycleId: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<ParticipantsResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    const response = await apiClient.get(
+      `/api/sysadmin/leaderboard-cycles/${cycleId}/participants?${params}`
+    );
+
+    return response.data;
+  }
+
+  async getWinners(cycleId: string): Promise<WinnersResponse> {
+    const response = await apiClient.get(
+      `/api/sysadmin/leaderboard-cycles/${cycleId}/winners`
+    );
+
+    return response.data;
+  }
+
+  async triggerCycleCheck(): Promise<{ message: string; stats: any }> {
+    const response = await apiClient.post(
+      `/api/sysadmin/leaderboard-cycles/trigger-check`
+    );
+
+    return response.data;
+  }
+
+  async deleteCycle(id: string): Promise<{ message: string }> {
+    const response = await apiClient.delete(
+      `/api/sysadmin/leaderboard-cycles/${id}/delete`
+    );
+
+    return response.data;
+  }
+
+  async markReviewAsElite(reviewId: string): Promise<{ message: string }> {
+    const response = await apiClient.put(
+      `/api/sysadmin/reviews/${reviewId}/mark-elite`
+    );
+
+    return response.data;
+  }
+
+  async removeEliteFromReview(reviewId: string): Promise<{ message: string }> {
+    const response = await apiClient.put(
+      `/api/sysadmin/reviews/${reviewId}/remove-elite`
+    );
+
+    return response.data;
+  }
+}
+
+export const leaderboardCycleService = new LeaderboardCycleService();
+
+// Export individual functions for convenience
+export const {
+  getCycles,
+  createCycle,
+  updateCycle,
+  updateCycleWithImage,
+  cancelCycle,
+  completeCycle,
+  getParticipants,
+  getWinners,
+  triggerCycleCheck,
+  deleteCycle,
+  markReviewAsElite,
+  removeEliteFromReview,
+} = leaderboardCycleService;

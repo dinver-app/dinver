@@ -15,7 +15,11 @@ import { IoRestaurant } from "react-icons/io5";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
 import { logout } from "../services/authService";
-import { QrCodeIcon, ReceiptRefundIcon } from "@heroicons/react/24/outline";
+import {
+  QrCodeIcon,
+  ReceiptRefundIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -98,6 +102,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: "Receipts",
       path: "/receipts",
       icon: <ReceiptRefundIcon className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("leaderboard_cycles"),
+      path: "/leaderboard-cycles",
+      icon: <TrophyIcon className="h-4 w-4 mr-3" />,
     },
   ];
 

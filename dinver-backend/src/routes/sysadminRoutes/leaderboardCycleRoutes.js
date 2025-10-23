@@ -49,6 +49,7 @@ router.get(
 router.put(
   '/leaderboard-cycles/:id',
   sysadminAuthenticateToken,
+  upload.single('headerImage'),
   leaderboardCycleController.updateCycle,
 );
 
@@ -78,6 +79,20 @@ router.get(
   '/leaderboard-cycles/:id/winners',
   sysadminAuthenticateToken,
   leaderboardCycleController.getCycleWinners,
+);
+
+// Manually trigger cycle check
+router.post(
+  '/leaderboard-cycles/trigger-check',
+  sysadminAuthenticateToken,
+  leaderboardCycleController.triggerCycleCheck,
+);
+
+// Delete cancelled cycle permanently
+router.delete(
+  '/leaderboard-cycles/:id/delete',
+  sysadminAuthenticateToken,
+  leaderboardCycleController.deleteCycle,
 );
 
 module.exports = router;

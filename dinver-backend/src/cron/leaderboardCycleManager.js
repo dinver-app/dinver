@@ -36,12 +36,11 @@ async function checkAndUpdateCycles() {
 async function activateScheduledCycles() {
   try {
     const now = new Date();
-    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
         status: 'scheduled',
-        startDate: { [Op.lte]: today },
+        startDate: { [Op.lte]: now },
       },
     });
 
@@ -67,12 +66,11 @@ async function activateScheduledCycles() {
 async function completeActiveCycles() {
   try {
     const now = new Date();
-    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {
         status: 'active',
-        endDate: { [Op.lte]: today },
+        endDate: { [Op.lte]: now },
       },
     });
 

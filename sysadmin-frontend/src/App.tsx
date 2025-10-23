@@ -20,6 +20,9 @@ import QRPrintRequests from "./pages/QRPrintRequests";
 import Types from "./pages/Types";
 import Receipts from "./pages/Receipts";
 import ReceiptDetails from "./pages/ReceiptDetails";
+import LeaderboardCycles from "./pages/LeaderboardCycles";
+import LeaderboardCycleDetails from "./pages/LeaderboardCycleDetails";
+import ReviewDetails from "./pages/ReviewDetails";
 
 function App() {
   return (
@@ -52,6 +55,12 @@ function App() {
             <Route path="/types" element={<Types />} />
             <Route path="/receipts" element={<Receipts />} />
             <Route path="/receipts/:id" element={<ReceiptDetails />} />
+            <Route path="/reviews/:id" element={<ReviewDetails />} />
+            <Route path="/leaderboard-cycles" element={<LeaderboardCycles />} />
+            <Route
+              path="/leaderboard-cycles/:id"
+              element={<LeaderboardCycleDetails />}
+            />
           </Route>
         </Routes>
       </Router>

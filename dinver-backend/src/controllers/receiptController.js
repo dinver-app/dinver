@@ -5,6 +5,7 @@ const {
   UserSysadmin,
   UserPointsHistory,
   Reservation,
+  UserSettings,
 } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
@@ -27,6 +28,21 @@ const uploadReceipt = async (req, res) => {
 
     if (!file) {
       return res.status(400).json({ error: 'No image provided' });
+    }
+
+    // Check if user is verified (email and phone)
+    const userSettings = await UserSettings.findOne({
+      where: { userId },
+    });
+
+    if (
+      !userSettings ||
+      !userSettings.isEmailVerified ||
+      !userSettings.isPhoneVerified
+    ) {
+      return res.status(403).json({
+        error: 'Morate verificirati email i broj mobitela prije slanja računa',
+      });
     }
 
     // Calculate image hash for duplicate detection
@@ -619,6 +635,55 @@ const approveReceipt = async (req, res) => {
       restaurantId: receipt.restaurantId,
       description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
+
+    const user = await User.findByPk(receipt.userId, {
+      include: [
+        {
+          model: User,
+          as: 'referrals',
+        },
+      ],
+    });
+
+    // Check if this is user's first approved receipt for referral bonus
+    const firstReceipt = await Receipt.findOne({
+      where: {
+        userId: receipt.userId,
+        status: 'approved',
+      },
+      order: [['verifiedAt', 'ASC']],
+    });
+
+    // If this is the first approved receipt and user was referred
+    if (firstReceipt && firstReceipt.id === receipt.id && user.referredByCode) {
+      try {
+        // Find the referrer
+        const referrer = await User.findOne({
+          where: { referralCode: user.referredByCode },
+        });
+
+        if (referrer) {
+          const PointsService = require('../utils/pointsService');
+          const pointsService = new PointsService(
+            require('../../models').sequelize,
+          );
+
+          // Award referral bonus to referrer
+          await pointsService.addReferralFirstReceiptBonus(
+            referrer.id,
+            receipt.userId,
+            user.referredByCode,
+            receipt.restaurantId,
+          );
+        }
+      } catch (referralError) {
+        console.error(
+          'Error awarding referral first receipt bonus:',
+          referralError,
+        );
+        // Don't fail the receipt approval if referral bonus fails
+      }
+    }
 
     // Mark reservation as completed if reservationId is provided
     if (reservationId) {

@@ -19,7 +19,11 @@ module.exports = (sequelize, DataTypes) => {
 
     // Add points to participant's total
     async addPoints(points) {
-      this.totalPoints += points;
+      // Convert to numbers and round to 2 decimal places
+      const currentPoints = parseFloat(this.totalPoints) || 0;
+      const pointsToAdd = parseFloat(points) || 0;
+      this.totalPoints = Math.round((currentPoints + pointsToAdd) * 100) / 100;
+
       await this.save();
     }
 
@@ -60,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'Reference to the user',
       },
       totalPoints: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         defaultValue: 0,
         comment: 'Cached total points for this cycle',

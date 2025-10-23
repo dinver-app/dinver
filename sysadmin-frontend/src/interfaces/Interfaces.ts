@@ -192,6 +192,7 @@ export interface Review {
   userLastName: string;
   userEmail: string;
   createdAt?: string;
+  isElite?: boolean;
 }
 
 export interface RestaurantReviews {

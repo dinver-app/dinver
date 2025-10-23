@@ -11,6 +11,7 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { calculateAverageRating } = require('../utils/ratingUtils');
 const PointsService = require('../utils/pointsService');
 const { getMediaUrl } = require('../../config/cdn');
+const { sendPushNotification } = require('../../utils/pushNotificationService');
 
 const EDIT_WINDOW_DAYS = 7;
 const MAX_EDITS = 1;
@@ -549,6 +550,146 @@ const updateRestaurantRating = async (restaurantId) => {
   );
 };
 
+// Mark review as elite (sysadmin only)
+const markReviewAsElite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pointsService = new PointsService(sequelize);
+
+    // Find the review
+    const review = await Review.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        error: 'Review not found',
+      });
+    }
+
+    // Check if already marked as elite
+    if (review.isElite) {
+      return res.status(400).json({
+        error: 'Review is already marked as elite',
+      });
+    }
+
+    // Mark as elite
+    await review.update({ isElite: true });
+
+    // Award elite review points
+    await pointsService.addEliteReviewPoints(
+      review.userId,
+      review.id,
+      review.restaurantId,
+    );
+
+    // Send push notification to user
+    try {
+      await sendPushNotification(review.userId, {
+        title: 'Elite Review!',
+        body: 'Vaš review je označen kao elitan! Dobili ste 3 bonus boda.',
+        data: {
+          type: 'elite_review',
+          reviewId: review.id,
+          restaurantName: review.restaurant.name,
+        },
+      });
+    } catch (notificationError) {
+      console.error(
+        'Error sending elite review notification:',
+        notificationError,
+      );
+      // Don't fail the request if notification fails
+    }
+
+    res.json({
+      message: 'Review marked as elite successfully',
+      review: {
+        id: review.id,
+        isElite: review.isElite,
+        user: review.user,
+        restaurant: review.restaurant,
+      },
+    });
+  } catch (error) {
+    console.error('Error marking review as elite:', error);
+    handleError(res, error);
+  }
+};
+
+const removeEliteFromReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const review = await Review.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+        },
+        { model: Restaurant, as: 'restaurant', attributes: ['id', 'name'] },
+      ],
+    });
+
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    if (!review.isElite) {
+      return res.status(400).json({ error: 'Review is not marked as elite' });
+    }
+
+    await review.update({ isElite: false });
+
+    // TODO: Consider if we should remove the points that were awarded
+    // For now, we'll just remove the elite status without touching points
+
+    try {
+      await sendPushNotification(review.userId, {
+        title: 'Elite Status Removed',
+        body: 'Elite status je uklonjen s vašeg review-a.',
+        data: {
+          type: 'elite_review_removed',
+          reviewId: review.id,
+          restaurantName: review.restaurant.name,
+        },
+      });
+    } catch (notificationError) {
+      console.error(
+        'Error sending elite removal notification:',
+        notificationError,
+      );
+      // Don't fail the request if notification fails
+    }
+
+    res.json({
+      message: 'Elite status removed successfully',
+      review: {
+        id: review.id,
+        isElite: review.isElite,
+        user: review.user,
+        restaurant: review.restaurant,
+      },
+    });
+  } catch (error) {
+    console.error('Error removing elite status:', error);
+    handleError(res, error);
+  }
+};
+
 module.exports = {
   createReview,
   getUserReviews,
@@ -557,4 +698,6 @@ module.exports = {
   getRestaurantReviews,
   canReview,
   canEdit,
+  markReviewAsElite,
+  removeEliteFromReview,
 };

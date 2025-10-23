@@ -106,14 +106,14 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'S3 key for header image',
       },
       startDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: false,
-        comment: 'Cycle start date',
+        comment: 'Cycle start date and time',
       },
       endDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: false,
-        comment: 'Cycle end date',
+        comment: 'Cycle end date and time',
       },
       status: {
         type: DataTypes.ENUM('scheduled', 'active', 'completed', 'cancelled'),

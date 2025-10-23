@@ -117,12 +117,8 @@ const getUserAchievements = async (req, res) => {
           // If user hasn't unlocked this achievement yet, unlock it
           const userAchievement = achievement.UserAchievements?.[0];
           if (!userAchievement && progress >= achievement.threshold) {
-            const pointsService = new PointsService(sequelize);
-            await pointsService.addAchievementPoints(
-              userId,
-              achievement.id,
-              achievement.nameEn,
-            );
+            // Note: Achievement points removed as per points system overhaul
+            // Achievement system will be changed later
 
             await UserAchievement.create({
               userId,

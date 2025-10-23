@@ -23,10 +23,13 @@ module.exports = (sequelize, DataTypes) => {
       restaurantId = null,
       description,
     }) {
+      // Round points to 2 decimal places
+      const roundedPoints = Math.round(parseFloat(points) * 100) / 100;
+
       const history = await this.create({
         userId,
         actionType,
-        points,
+        points: roundedPoints,
         referenceId,
         restaurantId,
         description,
@@ -38,12 +41,12 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       if (userPoints) {
-        await userPoints.addPoints(points);
+        await userPoints.addPoints(roundedPoints);
       } else {
         // Ako korisnik nema zapis o bodovima, kreiraj novi
         await this.sequelize.models.UserPoints.create({
           userId,
-          totalPoints: points,
+          totalPoints: roundedPoints,
         });
       }
 
@@ -63,7 +66,7 @@ module.exports = (sequelize, DataTypes) => {
               },
             );
 
-          await participant.addPoints(points);
+          await participant.addPoints(roundedPoints);
         }
       } catch (error) {
         console.error(
@@ -113,7 +116,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       points: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
       referenceId: {

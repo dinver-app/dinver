@@ -4,16 +4,14 @@ const {
   LeaderboardCycleWinner,
   User,
   UserSysadmin,
-  UserPointsHistory,
-  Sequelize,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
 const {
   sendPushNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
-const { Op } = require('sequelize');
 
 // ==================== SYSADMIN METHODS ====================
 
@@ -57,15 +55,40 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Check if there's already an active cycle
-    const activeCycle = await LeaderboardCycle.findOne({
-      where: { status: 'active' },
+    // Check for overlapping cycles
+    const overlappingCycle = await LeaderboardCycle.findOne({
+      where: {
+        status: { [Op.in]: ['scheduled', 'active'] },
+        [Op.or]: [
+          // New cycle starts before existing cycle ends
+          {
+            startDate: { [Op.lte]: endDate },
+            endDate: { [Op.gte]: startDate },
+          },
+          // New cycle ends after existing cycle starts
+          {
+            startDate: { [Op.lte]: endDate },
+            endDate: { [Op.gte]: startDate },
+          },
+        ],
+      },
     });
 
-    if (activeCycle) {
+    if (overlappingCycle) {
+      const cycleType =
+        overlappingCycle.status === 'active' ? 'aktivan' : 'zakazan';
+      const cycleEndDate = new Date(
+        overlappingCycle.endDate,
+      ).toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
       return res.status(400).json({
-        error:
-          'There is already an active cycle. Please wait for it to complete or cancel it first.',
+        error: `Postoji ${cycleType} ciklus "${overlappingCycle.name}" koji se završava ${cycleEndDate}. Molimo odaberite datume koji se ne preklapaju ili otkažite postojeći ciklus.`,
       });
     }
 
@@ -247,7 +270,7 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
             },
           ],
           order: [['totalPoints', 'DESC']],
@@ -259,7 +282,7 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
             },
           ],
           order: [['rank', 'ASC']],
@@ -306,6 +329,8 @@ const updateCycle = async (req, res) => {
       guaranteeFirstPlace,
     } = req.body;
 
+    const file = req.file;
+
     const cycle = await LeaderboardCycle.findByPk(id);
 
     if (!cycle) {
@@ -344,7 +369,15 @@ const updateCycle = async (req, res) => {
       endDate: cycle.endDate,
       numberOfWinners: cycle.numberOfWinners,
       guaranteeFirstPlace: cycle.guaranteeFirstPlace,
+      headerImageUrl: cycle.headerImageUrl,
     };
+
+    // Upload new header image if provided
+    let headerImageUrl = cycle.headerImageUrl;
+    if (file) {
+      const folder = `leaderboard-cycles`;
+      headerImageUrl = await uploadToS3(file, folder);
+    }
 
     await cycle.update({
       name: name || cycle.name,
@@ -358,6 +391,7 @@ const updateCycle = async (req, res) => {
         guaranteeFirstPlace !== undefined
           ? guaranteeFirstPlace
           : cycle.guaranteeFirstPlace,
+      headerImageUrl: headerImageUrl,
     });
 
     // Log audit
@@ -375,6 +409,7 @@ const updateCycle = async (req, res) => {
           endDate: cycle.endDate,
           numberOfWinners: cycle.numberOfWinners,
           guaranteeFirstPlace: cycle.guaranteeFirstPlace,
+          headerImageUrl: cycle.headerImageUrl,
         },
       },
     });
@@ -497,7 +532,7 @@ const getCycleParticipants = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
         },
       ],
       order: [['totalPoints', 'DESC']],
@@ -543,7 +578,7 @@ const getCycleWinners = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
         },
       ],
       order: [['rank', 'ASC']],
@@ -666,7 +701,7 @@ const getCycleLeaderboard = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
         },
       ],
       order: [['totalPoints', 'DESC']],
@@ -987,6 +1022,88 @@ async function notifyAllParticipants(cycleId, winners) {
   }
 }
 
+/**
+ * Manually trigger cycle status check (for testing/admin purposes)
+ */
+const triggerCycleCheck = async (req, res) => {
+  try {
+    const leaderboardCycleManager = require('../cron/leaderboardCycleManager');
+
+    console.log('Manual cycle check triggered by sysadmin');
+
+    // Run the cycle check
+    await leaderboardCycleManager.checkAndUpdateCycles();
+
+    // Get updated stats
+    const stats = await leaderboardCycleManager.getCycleStats();
+
+    res.json({
+      message: 'Cycle check completed successfully',
+      stats: stats,
+    });
+  } catch (error) {
+    console.error('Error in manual cycle check:', error);
+    res.status(500).json({
+      error: 'Failed to run cycle check',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Delete a cancelled cycle permanently
+ */
+const deleteCycle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cycle = await LeaderboardCycle.findByPk(id);
+    if (!cycle) {
+      return res.status(404).json({
+        error: 'Cycle not found',
+      });
+    }
+
+    // Only allow deletion of cancelled cycles
+    if (cycle.status !== 'cancelled') {
+      return res.status(400).json({
+        error: 'Only cancelled cycles can be deleted',
+      });
+    }
+
+    // Delete associated data first (cascade should handle this, but being explicit)
+    await LeaderboardCycleParticipant.destroy({
+      where: { cycleId: id },
+    });
+
+    await LeaderboardCycleWinner.destroy({
+      where: { cycleId: id },
+    });
+
+    // Delete the cycle
+    await cycle.destroy();
+
+    // Log audit
+    await logAudit({
+      userId: req.user.id,
+      action: ActionTypes.DELETE,
+      entity: Entities.LEADERBOARD_CYCLE,
+      entityId: id,
+      changes: { deleted: { name: cycle.name } },
+    });
+
+    res.json({
+      message: 'Cycle deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting cycle:', error);
+    res.status(500).json({
+      error: 'Failed to delete cycle',
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   // Sysadmin methods
   createCycle,
@@ -997,6 +1114,8 @@ module.exports = {
   manuallyCompleteCycle,
   getCycleParticipants,
   getCycleWinners,
+  triggerCycleCheck,
+  deleteCycle,
   // App methods
   getActiveCycle,
   getCycleLeaderboard,

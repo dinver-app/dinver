@@ -13,3 +13,8 @@ export const getPaginatedReviewsForClaimedRestaurants = async (
   );
   return response.data;
 };
+
+export const getReviewById = async (reviewId: string) => {
+  const response = await apiClient.get(`/api/sysadmin/reviews/${reviewId}`);
+  return response.data;
+};
