@@ -38,7 +38,8 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates - convert to UTC for storage
+    // Validate dates - store exactly as received from frontend
+    // Frontend sends datetime-local values which we store as-is
     const start = new Date(startDate);
     const end = new Date(endDate);
     const now = new Date();
@@ -352,6 +353,10 @@ const updateCycle = async (req, res) => {
       const start = new Date(startDate || cycle.startDate);
       const end = new Date(endDate || cycle.endDate);
       const now = new Date();
+
+      console.log(
+        `Updating cycle with start: ${start.toISOString()}, end: ${end.toISOString()}`,
+      );
 
       if (start <= now && cycle.status === 'scheduled') {
         return res.status(400).json({

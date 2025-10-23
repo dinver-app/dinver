@@ -11,13 +11,10 @@ const {
 const { Op } = require('sequelize');
 
 /**
- * Get current time in Europe/Zagreb timezone
+ * Get current time (no timezone conversion)
  */
-function getZagrebTime() {
-  const now = new Date();
-  // Convert to Zagreb timezone (UTC+1 or UTC+2 depending on DST)
-  const zagrebTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Zagreb"}));
-  return zagrebTime;
+function getCurrentTime() {
+  return new Date();
 }
 
 /**
@@ -45,9 +42,9 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    // Use Europe/Zagreb timezone for cycle activation
-    const now = getZagrebTime();
-    console.log(`Checking for cycles to activate at: ${now.toISOString()} (Zagreb time)`);
+    // Use current time for cycle activation
+    const now = getCurrentTime();
+    console.log(`Checking for cycles to activate at: ${now.toISOString()}`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
@@ -77,9 +74,9 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    // Use Europe/Zagreb timezone for cycle completion
-    const now = getZagrebTime();
-    console.log(`Checking for cycles to complete at: ${now.toISOString()} (Zagreb time)`);
+    // Use current time for cycle completion
+    const now = getCurrentTime();
+    console.log(`Checking for cycles to complete at: ${now.toISOString()}`);
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {
