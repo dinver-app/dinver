@@ -38,10 +38,14 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates
+    // Validate dates - convert to UTC for storage
     const start = new Date(startDate);
     const end = new Date(endDate);
     const now = new Date();
+
+    console.log(
+      `Creating cycle with start: ${start.toISOString()}, end: ${end.toISOString()}`,
+    );
 
     if (start <= now) {
       return res.status(400).json({
