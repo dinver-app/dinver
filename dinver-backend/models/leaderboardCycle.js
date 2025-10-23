@@ -45,16 +45,20 @@ module.exports = (sequelize, DataTypes) => {
 
     // Check if cycle has ended (past end date)
     hasEnded() {
-      const now = new Date();
-      const end = new Date(this.endDate);
-      return now > end;
+      const nowLocal = new Date();
+      const nowForComparison = new Date(
+        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+      );
+      return nowForComparison > new Date(this.endDate);
     }
 
     // Check if cycle should start (past start date)
     shouldStart() {
-      const now = new Date();
-      const start = new Date(this.startDate);
-      return now >= start;
+      const nowLocal = new Date();
+      const nowForComparison = new Date(
+        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+      );
+      return nowForComparison >= new Date(this.startDate);
     }
 
     // Get cycle duration in days
@@ -66,23 +70,29 @@ module.exports = (sequelize, DataTypes) => {
 
     // Get remaining days until end
     getRemainingDays() {
-      const now = new Date();
+      const nowLocal = new Date();
+      const nowForComparison = new Date(
+        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+      );
       const end = new Date(this.endDate);
-      const diff = end - now;
+      const diff = end - nowForComparison;
       return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
     }
 
     // Get cycle progress percentage (0-100)
     getProgressPercentage() {
-      const now = new Date();
+      const nowLocal = new Date();
+      const nowForComparison = new Date(
+        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
+      );
       const start = new Date(this.startDate);
       const end = new Date(this.endDate);
 
-      if (now < start) return 0;
-      if (now > end) return 100;
+      if (nowForComparison < start) return 0;
+      if (nowForComparison > end) return 100;
 
       const total = end - start;
-      const elapsed = now - start;
+      const elapsed = nowForComparison - start;
       return Math.round((elapsed / total) * 100);
     }
   }
