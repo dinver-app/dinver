@@ -35,10 +35,13 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    // Use current time as timezone-naive string
+    // Use current local time as timezone-naive string
     const now = new Date();
-    const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
-    console.log(`Checking for cycles to activate at: ${nowString}`);
+    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const nowString = nowLocal.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    console.log(
+      `Checking for cycles to activate at: ${nowString} (local time)`,
+    );
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
@@ -80,10 +83,13 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    // Use current time as timezone-naive string
+    // Use current local time as timezone-naive string
     const now = new Date();
-    const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
-    console.log(`Checking for cycles to complete at: ${nowString}`);
+    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const nowString = nowLocal.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    console.log(
+      `Checking for cycles to complete at: ${nowString} (local time)`,
+    );
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {
