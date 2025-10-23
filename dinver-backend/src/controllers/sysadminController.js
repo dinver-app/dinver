@@ -509,66 +509,96 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
         break;
     }
 
-    const users = await User.findAll({
-      attributes: ['id', 'firstName', 'lastName', 'email'],
-    });
-    const userMap = users.reduce((map, user) => {
-      map[user.id] = user;
-      return map;
-    }, {});
-
+    // Get all claimed restaurants
     const claimedRestaurants = await Restaurant.findAll({
       where: {
         isClaimed: true,
-        name: { [Op.iLike]: `%${search}%` },
       },
       attributes: ['id', 'name'],
     });
 
-    const reviewsData = await Promise.all(
-      claimedRestaurants.map(async (restaurant) => {
-        const { count, rows: reviews } = await Review.findAndCountAll({
-          where: {
-            restaurantId: restaurant.id,
+    const restaurantIds = claimedRestaurants.map((r) => r.id);
+    const restaurantMap = claimedRestaurants.reduce((map, restaurant) => {
+      map[restaurant.id] = restaurant.name;
+      return map;
+    }, {});
+
+    // Build where clause for reviews
+    let whereClause = {
+      restaurantId: { [Op.in]: restaurantIds },
+    };
+
+    // Add search functionality
+    if (search) {
+      whereClause = {
+        ...whereClause,
+        [Op.or]: [
+          { text: { [Op.iLike]: `%${search}%` } },
+          { '$Restaurant.name$': { [Op.iLike]: `%${search}%` } },
+          { '$User.firstName$': { [Op.iLike]: `%${search}%` } },
+          { '$User.lastName$': { [Op.iLike]: `%${search}%` } },
+        ],
+      };
+    }
+
+    // Get all reviews with pagination
+    const { count: totalReviews, rows: reviews } = await Review.findAndCountAll(
+      {
+        where: whereClause,
+        include: [
+          {
+            model: Restaurant,
+            as: 'restaurant',
+            attributes: ['id', 'name'],
           },
-          attributes: [
-            'id',
-            'rating',
-            'text',
-            'photos',
-            'userId',
-            'foodQuality',
-            'service',
-            'atmosphere',
-            'createdAt',
-          ],
-          limit,
-          offset,
-          order,
-        });
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'firstName', 'lastName', 'email'],
+          },
+        ],
+        attributes: [
+          'id',
+          'rating',
+          'text',
+          'photos',
+          'userId',
+          'foodQuality',
+          'service',
+          'atmosphere',
+          'createdAt',
+          'isElite',
+        ],
+        limit,
+        offset,
+        order,
+      },
+    );
 
-        const reviewsWithUserDetails = reviews.map((review) => {
-          const user = userMap[review.userId] || {};
-          return {
-            ...review.toJSON(),
-            userFirstName: user.firstName || 'Unknown',
-            userLastName: user.lastName || 'Unknown',
-            userEmail: user.email || 'Unknown',
-          };
-        });
+    // Group reviews by restaurant
+    const reviewsByRestaurant = {};
+    reviews.forEach((review) => {
+      const restaurantName = review.restaurant.name;
+      if (!reviewsByRestaurant[restaurantName]) {
+        reviewsByRestaurant[restaurantName] = [];
+      }
+      reviewsByRestaurant[restaurantName].push({
+        ...review.toJSON(),
+        userFirstName: review.user.firstName || 'Unknown',
+        userLastName: review.user.lastName || 'Unknown',
+        userEmail: review.user.email || 'Unknown',
+      });
+    });
 
-        return {
-          restaurant: restaurant.name,
-          reviews: reviewsWithUserDetails,
-          totalReviews: count,
-        };
+    // Convert to array format expected by frontend
+    const reviewsData = Object.keys(reviewsByRestaurant).map(
+      (restaurantName) => ({
+        restaurant: restaurantName,
+        reviews: reviewsByRestaurant[restaurantName],
+        totalReviews: reviewsByRestaurant[restaurantName].length,
       }),
     );
 
-    const totalReviews = reviewsData.reduce(
-      (acc, data) => acc + data.totalReviews,
-      0,
-    );
     const totalPages = Math.ceil(totalReviews / limit);
 
     res.json({
@@ -582,6 +612,54 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
     res
       .status(500)
       .json({ error: 'Failed to fetch reviews for claimed restaurants' });
+  }
+}
+
+async function getReviewById(req, res) {
+  try {
+    const { id } = req.params;
+
+    const review = await Review.findByPk(id, {
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+        },
+      ],
+      attributes: [
+        'id',
+        'rating',
+        'text',
+        'photos',
+        'userId',
+        'foodQuality',
+        'service',
+        'atmosphere',
+        'createdAt',
+        'isElite',
+      ],
+    });
+
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    res.json({
+      ...review.toJSON(),
+      userFirstName: review.user.firstName || 'Unknown',
+      userLastName: review.user.lastName || 'Unknown',
+      userEmail: review.user.email || 'Unknown',
+      restaurantName: review.restaurant.name,
+    });
+  } catch (error) {
+    console.error('Error fetching review by ID:', error);
+    res.status(500).json({ error: 'Failed to fetch review' });
   }
 }
 
@@ -604,4 +682,5 @@ module.exports = {
   updateRestaurantAdmin,
   listAllUsers,
   getAllReviewsForClaimedRestaurants,
+  getReviewById,
 };

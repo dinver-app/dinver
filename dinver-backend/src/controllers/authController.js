@@ -807,6 +807,47 @@ const verifyEmail = async (req, res) => {
       isEmailVerified: true,
     });
 
+    // Check if user is now fully verified (email + phone) and was referred
+    if (userSettings.isPhoneVerified && user.referredByCode) {
+      try {
+        // Check if verification points were already awarded
+        const { UserPointsHistory } = require('../../models');
+        const existingPoints = await UserPointsHistory.findOne({
+          where: {
+            userId: user.id,
+            actionType: 'referral_verification_referred',
+          },
+        });
+
+        if (!existingPoints) {
+          // Find the referrer
+          const referrer = await User.findOne({
+            where: { referralCode: user.referredByCode },
+          });
+
+          if (referrer) {
+            const PointsService = require('../utils/pointsService');
+            const pointsService = new PointsService(
+              require('../../models').sequelize,
+            );
+
+            // Award referral verification points to both users
+            await pointsService.addReferralVerificationPoints(
+              referrer.id,
+              user.id,
+              user.referredByCode,
+            );
+          }
+        }
+      } catch (referralError) {
+        console.error(
+          'Error awarding referral verification points:',
+          referralError,
+        );
+        // Don't fail the verification if referral bonus fails
+      }
+    }
+
     res.send(`
       <html>
         <head>
@@ -957,6 +998,47 @@ const verifyPhone = async (req, res) => {
     await userSettings.update({
       isPhoneVerified: true,
     });
+
+    // Check if user is now fully verified (email + phone) and was referred
+    if (userSettings.isEmailVerified && user.referredByCode) {
+      try {
+        // Check if verification points were already awarded
+        const { UserPointsHistory } = require('../../models');
+        const existingPoints = await UserPointsHistory.findOne({
+          where: {
+            userId: user.id,
+            actionType: 'referral_verification_referred',
+          },
+        });
+
+        if (!existingPoints) {
+          // Find the referrer
+          const referrer = await User.findOne({
+            where: { referralCode: user.referredByCode },
+          });
+
+          if (referrer) {
+            const PointsService = require('../utils/pointsService');
+            const pointsService = new PointsService(
+              require('../../models').sequelize,
+            );
+
+            // Award referral verification points to both users
+            await pointsService.addReferralVerificationPoints(
+              referrer.id,
+              user.id,
+              user.referredByCode,
+            );
+          }
+        }
+      } catch (referralError) {
+        console.error(
+          'Error awarding referral verification points:',
+          referralError,
+        );
+        // Don't fail the verification if referral bonus fails
+      }
+    }
 
     res.json({ message: 'Phone verified successfully' });
   } catch (error) {

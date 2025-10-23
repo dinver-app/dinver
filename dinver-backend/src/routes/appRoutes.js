@@ -28,6 +28,8 @@ const pushNotificationRoutes = require('./appRoutes/pushNotificationRoutes');
 const referralRoutes = require('./appRoutes/referralRoutes');
 const aiRoutes = require('./appRoutes/aiRoutes');
 const aiMenuSearch = require('./appRoutes/ai/menuSearchRoutes');
+const receiptRoutes = require('./appRoutes/receiptRoutes');
+const leaderboardCycleRoutes = require('./appRoutes/leaderboardCycleRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -59,5 +61,7 @@ router.use(pushNotificationRoutes);
 router.use(referralRoutes);
 router.use(aiRoutes);
 router.use(aiMenuSearch);
+router.use(receiptRoutes);
+router.use(leaderboardCycleRoutes);
 
 module.exports = router;

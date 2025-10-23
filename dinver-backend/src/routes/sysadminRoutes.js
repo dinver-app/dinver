@@ -19,6 +19,9 @@ const jsonMenuImportRoutes = require('./sysadminRoutes/jsonMenuImportRoutes');
 const referralRoutes = require('./sysadminRoutes/referralRoutes');
 const sizeRoutes = require('./sysadminRoutes/sizeRoutes');
 const waitListRoutes = require('./sysadminRoutes/waitListRoutes');
+const receiptRoutes = require('./sysadminRoutes/receiptRoutes');
+const leaderboardCycleRoutes = require('./sysadminRoutes/leaderboardCycleRoutes');
+const reviewRoutes = require('./sysadminRoutes/reviewRoutes');
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -42,5 +45,8 @@ router.use('/json-menu-import', jsonMenuImportRoutes);
 router.use(referralRoutes);
 router.use(sizeRoutes);
 router.use(waitListRoutes);
+router.use(receiptRoutes);
+router.use(leaderboardCycleRoutes);
+router.use(reviewRoutes);
 
 module.exports = router;

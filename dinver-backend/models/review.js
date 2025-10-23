@@ -79,6 +79,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      isElite: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Marks if review is marked as elite by sysadmin',
+      },
       isHidden: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

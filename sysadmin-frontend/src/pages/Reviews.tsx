@@ -3,9 +3,8 @@ import { getPaginatedReviewsForClaimedRestaurants } from "../services/reviewServ
 import { useTranslation } from "react-i18next";
 import { Review } from "../interfaces/Interfaces";
 import { format } from "date-fns";
-import ImageGallery from "react-image-gallery";
-import "react-image-gallery/styles/css/image-gallery.css";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const formatRating = (rating: number, language: string) => {
   return language === "hr"
@@ -15,14 +14,12 @@ const formatRating = (rating: number, language: string) => {
 
 const Reviews = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [reviewsData, setReviewsData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedReview, setSelectedReview] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("date_desc");
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchReviews();
@@ -47,14 +44,6 @@ const Reviews = () => {
     }
   };
 
-  const handleOpenModal = (review: any, restaurantName: string) => {
-    setSelectedReview({ review, restaurant: restaurantName });
-  };
-
-  const handleCloseModal = () => {
-    setSelectedReview(null);
-  };
-
   const truncateComment = (comment: string | null, maxLength: number) => {
     if (!comment) return "-";
     return comment.length > maxLength
@@ -62,15 +51,8 @@ const Reviews = () => {
       : comment;
   };
 
-  const openGallery = (index: number) => {
-    setCurrentImageIndex(index);
-    setIsGalleryOpen(true);
-  };
-
-  const closeGallery = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      setIsGalleryOpen(false);
-    }
+  const handleReviewClick = (reviewId: string) => {
+    navigate(`/reviews/${reviewId}`);
   };
 
   return (
@@ -115,7 +97,6 @@ const Reviews = () => {
                   <th className="py-2 px-4 text-left font-normal w-48">
                     {t("user")}
                   </th>
-
                   <th className="py-2 px-4 text-left font-normal w-64">
                     {t("comment")}
                   </th>
@@ -125,7 +106,9 @@ const Reviews = () => {
                   <th className="py-2 px-4 text-center font-normal w-32">
                     {t("rating")}
                   </th>
-                  <th className="py-2 px-4 text-left font-normal w-10"></th>
+                  <th className="py-2 px-4 text-center font-normal w-20">
+                    {t("elite")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -133,7 +116,8 @@ const Reviews = () => {
                   restaurant.reviews.map((review: Review) => (
                     <tr
                       key={review.id}
-                      className="hover:bg-gray-100 border-b border-gray-200"
+                      className="hover:bg-gray-100 border-b border-gray-200 cursor-pointer"
+                      onClick={() => handleReviewClick(review.id)}
                     >
                       <td className="py-2 px-4 text-sm w-64">
                         {restaurant.restaurant}
@@ -141,7 +125,6 @@ const Reviews = () => {
                       <td className="py-2 px-4 text-sm text-gray-600 w-48">
                         {review.userFirstName} {review.userLastName}
                       </td>
-
                       <td className="py-2 px-4 text-sm text-gray-600 w-64">
                         {truncateComment(review.text, 30)}
                       </td>
@@ -154,15 +137,14 @@ const Reviews = () => {
                       <td className="py-2 px-4 text-sm text-center text-gray-600 w-32">
                         {formatRating(review.rating, i18n.language)}
                       </td>
-                      <td className="py-2 px-4 text-sm text-gray-600 w-10">
-                        <button
-                          onClick={() =>
-                            handleOpenModal(review, restaurant.restaurant)
-                          }
-                          className="text-blue-500 hover:text-blue-700"
-                        >
-                          ...
-                        </button>
+                      <td className="py-2 px-4 text-sm text-center w-20">
+                        {review.isElite ? (
+                          <span className="text-green-600 font-bold text-lg">
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -193,143 +175,6 @@ const Reviews = () => {
             </div>
           </div>
         </>
-      )}
-
-      {selectedReview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative overflow-y-auto max-h-full">
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-            >
-              &times;
-            </button>
-            <div className="flex items-center mb-4 gap-1">
-              <img
-                src="/images/review.svg"
-                alt="Review Details Icon"
-                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3"
-              />
-              <div>
-                <h2 className="text-lg font-semibold">{t("review_details")}</h2>
-                <p className="text-sm text-gray-500">
-                  {t("view_review_details")}
-                </p>
-              </div>
-            </div>
-            <div className="h-line mb-4"></div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("restaurant")}</h3>
-              <p className="text-xs text-gray-600">
-                {selectedReview.restaurant}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("rating")}</h3>
-              <p className="text-xs text-gray-600">
-                {formatRating(selectedReview.review.rating, i18n.language)}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold mb-2">
-                {t("detailed_ratings")}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">
-                    {t("food_quality")}
-                  </span>
-                  <span className="text-xs font-medium">
-                    {formatRating(
-                      selectedReview.review.foodQuality,
-                      i18n.language
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">{t("service")}</span>
-                  <span className="text-xs font-medium">
-                    {formatRating(selectedReview.review.service, i18n.language)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">
-                    {t("atmosphere")}
-                  </span>
-                  <span className="text-xs font-medium">
-                    {formatRating(
-                      selectedReview.review.atmosphere,
-                      i18n.language
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("comment")}</h3>
-              <p className="text-xs text-gray-600">
-                {selectedReview.review.text || "-"}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("user")}</h3>
-              <p className="text-xs text-gray-600">
-                {selectedReview.review.userFirstName}{" "}
-                {selectedReview.review.userLastName}
-              </p>
-            </div>
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold">{t("images")}</h3>
-              <div className="flex gap-2">
-                {selectedReview.review.photos &&
-                selectedReview.review.photos.length > 0 ? (
-                  selectedReview.review.photos.map(
-                    (image: string, index: number) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`Review Image ${index + 1}`}
-                        className="w-16 h-16 object-cover cursor-pointer"
-                        onClick={() => openGallery(index)}
-                      />
-                    )
-                  )
-                ) : (
-                  <p className="text-xs text-gray-600">
-                    {t("no_images_in_review")}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isGalleryOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
-          onClick={closeGallery}
-        >
-          <div className="relative">
-            <button
-              onClick={() => setIsGalleryOpen(false)}
-              className="absolute top-0 right-0 mt-2 mr-2 text-white text-2xl"
-            >
-              &times;
-            </button>
-            <ImageGallery
-              items={selectedReview.review.images.map((image: string) => ({
-                original: image,
-              }))}
-              startIndex={currentImageIndex}
-              showThumbnails={false}
-              showFullscreenButton={false}
-              showPlayButton={false}
-              showBullets={true}
-              onImageLoad={() => window.dispatchEvent(new Event("resize"))}
-            />
-          </div>
-        </div>
       )}
     </div>
   );

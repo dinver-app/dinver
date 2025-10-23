@@ -19,6 +19,7 @@ export interface Sysadmin {
 export interface Restaurant {
   id?: string;
   name: string;
+  oib?: string;
   address: string;
   description?: string;
   workingHoursInfo?: string;
@@ -191,6 +192,7 @@ export interface Review {
   userLastName: string;
   userEmail: string;
   createdAt?: string;
+  isElite?: boolean;
 }
 
 export interface RestaurantReviews {

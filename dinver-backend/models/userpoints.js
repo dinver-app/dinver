@@ -12,7 +12,10 @@ module.exports = (sequelize, DataTypes) => {
 
     // Helper metoda za dodavanje bodova i ažuriranje levela
     async addPoints(points) {
-      this.totalPoints += points;
+      // Convert to numbers and round to 2 decimal places
+      const currentPoints = parseFloat(this.totalPoints) || 0;
+      const pointsToAdd = parseFloat(points) || 0;
+      this.totalPoints = Math.round((currentPoints + pointsToAdd) * 100) / 100;
 
       // Ažuriraj level bazirano na ukupnim bodovima
       if (this.totalPoints >= 1000) this.level = 5;
@@ -50,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
       },
       totalPoints: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         defaultValue: 0,
       },
