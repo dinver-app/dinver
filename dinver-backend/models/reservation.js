@@ -118,6 +118,10 @@ module.exports = (sequelize, DataTypes) => {
 
     // Helper metoda za provjeru može li se slati poruke
     canSendMessages() {
+      // Custom reservations don't support messaging
+      if (this.isCustomReservation) {
+        return false;
+      }
       return this.isThreadActive() && !this.isCancelled() && !this.isDeclined();
     }
   }
@@ -131,7 +135,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
       },
       restaurantId: {
         type: DataTypes.UUID,
@@ -199,6 +203,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      isCustomReservation: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      guestName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      guestPhone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      guestEmail: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+          isEmail: true,
+        },
+      },
       threadActive: {
         type: DataTypes.VIRTUAL,
         get() {
@@ -241,6 +265,22 @@ module.exports = (sequelize, DataTypes) => {
             );
             if (reservationDateTime < new Date()) {
               throw new Error('Reservation must be in the future');
+            }
+          }
+
+          // Validation for custom reservations
+          if (reservation.isCustomReservation) {
+            if (!reservation.guestName || reservation.guestName.trim() === '') {
+              throw new Error('Guest name is required for custom reservations');
+            }
+            if (!reservation.userId) {
+              // This is expected for custom reservations
+              reservation.userId = null;
+            }
+          } else {
+            // Regular reservations must have a userId
+            if (!reservation.userId) {
+              throw new Error('User ID is required for regular reservations');
             }
           }
         },

@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
     }) {
       return await this.create({
         reservationId,
-        userId,
+        userId, // Can be null for custom reservations
         event,
         oldStatus,
         newStatus,
@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       userId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
       },
       event: {
         type: DataTypes.STRING,

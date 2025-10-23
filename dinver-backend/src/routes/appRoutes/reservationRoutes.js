@@ -94,4 +94,13 @@ router.get(
   reservationController.getAvailableTimes,
 );
 
+// Ruta za kreiranje custom rezervacija
+router.post(
+  '/restaurants/:restaurantId/custom-reservations',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  checkAdmin,
+  reservationController.createCustomReservation,
+);
+
 module.exports = router;
