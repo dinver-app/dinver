@@ -38,25 +38,21 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates - treat local time as UTC for consistent comparison
-    const nowLocal = new Date();
-    const nowForComparison = new Date(
-      nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-    );
-    const startDateObj = new Date(startDate + ':00.000Z');
-    const endDateObj = new Date(endDate + ':00.000Z');
+    // Validate dates - treat as timezone-naive strings
+    const now = new Date();
+    const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
 
     console.log(
-      `Creating cycle with start: ${startDateObj.toISOString()}, end: ${endDateObj.toISOString()}, current: ${nowForComparison.toISOString()}`,
+      `Creating cycle with start: ${startDate}, end: ${endDate}, current: ${nowString}`,
     );
 
-    if (startDateObj <= nowForComparison) {
+    if (startDate <= nowString) {
       return res.status(400).json({
         error: 'Start date must be in the future',
       });
     }
 
-    if (endDateObj <= startDateObj) {
+    if (endDate <= startDate) {
       return res.status(400).json({
         error: 'End date must be after start date',
       });
@@ -69,13 +65,13 @@ const createCycle = async (req, res) => {
         [Op.or]: [
           // New cycle starts before existing cycle ends
           {
-            startDate: { [Op.lte]: endDateObj },
-            endDate: { [Op.gte]: startDateObj },
+            startDate: { [Op.lte]: endDate },
+            endDate: { [Op.gte]: startDate },
           },
           // New cycle ends after existing cycle starts
           {
-            startDate: { [Op.lte]: endDateObj },
-            endDate: { [Op.gte]: startDateObj },
+            startDate: { [Op.lte]: endDate },
+            endDate: { [Op.gte]: startDate },
           },
         ],
       },
@@ -117,13 +113,13 @@ const createCycle = async (req, res) => {
       headerImageUrl = await uploadToS3(file, folder);
     }
 
-    // Create the cycle - store local time as UTC (timezone-naive)
+    // Create the cycle - store as timezone-naive strings
     const cycle = await LeaderboardCycle.create({
       name,
       description,
       headerImageUrl,
-      startDate: new Date(startDate + ':00.000Z'), // Store local time as UTC
-      endDate: new Date(endDate + ':00.000Z'), // Store local time as UTC
+      startDate: startDate, // Store as string (timezone-naive)
+      endDate: endDate, // Store as string (timezone-naive)
       numberOfWinners: parseInt(numberOfWinners),
       guaranteeFirstPlace:
         guaranteeFirstPlace === 'true' || guaranteeFirstPlace === true,
@@ -352,22 +348,16 @@ const updateCycle = async (req, res) => {
 
     // Validate dates if provided
     if (startDate || endDate) {
-      const nowLocal = new Date();
-      const nowForComparison = new Date(
-        nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-      );
-      const startToCheck = startDate
-        ? new Date(startDate + ':00.000Z')
-        : new Date(cycle.startDate);
-      const endToCheck = endDate
-        ? new Date(endDate + ':00.000Z')
-        : new Date(cycle.endDate);
+      const now = new Date();
+      const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+      const startToCheck = startDate || cycle.startDate;
+      const endToCheck = endDate || cycle.endDate;
 
       console.log(
-        `Updating cycle with start: ${startToCheck.toISOString()}, end: ${endToCheck.toISOString()}, current: ${nowForComparison.toISOString()}`,
+        `Updating cycle with start: ${startToCheck}, end: ${endToCheck}, current: ${nowString}`,
       );
 
-      if (startToCheck <= nowForComparison && cycle.status === 'scheduled') {
+      if (startToCheck <= nowString && cycle.status === 'scheduled') {
         return res.status(400).json({
           error: 'Start date must be in the future for scheduled cycles',
         });
@@ -413,10 +403,10 @@ const updateCycle = async (req, res) => {
 
     // Add dates without timezone conversion if provided
     if (startDate) {
-      updateData.startDate = new Date(startDate + ':00.000Z'); // Store local time as UTC
+      updateData.startDate = startDate; // Store as string (timezone-naive)
     }
     if (endDate) {
-      updateData.endDate = new Date(endDate + ':00.000Z'); // Store local time as UTC
+      updateData.endDate = endDate; // Store as string (timezone-naive)
     }
 
     await cycle.update(updateData);

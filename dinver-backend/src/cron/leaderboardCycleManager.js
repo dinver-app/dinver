@@ -35,17 +35,15 @@ async function checkAndUpdateCycles() {
  */
 async function activateScheduledCycles() {
   try {
-    // Use current local time as UTC for cycle activation
-    const nowLocal = new Date();
-    const now = new Date(
-      nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-    );
-    console.log(`Checking for cycles to activate at: ${now.toISOString()}`);
+    // Use current time as timezone-naive string
+    const now = new Date();
+    const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    console.log(`Checking for cycles to activate at: ${nowString}`);
 
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
         status: 'scheduled',
-        startDate: { [Op.lte]: now }, // Compare as Date objects
+        startDate: { [Op.lte]: nowString }, // Compare as strings
       },
     });
 
@@ -57,7 +55,7 @@ async function activateScheduledCycles() {
     console.log(`Found ${allScheduledCycles.length} scheduled cycles:`);
     allScheduledCycles.forEach((cycle) => {
       console.log(
-        `- Cycle "${cycle.name}": startDate=${cycle.startDate}, now=${now.toISOString()}, shouldActivate=${new Date(cycle.startDate) <= now}`,
+        `- Cycle "${cycle.name}": startDate=${cycle.startDate}, now=${nowString}, shouldActivate=${cycle.startDate <= nowString}`,
       );
     });
 
@@ -82,17 +80,15 @@ async function activateScheduledCycles() {
  */
 async function completeActiveCycles() {
   try {
-    // Use current local time as UTC for cycle completion
-    const nowLocal = new Date();
-    const now = new Date(
-      nowLocal.getTime() - nowLocal.getTimezoneOffset() * 60000,
-    );
-    console.log(`Checking for cycles to complete at: ${now.toISOString()}`);
+    // Use current time as timezone-naive string
+    const now = new Date();
+    const nowString = now.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
+    console.log(`Checking for cycles to complete at: ${nowString}`);
 
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {
         status: 'active',
-        endDate: { [Op.lte]: now }, // Compare as Date objects
+        endDate: { [Op.lte]: nowString }, // Compare as strings
       },
     });
 
