@@ -740,7 +740,7 @@ const getCycleLeaderboard = async (req, res) => {
 
     // Get user's position and points if user is logged in
     let userPosition = null;
-    let userPoints = 0;
+    let userPoints = 0.0;
     let userRank = null;
 
     if (userId) {
@@ -751,8 +751,8 @@ const getCycleLeaderboard = async (req, res) => {
         },
       });
 
-      if (userParticipant && userParticipant.totalPoints > 0) {
-        userPoints = userParticipant.totalPoints;
+      if (userParticipant && parseFloat(userParticipant.totalPoints) > 0) {
+        userPoints = parseFloat(userParticipant.totalPoints);
 
         // Get user's rank among all participants with points
         userRank = await LeaderboardCycleParticipant.count({
