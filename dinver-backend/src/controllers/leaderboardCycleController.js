@@ -38,22 +38,22 @@ const createCycle = async (req, res) => {
       });
     }
 
-    // Validate dates - treat as timezone-naive (no conversion needed)
-    const startLocal = new Date(startDate);
-    const endLocal = new Date(endDate);
+    // Validate dates - treat as timezone-naive Date objects
     const now = new Date();
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
 
     console.log(
-      `Creating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
+      `Creating cycle with start: ${startDateObj.toISOString()}, end: ${endDateObj.toISOString()}, current: ${now.toISOString()}`,
     );
 
-    if (startLocal <= now) {
+    if (startDateObj <= now) {
       return res.status(400).json({
         error: 'Start date must be in the future',
       });
     }
 
-    if (endLocal <= startLocal) {
+    if (endDateObj <= startDateObj) {
       return res.status(400).json({
         error: 'End date must be after start date',
       });
@@ -66,13 +66,13 @@ const createCycle = async (req, res) => {
         [Op.or]: [
           // New cycle starts before existing cycle ends
           {
-            startDate: { [Op.lte]: endLocal },
-            endDate: { [Op.gte]: startLocal },
+            startDate: { [Op.lte]: endDateObj },
+            endDate: { [Op.gte]: startDateObj },
           },
           // New cycle ends after existing cycle starts
           {
-            startDate: { [Op.lte]: endLocal },
-            endDate: { [Op.gte]: startLocal },
+            startDate: { [Op.lte]: endDateObj },
+            endDate: { [Op.gte]: startDateObj },
           },
         ],
       },
@@ -114,13 +114,13 @@ const createCycle = async (req, res) => {
       headerImageUrl = await uploadToS3(file, folder);
     }
 
-    // Create the cycle
+    // Create the cycle - store dates as timezone-naive Date objects
     const cycle = await LeaderboardCycle.create({
       name,
       description,
       headerImageUrl,
-      startDate: startLocal,
-      endDate: endLocal,
+      startDate: new Date(startDate), // Parse as timezone-naive Date
+      endDate: new Date(endDate), // Parse as timezone-naive Date
       numberOfWinners: parseInt(numberOfWinners),
       guaranteeFirstPlace:
         guaranteeFirstPlace === 'true' || guaranteeFirstPlace === true,
@@ -349,21 +349,23 @@ const updateCycle = async (req, res) => {
 
     // Validate dates if provided
     if (startDate || endDate) {
-      const startLocal = new Date(startDate || cycle.startDate);
-      const endLocal = new Date(endDate || cycle.endDate);
       const now = new Date();
+      const startToCheck = startDate
+        ? new Date(startDate)
+        : new Date(cycle.startDate);
+      const endToCheck = endDate ? new Date(endDate) : new Date(cycle.endDate);
 
       console.log(
-        `Updating cycle with start: ${startLocal.toISOString()} (local), end: ${endLocal.toISOString()} (local)`,
+        `Updating cycle with start: ${startToCheck.toISOString()}, end: ${endToCheck.toISOString()}, current: ${now.toISOString()}`,
       );
 
-      if (startLocal <= now && cycle.status === 'scheduled') {
+      if (startToCheck <= now && cycle.status === 'scheduled') {
         return res.status(400).json({
           error: 'Start date must be in the future for scheduled cycles',
         });
       }
 
-      if (endLocal <= startLocal) {
+      if (endToCheck <= startToCheck) {
         return res.status(400).json({
           error: 'End date must be after start date',
         });
@@ -403,10 +405,10 @@ const updateCycle = async (req, res) => {
 
     // Add dates without timezone conversion if provided
     if (startDate) {
-      updateData.startDate = new Date(startDate);
+      updateData.startDate = new Date(startDate); // Parse as timezone-naive Date
     }
     if (endDate) {
-      updateData.endDate = new Date(endDate);
+      updateData.endDate = new Date(endDate); // Parse as timezone-naive Date
     }
 
     await cycle.update(updateData);

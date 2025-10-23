@@ -42,7 +42,7 @@ async function activateScheduledCycles() {
     const cyclesToActivate = await LeaderboardCycle.findAll({
       where: {
         status: 'scheduled',
-        startDate: { [Op.lte]: now },
+        startDate: { [Op.lte]: now }, // Compare as Date objects
       },
     });
 
@@ -74,7 +74,7 @@ async function completeActiveCycles() {
     const cyclesToComplete = await LeaderboardCycle.findAll({
       where: {
         status: 'active',
-        endDate: { [Op.lte]: now },
+        endDate: { [Op.lte]: now }, // Compare as Date objects
       },
     });
 
