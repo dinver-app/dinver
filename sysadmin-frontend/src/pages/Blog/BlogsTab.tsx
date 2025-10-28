@@ -123,6 +123,7 @@ const BlogsTab = () => {
           <thead className="bg-gray-100">
             <tr className="text-sm text-black">
               <th className="py-2 px-4 text-left font-normal">{t("title")}</th>
+              <th className="py-2 px-4 text-left font-normal">{t("views")}</th>
               <th className="py-2 px-4 text-left font-normal">{t("author")}</th>
               <th className="py-2 px-4 text-left font-normal">{t("status")}</th>
               <th className="py-2 px-4 text-left font-normal">
@@ -142,6 +143,9 @@ const BlogsTab = () => {
                     {blog.title}
                   </div>
                   <div className="text-sm text-gray-500">{blog.excerpt}</div>
+                </td>
+                <td className="py-2 px-4 text-sm text-gray-600">
+                  {blog.viewCount?.toLocaleString() || 0}
                 </td>
                 <td className="py-2 px-4 text-sm text-gray-600">
                   {blogUsers.find((user) => user.id === blog.authorId)?.name}
