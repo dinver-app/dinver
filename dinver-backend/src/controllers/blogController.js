@@ -1,5 +1,4 @@
-const { Blog, BlogUser } = require('../../models');
-const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const { Blog, BlogUser, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const slugify = require('slugify');
@@ -289,10 +288,23 @@ const getBlogStats = async (req, res) => {
     const publishedBlogs = await Blog.count({ where: { status: 'published' } });
     const draftBlogs = await Blog.count({ where: { status: 'draft' } });
 
+    // Calculate total views across all blogs
+    const result = await Blog.findAll({
+      where: { status: 'published' },
+      attributes: [[sequelize.literal('SUM("viewCount")'), 'totalViews']],
+      raw: true,
+    });
+
+    const totalViews = parseInt(result[0]?.totalViews) || 0;
+    const avgViewsPerBlog =
+      publishedBlogs > 0 ? Math.round(totalViews / publishedBlogs) : 0;
+
     res.json({
       total: totalBlogs,
       published: publishedBlogs,
       draft: draftBlogs,
+      totalViews,
+      avgViewsPerBlog,
     });
   } catch (error) {
     console.error('Error fetching blog stats:', error);
@@ -344,6 +356,7 @@ const getPublicBlogs = async (req, res) => {
         'tags',
         'publishedAt',
         'readingTimeMinutes',
+        'viewCount',
       ],
     });
 
@@ -359,6 +372,7 @@ const getPublicBlogs = async (req, res) => {
       tags: blog.tags,
       publishedAt: blog.publishedAt,
       readingTimeMinutes: blog.readingTimeMinutes,
+      viewCount: blog.viewCount,
       author: {
         name: blog.author?.name || 'Unknown',
         profileImage: blog.author?.profileImage,
@@ -408,6 +422,7 @@ const getPublicBlog = async (req, res) => {
         'tags',
         'publishedAt',
         'readingTimeMinutes',
+        'viewCount',
         'metaTitle',
         'metaDescription',
         'keywords',
@@ -430,6 +445,7 @@ const getPublicBlog = async (req, res) => {
       tags: blog.tags,
       publishedAt: blog.publishedAt,
       readingTimeMinutes: blog.readingTimeMinutes,
+      viewCount: blog.viewCount,
       metaTitle: blog.metaTitle,
       metaDescription: blog.metaDescription,
       keywords: blog.keywords,
@@ -446,6 +462,32 @@ const getPublicBlog = async (req, res) => {
   }
 };
 
+// Increment blog view count
+const incrementBlogView = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const blog = await Blog.findOne({
+      where: {
+        slug,
+        status: 'published',
+      },
+    });
+
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    // Increment view count
+    await blog.increment('viewCount');
+
+    res.json({ success: true, viewCount: blog.viewCount + 1 });
+  } catch (error) {
+    console.error('Error incrementing blog view:', error);
+    res.status(500).json({ error: 'Failed to increment view count' });
+  }
+};
+
 module.exports = {
   getBlogs,
   getBlog,
@@ -455,4 +497,5 @@ module.exports = {
   getBlogStats,
   getPublicBlogs,
   getPublicBlog,
+  incrementBlogView,
 };
