@@ -6,5 +6,6 @@ const router = express.Router();
 // Public routes
 router.get('/public/blogs', blogController.getPublicBlogs);
 router.get('/public/blogs/:slug', blogController.getPublicBlog);
+router.post('/public/blogs/:slug/view', blogController.incrementBlogView);
 
 module.exports = router;
