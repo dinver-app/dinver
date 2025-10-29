@@ -64,20 +64,60 @@ function normalizeText(text) {
 
 // Helper za SQL upite sa normalizacijom dijakritika
 // Normalizuje i kolonu u bazi i search term prije poređenja
-function createNormalizedLikeCondition(column, searchTerm) {
+// Koristi eksplicitnu tabličnu kvalifikaciju da izbjegne "ambiguous column" greške u JOIN-ovima
+function createNormalizedLikeCondition(column, searchTerm, tableName) {
   const normalizedTerm = normalizeText(searchTerm);
 
   // Koristi PostgreSQL TRANSLATE za uklanjanje dijakritika
-  // TRANSLATE(mapira svaki karakter iz prvog stringa u odgovarajući karakter iz drugog)
-  // Koristimo ::text sintaksu umjesto CAST za jednostavniju konverziju
-  // Properly escape column name for SQL - Sequelize.col() returns an object, so we use quoted string
-  const quotedColumn = `"${column}"`;
+  // Eksplicitno kvalificiramo kolonu s imenom tabele da izbjegnemo ambiguous column greške
+  // tableName se automatski postavlja na ime modela u kontekstu gdje se funkcija koristi
+  // Ako nije navedeno, Sequelize će pokušati automatski kvalificirati
+  const qualifiedColumn = tableName
+    ? Sequelize.literal(`"${tableName}"."${column}"`)
+    : Sequelize.col(column);
 
-  // Nested TRANSLATE pozivi za sve dijakritike
-  // Koristimo literal za kompleksnu SQL sintaksu
-  const columnNormalized = Sequelize.literal(
-    `LOWER(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(${quotedColumn}::text, 'čćČĆ', 'ccCC'), 'đĐ', 'dD'), 'šŠ', 'sS'), 'žŽ', 'zZ'), 'àáâãäåÀÁÂÃÄÅ', 'aaaaaaAAAAAA'), 'èéêëÈÉÊË', 'eeeeEEEE'), 'ìíîïÌÍÎÏ', 'iiiiIIII'), 'òóôõöÒÓÔÕÖ', 'oooooOOOOO'), 'ùúûüýÿÙÚÛÜÝŸ', 'uuuuyyUUUUYY'))`,
+  // Nested TRANSLATE pozivi koristeći Sequelize.fn() za pravilnu kvalifikaciju
+  // Kreirati chain TRANSLATE poziva
+  let translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    qualifiedColumn,
+    'čćČĆ',
+    'ccCC',
   );
+  translatedColumn = Sequelize.fn('TRANSLATE', translatedColumn, 'đĐ', 'dD');
+  translatedColumn = Sequelize.fn('TRANSLATE', translatedColumn, 'šŠ', 'sS');
+  translatedColumn = Sequelize.fn('TRANSLATE', translatedColumn, 'žŽ', 'zZ');
+  translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    translatedColumn,
+    'àáâãäåÀÁÂÃÄÅ',
+    'aaaaaaAAAAAA',
+  );
+  translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    translatedColumn,
+    'èéêëÈÉÊË',
+    'eeeeEEEE',
+  );
+  translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    translatedColumn,
+    'ìíîïÌÍÎÏ',
+    'iiiiIIII',
+  );
+  translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    translatedColumn,
+    'òóôõöÒÓÔÕÖ',
+    'oooooOOOOO',
+  );
+  translatedColumn = Sequelize.fn(
+    'TRANSLATE',
+    translatedColumn,
+    'ùúûüýÿÙÚÛÜÝŸ',
+    'uuuuyyUUUUYY',
+  );
+  const columnNormalized = Sequelize.fn('LOWER', translatedColumn);
 
   return Sequelize.where(columnNormalized, {
     [Op.like]: `%${normalizedTerm}%`,
@@ -348,14 +388,18 @@ module.exports = {
       if (searchTerms.length > 0) {
         // Search in restaurant names - koristimo normalizaciju za dijakritike
         const nameConditions = searchTerms.map((term) =>
-          createNormalizedLikeCondition('name', term),
+          createNormalizedLikeCondition('name', term, 'Restaurant'),
         );
 
         // Search in menu items - koristimo normalizaciju za dijakritike
         const menuItems = await MenuItemTranslation.findAll({
           where: {
             [Op.or]: searchTerms.map((term) =>
-              createNormalizedLikeCondition('name', term),
+              createNormalizedLikeCondition(
+                'name',
+                term,
+                'MenuItemTranslation',
+              ),
             ),
           },
           include: [
@@ -380,7 +424,11 @@ module.exports = {
         const drinkItems = await DrinkItemTranslation.findAll({
           where: {
             [Op.or]: searchTerms.map((term) =>
-              createNormalizedLikeCondition('name', term),
+              createNormalizedLikeCondition(
+                'name',
+                term,
+                'DrinkItemTranslation',
+              ),
             ),
           },
           include: [
@@ -453,7 +501,11 @@ module.exports = {
           const fallbackMenuItems = await MenuItemTranslation.findAll({
             where: {
               [Op.or]: searchTerms.map((term) =>
-                createNormalizedLikeCondition('name', term),
+                createNormalizedLikeCondition(
+                  'name',
+                  term,
+                  'MenuItemTranslation',
+                ),
               ),
             },
             include: [
@@ -480,7 +532,11 @@ module.exports = {
           const fallbackDrinkItems = await DrinkItemTranslation.findAll({
             where: {
               [Op.or]: searchTerms.map((term) =>
-                createNormalizedLikeCondition('name', term),
+                createNormalizedLikeCondition(
+                  'name',
+                  term,
+                  'DrinkItemTranslation',
+                ),
               ),
             },
             include: [
