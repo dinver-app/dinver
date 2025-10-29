@@ -62,6 +62,68 @@ function normalizeText(text) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+// Helper za SQL upite sa normalizacijom dijakritika
+// Normalizuje i kolonu u bazi i search term prije poređenja
+function createNormalizedLikeCondition(column, searchTerm) {
+  const normalizedTerm = normalizeText(searchTerm);
+
+  // Koristi PostgreSQL TRANSLATE za uklanjanje dijakritika
+  // TRANSLATE(mapira svaki karakter iz prvog stringa u odgovarajući karakter iz drugog)
+  const columnRef = Sequelize.col(column);
+  // Koristimo CAST da osiguramo da je tekst
+  const columnText = Sequelize.fn('CAST', columnRef, Sequelize.literal('TEXT'));
+
+  // Nested TRANSLATE pozivi za sve dijakritike
+  const columnNormalized = Sequelize.fn(
+    'LOWER',
+    Sequelize.fn(
+      'TRANSLATE',
+      Sequelize.fn(
+        'TRANSLATE',
+        Sequelize.fn(
+          'TRANSLATE',
+          Sequelize.fn(
+            'TRANSLATE',
+            Sequelize.fn(
+              'TRANSLATE',
+              Sequelize.fn(
+                'TRANSLATE',
+                Sequelize.fn(
+                  'TRANSLATE',
+                  Sequelize.fn(
+                    'TRANSLATE',
+                    Sequelize.fn('TRANSLATE', columnText, 'čćČĆ', 'ccCC'),
+                    'đĐ',
+                    'dD',
+                  ),
+                  'šŠ',
+                  'sS',
+                ),
+                'žŽ',
+                'zZ',
+              ),
+              'àáâãäåÀÁÂÃÄÅ',
+              'aaaaaaAAAAAA',
+            ),
+            'èéêëÈÉÊË',
+            'eeeeEEEE',
+          ),
+          'ìíîïÌÍÎÏ',
+          'iiiiIIII',
+        ),
+        'òóôõöÒÓÔÕÖ',
+        'oooooOOOOO',
+      ),
+      'ùúûüýÿÙÚÛÜÝŸ',
+      'uuuuyyUUUUYY',
+    ),
+  );
+
+  return Sequelize.where(columnNormalized, {
+    [Op.like]: `%${normalizedTerm}%`,
+  });
+}
+
 function computeTokenSimilarity(term, token) {
   if (!term || !token) return 0;
   if (term === token) return 1.0; // exact token match
@@ -324,17 +386,17 @@ module.exports = {
 
       // Search by terms if provided
       if (searchTerms.length > 0) {
-        // Search in restaurant names
-        const nameConditions = searchTerms.map((term) => ({
-          name: { [Op.iLike]: `%${term}%` },
-        }));
+        // Search in restaurant names - koristimo normalizaciju za dijakritike
+        const nameConditions = searchTerms.map((term) =>
+          createNormalizedLikeCondition('name', term),
+        );
 
-        // Search in menu items
+        // Search in menu items - koristimo normalizaciju za dijakritike
         const menuItems = await MenuItemTranslation.findAll({
           where: {
-            [Op.or]: searchTerms.map((term) => ({
-              name: { [Op.iLike]: `%${term}%` },
-            })),
+            [Op.or]: searchTerms.map((term) =>
+              createNormalizedLikeCondition('name', term),
+            ),
           },
           include: [
             {
@@ -354,12 +416,12 @@ module.exports = {
           limit: 300,
         });
 
-        // Search in drink items
+        // Search in drink items - koristimo normalizaciju za dijakritike
         const drinkItems = await DrinkItemTranslation.findAll({
           where: {
-            [Op.or]: searchTerms.map((term) => ({
-              name: { [Op.iLike]: `%${term}%` },
-            })),
+            [Op.or]: searchTerms.map((term) =>
+              createNormalizedLikeCondition('name', term),
+            ),
           },
           include: [
             {
@@ -427,12 +489,12 @@ module.exports = {
           .map((r) => r.id);
 
         if (fallbackRestaurantIds.length > 0) {
-          // Fetch matching MenuItems for these restaurants
+          // Fetch matching MenuItems for these restaurants - koristimo normalizaciju
           const fallbackMenuItems = await MenuItemTranslation.findAll({
             where: {
-              [Op.or]: searchTerms.map((term) => ({
-                name: { [Op.iLike]: `%${term}%` },
-              })),
+              [Op.or]: searchTerms.map((term) =>
+                createNormalizedLikeCondition('name', term),
+              ),
             },
             include: [
               {
@@ -454,12 +516,12 @@ module.exports = {
             ],
           });
 
-          // Fetch matching DrinkItems for these restaurants
+          // Fetch matching DrinkItems for these restaurants - koristimo normalizaciju
           const fallbackDrinkItems = await DrinkItemTranslation.findAll({
             where: {
-              [Op.or]: searchTerms.map((term) => ({
-                name: { [Op.iLike]: `%${term}%` },
-              })),
+              [Op.or]: searchTerms.map((term) =>
+                createNormalizedLikeCondition('name', term),
+              ),
             },
             include: [
               {
