@@ -96,7 +96,21 @@ const RestaurantDetails = () => {
         >
           &larr; {t("back_to_restaurants")}
         </button>
-        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
+        <div className="text-right">
+          <h1 className="text-2xl font-bold">{restaurant.name}</h1>
+          {restaurant.id && (
+            <div
+              onClick={() => {
+                navigator.clipboard.writeText(restaurant.id || "");
+                toast.success("ID kopiran u clipboard");
+              }}
+              className="text-sm text-gray-500 mt-1 cursor-pointer hover:text-gray-700 transition-colors"
+              title="Klikni da kopiraš ID"
+            >
+              ID: {restaurant.id}
+            </div>
+          )}
+        </div>
       </div>
       <div className="h-line mb-4"></div>
       <div className="tabs flex mb-4">
@@ -156,7 +170,9 @@ const RestaurantDetails = () => {
         </button>
         <button
           className={`py-2 px-4 border-b-2 text-sm ${
-            activeTab === "JSON Menu Import" ? "border-b-2 border-black" : "text-gray-500"
+            activeTab === "JSON Menu Import"
+              ? "border-b-2 border-black"
+              : "text-gray-500"
           }`}
           onClick={() => handleTabChange("JSON Menu Import")}
         >
