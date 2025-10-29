@@ -69,54 +69,14 @@ function createNormalizedLikeCondition(column, searchTerm) {
 
   // Koristi PostgreSQL TRANSLATE za uklanjanje dijakritika
   // TRANSLATE(mapira svaki karakter iz prvog stringa u odgovarajući karakter iz drugog)
-  const columnRef = Sequelize.col(column);
-  // Koristimo CAST da osiguramo da je tekst
-  const columnText = Sequelize.fn('CAST', columnRef, Sequelize.literal('TEXT'));
+  // Koristimo ::text sintaksu umjesto CAST za jednostavniju konverziju
+  // Properly escape column name for SQL - Sequelize.col() returns an object, so we use quoted string
+  const quotedColumn = `"${column}"`;
 
   // Nested TRANSLATE pozivi za sve dijakritike
-  const columnNormalized = Sequelize.fn(
-    'LOWER',
-    Sequelize.fn(
-      'TRANSLATE',
-      Sequelize.fn(
-        'TRANSLATE',
-        Sequelize.fn(
-          'TRANSLATE',
-          Sequelize.fn(
-            'TRANSLATE',
-            Sequelize.fn(
-              'TRANSLATE',
-              Sequelize.fn(
-                'TRANSLATE',
-                Sequelize.fn(
-                  'TRANSLATE',
-                  Sequelize.fn(
-                    'TRANSLATE',
-                    Sequelize.fn('TRANSLATE', columnText, 'čćČĆ', 'ccCC'),
-                    'đĐ',
-                    'dD',
-                  ),
-                  'šŠ',
-                  'sS',
-                ),
-                'žŽ',
-                'zZ',
-              ),
-              'àáâãäåÀÁÂÃÄÅ',
-              'aaaaaaAAAAAA',
-            ),
-            'èéêëÈÉÊË',
-            'eeeeEEEE',
-          ),
-          'ìíîïÌÍÎÏ',
-          'iiiiIIII',
-        ),
-        'òóôõöÒÓÔÕÖ',
-        'oooooOOOOO',
-      ),
-      'ùúûüýÿÙÚÛÜÝŸ',
-      'uuuuyyUUUUYY',
-    ),
+  // Koristimo literal za kompleksnu SQL sintaksu
+  const columnNormalized = Sequelize.literal(
+    `LOWER(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(TRANSLATE(${quotedColumn}::text, 'čćČĆ', 'ccCC'), 'đĐ', 'dD'), 'šŠ', 'sS'), 'žŽ', 'zZ'), 'àáâãäåÀÁÂÃÄÅ', 'aaaaaaAAAAAA'), 'èéêëÈÉÊË', 'eeeeEEEE'), 'ìíîïÌÍÎÏ', 'iiiiIIII'), 'òóôõöÒÓÔÕÖ', 'oooooOOOOO'), 'ùúûüýÿÙÚÛÜÝŸ', 'uuuuyyUUUUYY'))`,
   );
 
   return Sequelize.where(columnNormalized, {
