@@ -158,6 +158,23 @@ async function completeActiveCycles() {
  */
 async function selectWinners(cycleId) {
   const cycle = await LeaderboardCycle.findByPk(cycleId);
+
+  // Idempotency: if winners already exist for this cycle, return them
+  const existingWinners = await LeaderboardCycleWinner.findAll({
+    where: { cycleId },
+    order: [['rank', 'ASC']],
+  });
+  if (existingWinners.length > 0) {
+    console.log(
+      `Winners already exist for cycle ${cycleId}; skipping re-selection`,
+    );
+    return existingWinners.map((w) => ({
+      userId: w.userId,
+      rank: w.rank,
+      isGuaranteedWinner: w.isGuaranteedWinner,
+      pointsAtSelection: w.pointsAtSelection,
+    }));
+  }
   const participants = await LeaderboardCycleParticipant.findAll({
     where: {
       cycleId,
