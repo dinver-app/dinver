@@ -12,6 +12,10 @@ const {
   sendPushNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const {
+  selectWinners,
+  notifyAllParticipants,
+} = require('../cron/leaderboardCycleManager');
 
 // ==================== SYSADMIN METHODS ====================
 
@@ -936,144 +940,6 @@ const getUserCycleStats = async (req, res) => {
     res.status(500).json({ error: 'Failed to get user cycle stats' });
   }
 };
-
-// ==================== HELPER FUNCTIONS ====================
-
-/**
- * Select winners for a cycle using weighted random selection
- */
-async function selectWinners(cycleId) {
-  const cycle = await LeaderboardCycle.findByPk(cycleId);
-  const participants = await LeaderboardCycleParticipant.findAll({
-    where: {
-      cycleId,
-      totalPoints: { [Op.gt]: 0 }, // Only participants with points
-    },
-    order: [['totalPoints', 'DESC']],
-  });
-
-  if (participants.length === 0) {
-    return [];
-  }
-
-  const winners = [];
-  let remainingSlots = cycle.numberOfWinners;
-
-  // If guarantee first place and we have participants
-  if (cycle.guaranteeFirstPlace && participants.length > 0) {
-    winners.push({
-      userId: participants[0].userId,
-      rank: 1,
-      isGuaranteedWinner: true,
-      pointsAtSelection: participants[0].totalPoints,
-    });
-    remainingSlots--;
-  }
-
-  // Weighted random selection for remaining slots
-  const pool = cycle.guaranteeFirstPlace ? participants.slice(1) : participants;
-
-  for (let i = 0; i < remainingSlots && pool.length > 0; i++) {
-    const totalWeight = pool.reduce((sum, p) => sum + p.totalPoints, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let j = 0; j < pool.length; j++) {
-      random -= pool[j].totalPoints;
-      if (random <= 0) {
-        winners.push({
-          userId: pool[j].userId,
-          rank: winners.length + 1,
-          isGuaranteedWinner: false,
-          pointsAtSelection: pool[j].totalPoints,
-        });
-        pool.splice(j, 1); // Remove from pool
-        break;
-      }
-    }
-  }
-
-  // Save winners
-  await LeaderboardCycleWinner.bulkCreate(
-    winners.map((w) => ({ ...w, cycleId, selectedAt: new Date() })),
-  );
-
-  return winners;
-}
-
-/**
- * Notify all participants about cycle completion
- */
-async function notifyAllParticipants(cycleId, winners) {
-  try {
-    const cycle = await LeaderboardCycle.findByPk(cycleId);
-    const participants = await LeaderboardCycleParticipant.findAll({
-      where: { cycleId },
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id'],
-        },
-      ],
-    });
-
-    const participantUserIds = participants
-      .map((p) => p.user?.id)
-      .filter(Boolean);
-
-    if (participantUserIds.length === 0) {
-      return;
-    }
-
-    const winnerUserIds = winners.map((w) => w.userId);
-
-    // Send different notifications to winners and non-winners
-    const winnerNotifications = [];
-    const nonWinnerNotifications = [];
-
-    for (const participantId of participantUserIds) {
-      if (winnerUserIds.includes(participantId)) {
-        winnerNotifications.push(participantId);
-      } else {
-        nonWinnerNotifications.push(participantId);
-      }
-    }
-
-    // Notify winners
-    if (winnerNotifications.length > 0) {
-      await sendPushNotificationToUsers(winnerNotifications, {
-        title: 'Čestitamo! 🎉',
-        body: `Osvojili ste nagradu u ciklusu "${cycle.name}"!`,
-        data: {
-          type: 'cycle_winner',
-          cycleId: cycle.id,
-          cycleName: cycle.name,
-        },
-      });
-    }
-
-    // Notify non-winners
-    if (nonWinnerNotifications.length > 0) {
-      await sendPushNotificationToUsers(nonWinnerNotifications, {
-        title: 'Ciklus završen!',
-        body: `Ciklus "${cycle.name}" je završio! Pogledajte pobjednike i pridružite se idućem ciklusu!`,
-        data: {
-          type: 'cycle_completed',
-          cycleId: cycle.id,
-          cycleName: cycle.name,
-        },
-      });
-    }
-
-    // Mark winners as notified
-    await LeaderboardCycleWinner.update(
-      { notified: true },
-      { where: { cycleId, userId: { [Op.in]: winnerUserIds } } },
-    );
-  } catch (error) {
-    console.error('Error notifying participants:', error);
-  }
-}
 
 /**
  * Manually trigger cycle status check (for testing/admin purposes)

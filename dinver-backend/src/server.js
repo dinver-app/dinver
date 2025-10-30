@@ -25,8 +25,8 @@ sequelize.sync().then(() => {
     console.log(`Server is running on port ${PORT}`);
 
     // Start leaderboard cycle management cron job
-    // Run every hour at minute 0
-    cron.schedule('0 * * * *', async () => {
+    // Run every minute
+    cron.schedule('* * * * *', async () => {
       console.log('Running leaderboard cycle check...');
       await leaderboardCycleManager.checkAndUpdateCycles();
     });
