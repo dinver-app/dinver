@@ -836,7 +836,8 @@
     "reject": "Reject",
     "search": "Search",
     "select": "Select",
-    "click_to_zoom": "Click to zoom"
+    "click_to_zoom": "Click to zoom",
+    "change": "Change"
   },
   "picker": {
     "choose_restaurant": "Choose Restaurant",

@@ -67,6 +67,29 @@ module.exports = (sequelize, DataTypes) => {
             );
 
           await participant.addPoints(roundedPoints);
+
+          // Recalculate ranks for this cycle after points update
+          try {
+            const participants =
+              await this.sequelize.models.LeaderboardCycleParticipant.findAll({
+                where: { cycleId: activeLeaderboardCycle.id },
+                order: [['totalPoints', 'DESC']],
+              });
+
+            let currentRank = 1;
+            for (const p of participants) {
+              const pts = parseFloat(p.totalPoints) || 0;
+              const newRank = pts > 0 ? currentRank++ : null;
+              if (p.rank !== newRank) {
+                await p.update({ rank: newRank });
+              }
+            }
+          } catch (rankErr) {
+            console.error(
+              'Error recalculating ranks after points update:',
+              rankErr,
+            );
+          }
         }
       } catch (error) {
         console.error(
