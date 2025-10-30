@@ -201,7 +201,8 @@ async function selectWinners(cycleId) {
       userId: participants[0].userId,
       rank: 1,
       isGuaranteedWinner: true,
-      pointsAtSelection: participants[0].totalPoints,
+      pointsAtSelection:
+        Math.round((parseFloat(participants[0].totalPoints) || 0) * 100) / 100,
     });
     remainingSlots--;
     console.log(
@@ -229,7 +230,8 @@ async function selectWinners(cycleId) {
           userId: pool[j].userId,
           rank: winners.length + 1,
           isGuaranteedWinner: false,
-          pointsAtSelection: pool[j].totalPoints,
+          pointsAtSelection:
+            Math.round((parseFloat(pool[j].totalPoints) || 0) * 100) / 100,
         });
         console.log(
           `Random winner selected: User ${pool[j].userId} with ${pool[j].totalPoints} points`,
@@ -337,6 +339,31 @@ async function notifyAllParticipants(cycleId, winners) {
 }
 
 /**
+ * Recalculate and persist participant ranks for a given cycle.
+ * Participants with totalPoints > 0 are ranked DESC by points; others get null rank.
+ */
+async function recalculateParticipantRanks(cycleId) {
+  try {
+    const participants = await LeaderboardCycleParticipant.findAll({
+      where: { cycleId },
+      order: [['totalPoints', 'DESC']],
+    });
+
+    let currentRank = 1;
+    for (const participant of participants) {
+      const points = parseFloat(participant.totalPoints) || 0;
+      const newRank = points > 0 ? currentRank++ : null;
+      // Only update if changed to avoid unnecessary writes
+      if (participant.rank !== newRank) {
+        await participant.update({ rank: newRank });
+      }
+    }
+  } catch (error) {
+    console.error('Error recalculating participant ranks:', error);
+  }
+}
+
+/**
  * Get cycle statistics for monitoring
  */
 async function getCycleStats() {
@@ -384,5 +411,6 @@ module.exports = {
   completeActiveCycles,
   selectWinners,
   notifyAllParticipants,
+  recalculateParticipantRanks,
   getCycleStats,
 };

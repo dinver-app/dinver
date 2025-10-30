@@ -562,18 +562,19 @@ const approveReceipt = async (req, res) => {
         .json({ error: 'Can only approve pending receipts' });
     }
 
-    // Check if user already has an approved receipt for this restaurant
-    const existingApprovedReceipt = await Receipt.findOne({
+    // Check if user already has an approved receipt for this restaurant ON THE SAME DAY
+    const existingApprovedReceiptSameDay = await Receipt.findOne({
       where: {
         userId: receipt.userId,
         restaurantId: restaurantId,
         status: 'approved',
+        issueDate: issueDate, // same calendar day
       },
     });
 
-    if (existingApprovedReceipt) {
+    if (existingApprovedReceiptSameDay) {
       return res.status(400).json({
-        error: 'Korisnik već ima odobren račun za ovaj restoran',
+        error: 'Korisnik već ima odobren račun za ovaj restoran za isti datum',
       });
     }
 

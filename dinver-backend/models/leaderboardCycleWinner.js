@@ -80,7 +80,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'True if 1st place guaranteed',
       },
       pointsAtSelection: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         comment: 'How many points they had when selected',
       },
