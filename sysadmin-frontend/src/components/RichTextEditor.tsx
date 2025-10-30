@@ -209,7 +209,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <div className="p-3 min-h-[120px] bg-white">
         <EditorContent
           editor={editor}
-          className="prose max-w-none focus:outline-none"
+          className="w-full focus:outline-none"
           placeholder={placeholder}
         />
       </div>

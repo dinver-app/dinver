@@ -35,6 +35,7 @@ const LeaderboardCycleDetails: React.FC = () => {
     "participants"
   );
   const [showEditModal, setShowEditModal] = useState(false);
+  const [countdownText, setCountdownText] = useState<string>("");
 
   const loadCycle = async () => {
     try {
@@ -91,6 +92,45 @@ const LeaderboardCycleDetails: React.FC = () => {
         loadWinners();
       }
     }
+  }, [cycle]);
+
+  // Live countdown to cycle end
+  useEffect(() => {
+    if (!cycle || cycle.status !== "active") return;
+
+    const endTime = new Date(cycle.endDate).getTime();
+
+    const formatTwo = (n: number) => String(Math.max(0, n)).padStart(2, "0");
+
+    const compute = () => {
+      const now = Date.now();
+      let diff = Math.max(0, endTime - now);
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      diff -= days * 24 * 60 * 60 * 1000;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      diff -= hours * 60 * 60 * 1000;
+      const minutes = Math.floor(diff / (1000 * 60));
+      diff -= minutes * 60 * 1000;
+      const seconds = Math.floor(diff / 1000);
+
+      let text = "";
+      if (days >= 1) {
+        text = `${formatTwo(days)} days ${formatTwo(hours)} hours`;
+      } else if (hours >= 1) {
+        text = `${formatTwo(hours)} hours ${formatTwo(minutes)} minutes`;
+      } else if (minutes >= 1) {
+        text = `${formatTwo(minutes)} minutes ${formatTwo(seconds)} seconds`;
+      } else {
+        text = `${formatTwo(seconds)} seconds`;
+      }
+
+      setCountdownText(text);
+    };
+
+    compute();
+    const id = setInterval(compute, 1000);
+    return () => clearInterval(id);
   }, [cycle]);
 
   const handleCancelCycle = async () => {
@@ -166,15 +206,7 @@ const LeaderboardCycleDetails: React.FC = () => {
     return Math.round(((now - start) / (end - start)) * 100);
   };
 
-  const getRemainingDays = () => {
-    if (!cycle) return 0;
-    const now = new Date().getTime();
-    const end = new Date(cycle.endDate).getTime();
-    const diff = end - now;
-
-    if (diff <= 0) return 0;
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
-  };
+  // getRemainingDays replaced by live countdown
 
   const getRankOrdinal = (rank: number) => {
     const j = rank % 10;
@@ -234,7 +266,6 @@ const LeaderboardCycleDetails: React.FC = () => {
   }
 
   const progress = calculateProgress();
-  const remainingDays = getRemainingDays();
 
   return (
     <div className="p-6">
@@ -254,10 +285,10 @@ const LeaderboardCycleDetails: React.FC = () => {
                 <span className={getStatusBadge(cycle.status)}>
                   {t(cycle.status)}
                 </span>
-                {cycle.status === "active" && remainingDays > 0 && (
+                {cycle.status === "active" && countdownText && (
                   <span className="ml-3 text-sm text-gray-600">
                     <ClockIcon className="h-4 w-4 inline mr-1" />
-                    {remainingDays} {t("remaining_days")}
+                    {countdownText}
                   </span>
                 )}
               </div>

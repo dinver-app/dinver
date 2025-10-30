@@ -88,6 +88,13 @@
     border: none;
   }
 
+  /* Ensure no blue focus ring on contenteditable */
+  .ProseMirror:focus,
+  .ProseMirror:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
   .ProseMirror p.is-editor-empty:first-child::before {
     color: #adb5bd;
     content: attr(data-placeholder);

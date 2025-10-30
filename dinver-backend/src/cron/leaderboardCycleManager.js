@@ -214,7 +214,11 @@ async function selectWinners(cycleId) {
   const pool = cycle.guaranteeFirstPlace ? participants.slice(1) : participants;
 
   for (let i = 0; i < remainingSlots && pool.length > 0; i++) {
-    const totalWeight = pool.reduce((sum, p) => sum + p.totalPoints, 0);
+    // totalPoints can be DECIMAL and come as strings; coerce to numbers to avoid string concatenation
+    const totalWeight = pool.reduce(
+      (sum, p) => sum + (parseFloat(p.totalPoints) || 0),
+      0,
+    );
 
     if (totalWeight === 0) {
       console.log('No remaining weight for random selection');
@@ -224,7 +228,7 @@ async function selectWinners(cycleId) {
     let random = Math.random() * totalWeight;
 
     for (let j = 0; j < pool.length; j++) {
-      random -= pool[j].totalPoints;
+      random -= parseFloat(pool[j].totalPoints) || 0;
       if (random <= 0) {
         winners.push({
           userId: pool[j].userId,
