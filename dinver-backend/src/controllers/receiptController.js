@@ -562,6 +562,44 @@ const approveReceipt = async (req, res) => {
         .json({ error: 'Can only approve pending receipts' });
     }
 
+    // Prevent approving duplicate receipts by JIR or ZKI that are already approved
+    const normalizedJir = (jir || '').trim();
+    const normalizedZki = (zki || '').trim();
+
+    if (normalizedZki) {
+      const existingByZki = await Receipt.findOne({
+        where: {
+          status: 'approved',
+          zki: normalizedZki,
+          id: { [Op.ne]: id },
+        },
+        attributes: ['id'],
+      });
+
+      if (existingByZki) {
+        return res.status(400).json({
+          error: `Račun s ovim ZKI već je odobren (ID: ${existingByZki.id}).`,
+        });
+      }
+    }
+
+    if (normalizedJir) {
+      const existingByJir = await Receipt.findOne({
+        where: {
+          status: 'approved',
+          jir: normalizedJir,
+          id: { [Op.ne]: id },
+        },
+        attributes: ['id'],
+      });
+
+      if (existingByJir) {
+        return res.status(400).json({
+          error: `Račun s ovim JIR već je odobren (ID: ${existingByJir.id}).`,
+        });
+      }
+    }
+
     // Check if user already has an approved receipt for this restaurant ON THE SAME DAY
     const existingApprovedReceiptSameDay = await Receipt.findOne({
       where: {

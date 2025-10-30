@@ -37,6 +37,7 @@ const ReceiptDetailsContent: React.FC<Props> = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
   const [hasReservationBonus, setHasReservationBonus] = useState(
     receipt.hasReservationBonus || false
   );
@@ -167,6 +168,7 @@ const ReceiptDetailsContent: React.FC<Props> = ({
 
     try {
       setLoading(true);
+      setApproveError(null);
       const approveData: ApproveReceiptData = {
         restaurantId: formData.restaurantId!,
         totalAmount: formData.totalAmount!,
@@ -184,9 +186,10 @@ const ReceiptDetailsContent: React.FC<Props> = ({
       onUpdate();
       onClose();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("receipts.approve_failed")
-      );
+      const message =
+        error instanceof Error ? error.message : t("receipts.approve_failed");
+      setApproveError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -388,6 +391,9 @@ const ReceiptDetailsContent: React.FC<Props> = ({
                   }`}
                   placeholder={t("receipts.jir_placeholder")}
                 />
+                {approveError && approveError.includes("JIR") && (
+                  <p className="mt-1 text-xs text-red-600">{approveError}</p>
+                )}
               </div>
 
               <div>
@@ -406,6 +412,9 @@ const ReceiptDetailsContent: React.FC<Props> = ({
                   }`}
                   placeholder={t("receipts.zki_placeholder")}
                 />
+                {approveError && approveError.includes("ZKI") && (
+                  <p className="mt-1 text-xs text-red-600">{approveError}</p>
+                )}
               </div>
 
               <div>
