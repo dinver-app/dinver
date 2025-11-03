@@ -568,10 +568,61 @@ const getReferralStats = async (req, res) => {
   }
 };
 
+const applyReferralCodeEndpoint = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { referralCode } = req.body;
+
+    if (!referralCode) {
+      return res.status(400).json({ error: 'Referral code is required' });
+    }
+
+    const referral = await applyReferralCode(userId, referralCode);
+
+    const refCode = await ReferralCode.findOne({
+      where: { code: referralCode.toUpperCase(), isActive: true },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['firstName', 'lastName', 'email'],
+        },
+      ],
+    });
+
+    const referrerData = refCode?.user
+      ? {
+          firstName: refCode.user.firstName,
+          lastName: refCode.user.lastName,
+          email: refCode.user.email,
+        }
+      : null;
+
+    res.status(200).json({
+      message: 'Referral code applied successfully',
+      referral,
+      referrer: referrerData,
+    });
+  } catch (error) {
+    console.error('Error applying referral code:', error);
+
+    if (
+      error.message === 'Invalid referral code' ||
+      error.message === 'Cannot use your own referral code' ||
+      error.message === 'User already has a referral'
+    ) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to apply referral code' });
+  }
+};
+
 module.exports = {
   getMyReferralCode,
   getMyReferrals,
   applyReferralCode,
+  applyReferralCodeEndpoint,
   handleFirstVisit,
   getMyRewards,
   validateReferralCode,
