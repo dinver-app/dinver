@@ -36,4 +36,11 @@ router.get(
   referralController.getMyRewards,
 );
 
+router.post(
+  '/referrals/apply',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  referralController.applyReferralCodeEndpoint,
+);
+
 module.exports = router;
