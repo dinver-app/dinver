@@ -577,6 +577,8 @@ async function updateRestaurant(req, res) {
     }
 
     // Update restaurant data
+    // Normalize OIB: empty string should be saved as null
+    const oibValue = oib && oib.toString().trim() !== '' ? oib : null;
     await restaurant.update({
       name,
       address,
@@ -587,7 +589,7 @@ async function updateRestaurant(req, res) {
       phone,
       ttUrl,
       email,
-      oib,
+      oib: oibValue,
       description,
       thumbnailUrl: thumbnailKey, // Spremamo samo key
       priceCategoryId,
