@@ -22,6 +22,7 @@ const waitListRoutes = require('./sysadminRoutes/waitListRoutes');
 const receiptRoutes = require('./sysadminRoutes/receiptRoutes');
 const leaderboardCycleRoutes = require('./sysadminRoutes/leaderboardCycleRoutes');
 const reviewRoutes = require('./sysadminRoutes/reviewRoutes');
+const experienceRoutes = require('./sysadminRoutes/experienceRoutes');
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -48,5 +49,6 @@ router.use(waitListRoutes);
 router.use(receiptRoutes);
 router.use(leaderboardCycleRoutes);
 router.use(reviewRoutes);
+router.use(experienceRoutes); // Experience moderation za sysadmin
 
 module.exports = router;

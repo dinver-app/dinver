@@ -23,6 +23,9 @@ import ReceiptDetails from "./pages/ReceiptDetails";
 import LeaderboardCycles from "./pages/LeaderboardCycles";
 import LeaderboardCycleDetails from "./pages/LeaderboardCycleDetails";
 import ReviewDetails from "./pages/ReviewDetails";
+import Experiences from "./pages/Experiences";
+import ExperienceDetails from "./pages/ExperienceDetails";
+import UserExperienceStats from "./pages/UserExperienceStats";
 
 function App() {
   return (
@@ -60,6 +63,12 @@ function App() {
             <Route
               path="/leaderboard-cycles/:id"
               element={<LeaderboardCycleDetails />}
+            />
+            <Route path="/experiences" element={<Experiences />} />
+            <Route path="/experiences/:id" element={<ExperienceDetails />} />
+            <Route
+              path="/experiences/users/:userId/stats"
+              element={<UserExperienceStats />}
             />
           </Route>
         </Routes>
