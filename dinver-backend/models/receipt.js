@@ -224,6 +224,78 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.NOW,
         comment: 'When receipt was submitted by user',
       },
+      merchantName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Merchant/business name extracted from receipt',
+      },
+      merchantAddress: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Merchant address extracted from receipt',
+      },
+      declaredTotal: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        comment: 'Total amount declared by user (optional)',
+      },
+      rawOcrText: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Raw OCR text from Google Vision',
+      },
+      visionConfidence: {
+        type: DataTypes.DECIMAL(3, 2),
+        allowNull: true,
+        comment: 'Google Vision overall confidence (0-1)',
+      },
+      parserConfidence: {
+        type: DataTypes.DECIMAL(3, 2),
+        allowNull: true,
+        comment: 'Parser confidence for extracted fields (0-1)',
+      },
+      consistencyScore: {
+        type: DataTypes.DECIMAL(3, 2),
+        allowNull: true,
+        comment: 'Consistency score between fields (0-1)',
+      },
+      autoApproveScore: {
+        type: DataTypes.DECIMAL(3, 2),
+        allowNull: true,
+        comment: 'Auto-approve score from decision engine (0-1)',
+      },
+      fraudFlags: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: [],
+        comment: 'Array of fraud indicators/warnings',
+      },
+      perceptualHash: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        comment: 'Perceptual hash for duplicate image detection',
+      },
+      gpsAccuracy: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        comment: 'GPS accuracy in meters',
+      },
+      deviceInfo: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        comment: 'Device information for fraud detection',
+      },
+      ocrMethod: {
+        type: DataTypes.ENUM('vision', 'gpt', 'vision+gpt', 'manual'),
+        allowNull: true,
+        defaultValue: 'vision',
+        comment: 'OCR method used for extraction',
+      },
+      fieldConfidences: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        comment: 'Confidence scores for individual fields',
+      },
     },
     {
       sequelize,

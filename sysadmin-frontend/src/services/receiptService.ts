@@ -25,6 +25,55 @@ export interface Receipt {
   submittedAt: string;
   createdAt: string;
   updatedAt: string;
+  // New OCR metadata fields
+  merchantName?: string;
+  merchantAddress?: string;
+  declaredTotal?: number;
+  rawOcrText?: string;
+  visionConfidence?: number;
+  parserConfidence?: number;
+  consistencyScore?: number;
+  autoApproveScore?: number;
+  fraudFlags?: string[];
+  perceptualHash?: string;
+  gpsAccuracy?: number;
+  deviceInfo?: any;
+  ocrMethod?: "vision" | "gpt" | "vision+gpt" | "manual";
+  fieldConfidences?: Record<string, number>;
+  // Structured OCR data
+  ocr?: {
+    method?: string;
+    rawText?: string;
+    visionConfidence?: number;
+    parserConfidence?: number;
+    consistencyScore?: number;
+    fieldConfidences?: Record<string, number>;
+    confidence?: any; // legacy
+  };
+  autoApprove?: {
+    score?: number;
+    fraudFlags?: string[];
+  };
+  extracted?: {
+    oib?: string;
+    jir?: string;
+    zki?: string;
+    totalAmount?: number;
+    issueDate?: string;
+    issueTime?: string;
+    merchantName?: string;
+    merchantAddress?: string;
+  };
+  declared?: {
+    total?: number;
+  };
+  location?: {
+    lat?: number;
+    lng?: number;
+    accuracy?: number;
+  };
+  device?: any;
+  // Relations
   user?: {
     id: string;
     firstName: string;
