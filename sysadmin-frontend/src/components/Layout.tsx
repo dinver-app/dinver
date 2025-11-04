@@ -19,6 +19,7 @@ import {
   QrCodeIcon,
   ReceiptRefundIcon,
   TrophyIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -107,6 +108,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: t("leaderboard_cycles"),
       path: "/leaderboard-cycles",
       icon: <TrophyIcon className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: t("experiences"),
+      path: "/experiences",
+      icon: <SparklesIcon className="h-4 w-4 mr-3" />,
     },
   ];
 
