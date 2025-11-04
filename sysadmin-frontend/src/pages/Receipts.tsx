@@ -245,6 +245,9 @@ const Receipts: React.FC = () => {
                   Points
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  OCR Score
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -287,6 +290,30 @@ const Receipts: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatPoints(receipt.pointsAwarded)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {receipt.autoApproveScore != null ? (
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`text-xs font-semibold ${
+                            receipt.autoApproveScore >= 0.8
+                              ? "text-green-600"
+                              : receipt.autoApproveScore >= 0.5
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(receipt.autoApproveScore * 100).toFixed(0)}%
+                        </span>
+                        {receipt.fraudFlags && receipt.fraudFlags.length > 0 && (
+                          <span className="text-xs text-red-600">
+                            ⚠️ {receipt.fraudFlags.length}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">N/A</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button

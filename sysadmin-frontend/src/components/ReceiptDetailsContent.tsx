@@ -336,6 +336,105 @@ const ReceiptDetailsContent: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* OCR Confidence & Metadata */}
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-900 mb-2">
+                OCR Metadata
+              </h4>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                {receipt.ocr && (
+                  <>
+                    <p>
+                      <strong>OCR Method:</strong>{" "}
+                      <span className="uppercase font-mono text-sm">
+                        {receipt.ocr.method || "unknown"}
+                      </span>
+                    </p>
+                    {receipt.ocr.visionConfidence != null && (
+                      <p>
+                        <strong>Vision Confidence:</strong>{" "}
+                        <span
+                          className={`font-semibold ${
+                            receipt.ocr.visionConfidence >= 0.8
+                              ? "text-green-600"
+                              : receipt.ocr.visionConfidence >= 0.6
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(receipt.ocr.visionConfidence * 100).toFixed(0)}%
+                        </span>
+                      </p>
+                    )}
+                    {receipt.ocr.parserConfidence != null && (
+                      <p>
+                        <strong>Parser Confidence:</strong>{" "}
+                        <span
+                          className={`font-semibold ${
+                            receipt.ocr.parserConfidence >= 0.8
+                              ? "text-green-600"
+                              : receipt.ocr.parserConfidence >= 0.6
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(receipt.ocr.parserConfidence * 100).toFixed(0)}%
+                        </span>
+                      </p>
+                    )}
+                    {receipt.ocr.consistencyScore != null && (
+                      <p>
+                        <strong>Consistency Score:</strong>{" "}
+                        <span
+                          className={`font-semibold ${
+                            receipt.ocr.consistencyScore >= 0.8
+                              ? "text-green-600"
+                              : receipt.ocr.consistencyScore >= 0.6
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {(receipt.ocr.consistencyScore * 100).toFixed(0)}%
+                        </span>
+                      </p>
+                    )}
+                  </>
+                )}
+                {receipt.autoApprove?.score != null && (
+                  <p>
+                    <strong>Auto-Approve Score:</strong>{" "}
+                    <span
+                      className={`font-semibold ${
+                        receipt.autoApprove.score >= 0.8
+                          ? "text-green-600"
+                          : receipt.autoApprove.score >= 0.5
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {(receipt.autoApprove.score * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      (for monitoring only)
+                    </span>
+                  </p>
+                )}
+                {receipt.autoApprove?.fraudFlags &&
+                  receipt.autoApprove.fraudFlags.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <p className="font-semibold text-red-600 mb-1">
+                        ⚠️ Fraud Flags:
+                      </p>
+                      <ul className="list-disc list-inside text-sm text-red-700">
+                        {receipt.autoApprove.fraudFlags.map((flag, idx) => (
+                          <li key={idx}>{flag}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            </div>
+
             {receipt.ocrData && (
               <div className="mb-6">
                 <h4 className="text-md font-medium text-gray-900 mb-2">

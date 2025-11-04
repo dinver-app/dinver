@@ -11,6 +11,23 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
 const { extractReceiptData } = require('../services/ocrService');
 const {
+  extractReceiptWithVision,
+} = require('../services/visionOcrService');
+const {
+  normalizeWithGPT,
+  extractWithGPTVision,
+} = require('../services/gptNormalizerService');
+const {
+  calculateAutoApproveScore,
+  calculateConsistencyScore,
+} = require('../services/decisionEngine');
+const {
+  calculatePerceptualHash,
+  checkGeofence,
+  detectFraudPatterns,
+  areSimilarImages,
+} = require('../utils/antifraudUtils');
+const {
   sendPushNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
@@ -19,11 +36,19 @@ const crypto = require('crypto');
 
 /**
  * Upload receipt image and create receipt record
+ * NEW: Enhanced OCR flow with Vision + GPT + Decision Engine
  */
 const uploadReceipt = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { locationLat, locationLng } = req.body;
+    const {
+      locationLat,
+      locationLng,
+      gpsAccuracy,
+      declaredTotal,
+      restaurantId,
+      deviceInfo,
+    } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -45,29 +70,79 @@ const uploadReceipt = async (req, res) => {
       });
     }
 
-    // Calculate image hash for duplicate detection
-    const imageHash = crypto
-      .createHash('md5')
-      .update(file.buffer)
-      .digest('hex');
-
-    // Check for duplicate image
-    const existingReceipt = await Receipt.findOne({
-      where: { imageHash },
-    });
-
-    if (existingReceipt) {
-      return res.status(400).json({
-        error: 'Ovaj račun je već poslan na provjeru',
-      });
-    }
-
-    // Optional server-side compression using sharp
+    // === STEP 1: Image Processing & Hashing ===
     const sharp = require('sharp');
     const inputBuffer = file.buffer;
     let processedBuffer = inputBuffer;
     let contentType = 'image/jpeg';
     let imageMeta = null;
+
+    // Validate image can be processed
+    try {
+      const metadata = await sharp(inputBuffer, { failOn: 'none' }).metadata();
+      if (!metadata || !metadata.format) {
+        return res.status(400).json({
+          error:
+            'Slika nije u ispravnom formatu. Molimo koristite JPG, PNG, WEBP ili HEIC.',
+        });
+      }
+      console.log(`Image format detected: ${metadata.format}`);
+    } catch (error) {
+      console.error('Image validation failed:', error);
+      return res.status(400).json({
+        error: `Slika se ne može obraditi. Format: ${file.mimetype}. Molimo koristite JPG, PNG, WEBP ili HEIC.`,
+      });
+    }
+
+    // Calculate MD5 hash for exact duplicate detection
+    const imageHash = crypto
+      .createHash('md5')
+      .update(file.buffer)
+      .digest('hex');
+
+    // Check for exact duplicate
+    const exactDuplicate = await Receipt.findOne({
+      where: { imageHash },
+    });
+
+    if (exactDuplicate) {
+      return res.status(400).json({
+        error: 'Ovaj račun je već poslan na provjeru (exact duplicate)',
+      });
+    }
+
+    // Calculate perceptual hash for near-duplicate detection
+    let perceptualHash = null;
+    try {
+      perceptualHash = await calculatePerceptualHash(file.buffer);
+
+      if (perceptualHash) {
+        // Check for similar images
+        const recentReceipts = await Receipt.findAll({
+          where: {
+            userId,
+            perceptualHash: { [Op.ne]: null },
+            submittedAt: {
+              [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+            },
+          },
+          attributes: ['id', 'perceptualHash'],
+        });
+
+        for (const receipt of recentReceipts) {
+          if (areSimilarImages(perceptualHash, receipt.perceptualHash, 5)) {
+            return res.status(400).json({
+              error:
+                'Ovaj račun izgleda kao duplikat prethodnog računa (perceptual match)',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating perceptual hash:', error);
+    }
+
+    // Image compression
     try {
       const image = sharp(inputBuffer, { failOn: 'none' });
       const metadata = await image.metadata();
@@ -80,7 +155,7 @@ const uploadReceipt = async (req, res) => {
         .jpeg({ quality: 80, mozjpeg: true })
         .toBuffer();
       contentType = 'image/jpeg';
-      // overwrite file buffer so upload util uses compressed bytes
+
       file.buffer = processedBuffer;
       file.mimetype = contentType;
       file.originalname =
@@ -93,63 +168,189 @@ const uploadReceipt = async (req, res) => {
         contentType,
       };
     } catch (e) {
-      console.warn(
-        'Image compression failed, using original buffer:',
-        e?.message,
-      );
+      console.warn('Image compression failed:', e?.message);
     }
 
-    // Upload image to S3 (uses possibly compressed buffer)
+    // === STEP 2: Upload to S3 ===
     const folder = `receipts/${userId}`;
     const imageKey = await uploadToS3(file, folder);
 
-    // Try OCR extraction (non-blocking)
-    let ocrData = null;
-    let extracted = null;
+    // === STEP 3: OCR Processing (Vision → Parser → GPT) ===
+    let ocrMethod = 'vision';
+    let rawOcrText = null;
+    let visionConfidence = null;
+    let parserConfidence = null;
+    let extractedFields = {};
+    let fieldConfidences = {};
 
     try {
-      extracted = await extractReceiptData(processedBuffer);
+      // Try Google Vision first
+      console.log('Attempting OCR with Google Vision...');
+      const visionResult = await extractReceiptWithVision(processedBuffer);
 
-      // Check if OCR returned an error indicating the image is not a receipt
-      if (extracted && extracted.error === 'NOT_RECEIPT') {
-        return res.status(400).json({
-          error: 'NOT_RECEIPT',
-          message: extracted.message,
-          reason: extracted.reason,
-          confidence: extracted.confidence,
-        });
-      }
+      if (visionResult && visionResult.success) {
+        ocrMethod = 'vision';
+        rawOcrText = visionResult.rawText;
+        visionConfidence = visionResult.visionConfidence;
+        parserConfidence = visionResult.parserConfidence;
+        extractedFields = visionResult.fields;
+        fieldConfidences = visionResult.confidences;
 
-      if (extracted) {
-        ocrData = imageMeta ? { ...extracted, meta: imageMeta } : extracted;
-      } else if (imageMeta) {
-        ocrData = { meta: imageMeta };
+        console.log(
+          `Vision OCR successful. Parser confidence: ${parserConfidence}`,
+        );
+
+        // If parser confidence is low, try GPT normalization
+        if (parserConfidence < 0.6) {
+          console.log('Parser confidence low, trying GPT normalization...');
+          const gptResult = await normalizeWithGPT(rawOcrText, visionResult);
+
+          if (gptResult) {
+            ocrMethod = 'vision+gpt';
+            // Merge GPT results with Vision results (prefer GPT for uncertain fields)
+            Object.keys(gptResult).forEach((key) => {
+              if (gptResult[key] !== null && fieldConfidences[key] < 0.7) {
+                extractedFields[key] = gptResult[key];
+                fieldConfidences[key] = 0.8; // GPT-normalized fields get 0.8 confidence
+              }
+            });
+            console.log('GPT normalization applied');
+          }
+        }
+      } else {
+        // Vision failed, try GPT Vision as fallback
+        console.log('Vision OCR failed, trying GPT Vision...');
+        const gptVisionResult = await extractWithGPTVision(processedBuffer);
+
+        if (gptVisionResult) {
+          ocrMethod = 'gpt';
+          extractedFields = gptVisionResult;
+          visionConfidence = 0.7;
+          parserConfidence = 0.7;
+          // Assign default confidences
+          Object.keys(extractedFields).forEach((key) => {
+            fieldConfidences[key] = extractedFields[key] ? 0.7 : 0;
+          });
+          console.log('GPT Vision fallback successful');
+        }
       }
     } catch (ocrError) {
-      console.error('OCR extraction failed:', ocrError);
-      // Continue without OCR data
-      if (imageMeta) {
-        ocrData = { meta: imageMeta };
+      console.error('All OCR methods failed:', ocrError);
+    }
+
+    // === STEP 4: Geofence Check ===
+    let geofenceResult = { withinGeofence: null, distance: null };
+    if (
+      locationLat &&
+      locationLng &&
+      restaurantId &&
+      extractedFields.restaurantId
+    ) {
+      try {
+        const restaurant = await Restaurant.findByPk(restaurantId);
+        if (restaurant && restaurant.latitude && restaurant.longitude) {
+          geofenceResult = checkGeofence(
+            parseFloat(locationLat),
+            parseFloat(locationLng),
+            parseFloat(restaurant.latitude),
+            parseFloat(restaurant.longitude),
+          );
+        }
+      } catch (error) {
+        console.error('Geofence check failed:', error);
       }
     }
 
-    // Create receipt record
-    const receipt = await Receipt.create({
+    // === STEP 5: Fraud Detection ===
+    const fraudFlags = detectFraudPatterns({
+      ...extractedFields,
+      geofenceCheck: geofenceResult,
+    });
+
+    // === STEP 6: Consistency Score ===
+    const consistencyScore = calculateConsistencyScore(extractedFields);
+
+    // === STEP 7: Auto-Approve Decision Engine ===
+    let autoApproveScore = 0;
+    let autoApproveDecision = 'pending_review';
+
+    try {
+      const decision = await calculateAutoApproveScore({
+        extractedData: extractedFields,
+        declaredTotal: declaredTotal ? parseFloat(declaredTotal) : null,
+        userLocation: geofenceResult,
+        restaurantId,
+        fraudFlags,
+        visionConfidence,
+        parserConfidence,
+      });
+
+      autoApproveScore = decision.score;
+      autoApproveDecision = decision.decision;
+
+      console.log(
+        `Auto-approve score: ${autoApproveScore}, Decision: ${autoApproveDecision}`,
+      );
+      console.log('Decision reasons:', decision.reasons);
+    } catch (error) {
+      console.error('Decision engine failed:', error);
+    }
+
+    // === STEP 8: Create Receipt Record ===
+    // NOTE: Auto-approve is DISABLED - all receipts go to manual review
+    // The autoApproveScore is calculated for tracking/monitoring purposes only
+    const receiptData = {
       userId,
       imageUrl: imageKey,
       imageHash,
+      perceptualHash,
       locationLat: locationLat ? parseFloat(locationLat) : null,
       locationLng: locationLng ? parseFloat(locationLng) : null,
-      status: 'pending',
-      ocrData,
-      // Pre-populate fields if OCR was successful
-      oib: extracted?.fields?.oib || null,
-      jir: extracted?.fields?.jir || null,
-      zki: extracted?.fields?.zki || null,
-      totalAmount: extracted?.fields?.totalAmount || null,
-      issueDate: extracted?.fields?.issueDate || null,
-      issueTime: extracted?.fields?.issueTime || null,
-    });
+      gpsAccuracy: gpsAccuracy ? parseFloat(gpsAccuracy) : null,
+      declaredTotal: declaredTotal ? parseFloat(declaredTotal) : null,
+      deviceInfo: deviceInfo || null,
+      status: 'pending', // Always pending - no auto-approve
+      // Extracted fields
+      oib: extractedFields.oib || null,
+      jir: extractedFields.jir || null,
+      zki: extractedFields.zki || null,
+      totalAmount: extractedFields.totalAmount || null,
+      issueDate: extractedFields.issueDate || null,
+      issueTime: extractedFields.issueTime || null,
+      merchantName: extractedFields.merchantName || null,
+      merchantAddress: extractedFields.merchantAddress || null,
+      // OCR metadata
+      rawOcrText,
+      visionConfidence,
+      parserConfidence,
+      consistencyScore,
+      autoApproveScore,
+      fraudFlags,
+      ocrMethod,
+      fieldConfidences,
+      // Legacy ocrData for backwards compatibility
+      ocrData: imageMeta
+        ? {
+            meta: imageMeta,
+            fields: extractedFields,
+            confidence: fieldConfidences,
+          }
+        : null,
+    };
+
+    // Auto-match restaurant by OIB if not provided
+    if (!restaurantId && extractedFields.oib) {
+      const matchedRestaurant = await Restaurant.findOne({
+        where: { oib: extractedFields.oib },
+      });
+      if (matchedRestaurant) {
+        receiptData.restaurantId = matchedRestaurant.id;
+      }
+    } else if (restaurantId) {
+      receiptData.restaurantId = restaurantId;
+    }
+
+    const receipt = await Receipt.create(receiptData);
 
     // Log audit
     await logAudit({
@@ -157,13 +358,36 @@ const uploadReceipt = async (req, res) => {
       action: ActionTypes.CREATE,
       entity: Entities.RECEIPT,
       entityId: receipt.id,
-      changes: { new: { imageUrl: imageKey, status: 'pending' } },
+      changes: {
+        new: {
+          imageUrl: imageKey,
+          status: 'pending',
+          autoApproveScore,
+          ocrMethod,
+        },
+      },
     });
 
+    // Response - always pending for manual review
+    let message =
+      'Račun poslan na provjeru. Bodovi će biti dodijeljeni u roku 24 sata.';
+
+    // Add warning if fraud flags detected
+    if (fraudFlags.length > 0) {
+      message =
+        'Račun poslan na provjeru. Detektirana potencijalna nepodudaranja.';
+    }
+
     res.status(201).json({
-      message:
-        'Račun poslan na provjeru. Bodovi će biti dodijeljeni u roku 24 sata.',
+      message,
       receiptId: receipt.id,
+      autoApproveScore: Math.round(autoApproveScore * 100) / 100,
+      extractedData: {
+        oib: extractedFields.oib,
+        totalAmount: extractedFields.totalAmount,
+        issueDate: extractedFields.issueDate,
+        merchantName: extractedFields.merchantName,
+      },
     });
   } catch (error) {
     console.error('Error uploading receipt:', error);
@@ -341,6 +565,7 @@ const getReceiptById = async (req, res) => {
 
     const receiptData = receipt.toJSON();
     receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+
     // Add image meta and OCR confidence if available
     const meta = receipt.ocrData?.meta || null;
     receiptData.imageMeta = meta
@@ -351,12 +576,51 @@ const getReceiptById = async (req, res) => {
           contentType: meta.contentType || null,
         }
       : null;
+
+    // Enhanced OCR metadata
     receiptData.ocr = {
+      method: receipt.ocrMethod || 'unknown',
+      rawText: receipt.rawOcrText || null,
+      visionConfidence: receipt.visionConfidence || null,
+      parserConfidence: receipt.parserConfidence || null,
+      consistencyScore: receipt.consistencyScore || null,
+      fieldConfidences: receipt.fieldConfidences || null,
+      // Legacy support
       confidence: receipt.ocrData?.confidence || null,
     };
 
-    // Ensure OIB is included in the response
-    receiptData.oib = receipt.oib;
+    // Auto-approve metadata
+    receiptData.autoApprove = {
+      score: receipt.autoApproveScore || null,
+      fraudFlags: receipt.fraudFlags || [],
+    };
+
+    // Extracted fields
+    receiptData.extracted = {
+      oib: receipt.oib,
+      jir: receipt.jir,
+      zki: receipt.zki,
+      totalAmount: receipt.totalAmount,
+      issueDate: receipt.issueDate,
+      issueTime: receipt.issueTime,
+      merchantName: receipt.merchantName,
+      merchantAddress: receipt.merchantAddress,
+    };
+
+    // User-declared data
+    receiptData.declared = {
+      total: receipt.declaredTotal,
+    };
+
+    // Location data
+    receiptData.location = {
+      lat: receipt.locationLat,
+      lng: receipt.locationLng,
+      accuracy: receipt.gpsAccuracy,
+    };
+
+    // Device info
+    receiptData.device = receipt.deviceInfo || null;
 
     // Auto-match restaurant by OIB if not already set
     if (!receipt.restaurantId && receipt.oib) {
