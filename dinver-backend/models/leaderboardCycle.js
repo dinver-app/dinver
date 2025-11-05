@@ -98,15 +98,25 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      name: {
+      nameEn: {
         type: DataTypes.STRING,
         allowNull: false,
-        comment: 'Cycle name/title',
+        comment: 'Cycle name in English',
       },
-      description: {
+      nameHr: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Cycle name in Croatian',
+      },
+      descriptionEn: {
         type: DataTypes.TEXT,
         allowNull: true,
-        comment: 'Rich text content with rules and prizes',
+        comment: 'Cycle description in English (rich text)',
+      },
+      descriptionHr: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Cycle description in Croatian (rich text)',
       },
       headerImageUrl: {
         type: DataTypes.STRING,
