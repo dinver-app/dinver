@@ -2,8 +2,10 @@ import { apiClient } from "./authService";
 
 export interface LeaderboardCycle {
   id: string;
-  name: string;
-  description?: string;
+  nameEn: string;
+  nameHr: string;
+  descriptionEn?: string;
+  descriptionHr?: string;
   headerImageUrl?: string;
   startDate: string;
   endDate: string;
@@ -107,8 +109,10 @@ export interface WinnersResponse {
 }
 
 export interface CreateCycleData {
-  name: string;
-  description?: string;
+  nameEn: string;
+  nameHr: string;
+  descriptionEn?: string;
+  descriptionHr?: string;
   startDate: string;
   endDate: string;
   numberOfWinners: number;
@@ -117,8 +121,10 @@ export interface CreateCycleData {
 }
 
 export interface UpdateCycleData {
-  name?: string;
-  description?: string;
+  nameEn?: string;
+  nameHr?: string;
+  descriptionEn?: string;
+  descriptionHr?: string;
   startDate?: string;
   endDate?: string;
   numberOfWinners?: number;
@@ -155,8 +161,12 @@ class LeaderboardCycleService {
   ): Promise<{ message: string; cycle: LeaderboardCycle }> {
     const formData = new FormData();
 
-    formData.append("name", data.name);
-    if (data.description) formData.append("description", data.description);
+    formData.append("nameEn", data.nameEn);
+    formData.append("nameHr", data.nameHr);
+    if (data.descriptionEn)
+      formData.append("descriptionEn", data.descriptionEn);
+    if (data.descriptionHr)
+      formData.append("descriptionHr", data.descriptionHr);
     formData.append("startDate", data.startDate);
     formData.append("endDate", data.endDate);
     formData.append("numberOfWinners", data.numberOfWinners.toString());
@@ -197,8 +207,12 @@ class LeaderboardCycleService {
   ): Promise<{ message: string; cycle: LeaderboardCycle }> {
     const formData = new FormData();
 
-    formData.append("name", data.name);
-    if (data.description) formData.append("description", data.description);
+    formData.append("nameEn", data.nameEn);
+    formData.append("nameHr", data.nameHr);
+    if (data.descriptionEn)
+      formData.append("descriptionEn", data.descriptionEn);
+    if (data.descriptionHr)
+      formData.append("descriptionHr", data.descriptionHr);
     formData.append("startDate", data.startDate);
     formData.append("endDate", data.endDate);
     formData.append("numberOfWinners", data.numberOfWinners.toString());

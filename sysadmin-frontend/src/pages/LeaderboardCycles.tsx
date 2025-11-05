@@ -20,7 +20,7 @@ import CreateCycleModal from "../components/modals/CreateCycleModal";
 import EditCycleModal from "../components/modals/EditCycleModal";
 
 const LeaderboardCycles: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [cycles, setCycles] = useState<LeaderboardCycle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -437,7 +437,9 @@ const LeaderboardCycles: React.FC = () => {
                         )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {cycle.name}
+                            {i18n.language === "en"
+                              ? cycle.nameEn
+                              : cycle.nameHr}
                           </div>
                         </div>
                       </div>

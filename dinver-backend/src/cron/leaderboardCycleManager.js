@@ -71,11 +71,11 @@ async function activateScheduledCycles() {
     }
 
     for (const cycle of cyclesToActivate) {
-      console.log(`Activating cycle: ${cycle.name} (ID: ${cycle.id})`);
+      console.log(`Activating cycle: ${cycle.nameHr} (ID: ${cycle.id})`);
 
       await cycle.update({ status: 'active' });
 
-      console.log(`Cycle "${cycle.name}" activated successfully`);
+      console.log(`Cycle "${cycle.nameHr}" activated successfully`);
     }
 
     if (cyclesToActivate.length > 0) {
@@ -117,7 +117,7 @@ async function completeActiveCycles() {
     });
 
     for (const cycle of cyclesToComplete) {
-      console.log(`Completing cycle: ${cycle.name} (ID: ${cycle.id})`);
+      console.log(`Completing cycle: ${cycle.nameHr} (ID: ${cycle.id})`);
 
       try {
         // Select winners
@@ -133,7 +133,7 @@ async function completeActiveCycles() {
         await notifyAllParticipants(cycle.id, winners);
 
         console.log(
-          `Cycle "${cycle.name}" completed successfully with ${winners.length} winner(s)`,
+          `Cycle "${cycle.nameHr}" completed successfully with ${winners.length} winner(s)`,
         );
       } catch (error) {
         console.error(`Error completing cycle ${cycle.id}:`, error);
@@ -301,11 +301,11 @@ async function notifyAllParticipants(cycleId, winners) {
     if (winnerNotifications.length > 0) {
       await sendPushNotificationToUsers(winnerNotifications, {
         title: 'Čestitamo! 🎉',
-        body: `Osvojili ste nagradu u ciklusu "${cycle.name}"!`,
+        body: `Osvojili ste nagradu u ciklusu "${cycle.nameHr}"!`,
         data: {
           type: 'cycle_winner',
           cycleId: cycle.id,
-          cycleName: cycle.name,
+          cycleName: cycle.nameHr,
         },
       });
       console.log(
@@ -317,11 +317,11 @@ async function notifyAllParticipants(cycleId, winners) {
     if (nonWinnerNotifications.length > 0) {
       await sendPushNotificationToUsers(nonWinnerNotifications, {
         title: 'Ciklus završen!',
-        body: `Ciklus "${cycle.name}" je završio! Pogledajte pobjednike i pridružite se idućem ciklusu!`,
+        body: `Ciklus "${cycle.nameHr}" je završio! Pogledajte pobjednike i pridružite se idućem ciklusu!`,
         data: {
           type: 'cycle_completed',
           cycleId: cycle.id,
-          cycleName: cycle.name,
+          cycleName: cycle.nameHr,
         },
       });
       console.log(
@@ -393,7 +393,7 @@ async function getCycleStats() {
 
     const activeCycleStats = activeCycles.map((cycle) => ({
       id: cycle.id,
-      name: cycle.name,
+      name: cycle.nameHr,
       participantCount: cycle.participants.length,
       endDate: cycle.endDate,
       remainingDays: cycle.getRemainingDays(),

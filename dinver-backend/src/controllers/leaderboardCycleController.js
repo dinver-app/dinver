@@ -8,9 +8,6 @@ const {
 const { Op } = require('sequelize');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
-const {
-  sendPushNotificationToUsers,
-} = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const {
   selectWinners,
@@ -25,8 +22,10 @@ const {
 const createCycle = async (req, res) => {
   try {
     const {
-      name,
-      description,
+      nameEn,
+      nameHr,
+      descriptionEn,
+      descriptionHr,
       startDate,
       endDate,
       numberOfWinners = 1,
@@ -36,9 +35,10 @@ const createCycle = async (req, res) => {
     const file = req.file;
 
     // Validate required fields
-    if (!name || !startDate || !endDate) {
+    if (!nameEn || !nameHr || !startDate || !endDate) {
       return res.status(400).json({
-        error: 'Name, start date, and end date are required',
+        error:
+          'Name (English and Croatian), start date, and end date are required',
       });
     }
 
@@ -95,7 +95,7 @@ const createCycle = async (req, res) => {
       });
 
       return res.status(400).json({
-        error: `Postoji ${cycleType} ciklus "${overlappingCycle.name}" koji se završava ${cycleEndDate}. Molimo odaberite datume koji se ne preklapaju ili otkažite postojeći ciklus.`,
+        error: `Postoji ${cycleType} ciklus "${overlappingCycle.nameHr}" koji se završava ${cycleEndDate}. Molimo odaberite datume koji se ne preklapaju ili otkažite postojeći ciklus.`,
       });
     }
 
@@ -119,8 +119,10 @@ const createCycle = async (req, res) => {
 
     // Create the cycle - store as timezone-naive strings
     const cycle = await LeaderboardCycle.create({
-      name,
-      description,
+      nameEn,
+      nameHr,
+      descriptionEn,
+      descriptionHr,
       headerImageUrl,
       startDate: startDate, // Store as string (timezone-naive)
       endDate: endDate, // Store as string (timezone-naive)
@@ -136,15 +138,27 @@ const createCycle = async (req, res) => {
       action: ActionTypes.CREATE,
       entity: Entities.LEADERBOARD_CYCLE,
       entityId: cycle.id,
-      changes: { new: { name, startDate, endDate, numberOfWinners } },
+      changes: {
+        new: {
+          nameEn,
+          nameHr,
+          descriptionEn,
+          descriptionHr,
+          startDate,
+          endDate,
+          numberOfWinners,
+        },
+      },
     });
 
     res.status(201).json({
       message: 'Cycle created successfully',
       cycle: {
         id: cycle.id,
-        name: cycle.name,
-        description: cycle.description,
+        nameEn: cycle.nameEn,
+        nameHr: cycle.nameHr,
+        descriptionEn: cycle.descriptionEn,
+        descriptionHr: cycle.descriptionHr,
         headerImageUrl: headerImageUrl
           ? getMediaUrl(headerImageUrl, 'image')
           : null,
@@ -328,8 +342,10 @@ const updateCycle = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      name,
-      description,
+      nameEn,
+      nameHr,
+      descriptionEn,
+      descriptionHr,
       startDate,
       endDate,
       numberOfWinners,
@@ -347,6 +363,13 @@ const updateCycle = async (req, res) => {
     if (cycle.status === 'completed' || cycle.status === 'cancelled') {
       return res.status(400).json({
         error: 'Cannot update completed or cancelled cycles',
+      });
+    }
+
+    // Validate that if nameEn or nameHr is provided, both must be provided
+    if ((nameEn && !nameHr) || (!nameEn && nameHr)) {
+      return res.status(400).json({
+        error: 'Both nameEn and nameHr must be provided together',
       });
     }
 
@@ -375,8 +398,10 @@ const updateCycle = async (req, res) => {
     }
 
     const oldData = {
-      name: cycle.name,
-      description: cycle.description,
+      nameEn: cycle.nameEn,
+      nameHr: cycle.nameHr,
+      descriptionEn: cycle.descriptionEn,
+      descriptionHr: cycle.descriptionHr,
       startDate: cycle.startDate,
       endDate: cycle.endDate,
       numberOfWinners: cycle.numberOfWinners,
@@ -393,8 +418,6 @@ const updateCycle = async (req, res) => {
 
     // Update the cycle with local time conversion for dates
     const updateData = {
-      name: name || cycle.name,
-      description: description !== undefined ? description : cycle.description,
       numberOfWinners: numberOfWinners
         ? parseInt(numberOfWinners)
         : cycle.numberOfWinners,
@@ -404,6 +427,18 @@ const updateCycle = async (req, res) => {
           : cycle.guaranteeFirstPlace,
       headerImageUrl: headerImageUrl,
     };
+
+    // Add translation fields if provided
+    if (nameEn && nameHr) {
+      updateData.nameEn = nameEn;
+      updateData.nameHr = nameHr;
+    }
+    if (descriptionEn !== undefined) {
+      updateData.descriptionEn = descriptionEn;
+    }
+    if (descriptionHr !== undefined) {
+      updateData.descriptionHr = descriptionHr;
+    }
 
     // Add dates without timezone conversion if provided
     if (startDate) {
@@ -424,8 +459,10 @@ const updateCycle = async (req, res) => {
       changes: {
         old: oldData,
         new: {
-          name: cycle.name,
-          description: cycle.description,
+          nameEn: cycle.nameEn,
+          nameHr: cycle.nameHr,
+          descriptionEn: cycle.descriptionEn,
+          descriptionHr: cycle.descriptionHr,
           startDate: cycle.startDate,
           endDate: cycle.endDate,
           numberOfWinners: cycle.numberOfWinners,
@@ -907,7 +944,7 @@ const getUserCycleStats = async (req, res) => {
     // Format participations
     const formattedParticipations = participations.map((participation) => {
       const participationData = participation.toJSON();
-      participationData.cycleName = participation.cycle.name;
+      participationData.cycleName = participation.cycle.nameHr;
       participationData.formattedPoints = participation.getFormattedPoints();
       return participationData;
     });
@@ -915,7 +952,7 @@ const getUserCycleStats = async (req, res) => {
     // Format wins
     const formattedWins = wins.map((win) => {
       const winData = win.toJSON();
-      winData.cycleName = win.cycle.name;
+      winData.cycleName = win.cycle.nameHr;
       winData.rankOrdinal = win.getRankOrdinal();
       winData.formattedPoints = win.getFormattedPoints();
       return winData;
@@ -1008,7 +1045,9 @@ const deleteCycle = async (req, res) => {
       action: ActionTypes.DELETE,
       entity: Entities.LEADERBOARD_CYCLE,
       entityId: id,
-      changes: { deleted: { name: cycle.name } },
+      changes: {
+        deleted: { nameEn: cycle.nameEn, nameHr: cycle.nameHr },
+      },
     });
 
     res.json({

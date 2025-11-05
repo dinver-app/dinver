@@ -25,8 +25,10 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<UpdateCycleData>({
-    name: "",
-    description: "",
+    nameEn: "",
+    nameHr: "",
+    descriptionEn: "",
+    descriptionHr: "",
     startDate: "",
     endDate: "",
     numberOfWinners: 1,
@@ -46,8 +48,10 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
       };
 
       setFormData({
-        name: cycle.name,
-        description: cycle.description || "",
+        nameEn: cycle.nameEn,
+        nameHr: cycle.nameHr,
+        descriptionEn: cycle.descriptionEn || "",
+        descriptionHr: cycle.descriptionHr || "",
         startDate: formatDateForInput(cycle.startDate),
         endDate: formatDateForInput(cycle.endDate),
         numberOfWinners: cycle.numberOfWinners,
@@ -59,8 +63,19 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name?.trim()) {
-      newErrors.name = "Cycle name is required";
+    // If nameEn or nameHr is provided, both must be provided
+    if (formData.nameEn && !formData.nameHr) {
+      newErrors.nameHr = "Croatian name is required when English name is provided";
+    }
+    if (formData.nameHr && !formData.nameEn) {
+      newErrors.nameEn = "English name is required when Croatian name is provided";
+    }
+    if (!formData.nameEn && !formData.nameHr && cycle) {
+      // If updating, at least keep existing names
+      if (!cycle.nameEn || !cycle.nameHr) {
+        newErrors.nameEn = "Cycle name (English) is required";
+        newErrors.nameHr = "Cycle name (Croatian) is required";
+      }
     }
 
     if (!formData.startDate) {
@@ -116,8 +131,10 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
       // If there's a new image, use the image update endpoint
       if (headerImage) {
         await leaderboardCycleService.updateCycleWithImage(cycle.id, {
-          name: formData.name || "",
-          description: formData.description,
+          nameEn: formData.nameEn || cycle.nameEn,
+          nameHr: formData.nameHr || cycle.nameHr,
+          descriptionEn: formData.descriptionEn,
+          descriptionHr: formData.descriptionHr,
           startDate: formData.startDate || "",
           endDate: formData.endDate || "",
           numberOfWinners: formData.numberOfWinners || 1,
@@ -125,7 +142,11 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
           headerImage: headerImage,
         });
       } else {
-        await leaderboardCycleService.updateCycle(cycle.id, formData);
+        await leaderboardCycleService.updateCycle(cycle.id, {
+          ...formData,
+          nameEn: formData.nameEn || cycle.nameEn,
+          nameHr: formData.nameHr || cycle.nameHr,
+        });
       }
 
       toast.dismiss(loadingToast);
@@ -161,35 +182,72 @@ const EditCycleModal: React.FC<EditCycleModalProps> = ({
       size="2xl"
     >
       <div className="space-y-6">
-        {/* Cycle Name */}
+        {/* Cycle Name - English */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {t("cycle_name")} *
+            {t("cycle_name")} (English) *
           </label>
           <input
             type="text"
-            value={formData.name || ""}
-            onChange={(e) => handleInputChange("name", e.target.value)}
+            value={formData.nameEn || ""}
+            onChange={(e) => handleInputChange("nameEn", e.target.value)}
             className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? "border-red-500" : "border-gray-300"
+              errors.nameEn ? "border-red-500" : "border-gray-300"
             }`}
-            placeholder="Enter cycle name"
+            placeholder="Enter cycle name in English"
             disabled={isUpdating}
           />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+          {errors.nameEn && (
+            <p className="mt-1 text-sm text-red-600">{errors.nameEn}</p>
           )}
         </div>
 
-        {/* Description */}
+        {/* Cycle Name - Croatian */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            {t("cycle_description")}
+            {t("cycle_name")} (Croatian) *
+          </label>
+          <input
+            type="text"
+            value={formData.nameHr || ""}
+            onChange={(e) => handleInputChange("nameHr", e.target.value)}
+            className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.nameHr ? "border-red-500" : "border-gray-300"
+            }`}
+            placeholder="Enter cycle name in Croatian"
+            disabled={isUpdating}
+          />
+          {errors.nameHr && (
+            <p className="mt-1 text-sm text-red-600">{errors.nameHr}</p>
+          )}
+        </div>
+
+        {/* Description - English */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t("cycle_description")} (English)
           </label>
           <RichTextEditor
-            content={formData.description || ""}
-            onChange={(content) => handleInputChange("description", content)}
-            placeholder="Enter cycle description..."
+            content={formData.descriptionEn || ""}
+            onChange={(content) => handleInputChange("descriptionEn", content)}
+            placeholder="Enter cycle description in English..."
+            disabled={isUpdating}
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Use the toolbar above to format your text with bold, italic,
+            headings, lists, and more.
+          </p>
+        </div>
+
+        {/* Description - Croatian */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            {t("cycle_description")} (Croatian)
+          </label>
+          <RichTextEditor
+            content={formData.descriptionHr || ""}
+            onChange={(content) => handleInputChange("descriptionHr", content)}
+            placeholder="Enter cycle description in Croatian..."
             disabled={isUpdating}
           />
           <p className="mt-1 text-sm text-gray-500">
