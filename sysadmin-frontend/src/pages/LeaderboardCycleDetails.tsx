@@ -23,7 +23,7 @@ import EditCycleModal from "../components/modals/EditCycleModal";
 const LeaderboardCycleDetails: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [cycle, setCycle] = useState<LeaderboardCycle | null>(null);
   const [participants, setParticipants] = useState<CycleParticipant[]>([]);
   const [winners, setWinners] = useState<CycleWinner[]>([]);
@@ -280,7 +280,9 @@ const LeaderboardCycleDetails: React.FC = () => {
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{cycle.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {i18n.language === "en" ? cycle.nameEn : cycle.nameHr}
+              </h1>
               <div className="flex items-center mt-2">
                 <span className={getStatusBadge(cycle.status)}>
                   {t(cycle.status)}
@@ -407,14 +409,19 @@ const LeaderboardCycleDetails: React.FC = () => {
       </div>
 
       {/* Description */}
-      {cycle.description && (
+      {(i18n.language === "en" ? cycle.descriptionEn : cycle.descriptionHr) && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
             {t("cycle_description")}
           </h3>
           <div
             className="prose max-w-none text-gray-700 prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700"
-            dangerouslySetInnerHTML={{ __html: cycle.description }}
+            dangerouslySetInnerHTML={{
+              __html:
+                i18n.language === "en"
+                  ? cycle.descriptionEn || ""
+                  : cycle.descriptionHr || "",
+            }}
           />
         </div>
       )}
