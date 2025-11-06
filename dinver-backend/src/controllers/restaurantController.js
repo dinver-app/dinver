@@ -1487,20 +1487,6 @@ const addRestaurantImages = async (req, res) => {
       files.map((file) => uploadToS3(file, folder)),
     );
 
-    // Trenutno spremaš i key i URL, što nije potrebno
-    const updatedImages = [
-      ...(restaurant.images || []).map((img) =>
-        typeof img === 'string'
-          ? { key: img, url: getMediaUrl(img, 'image') }
-          : img,
-      ),
-      ...imageKeys.map((key) => ({
-        key,
-        url: getMediaUrl(key, 'image'),
-      })),
-    ];
-
-    // ISPRAVAK: Trebamo spremiti samo keys
     const updatedImageKeys = [...(restaurant.images || []), ...imageKeys];
 
     // Spremamo samo keys u bazu
