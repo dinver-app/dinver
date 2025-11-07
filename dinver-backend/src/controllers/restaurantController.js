@@ -3811,9 +3811,16 @@ ${new Date().toLocaleString('hr-HR', {
       host: 'api.eu.mailgun.net', // EU region
     });
 
+    const claimNotificationRecipients = process.env
+      .CLAIM_NOTIFICATION_RECIPIENTS
+      ? process.env.CLAIM_NOTIFICATION_RECIPIENTS.split(',')
+          .map((email) => email.trim())
+          .filter(Boolean)
+      : ['ivankikic49@gmail.com', 'mbaric25@gmail.com'];
+
     const emailData = {
       from: 'Dinver <info@dinverapp.com>',
-      to: 'ivankikic49@gmail.com',
+      to: claimNotificationRecipients,
       subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
       text: emailContent,
     };
