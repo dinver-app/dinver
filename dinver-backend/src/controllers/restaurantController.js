@@ -1487,20 +1487,6 @@ const addRestaurantImages = async (req, res) => {
       files.map((file) => uploadToS3(file, folder)),
     );
 
-    // Trenutno spremaš i key i URL, što nije potrebno
-    const updatedImages = [
-      ...(restaurant.images || []).map((img) =>
-        typeof img === 'string'
-          ? { key: img, url: getMediaUrl(img, 'image') }
-          : img,
-      ),
-      ...imageKeys.map((key) => ({
-        key,
-        url: getMediaUrl(key, 'image'),
-      })),
-    ];
-
-    // ISPRAVAK: Trebamo spremiti samo keys
     const updatedImageKeys = [...(restaurant.images || []), ...imageKeys];
 
     // Spremamo samo keys u bazu
@@ -3825,9 +3811,16 @@ ${new Date().toLocaleString('hr-HR', {
       host: 'api.eu.mailgun.net', // EU region
     });
 
+    const claimNotificationRecipients = process.env
+      .CLAIM_NOTIFICATION_RECIPIENTS
+      ? process.env.CLAIM_NOTIFICATION_RECIPIENTS.split(',')
+          .map((email) => email.trim())
+          .filter(Boolean)
+      : ['ivankikic49@gmail.com', 'mbaric25@gmail.com'];
+
     const emailData = {
       from: 'Dinver <info@dinverapp.com>',
-      to: 'ivankikic49@gmail.com',
+      to: claimNotificationRecipients,
       subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
       text: emailContent,
     };
