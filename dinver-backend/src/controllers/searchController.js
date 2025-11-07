@@ -1,5 +1,6 @@
 const { Op, Sequelize } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 const {
   MenuItem,
   DrinkItem,
@@ -677,11 +678,13 @@ module.exports = {
               });
               const existing = groupedByItem.get(itemId);
               if (!existing || sim > existing.sim) {
+                const imageUrls = mi.menuItem.imageUrl ? getImageUrls(mi.menuItem.imageUrl) : null;
                 groupedByItem.set(itemId, {
                   id: itemId,
                   type: 'food',
                   price: priceVal,
-                  imageUrl: getMediaUrl(mi.menuItem.imageUrl, 'image'),
+                  imageUrl: mi.menuItem.imageUrl ? getMediaUrl(mi.menuItem.imageUrl, 'image', 'thumbnail') : null,
+                  imageUrls: imageUrls,
                   translations: trMap,
                   sim,
                 });
@@ -718,11 +721,13 @@ module.exports = {
               });
               const existing = groupedByItem.get(itemId);
               if (!existing || sim > existing.sim) {
+                const imageUrls = di.drinkItem.imageUrl ? getImageUrls(di.drinkItem.imageUrl) : null;
                 groupedByItem.set(itemId, {
                   id: itemId,
                   type: 'drink',
                   price: priceVal,
-                  imageUrl: getMediaUrl(di.drinkItem.imageUrl, 'image'),
+                  imageUrl: di.drinkItem.imageUrl ? getMediaUrl(di.drinkItem.imageUrl, 'image', 'thumbnail') : null,
+                  imageUrls: imageUrls,
                   translations: trMap,
                   sim,
                 });
@@ -739,6 +744,7 @@ module.exports = {
             price: it.price != null ? Number(it.price.toFixed(2)) : null,
             type: it.type,
             imageUrl: it.imageUrl || null,
+            imageUrls: it.imageUrls || null,
             translations: it.translations,
           }));
 
@@ -955,8 +961,9 @@ module.exports = {
           restaurants: paginatedRestaurants.map((r) => ({
             ...r,
             thumbnailUrl: r.thumbnailUrl
-              ? getMediaUrl(r.thumbnailUrl, 'image')
+              ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
               : null,
+            thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
           })),
           pagination: {
             currentPage: page,
@@ -1094,8 +1101,9 @@ module.exports = {
         restaurants: paginatedRestaurants.map((r) => ({
           ...r,
           thumbnailUrl: r.thumbnailUrl
-            ? getMediaUrl(r.thumbnailUrl, 'image')
+            ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
             : null,
+          thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
         })),
         pagination: {
           currentPage: page,

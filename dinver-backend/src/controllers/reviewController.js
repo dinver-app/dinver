@@ -7,11 +7,17 @@ const {
 } = require('../../models');
 const { handleError } = require('../../utils/errorHandler');
 const { ValidationError, Op } = require('sequelize');
-const { uploadToS3 } = require('../../utils/s3Upload');
+const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 const { calculateAverageRating } = require('../utils/ratingUtils');
 const PointsService = require('../utils/pointsService');
 const { getMediaUrl } = require('../../config/cdn');
 const { sendPushNotification } = require('../../utils/pushNotificationService');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 const EDIT_WINDOW_DAYS = 7;
 const MAX_EDITS = 1;
@@ -133,12 +139,23 @@ const createReview = async (req, res) => {
     );
 
     // Handle photo uploads
+    let imageUploadResults = [];
     if (files && files.length > 0) {
       const folder = `review_images/${review.id}`;
-      const imageKeys = await Promise.all(
-        files.map((file) => uploadToS3(file, folder)),
+
+      // Upload images with optimistic processing
+      imageUploadResults = await Promise.all(
+        files.map((file) =>
+          uploadImage(file, folder, {
+            strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+            entityType: 'review',
+            entityId: review.id,
+            priority: 8,
+          })
+        ),
       );
 
+      const imageKeys = imageUploadResults.map(result => result.imageUrl);
       await review.update({ photos: imageKeys });
 
       // Check if this is a high-quality review and track achievement
@@ -165,12 +182,19 @@ const createReview = async (req, res) => {
       ],
     });
 
-    // Transform image keys to URLs for response
+    // Transform image keys to URLs for response with variants
     const responseData = reviewWithDetails.toJSON();
     if (responseData.photos && Array.isArray(responseData.photos)) {
-      responseData.photos = responseData.photos.map((photoKey) =>
-        getMediaUrl(photoKey, 'image'),
-      );
+      responseData.photos = responseData.photos.map((photoKey, index) => {
+        const imageUrls = getImageUrls(photoKey);
+        const uploadResult = imageUploadResults[index];
+        return {
+          url: getMediaUrl(photoKey, 'image', 'medium'),
+          imageUrls: imageUrls,
+          processing: uploadResult && uploadResult.status === 'processing',
+          jobId: uploadResult?.jobId,
+        };
+      });
     }
 
     res.status(201).json(responseData);
@@ -204,13 +228,17 @@ const getUserReviews = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    // Transform photo URLs
+    // Transform photo URLs with variants
     const transformedReviews = reviews.map((review) => {
       const reviewData = review.toJSON();
       if (reviewData.photos && Array.isArray(reviewData.photos)) {
-        reviewData.photos = reviewData.photos.map((photoKey) =>
-          getMediaUrl(photoKey, 'image'),
-        );
+        reviewData.photos = reviewData.photos.map((photoKey) => {
+          const imageUrls = getImageUrls(photoKey);
+          return {
+            url: getMediaUrl(photoKey, 'image', 'medium'),
+            imageUrls: imageUrls,
+          };
+        });
       }
       return reviewData;
     });
@@ -265,14 +293,18 @@ const getRestaurantReviews = async (req, res) => {
       offset,
     });
 
-    // Add virtual fields to each review and transform photos
+    // Add virtual fields to each review and transform photos with variants
     const reviewsWithMeta = reviews.map((review) => {
       const reviewData = review.toJSON();
-      // Transform photo keys to URLs
+      // Transform photo keys to URLs with variants
       if (reviewData.photos && Array.isArray(reviewData.photos)) {
-        reviewData.photos = reviewData.photos.map((photoKey) =>
-          getMediaUrl(photoKey, 'image'),
-        );
+        reviewData.photos = reviewData.photos.map((photoKey) => {
+          const imageUrls = getImageUrls(photoKey);
+          return {
+            url: getMediaUrl(photoKey, 'image', 'thumbnail'),
+            imageUrls: imageUrls,
+          };
+        });
       }
       return {
         ...reviewData,
@@ -412,12 +444,44 @@ const updateReview = async (req, res) => {
     }
 
     // 2. Add new photos if any
+    let newImageUploadResults = [];
     if (files && files.length > 0) {
       const folder = `review_images/${review.id}`;
-      const newImageKeys = await Promise.all(
-        files.map((file) => uploadToS3(file, folder)),
+
+      // Upload new images with optimistic processing
+      newImageUploadResults = await Promise.all(
+        files.map((file) =>
+          uploadImage(file, folder, {
+            strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+            entityType: 'review',
+            entityId: review.id,
+            priority: 8,
+          })
+        ),
       );
+
+      const newImageKeys = newImageUploadResults.map(result => result.imageUrl);
       updatedPhotoKeys = [...updatedPhotoKeys, ...newImageKeys];
+    }
+
+    // Delete old photos that were removed
+    if (review.photos && Array.isArray(review.photos)) {
+      const removedPhotos = review.photos.filter(
+        (photoKey) => !updatedPhotoKeys.includes(photoKey)
+      );
+      for (const photoKey of removedPhotos) {
+        const baseFileName = getBaseFileName(photoKey);
+        const folder = getFolderFromKey(photoKey);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
+      }
     }
 
     // Update review content and ratings
@@ -463,9 +527,18 @@ const updateReview = async (req, res) => {
 
     const responseData = updatedReviewWithDetails.toJSON();
     if (responseData.photos && Array.isArray(responseData.photos)) {
-      responseData.photos = responseData.photos.map((photoKey) =>
-        getMediaUrl(photoKey, 'image'),
-      );
+      responseData.photos = responseData.photos.map((photoKey, index) => {
+        const imageUrls = getImageUrls(photoKey);
+        // Check if this is a newly uploaded image
+        const uploadResultIndex = index - (updatedPhotoKeys.length - newImageUploadResults.length);
+        const uploadResult = uploadResultIndex >= 0 ? newImageUploadResults[uploadResultIndex] : null;
+        return {
+          url: getMediaUrl(photoKey, 'image', 'medium'),
+          imageUrls: imageUrls,
+          processing: uploadResult && uploadResult.status === 'processing',
+          jobId: uploadResult?.jobId,
+        };
+      });
     }
 
     res.json(responseData);

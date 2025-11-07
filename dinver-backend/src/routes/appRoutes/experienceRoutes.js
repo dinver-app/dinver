@@ -19,6 +19,13 @@ router.post(
   experienceController.confirmMediaUpload,
 );
 
+// NEW: Video processing status check
+router.get(
+  '/media/video-status/:jobId',
+  appAuthenticateToken,
+  experienceController.checkVideoStatus,
+);
+
 // Experience CRUD
 router.post('/', appAuthenticateToken, experienceController.createExperience);
 

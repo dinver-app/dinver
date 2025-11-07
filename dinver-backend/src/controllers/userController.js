@@ -12,6 +12,12 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
+const { getMediaUrl } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 const updateUserLanguage = async (req, res) => {
   const { language } = req.body;
@@ -400,12 +406,45 @@ const updateProfileImage = async (req, res) => {
 
     // Upload new image to S3
     const folder = 'user_profile_images';
-    const imageUrl = await uploadToS3(file, folder);
+    let imageUrl = null;
+    let imageUploadResult = null;
+    try {
+      imageUploadResult = await uploadImage(file, folder, {
+        strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+        entityType: 'user',
+        entityId: userId,
+        priority: 10,
+      });
+      imageUrl = imageUploadResult.imageUrl;
+    } catch (uploadError) {
+      console.error('Error uploading to S3:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload image' });
+    }
 
     // Update user's profile image
     await user.update({ profileImage: imageUrl });
 
-    res.json({ message: 'Profile image updated successfully', imageUrl });
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (imageUrl) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(imageUrl);
+      }
+    }
+
+    res.json({
+      message: 'Profile image updated successfully',
+      imageUrl: imageUrl ? getMediaUrl(imageUrl, 'image', 'medium') : null,
+      imageUrls: imageUrls,
+    });
   } catch (error) {
     console.error('Error updating profile image:', error);
     res.status(500).json({ error: 'Failed to update profile image' });

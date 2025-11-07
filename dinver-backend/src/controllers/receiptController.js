@@ -7,8 +7,12 @@ const {
   Reservation,
   UserSettings,
 } = require('../../models');
-const { uploadToS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 const { extractReceiptData } = require('../services/ocrService');
 const {
   extractReceiptWithVision,
@@ -172,8 +176,22 @@ const uploadReceipt = async (req, res) => {
     }
 
     // === STEP 2: Upload to S3 ===
+    // Use QUICK strategy since receipts don't need multiple variants
+    // The image is already processed by Sharp above
     const folder = `receipts/${userId}`;
-    const imageKey = await uploadToS3(file, folder);
+    let imageUploadResult;
+    try {
+      imageUploadResult = await uploadImage(file, folder, {
+        strategy: UPLOAD_STRATEGY.QUICK,
+        entityType: 'receipt',
+        entityId: null, // Will be set after receipt creation
+        priority: 15, // High priority for receipts
+      });
+    } catch (uploadError) {
+      console.error('Error uploading receipt:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload receipt image' });
+    }
+    const imageKey = imageUploadResult.imageUrl;
 
     // === STEP 3: OCR Processing (Vision → Parser → GPT) ===
     let ocrMethod = 'vision';

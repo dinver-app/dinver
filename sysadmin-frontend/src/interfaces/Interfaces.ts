@@ -60,9 +60,10 @@ export interface Restaurant {
   igUrl?: string;
   ttUrl?: string;
   phone?: string;
-  images?: string[];
+  images?: Array<{ url: string; imageUrls: { thumbnail: string; medium: string; fullscreen: string } }>;
   reviewRating?: number;
   email?: string;
+  thumbnailUrls?: { thumbnail: string; medium: string; fullscreen: string };
   place?: string;
   translations?: {
     language: string;

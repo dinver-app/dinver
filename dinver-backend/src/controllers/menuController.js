@@ -17,7 +17,12 @@ const {
   autoTranslate,
   translateSizeNameFill,
 } = require('../../utils/translate');
-const { getMediaUrl } = require('../../config/cdn');
+const { getMediaUrl, getMediaUrlVariants } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 const { v4: uuidv4 } = require('uuid');
 
 // Helper function to get user language
@@ -124,6 +129,9 @@ const getMenuItems = async (req, res) => {
           priceRange = `${parseFloat(itemData.minPrice).toFixed(2)} - ${parseFloat(itemData.maxPrice).toFixed(2)}€`;
         }
 
+        // For list views, provide thumbnail by default but include all variants
+        const imageUrls = itemData.imageUrl ? getImageUrls(itemData.imageUrl) : null;
+
         return {
           ...itemData,
           name: (userTranslation || anyTranslation)?.name || '',
@@ -131,8 +139,9 @@ const getMenuItems = async (req, res) => {
           price:
             displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
           imageUrl: itemData.imageUrl
-            ? getMediaUrl(itemData.imageUrl, 'image')
-            : null,
+            ? getMediaUrl(itemData.imageUrl, 'image', 'thumbnail')
+            : null, // Use thumbnail for list view
+          imageUrls: imageUrls, // All variants available
           sizes: formattedSizes,
           priceRange: priceRange,
         };
@@ -225,12 +234,20 @@ const createMenuItem = async (req, res) => {
     const lastPosition = existingItems[0]?.position ?? -1;
     const newPosition = lastPosition + 1;
 
-    // Handle image upload
+    // Handle image upload with new optimistic processing
     let imageKey = null;
+    let imageUploadResult = null;
     if (file) {
       const folder = 'menu_items';
       try {
-        imageKey = await uploadToS3(file, folder);
+        // Use optimistic upload strategy for fast response
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'menu_item',
+          entityId: null, // Will be set after creation
+          priority: 10,
+        });
+        imageKey = imageUploadResult.imageUrl; // Store base/medium variant key
       } catch (uploadError) {
         console.error('Error uploading to S3:', uploadError);
         return res.status(500).json({ error: 'Failed to upload image' });
@@ -379,11 +396,30 @@ const createMenuItem = async (req, res) => {
       priceRange = `${parseFloat(createdItem.minPrice).toFixed(2)} - ${parseFloat(createdItem.maxPrice).toFixed(2)}€`;
     }
 
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (imageKey) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        // Return optimistic response with all variant URLs
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        // Image already processed or old format
+        imageUrls = getImageUrls(imageKey);
+      }
+    }
+
     const result = {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
-      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'medium') : null, // Backward compatibility
+      imageUrls: imageUrls, // New format with all variants
       sizes: formattedSizes,
       priceRange: priceRange,
     };
@@ -435,13 +471,25 @@ const updateMenuItem = async (req, res) => {
 
     // Handle image
     let imageKey = menuItem.imageUrl;
+    let imageUploadResult = null;
     if (file) {
       if (menuItem.imageUrl) {
         const oldKey = menuItem.imageUrl.split('/').pop();
         await deleteFromS3(`menu_items/${oldKey}`);
       }
       const folder = 'menu_items';
-      imageKey = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'menu_item',
+          entityId: id,
+          priority: 10,
+        });
+        imageKey = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     } else if (removeImage === 'true') {
       if (menuItem.imageUrl) {
         const oldKey = menuItem.imageUrl.split('/').pop();
@@ -622,11 +670,28 @@ const updateMenuItem = async (req, res) => {
       priceRange = `${parseFloat(updated.minPrice).toFixed(2)} - ${parseFloat(updated.maxPrice).toFixed(2)}€`;
     }
 
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (imageKey) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(imageKey);
+      }
+    }
+
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
-      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'medium') : null,
+      imageUrls: imageUrls,
       translations: updated.translations,
       sizes: formattedSizes,
       priceRange: priceRange,

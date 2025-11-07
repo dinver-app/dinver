@@ -25,10 +25,15 @@ const {
   updateWorldCuisineProgress,
 } = require('./achievementController');
 const { Op, Sequelize } = require('sequelize');
-const { uploadToS3 } = require('../../utils/s3Upload');
+const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 const {
   FoodType,
@@ -371,10 +376,10 @@ const getRestaurantDetails = async (req, res) => {
       );
     }
 
-    // Transformiramo keys u URL-ove za galeriju slika
+    // Transformiramo keys u objekte s variantama za galeriju slika
     if (restaurantData.images && Array.isArray(restaurantData.images)) {
       restaurantData.images = restaurantData.images.map((imageKey) =>
-        getMediaUrl(imageKey, 'image'),
+        getImageUrls(imageKey),
       );
     }
 
@@ -418,7 +423,7 @@ async function viewRestaurant(req, res) {
       data.thumbnailUrl = getMediaUrl(data.thumbnailUrl, 'image');
     }
     if (data.images && Array.isArray(data.images)) {
-      data.images = data.images.map((key) => getMediaUrl(key, 'image'));
+      data.images = data.images.map((key) => getImageUrls(key));
     }
 
     res.json(data);
@@ -545,15 +550,40 @@ async function updateRestaurant(req, res) {
     const oldData = { ...restaurant.get() };
 
     let thumbnailKey = restaurant.thumbnailUrl;
+    let thumbnailUploadResult = null;
 
     if (req.file) {
-      // Ako postoji stari thumbnail, brišemo ga
+      // Delete old thumbnail variants before uploading new
       if (thumbnailKey) {
-        const oldKey = thumbnailKey.split('/').pop();
-        await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
+        const baseFileName = getBaseFileName(thumbnailKey);
+        const folder = getFolderFromKey(thumbnailKey);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
-      // Spremamo novi key
-      thumbnailKey = await uploadToS3(req.file, 'restaurant_thumbnails');
+      // Upload new thumbnail with optimistic processing
+      try {
+        thumbnailUploadResult = await uploadImage(
+          req.file,
+          'restaurant_thumbnails',
+          {
+            strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+            entityType: 'restaurant',
+            entityId: id,
+            priority: 10,
+          },
+        );
+        thumbnailKey = thumbnailUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading thumbnail:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload thumbnail' });
+      }
     }
 
     // Validacija i update subdomaina
@@ -616,17 +646,37 @@ async function updateRestaurant(req, res) {
 
     // Za response dodajemo URL
     const responseData = restaurant.get();
+
+    // Prepare thumbnail URLs with variants
+    let thumbnailUrls = null;
     if (responseData.thumbnailUrl) {
-      responseData.thumbnailUrl = getMediaUrl(
-        responseData.thumbnailUrl,
-        'image',
-      );
+      if (
+        thumbnailUploadResult &&
+        thumbnailUploadResult.status === 'processing'
+      ) {
+        thumbnailUrls = {
+          thumbnail: thumbnailUploadResult.urls.thumbnail,
+          medium: thumbnailUploadResult.urls.medium,
+          fullscreen: thumbnailUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: thumbnailUploadResult.jobId,
+        };
+        responseData.thumbnailUrl = thumbnailUploadResult.urls.medium;
+      } else {
+        thumbnailUrls = getImageUrls(responseData.thumbnailUrl);
+        responseData.thumbnailUrl = getMediaUrl(
+          responseData.thumbnailUrl,
+          'image',
+          'medium',
+        );
+      }
+      responseData.thumbnailUrls = thumbnailUrls;
     }
 
-    // Transformiramo galeriju slika za response
+    // Transformiramo galeriju slika za response s variantama
     if (responseData.images) {
       responseData.images = responseData.images.map((imageKey) =>
-        getMediaUrl(imageKey, 'image'),
+        getImageUrls(imageKey),
       );
     }
 
@@ -645,9 +695,19 @@ const deleteRestaurant = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
+    // Delete thumbnail variants from S3 if they exist
     if (restaurant.thumbnailUrl) {
-      const key = restaurant.thumbnailUrl.split('/').pop();
-      await deleteFromS3(`restaurant_thumbnails/${key}`);
+      const baseFileName = getBaseFileName(restaurant.thumbnailUrl);
+      const folder = getFolderFromKey(restaurant.thumbnailUrl);
+      const variants = ['thumb', 'medium', 'full'];
+      for (const variant of variants) {
+        const key = `${folder}/${baseFileName}-${variant}.jpg`;
+        try {
+          await deleteFromS3(key);
+        } catch (error) {
+          console.error(`Failed to delete ${key}:`, error);
+        }
+      }
     }
 
     await restaurant.destroy();
@@ -1482,20 +1542,33 @@ const addRestaurantImages = async (req, res) => {
     }
 
     const folder = `restaurant_images/${restaurantSlug}`;
-    // Spremamo samo keys
-    const imageKeys = await Promise.all(
-      files.map((file) => uploadToS3(file, folder)),
+
+    // Upload images with optimistic processing
+    const imageUploadResults = await Promise.all(
+      files.map((file) =>
+        uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'restaurant_gallery',
+          entityId: id,
+          priority: 5,
+        }),
+      ),
     );
 
+    const imageKeys = imageUploadResults.map((result) => result.imageUrl);
     const updatedImageKeys = [...(restaurant.images || []), ...imageKeys];
 
     // Spremamo samo keys u bazu
     await restaurant.update({ images: updatedImageKeys });
 
-    // Za response generiramo URL-ove
-    const responseImages = updatedImageKeys.map((key) =>
-      getMediaUrl(key, 'image'),
-    );
+    // Za response generiramo URL-ove sa variantama
+    const responseImages = updatedImageKeys.map((key) => {
+      const imageUrls = getImageUrls(key);
+      return {
+        url: getMediaUrl(key, 'image', 'medium'),
+        imageUrls: imageUrls,
+      };
+    });
 
     await logAudit({
       userId: req.user ? req.user.id : null,
@@ -1534,10 +1607,18 @@ const deleteRestaurantImage = async (req, res) => {
       return res.status(400).json({ error: 'Image not found in restaurant' });
     }
 
-    // Brišemo sliku iz S3
-    await deleteFromS3(
-      `restaurant_images/${restaurant.slug}/${imageKey.split('/').pop()}`,
-    );
+    // Delete all image variants from S3
+    const baseFileName = getBaseFileName(imageKey);
+    const folder = getFolderFromKey(imageKey);
+    const variants = ['thumb', 'medium', 'full'];
+    for (const variant of variants) {
+      const key = `${folder}/${baseFileName}-${variant}.jpg`;
+      try {
+        await deleteFromS3(key);
+      } catch (error) {
+        console.error(`Failed to delete ${key}:`, error);
+      }
+    }
 
     // Uklanjamo key iz liste slika
     const updatedImageKeys = restaurant.images.filter(
@@ -1545,10 +1626,14 @@ const deleteRestaurantImage = async (req, res) => {
     );
     await restaurant.update({ images: updatedImageKeys });
 
-    // Za response generiramo URL-ove
-    const responseImages = updatedImageKeys.map((key) =>
-      getMediaUrl(key, 'image'),
-    );
+    // Za response generiramo URL-ove sa variantama
+    const responseImages = updatedImageKeys.map((key) => {
+      const imageUrls = getImageUrls(key);
+      return {
+        url: getMediaUrl(key, 'image', 'medium'),
+        imageUrls: imageUrls,
+      };
+    });
 
     // Log the delete image action
     await logAudit({
@@ -1616,8 +1701,11 @@ const updateImageOrder = async (req, res) => {
     // Update with keys only
     await restaurant.update({ images: imageKeys });
 
-    // Transform keys back to URLs for response
-    const responseImages = imageKeys.map((key) => getMediaUrl(key, 'image'));
+    // Transform keys to objects with variants for response
+    const responseImages = imageKeys.map((key) => ({
+      url: getMediaUrl(key, 'image', 'medium'),
+      imageUrls: getImageUrls(key),
+    }));
 
     res.json({
       message: 'Image order updated successfully',
@@ -1679,12 +1767,22 @@ const getRestaurantById = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
     const data = restaurant.get();
+
+    // Thumbnail with variants
     if (data.thumbnailUrl) {
-      data.thumbnailUrl = getMediaUrl(data.thumbnailUrl, 'image');
+      const originalKey = data.thumbnailUrl;
+      data.thumbnailUrl = getMediaUrl(originalKey, 'image', 'medium'); // Medium for detail view
+      data.thumbnailUrls = getImageUrls(originalKey);
     }
+
+    // Gallery images with variants
     if (data.images && Array.isArray(data.images)) {
-      data.images = data.images.map((key) => getMediaUrl(key, 'image'));
+      data.images = data.images.map((key) => ({
+        url: getMediaUrl(key, 'image', 'medium'),
+        imageUrls: getImageUrls(key),
+      }));
     }
+
     res.json(data);
   } catch (error) {
     console.error('Error fetching restaurant by ID:', error);
@@ -2725,13 +2823,13 @@ const getFullRestaurantDetails = async (req, res) => {
       );
     }
 
-    // Transform image gallery URLs
+    // Transform image gallery URLs with variants
     if (
       finalRestaurantData.images &&
       Array.isArray(finalRestaurantData.images)
     ) {
       finalRestaurantData.images = finalRestaurantData.images.map((imageKey) =>
-        getMediaUrl(imageKey, 'image'),
+        getImageUrls(imageKey),
       );
     }
 
@@ -2945,7 +3043,10 @@ const getRestaurantMenu = async (req, res) => {
           item.translations.find((t) => t.language === 'hr')?.description || '',
         price:
           displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
-        imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
+        imageUrl: item.imageUrl
+          ? getMediaUrl(item.imageUrl, 'image', 'medium')
+          : null,
+        imageUrls: item.imageUrl ? getImageUrls(item.imageUrl) : null,
         allergens: mapAllergens(item.allergens),
         sizes,
       };
@@ -3015,8 +3116,9 @@ const getRestaurantMenu = async (req, res) => {
               '',
             price: parseFloat(item.price).toFixed(2),
             imageUrl: item.imageUrl
-              ? getMediaUrl(item.imageUrl, 'image')
+              ? getMediaUrl(item.imageUrl, 'image', 'medium')
               : null,
+            imageUrls: item.imageUrl ? getImageUrls(item.imageUrl) : null,
           })),
       })),
       uncategorized: drinkItems
@@ -3036,7 +3138,10 @@ const getRestaurantMenu = async (req, res) => {
             item.translations.find((t) => t.language === 'hr')?.description ||
             '',
           price: parseFloat(item.price).toFixed(2),
-          imageUrl: item.imageUrl ? getMediaUrl(item.imageUrl, 'image') : null,
+          imageUrl: item.imageUrl
+            ? getMediaUrl(item.imageUrl, 'image', 'medium')
+            : null,
+          imageUrls: item.imageUrl ? getImageUrls(item.imageUrl) : null,
         })),
     };
 
@@ -3065,9 +3170,18 @@ const deleteRestaurantThumbnail = async (req, res) => {
         .json({ error: 'Restaurant has no thumbnail image' });
     }
 
-    // Delete the thumbnail from S3
-    const oldKey = restaurant.thumbnailUrl.split('/').pop();
-    await deleteFromS3(`restaurant_thumbnails/${oldKey}`);
+    // Delete thumbnail variants from S3
+    const baseFileName = getBaseFileName(restaurant.thumbnailUrl);
+    const folder = getFolderFromKey(restaurant.thumbnailUrl);
+    const variants = ['thumb', 'medium', 'full'];
+    for (const variant of variants) {
+      const key = `${folder}/${baseFileName}-${variant}.jpg`;
+      try {
+        await deleteFromS3(key);
+      } catch (error) {
+        console.error(`Failed to delete ${key}:`, error);
+      }
+    }
 
     // Update restaurant to remove thumbnail URL
     await restaurant.update({ thumbnailUrl: null });
