@@ -217,7 +217,7 @@ const giveRegistrationBonus = async (
     const pointsService = new PointsService(sequelize);
 
     // Award points through PointsService (both users)
-    await pointsService.addReferralRegistrationPoints(
+    await pointsService.addReferralVerificationPoints(
       referrerId,
       referredUserId,
       referralId,

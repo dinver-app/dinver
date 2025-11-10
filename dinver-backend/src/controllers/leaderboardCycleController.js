@@ -214,7 +214,7 @@ const getAllCycles = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
             },
           ],
         },
@@ -280,7 +280,7 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
             },
           ],
         },
@@ -291,7 +291,14 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
+              attributes: [
+                'id',
+                'firstName',
+                'lastName',
+                'email',
+                'city',
+                'profileImage',
+              ],
             },
           ],
           order: [['totalPoints', 'DESC']],
@@ -303,7 +310,14 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
+              attributes: [
+                'id',
+                'firstName',
+                'lastName',
+                'email',
+                'city',
+                'profileImage',
+              ],
             },
           ],
           order: [['rank', 'ASC']],
@@ -590,7 +604,14 @@ const getCycleParticipants = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
+          attributes: [
+            'id',
+            'firstName',
+            'lastName',
+            'email',
+            'city',
+            'profileImage',
+          ],
         },
       ],
       order: [['totalPoints', 'DESC']],
@@ -636,7 +657,14 @@ const getCycleWinners = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
+          attributes: [
+            'id',
+            'firstName',
+            'lastName',
+            'email',
+            'city',
+            'profileImage',
+          ],
         },
       ],
       order: [['rank', 'ASC']],
@@ -680,7 +708,7 @@ const getActiveCycle = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
             },
           ],
         },
@@ -760,7 +788,14 @@ const getCycleLeaderboard = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'city'],
+          attributes: [
+            'id',
+            'firstName',
+            'lastName',
+            'email',
+            'city',
+            'profileImage',
+          ],
         },
       ],
       order: [['totalPoints', 'DESC']],
@@ -850,7 +885,7 @@ const getCycleHistory = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
             },
           ],
           order: [['rank', 'ASC']],

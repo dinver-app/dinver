@@ -102,11 +102,6 @@ const googleSignIn = async (req, res) => {
       await user.update({ googleId: googleId });
     }
 
-    // Update profile image if changed
-    if (profileImage && user.profileImage !== profileImage) {
-      await user.update({ profileImage: profileImage });
-    }
-
     // Make sure UserSettings exists for existing users
     let userSettings = await UserSettings.findOne({
       where: { userId: user.id },

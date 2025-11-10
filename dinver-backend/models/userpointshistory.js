@@ -121,6 +121,7 @@ module.exports = (sequelize, DataTypes) => {
       actionType: {
         type: DataTypes.ENUM(
           'review_add',
+          'review_elite',
           'review_long',
           'review_with_photo',
           'visit_qr',
@@ -130,6 +131,9 @@ module.exports = (sequelize, DataTypes) => {
           'referral_registration_referrer',
           'referral_registration_referred',
           'referral_visit_referrer',
+          'referral_verification_referrer',
+          'referral_verification_referred',
+          'referral_first_receipt_referrer',
           // Points deduction (spending)
           'points_spent_coupon',
           // Receipt validation
