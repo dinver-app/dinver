@@ -35,6 +35,34 @@ const formatTimeDisplay = (timeStr) => {
   return `${hhmm}h`;
 };
 
+// Helper: format "osoba" word according to Croatian grammar rules
+const formatGuestsWord = (count) => {
+  const num = parseInt(count, 10);
+  if (isNaN(num) || num < 1) return 'osoba';
+
+  // Get last digit and last two digits
+  const lastDigit = num % 10;
+  const lastTwoDigits = num % 100;
+
+  // Special cases: 11, 12, 13, 14 always use "osoba"
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return 'osoba';
+  }
+
+  // If ends in 1 (but not 11) -> "osobu"
+  if (lastDigit === 1) {
+    return 'osobu';
+  }
+
+  // If ends in 2, 3, 4 (but not 12, 13, 14) -> "osobe"
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return 'osobe';
+  }
+
+  // Otherwise (ends in 0, 5-9, or 11-14) -> "osoba"
+  return 'osoba';
+};
+
 const now = DateTime.now().setZone('Europe/Zagreb');
 const nowTime = now.toFormat('HH:mm:ss');
 
@@ -140,7 +168,7 @@ const createReservation = async (req, res) => {
     // Kreiraj inicijalnu sistemsku poruku
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      `Nova rezervacija kreirana za ${guests} osoba`,
+      `Nova rezervacija kreirana za ${guests} ${formatGuestsWord(guests)}`,
       {
         type: 'reservation_created',
         guests,
@@ -227,7 +255,7 @@ const createReservation = async (req, res) => {
       try {
         await sendPushNotificationToUsers(adminUserIds, {
           title: 'Nova rezervacija u tvojem restoranu! 📅',
-          body: `Nova rezervacija za ${guests} osoba dana ${formatDateDisplay(
+          body: `Nova rezervacija za ${guests} ${formatGuestsWord(guests)} dana ${formatDateDisplay(
             date,
           )} u ${formatTimeDisplay(time)}`,
           data: {
@@ -1493,7 +1521,7 @@ const createCustomReservation = async (req, res) => {
     // Kreiraj inicijalnu sistemsku poruku
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      `Custom rezervacija kreirana za ${guests} osoba - ${guestName}`,
+      `Custom rezervacija kreirana za ${guests} ${formatGuestsWord(guests)} - ${guestName}`,
       {
         type: 'custom_reservation_created',
         guests,
