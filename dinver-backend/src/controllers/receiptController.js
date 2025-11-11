@@ -12,6 +12,7 @@ const { getMediaUrl } = require('../../config/cdn');
 const { extractReceiptData } = require('../services/ocrService');
 const {
   extractReceiptWithVision,
+  validateReceiptImage,
 } = require('../services/visionOcrService');
 const {
   normalizeWithGPT,
@@ -140,6 +141,23 @@ const uploadReceipt = async (req, res) => {
       }
     } catch (error) {
       console.error('Error calculating perceptual hash:', error);
+    }
+
+    // Quick validation to ensure image looks like a receipt
+    try {
+      const { isReceipt, confidence, reason } =
+        await validateReceiptImage(inputBuffer);
+      if (isReceipt === false && confidence >= 0.8) {
+        console.warn(
+          `Receipt image rejected: ${reason} (confidence: ${confidence})`,
+        );
+        return res.status(400).json({
+          error:
+            'Slika nije prepoznata kao račun. Molimo učitajte jasnu fotografiju računa.',
+        });
+      }
+    } catch (validationError) {
+      console.error('Receipt image validation failed:', validationError);
     }
 
     // Image compression
