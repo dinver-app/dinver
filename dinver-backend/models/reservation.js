@@ -1,5 +1,5 @@
 'use strict';
-const { Model } = require('sequelize');
+const { Model, ValidationError } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Reservation extends Model {
@@ -148,7 +148,9 @@ module.exports = (sequelize, DataTypes) => {
           isDate: true,
           isFuture(value) {
             if (new Date(value) < new Date().setHours(0, 0, 0, 0)) {
-              throw new Error('Reservation date must be in the future');
+              throw new ValidationError(
+                'Reservation date must be in the future',
+              );
             }
           },
         },
@@ -264,7 +266,7 @@ module.exports = (sequelize, DataTypes) => {
               reservation.date + 'T' + reservation.time,
             );
             if (reservationDateTime < new Date()) {
-              throw new Error('Reservation must be in the future');
+              throw new ValidationError('Reservation must be in the future');
             }
           }
 
