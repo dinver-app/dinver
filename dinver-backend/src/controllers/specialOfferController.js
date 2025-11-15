@@ -8,6 +8,7 @@ const {
 } = require('../../models');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 const { calculateDistance } = require('../../utils/distance');
 const { Op, literal } = require('sequelize');
 
@@ -58,8 +59,9 @@ const getSpecialOffersByRestaurant = async (req, res) => {
           translations: menuItem.translations,
           price: parseFloat(menuItem.price).toFixed(2),
           imageUrl: menuItem.imageUrl
-            ? getMediaUrl(menuItem.imageUrl, 'image')
+            ? getMediaUrl(menuItem.imageUrl, 'image', 'medium')
             : null,
+          imageUrls: menuItem.imageUrl ? getImageUrls(menuItem.imageUrl) : null,
         },
       };
     });
@@ -179,8 +181,9 @@ const getActiveSpecialOffers = async (req, res) => {
           translations: menuItem.translations,
           price: parseFloat(menuItem.price).toFixed(2),
           imageUrl: menuItem.imageUrl
-            ? getMediaUrl(menuItem.imageUrl, 'image')
+            ? getMediaUrl(menuItem.imageUrl, 'image', 'thumbnail')
             : null,
+          imageUrls: menuItem.imageUrl ? getImageUrls(menuItem.imageUrl) : null,
         },
       };
 
@@ -193,8 +196,9 @@ const getActiveSpecialOffers = async (req, res) => {
             address: restaurant.address,
             place: restaurant.place,
             thumbnailUrl: restaurant.thumbnailUrl
-              ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+              ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
               : null,
+            thumbnailUrls: restaurant.thumbnailUrl ? getImageUrls(restaurant.thumbnailUrl) : null,
             distance: distance,
           },
           offers: [],
@@ -297,8 +301,9 @@ const createSpecialOffer = async (req, res) => {
         translations: createdOffer.menuItem.translations,
         price: parseFloat(createdOffer.menuItem.price).toFixed(2),
         imageUrl: createdOffer.menuItem.imageUrl
-          ? getMediaUrl(createdOffer.menuItem.imageUrl, 'image')
+          ? getMediaUrl(createdOffer.menuItem.imageUrl, 'image', 'medium')
           : null,
+        imageUrls: createdOffer.menuItem.imageUrl ? getImageUrls(createdOffer.menuItem.imageUrl) : null,
       },
     };
 
@@ -372,8 +377,9 @@ const updateSpecialOffer = async (req, res) => {
         translations: updatedOffer.menuItem.translations,
         price: parseFloat(updatedOffer.menuItem.price).toFixed(2),
         imageUrl: updatedOffer.menuItem.imageUrl
-          ? getMediaUrl(updatedOffer.menuItem.imageUrl, 'image')
+          ? getMediaUrl(updatedOffer.menuItem.imageUrl, 'image', 'medium')
           : null,
+        imageUrls: updatedOffer.menuItem.imageUrl ? getImageUrls(updatedOffer.menuItem.imageUrl) : null,
       },
     };
 
@@ -670,8 +676,9 @@ const getRedemptionDetails = async (req, res) => {
           translations: specialOffer.menuItem.translations,
           price: parseFloat(specialOffer.menuItem.price).toFixed(2),
           imageUrl: specialOffer.menuItem.imageUrl
-            ? getMediaUrl(specialOffer.menuItem.imageUrl, 'image')
+            ? getMediaUrl(specialOffer.menuItem.imageUrl, 'image', 'medium')
             : null,
+          imageUrls: specialOffer.menuItem.imageUrl ? getImageUrls(specialOffer.menuItem.imageUrl) : null,
         },
         restaurant: {
           id: specialOffer.restaurant.id,

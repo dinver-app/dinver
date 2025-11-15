@@ -3,6 +3,12 @@ const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
+const { getMediaUrl } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 // Helper function to generate unique slug
 const generateUniqueSlug = async (title) => {
@@ -137,8 +143,20 @@ const createBlog = async (req, res) => {
     } = req.body;
 
     let featuredImage = null;
+    let imageUploadResult = null;
     if (req.file) {
-      featuredImage = await uploadToS3(req.file, 'blog_images');
+      try {
+        imageUploadResult = await uploadImage(req.file, 'blog_images', {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'blog',
+          entityId: null, // Will be set after creation
+          priority: 10,
+        });
+        featuredImage = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     }
 
     const slug = await generateUniqueSlug(title);
@@ -173,7 +191,27 @@ const createBlog = async (req, res) => {
       ],
     });
 
-    res.status(201).json(blogWithAuthor);
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (featuredImage) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(featuredImage);
+      }
+    }
+
+    res.status(201).json({
+      ...blogWithAuthor.get(),
+      featuredImage: featuredImage ? getMediaUrl(featuredImage, 'image', 'medium') : null,
+      imageUrls: imageUrls,
+    });
   } catch (error) {
     console.error('Error creating blog:', error);
     res.status(500).json({ error: 'Failed to create blog' });
@@ -204,12 +242,24 @@ const updateBlog = async (req, res) => {
     } = req.body;
 
     let featuredImage = blog.featuredImage;
+    let imageUploadResult = null;
     if (req.file) {
       if (featuredImage) {
         const oldKey = featuredImage.split('/').pop();
         await deleteFromS3(`blog_images/${oldKey}`);
       }
-      featuredImage = await uploadToS3(req.file, 'blog_images');
+      try {
+        imageUploadResult = await uploadImage(req.file, 'blog_images', {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'blog',
+          entityId: req.params.id,
+          priority: 10,
+        });
+        featuredImage = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     }
 
     // Only update slug if title changed
@@ -255,7 +305,27 @@ const updateBlog = async (req, res) => {
       ],
     });
 
-    res.json(updatedBlog);
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (featuredImage) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(featuredImage);
+      }
+    }
+
+    res.json({
+      ...updatedBlog.get(),
+      featuredImage: featuredImage ? getMediaUrl(featuredImage, 'image', 'medium') : null,
+      imageUrls: imageUrls,
+    });
   } catch (error) {
     console.error('Error updating blog:', error);
     res.status(500).json({ error: 'Failed to update blog' });

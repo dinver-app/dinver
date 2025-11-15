@@ -4,11 +4,16 @@ const {
   DrinkItemTranslation,
   DrinkCategoryTranslation,
 } = require('../../models');
-const { uploadToS3 } = require('../../utils/s3Upload');
+const { uploadToS3, getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { autoTranslate } = require('../../utils/translate');
-const { getMediaUrl } = require('../../config/cdn');
+const { getMediaUrl, getMediaUrlVariants } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 // Helper function to get user language
 const getUserLanguage = (req) => {
@@ -52,14 +57,18 @@ const getDrinkItems = async (req, res) => {
       );
       const anyTranslation = itemData.translations[0];
 
+      // For list views, use thumbnail and include all variants
+      const imageUrls = itemData.imageUrl ? getImageUrls(itemData.imageUrl) : null;
+
       return {
         ...itemData,
         name: (userTranslation || anyTranslation)?.name || '',
         description: (userTranslation || anyTranslation)?.description || '',
         price: parseFloat(itemData.price).toFixed(2),
         imageUrl: itemData.imageUrl
-          ? getMediaUrl(itemData.imageUrl, 'image')
+          ? getMediaUrl(itemData.imageUrl, 'image', 'thumbnail')
           : null,
+        imageUrls: imageUrls,
       };
     });
 
@@ -134,11 +143,23 @@ const createDrinkItem = async (req, res) => {
     const lastPosition = existingItems[0]?.position ?? -1;
     const newPosition = lastPosition + 1;
 
-    // Handle image upload
+    // Handle image upload with new optimistic processing
     let imageKey = null;
+    let imageUploadResult = null;
     if (file) {
       const folder = 'drink_items';
-      imageKey = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'drink_item',
+          entityId: null,
+          priority: 10,
+        });
+        imageKey = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     }
 
     // Create drink item
@@ -171,11 +192,28 @@ const createDrinkItem = async (req, res) => {
     );
     const anyTranslation = createdItem.translations[0];
 
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (imageKey) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(imageKey);
+      }
+    }
+
     const result = {
       ...createdItem.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
-      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'medium') : null,
+      imageUrls: imageUrls,
     };
 
     res.status(201).json(result);
@@ -211,17 +249,48 @@ const updateDrinkItem = async (req, res) => {
 
     // Handle image
     let imageKey = drinkItem.imageUrl;
+    let imageUploadResult = null;
     if (file) {
+      // Delete old image variants before uploading new
       if (drinkItem.imageUrl) {
-        const oldKey = drinkItem.imageUrl.split('/').pop();
-        await deleteFromS3(`drink_items/${oldKey}`);
+        const baseFileName = getBaseFileName(drinkItem.imageUrl);
+        const folder = getFolderFromKey(drinkItem.imageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
       const folder = 'drink_items';
-      imageKey = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'drink_item',
+          entityId: id,
+          priority: 10,
+        });
+        imageKey = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     } else if (removeImage === 'true') {
       if (drinkItem.imageUrl) {
-        const oldKey = drinkItem.imageUrl.split('/').pop();
-        await deleteFromS3(`drink_items/${oldKey}`);
+        const baseFileName = getBaseFileName(drinkItem.imageUrl);
+        const folder = getFolderFromKey(drinkItem.imageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
       imageKey = null;
     }
@@ -262,11 +331,28 @@ const updateDrinkItem = async (req, res) => {
     );
     const anyTranslation = updated.translations[0];
 
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (imageKey) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(imageKey);
+      }
+    }
+
     const result = {
       ...updated.get(),
       name: (userTranslation || anyTranslation)?.name || '',
       description: (userTranslation || anyTranslation)?.description || '',
-      imageUrl: imageKey ? getMediaUrl(imageKey, 'image') : null,
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'medium') : null,
+      imageUrls: imageUrls,
       translations: updated.translations,
     };
 
@@ -286,10 +372,19 @@ const deleteDrinkItem = async (req, res) => {
       return res.status(404).json({ error: 'Drink item not found' });
     }
 
+    // Delete image variants from S3 if they exist
     if (drinkItem.imageUrl) {
-      const fileName = drinkItem.imageUrl.split('/').pop();
-      const key = `drink_items/${fileName}`;
-      await deleteFromS3(key);
+      const baseFileName = getBaseFileName(drinkItem.imageUrl);
+      const folder = getFolderFromKey(drinkItem.imageUrl);
+      const variants = ['thumb', 'medium', 'full'];
+      for (const variant of variants) {
+        const key = `${folder}/${baseFileName}-${variant}.jpg`;
+        try {
+          await deleteFromS3(key);
+        } catch (error) {
+          console.error(`Failed to delete ${key}:`, error);
+        }
+      }
     }
 
     await logAudit({
@@ -550,14 +645,18 @@ const getAllDrinkItemsForAdmin = async (req, res) => {
       );
       const anyTranslation = itemData.translations[0];
 
+      // For admin list view, use thumbnail and include all variants
+      const imageUrls = itemData.imageUrl ? getImageUrls(itemData.imageUrl) : null;
+
       return {
         ...itemData,
         name: (userTranslation || anyTranslation)?.name || '',
         description: (userTranslation || anyTranslation)?.description || '',
         price: parseFloat(itemData.price).toFixed(2),
         imageUrl: itemData.imageUrl
-          ? getMediaUrl(itemData.imageUrl, 'image')
+          ? getMediaUrl(itemData.imageUrl, 'image', 'thumbnail')
           : null,
+        imageUrls: imageUrls,
       };
     });
 

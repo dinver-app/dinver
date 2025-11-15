@@ -2,6 +2,12 @@ const { BlogUser } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { Op } = require('sequelize');
+const { getMediaUrl } = require('../../config/cdn');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 
 // Get all blog users
 const getBlogUsers = async (req, res) => {
@@ -66,9 +72,21 @@ const createBlogUser = async (req, res) => {
 
     // Handle profile image upload if present
     let profileImageUrl = null;
+    let imageUploadResult = null;
     if (file) {
       const folder = 'profile_images';
-      profileImageUrl = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'blog_user',
+          entityId: null, // Will be set after creation
+          priority: 10,
+        });
+        profileImageUrl = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     }
 
     const user = await BlogUser.create({
@@ -76,7 +94,27 @@ const createBlogUser = async (req, res) => {
       profileImage: profileImageUrl,
     });
 
-    res.status(201).json(user);
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (profileImageUrl) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(profileImageUrl);
+      }
+    }
+
+    res.status(201).json({
+      ...user.get(),
+      profileImage: profileImageUrl ? getMediaUrl(profileImageUrl, 'image', 'medium') : null,
+      imageUrls: imageUrls,
+    });
   } catch (error) {
     console.error('Error creating blog user:', error);
     res.status(500).json({ error: 'Failed to create blog user' });
@@ -97,6 +135,7 @@ const updateBlogUser = async (req, res) => {
 
     // Handle profile image
     let profileImageUrl = user.profileImage;
+    let imageUploadResult = null;
     if (file) {
       // Delete old image if exists
       if (user.profileImage) {
@@ -105,7 +144,18 @@ const updateBlogUser = async (req, res) => {
       }
       // Upload new image
       const folder = 'profile_images';
-      profileImageUrl = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'blog_user',
+          entityId: id,
+          priority: 10,
+        });
+        profileImageUrl = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading to S3:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload image' });
+      }
     } else if (removeImage === 'true') {
       // Remove image if requested
       if (user.profileImage) {
@@ -120,7 +170,27 @@ const updateBlogUser = async (req, res) => {
       profileImage: profileImageUrl,
     });
 
-    res.json(user);
+    // Prepare image URLs with variants
+    let imageUrls = null;
+    if (profileImageUrl) {
+      if (imageUploadResult && imageUploadResult.status === 'processing') {
+        imageUrls = {
+          thumbnail: imageUploadResult.urls.thumbnail,
+          medium: imageUploadResult.urls.medium,
+          fullscreen: imageUploadResult.urls.fullscreen,
+          processing: true,
+          jobId: imageUploadResult.jobId,
+        };
+      } else {
+        imageUrls = getImageUrls(profileImageUrl);
+      }
+    }
+
+    res.json({
+      ...user.get(),
+      profileImage: profileImageUrl ? getMediaUrl(profileImageUrl, 'image', 'medium') : null,
+      imageUrls: imageUrls,
+    });
   } catch (error) {
     console.error('Error updating blog user:', error);
     res.status(500).json({ error: 'Failed to update blog user' });

@@ -89,13 +89,44 @@ function getS3Url(mediaKey) {
   return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${mediaKey}`;
 }
 
-// Helper za generiranje URL-a ovisno o tipu medija
-function getMediaUrl(mediaKey, mediaType = 'image') {
+/**
+ * Helper za generiranje URL-a ovisno o tipu medija
+ *
+ * @param {string} mediaKey - S3 key or base key
+ * @param {string} mediaType - Type of media (image, video)
+ * @param {string} size - Image size variant (thumbnail, medium, fullscreen, original)
+ * @returns {string|null} Media URL
+ */
+function getMediaUrl(mediaKey, mediaType = 'image', size = 'medium') {
   if (!mediaKey) return null;
 
   // Remove any full URLs if they were accidentally stored
   if (mediaKey.startsWith('http')) {
     mediaKey = mediaKey.split('.com/').pop();
+  }
+
+  // If requesting a specific size and mediaKey doesn't already have a size suffix
+  if (
+    mediaType === 'image' &&
+    size &&
+    size !== 'original' &&
+    !mediaKey.match(/-(thumb|medium|full)\.(jpg|jpeg|png|webp)$/i)
+  ) {
+    // Try to construct the variant key
+    const sizeSuffix = getSizeSuffix(size);
+    if (sizeSuffix) {
+      // Extract base path and extension
+      const lastDotIndex = mediaKey.lastIndexOf('.');
+      const basePath =
+        lastDotIndex > 0 ? mediaKey.substring(0, lastDotIndex) : mediaKey;
+      const extension =
+        lastDotIndex > 0 ? mediaKey.substring(lastDotIndex) : '.jpg';
+
+      // Check if base path already has a variant suffix
+      if (!basePath.match(/-(thumb|medium|full)$/)) {
+        mediaKey = `${basePath}${sizeSuffix}${extension}`;
+      }
+    }
   }
 
   // Za video i slike koristimo CloudFront s cachiranjem
@@ -107,7 +138,56 @@ function getMediaUrl(mediaKey, mediaType = 'image') {
   return getS3Url(mediaKey);
 }
 
+/**
+ * Get all image variants for a base key
+ *
+ * @param {string} baseKey - Base S3 key (without size suffix)
+ * @param {string} mediaType - Type of media
+ * @returns {Object} Object with URLs for all variants
+ */
+function getMediaUrlVariants(baseKey, mediaType = 'image') {
+  if (!baseKey || mediaType !== 'image') {
+    return {
+      thumbnail: getMediaUrl(baseKey, mediaType, 'thumbnail'),
+      medium: getMediaUrl(baseKey, mediaType, 'medium'),
+      fullscreen: getMediaUrl(baseKey, mediaType, 'fullscreen'),
+      original: getMediaUrl(baseKey, mediaType, 'original'),
+    };
+  }
+
+  // Extract base path without variant suffix
+  const cleanBaseKey = baseKey.replace(/-(thumb|medium|full)\.(jpg|jpeg|png|webp)$/i, '');
+  const extension = baseKey.match(/\.(jpg|jpeg|png|webp)$/i)?.[0] || '.jpg';
+  const basePath = cleanBaseKey.replace(new RegExp(`\\${extension}$`), '');
+
+  return {
+    thumbnail: getMediaUrl(`${basePath}-thumb${extension}`, mediaType, 'original'),
+    medium: getMediaUrl(`${basePath}-medium${extension}`, mediaType, 'original'),
+    fullscreen: getMediaUrl(`${basePath}-full${extension}`, mediaType, 'original'),
+    original: getMediaUrl(baseKey, mediaType, 'original'),
+  };
+}
+
+/**
+ * Get size suffix for variant
+ *
+ * @param {string} size - Size name
+ * @returns {string} Size suffix
+ */
+function getSizeSuffix(size) {
+  const suffixes = {
+    thumbnail: '-thumb',
+    thumb: '-thumb',
+    medium: '-medium',
+    fullscreen: '-full',
+    full: '-full',
+  };
+  return suffixes[size.toLowerCase()] || '';
+}
+
 module.exports = {
   getSignedUrl: getSignedUrlForCloudFront,
   getMediaUrl,
+  getMediaUrlVariants,
+  getSizeSuffix,
 };

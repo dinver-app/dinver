@@ -11,6 +11,8 @@ import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
+type RestaurantImage = { url: string; imageUrls: { thumbnail: string; medium: string; fullscreen: string } };
+
 const Images = ({
   restaurant,
   onUpdate,
@@ -19,11 +21,11 @@ const Images = ({
   onUpdate: (updatedRestaurant: Restaurant) => void;
 }) => {
   const { t } = useTranslation();
-  const [images, setImages] = useState<string[]>(restaurant.images || []);
+  const [images, setImages] = useState<RestaurantImage[]>(restaurant.images || []);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [reorderedImages, setReorderedImages] = useState<string[]>(
+  const [reorderedImages, setReorderedImages] = useState<RestaurantImage[]>(
     restaurant.images || []
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,8 +63,8 @@ const Images = ({
     fileInputRef.current?.click();
   };
 
-  const handleDeleteImageConfirmation = (imageUrl: string) => {
-    setImageToDelete(imageUrl);
+  const handleDeleteImageConfirmation = (image: RestaurantImage) => {
+    setImageToDelete(image.url);
     setIsDeleteImageModalOpen(true);
   };
 
@@ -102,7 +104,9 @@ const Images = ({
 
   const handleSaveImageOrder = async () => {
     try {
-      await updateImageOrder(restaurant.id || "", reorderedImages);
+      // Send URLs to the backend
+      const imageUrls = reorderedImages.map(img => img.url);
+      await updateImageOrder(restaurant.id || "", imageUrls);
       setImages(reorderedImages);
       setReorderedImages(reorderedImages);
       onUpdate({ ...restaurant, images: reorderedImages });
@@ -167,7 +171,7 @@ const Images = ({
           {images.map((image, index) => (
             <div key={index} className="relative">
               <img
-                src={image}
+                src={image.imageUrls?.thumbnail || image.url}
                 alt={`Restaurant Image ${index + 1}`}
                 className="w-full h-auto cursor-pointer"
                 onClick={() => openGallery(index)}
@@ -201,7 +205,10 @@ const Images = ({
             </button>
             // @ts-ignore
             <ImageGallery
-              items={images.map((image) => ({ original: image }))}
+              items={images.map((image) => ({
+                original: image.imageUrls?.fullscreen || image.url,
+                thumbnail: image.imageUrls?.thumbnail || image.url
+              }))}
               startIndex={currentImageIndex}
               showThumbnails={false}
               showFullscreenButton={false}
@@ -237,8 +244,8 @@ const Images = ({
                       {reorderedImages.map((image, index) => (
                         // @ts-ignore
                         <Draggable
-                          key={image}
-                          draggableId={image}
+                          key={image.url}
+                          draggableId={image.url}
                           index={index}
                         >
                           {(provided) => (
@@ -256,7 +263,7 @@ const Images = ({
                                 />
                               </span>
                               <img
-                                src={image}
+                                src={image.imageUrls?.thumbnail || image.url}
                                 alt={`Image ${index + 1}`}
                                 className="w-10 h-10 object-cover mr-2"
                               />

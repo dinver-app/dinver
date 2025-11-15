@@ -9,6 +9,7 @@ const path = require('path');
 const os = require('os');
 const { PostView, PostInteraction } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 
 // Mapa za praćenje progress listenera po postId
 let progressListeners = new Map();
@@ -452,13 +453,16 @@ const getPostsByRestaurant = async (req, res) => {
             const thumbnailUrl = getMediaUrl(
               postData.mediaUrls[0].thumbnailKey,
               'image',
+              'medium',
             );
             const videoUrl = getMediaUrl(
               postData.mediaUrls[0].videoKey,
               'video',
             );
+            const thumbnailUrls = getImageUrls(postData.mediaUrls[0].thumbnailKey);
 
             postData.thumbnailUrl = thumbnailUrl;
+            postData.thumbnailUrls = thumbnailUrls;
             postData.mediaUrls = [videoUrl];
           } else {
             // Za carousel postove
@@ -471,7 +475,16 @@ const getPostsByRestaurant = async (req, res) => {
                   );
                   return null;
                 }
-                return getMediaUrl(media.imageKey, 'image');
+                return getMediaUrl(media.imageKey, 'image', 'medium');
+              })
+              .filter(Boolean); // Remove null URLs
+
+            const urlsVariants = postData.mediaUrls
+              .map((media, index) => {
+                if (!media.imageKey) {
+                  return null;
+                }
+                return getImageUrls(media.imageKey);
               })
               .filter(Boolean); // Remove null URLs
 
@@ -484,7 +497,9 @@ const getPostsByRestaurant = async (req, res) => {
             }
 
             postData.thumbnailUrl = urls[0]; // First image as thumbnail
+            postData.thumbnailUrls = urlsVariants[0]; // First image variants as thumbnail variants
             postData.mediaUrls = urls;
+            postData.mediaUrlsVariants = urlsVariants;
           }
 
           return postData;
@@ -708,21 +723,30 @@ const getPost = async (req, res) => {
     // Transform stored keys to clean URLs
     if (post.mediaType === 'video') {
       // Za video postove, thumbnail je posebna slika
-      responsePost.thumbnailUrl = getMediaUrl(
+      const thumbnailUrl = getMediaUrl(
         post.mediaUrls[0].thumbnailKey,
         'image',
+        'medium',
       );
+      responsePost.thumbnailUrl = thumbnailUrl;
+      responsePost.thumbnailUrls = getImageUrls(post.mediaUrls[0].thumbnailKey);
       responsePost.mediaUrls = [
         getMediaUrl(post.mediaUrls[0].videoKey, 'video'),
       ];
     } else {
       // Za carousel postove, thumbnail je prva slika
-      responsePost.thumbnailUrl = getMediaUrl(
+      const thumbnailUrl = getMediaUrl(
         post.mediaUrls[0].imageKey,
         'image',
+        'medium',
       );
+      responsePost.thumbnailUrl = thumbnailUrl;
+      responsePost.thumbnailUrls = getImageUrls(post.mediaUrls[0].imageKey);
       responsePost.mediaUrls = post.mediaUrls.map((media) =>
-        getMediaUrl(media.imageKey, 'image'),
+        getMediaUrl(media.imageKey, 'image', 'medium'),
+      );
+      responsePost.mediaUrlsVariants = post.mediaUrls.map((media) =>
+        getImageUrls(media.imageKey),
       );
     }
 

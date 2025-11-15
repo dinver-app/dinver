@@ -10,6 +10,7 @@ const {
 const { Op } = require('sequelize');
 const { calculateDistance } = require('../../utils/distance');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 
 const DISTANCE_FILTERS = {
   ALL: Infinity,
@@ -125,7 +126,29 @@ const transformMediaUrls = (mediaUrls) => {
     if (media.type === 'video') {
       return getMediaUrl(media.videoKey, 'video');
     } else {
-      return getMediaUrl(media.imageKey, 'image');
+      return getMediaUrl(media.imageKey, 'image', 'medium');
+    }
+  });
+};
+
+// Helper za transformaciju media URLs sa svim varijantama
+const transformMediaUrlsWithVariants = (mediaUrls) => {
+  if (!mediaUrls || !mediaUrls.length) return [];
+
+  return mediaUrls.map((media) => {
+    if (media.type === 'video') {
+      return {
+        url: getMediaUrl(media.videoKey, 'video'),
+        urls: { video: getMediaUrl(media.videoKey, 'video') },
+        type: 'video',
+      };
+    } else {
+      const imageUrls = getImageUrls(media.imageKey);
+      return {
+        url: getMediaUrl(media.imageKey, 'image', 'medium'),
+        urls: imageUrls,
+        type: 'image',
+      };
     }
   });
 };
@@ -269,6 +292,7 @@ const getFeed = async (req, res) => {
           isSaved: postInteractions.has('save'),
           isShared: postInteractions.has('share'),
           mediaUrls: transformMediaUrls(post.mediaUrls),
+          mediaUrlsVariants: transformMediaUrlsWithVariants(post.mediaUrls),
         };
 
         return postData;
