@@ -2830,9 +2830,10 @@ const getFullRestaurantDetails = async (req, res) => {
       finalRestaurantData.images &&
       Array.isArray(finalRestaurantData.images)
     ) {
-      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) =>
-        getImageUrls(imageKey),
-      );
+      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) => ({
+        url: getMediaUrl(imageKey, 'image', 'medium'),
+        imageUrls: getImageUrls(imageKey),
+      }));
     }
 
     // Transform review photos URLs
