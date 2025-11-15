@@ -4,6 +4,7 @@ const { fetchRestaurantDetails } = require('../dinver-ai/dataAccess');
 const { v4: uuidv4 } = require('uuid');
 const { AiThread, AiMessage } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 
 async function findOrCreateActiveThread({
   userId,
@@ -148,8 +149,13 @@ module.exports = {
           thumbnailUrl:
             restaurant.thumbnailUrl &&
             !restaurant.thumbnailUrl.includes('cloudfront.net')
-              ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+              ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
               : restaurant.thumbnailUrl,
+          thumbnailUrls:
+            restaurant.thumbnailUrl &&
+            !restaurant.thumbnailUrl.includes('cloudfront.net')
+              ? getImageUrls(restaurant.thumbnailUrl)
+              : null,
         }));
       }
       if (normalized.items && Array.isArray(normalized.items)) {
@@ -157,8 +163,12 @@ module.exports = {
           ...item,
           thumbnailUrl:
             item.thumbnailUrl && !item.thumbnailUrl.includes('cloudfront.net')
-              ? getMediaUrl(item.thumbnailUrl, 'image')
+              ? getMediaUrl(item.thumbnailUrl, 'image', 'thumbnail')
               : item.thumbnailUrl,
+          thumbnailUrls:
+            item.thumbnailUrl && !item.thumbnailUrl.includes('cloudfront.net')
+              ? getImageUrls(item.thumbnailUrl)
+              : null,
         }));
       }
       if (
@@ -169,6 +179,10 @@ module.exports = {
         normalized.restaurant.thumbnailUrl = getMediaUrl(
           normalized.restaurant.thumbnailUrl,
           'image',
+          'medium',
+        );
+        normalized.restaurant.thumbnailUrls = getImageUrls(
+          normalized.restaurant.thumbnailUrl,
         );
       }
 
@@ -271,8 +285,13 @@ module.exports = {
                 thumbnailUrl:
                   restaurant.thumbnailUrl &&
                   !restaurant.thumbnailUrl.includes('cloudfront.net')
-                    ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+                    ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
                     : restaurant.thumbnailUrl,
+                thumbnailUrls:
+                  restaurant.thumbnailUrl &&
+                  !restaurant.thumbnailUrl.includes('cloudfront.net')
+                    ? getImageUrls(restaurant.thumbnailUrl)
+                    : null,
               }),
             );
           }
@@ -286,8 +305,13 @@ module.exports = {
               thumbnailUrl:
                 item.thumbnailUrl &&
                 !item.thumbnailUrl.includes('cloudfront.net')
-                  ? getMediaUrl(item.thumbnailUrl, 'image')
+                  ? getMediaUrl(item.thumbnailUrl, 'image', 'thumbnail')
                   : item.thumbnailUrl,
+              thumbnailUrls:
+                item.thumbnailUrl &&
+                !item.thumbnailUrl.includes('cloudfront.net')
+                  ? getImageUrls(item.thumbnailUrl)
+                  : null,
             }));
           }
           // Transform single restaurant
@@ -301,6 +325,10 @@ module.exports = {
             messageData.reply.restaurant.thumbnailUrl = getMediaUrl(
               messageData.reply.restaurant.thumbnailUrl,
               'image',
+              'medium',
+            );
+            messageData.reply.restaurant.thumbnailUrls = getImageUrls(
+              messageData.reply.restaurant.thumbnailUrl,
             );
           }
         }

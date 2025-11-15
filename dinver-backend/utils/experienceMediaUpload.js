@@ -23,10 +23,12 @@ const BUCKET_NAME =
   process.env.AWS_S3_BUCKET_NAME || 'dinver-restaurant-thumbnails';
 const CLOUDFRONT_DOMAIN = process.env.AWS_CLOUDFRONT_DOMAIN;
 
-// File size limits
-const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_VIDEO_DURATION = 30; // seconds
+// File size limits - increased for better quality uploads
+// TikTok allows up to 287MB (iOS) / 72MB (Android)
+// Instagram Reels allows up to 4GB
+const MAX_IMAGE_SIZE = 100 * 1024 * 1024; // 100MB (for high quality photos)
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB (balance between quality and upload time)
+const MAX_VIDEO_DURATION = 60; // seconds (increased to 60s like TikTok)
 
 // Allowed MIME types
 const ALLOWED_IMAGE_MIMES = [

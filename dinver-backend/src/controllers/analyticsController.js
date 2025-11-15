@@ -1,5 +1,6 @@
 const { Op, Sequelize } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
+const { getImageUrls } = require('../../services/imageUploadService');
 const {
   AnalyticsEvent,
   Restaurant,
@@ -885,8 +886,9 @@ const getPopularRestaurants = async (req, res) => {
                 rating: r.rating,
                 priceLevel: r.priceLevel,
                 thumbnailUrl: r.thumbnailUrl
-                  ? getMediaUrl(r.thumbnailUrl, 'image')
+                  ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
                   : null,
+                thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
                 isClaimed: r.isClaimed,
                 distance,
               }

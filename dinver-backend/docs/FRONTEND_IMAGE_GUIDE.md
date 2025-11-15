@@ -3,7 +3,6 @@
 ## 📸 Što se promijenilo?
 
 Backend sad vraća **3 veličine svake slike** umjesto jedne:
-
 - **thumbnail** (400x400px) - Za liste i search
 - **medium** (1200px) - Za detail prikaze
 - **fullscreen** (2400px) - Za galerije i zoom
@@ -21,26 +20,22 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### 1. **Search Results & Liste**
 
 **API Response:**
-
 ```json
 {
-  "restaurants": [
-    {
-      "id": 1,
-      "name": "Bocca di Lupo",
-      "thumbnailUrl": "...abc123-thumb.jpg", // Automatski thumbnail!
-      "thumbnailUrls": {
-        "thumbnail": "...abc123-thumb.jpg", // 400x400, ~50KB
-        "medium": "...abc123-medium.jpg", // 1200px, ~200KB
-        "fullscreen": "...abc123-full.jpg" // 2400px, ~500KB
-      }
+  "restaurants": [{
+    "id": 1,
+    "name": "Bocca di Lupo",
+    "thumbnailUrl": "...abc123-thumb.jpg",  // Automatski thumbnail!
+    "thumbnailUrls": {
+      "thumbnail": "...abc123-thumb.jpg",   // 400x400, ~50KB
+      "medium": "...abc123-medium.jpg",     // 1200px, ~200KB
+      "fullscreen": "...abc123-full.jpg"    // 2400px, ~500KB
     }
-  ]
+  }]
 }
 ```
 
 **Korištenje:**
-
 ```jsx
 // Liste - koristi thumbnailUrl (automatski thumbnail)
 <Image
@@ -59,11 +54,10 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### 2. **Restaurant Detail - Hero Image**
 
 **API Response:**
-
 ```json
 {
   "id": 1,
-  "thumbnailUrl": "...abc123-medium.jpg", // Automatski medium za detail
+  "thumbnailUrl": "...abc123-medium.jpg",  // Automatski medium za detail
   "thumbnailUrls": {
     "thumbnail": "...abc123-thumb.jpg",
     "medium": "...abc123-medium.jpg",
@@ -73,7 +67,6 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ```
 
 **Korištenje:**
-
 ```jsx
 // Hero image - koristi thumbnailUrl (automatski medium)
 <Image
@@ -90,12 +83,11 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### 3. **Restaurant Gallery** - ⚠️ NOVO!
 
 **API Response (PROMIJENJENO):**
-
 ```json
 {
   "images": [
     {
-      "url": "...img1-medium.jpg", // Medium za prikaz
+      "url": "...img1-medium.jpg",    // Medium za prikaz
       "urls": {
         "thumbnail": "...img1-thumb.jpg",
         "medium": "...img1-medium.jpg",
@@ -104,47 +96,41 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
     },
     {
       "url": "...img2-medium.jpg",
-      "urls": {
-        /* ... */
-      }
+      "urls": { /* ... */ }
     }
   ]
 }
 ```
 
 **STARA struktura (više ne vraća):**
-
 ```json
 {
   "images": [
-    "https://cdn.../img1.jpg", // Staro - samo string
+    "https://cdn.../img1.jpg",  // Staro - samo string
     "https://cdn.../img2.jpg"
   ]
 }
 ```
 
 **Korištenje (NOVO):**
-
 ```jsx
 // Gallery preview - koristi .url (medium)
-{
-  restaurant.images?.map((img, index) => (
-    <TouchableOpacity
-      key={index}
-      onPress={() => openFullscreen(img.urls.fullscreen)} // Fullscreen na klik
-    >
-      <Image source={{ uri: img.url }} /> {/* Medium za preview */}
-    </TouchableOpacity>
-  ));
-}
+{restaurant.images?.map((img, index) => (
+  <TouchableOpacity
+    key={index}
+    onPress={() => openFullscreen(img.urls.fullscreen)}  // Fullscreen na klik
+  >
+    <Image source={{ uri: img.url }} />  {/* Medium za preview */}
+  </TouchableOpacity>
+))}
 
 // Fullscreen modal
 <Modal visible={fullscreenVisible}>
   <Image
-    source={{ uri: selectedImage.urls?.fullscreen }} // Fullscreen verzija
+    source={{ uri: selectedImage.urls?.fullscreen }}  // Fullscreen verzija
     resizeMode="contain"
   />
-</Modal>;
+</Modal>
 ```
 
 ---
@@ -152,32 +138,26 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### 4. **Menu Items**
 
 **API Response:**
-
 ```json
 {
   "foodMenu": {
-    "categories": [
-      {
-        "items": [
-          {
-            "id": 10,
-            "name": "Margherita",
-            "imageUrl": "...abc123-medium.jpg", // Medium za menu
-            "imageUrls": {
-              "thumbnail": "...abc123-thumb.jpg",
-              "medium": "...abc123-medium.jpg",
-              "fullscreen": "...abc123-full.jpg"
-            }
-          }
-        ]
-      }
-    ]
+    "categories": [{
+      "items": [{
+        "id": 10,
+        "name": "Margherita",
+        "imageUrl": "...abc123-medium.jpg",  // Medium za menu
+        "imageUrls": {
+          "thumbnail": "...abc123-thumb.jpg",
+          "medium": "...abc123-medium.jpg",
+          "fullscreen": "...abc123-full.jpg"
+        }
+      }]
+    }]
   }
 }
 ```
 
 **Korištenje:**
-
 ```jsx
 // Menu prikaz - koristi imageUrl (automatski medium)
 <Image
@@ -196,26 +176,22 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### 5. **Search Results - Menu/Drink Items**
 
 **API Response:**
-
 ```json
 {
-  "menuItems": [
-    {
-      "id": 10,
-      "name": "Margherita",
-      "imageUrl": "...abc123-thumb.jpg", // Automatski thumbnail za search!
-      "imageUrls": {
-        "thumbnail": "...abc123-thumb.jpg",
-        "medium": "...abc123-medium.jpg",
-        "fullscreen": "...abc123-full.jpg"
-      }
+  "menuItems": [{
+    "id": 10,
+    "name": "Margherita",
+    "imageUrl": "...abc123-thumb.jpg",  // Automatski thumbnail za search!
+    "imageUrls": {
+      "thumbnail": "...abc123-thumb.jpg",
+      "medium": "...abc123-medium.jpg",
+      "fullscreen": "...abc123-full.jpg"
     }
-  ]
+  }]
 }
 ```
 
 **Korištenje:**
-
 ```jsx
 // Search rezultati - koristi imageUrl (automatski thumbnail)
 <Image source={{ uri: item.imageUrl }} />
@@ -228,23 +204,22 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 
 ## 📋 Quick Reference
 
-| Screen                | Element            | Koristi                    | Varijanta  | Veličina       |
-| --------------------- | ------------------ | -------------------------- | ---------- | -------------- |
-| **Search**            | Restaurant card    | `thumbnailUrl`             | thumbnail  | 400x400, ~50KB |
-| **Search**            | Menu item card     | `imageUrl`                 | thumbnail  | 400x400, ~50KB |
-| **Restaurant List**   | Card               | `thumbnailUrl`             | thumbnail  | 400x400, ~50KB |
-| **Restaurant Detail** | Hero               | `thumbnailUrl`             | medium     | 1200px, ~200KB |
-| **Restaurant Detail** | Gallery preview    | `images[].url`             | medium     | 1200px, ~200KB |
+| Screen | Element | Koristi | Varijanta | Veličina |
+|--------|---------|---------|-----------|----------|
+| **Search** | Restaurant card | `thumbnailUrl` | thumbnail | 400x400, ~50KB |
+| **Search** | Menu item card | `imageUrl` | thumbnail | 400x400, ~50KB |
+| **Restaurant List** | Card | `thumbnailUrl` | thumbnail | 400x400, ~50KB |
+| **Restaurant Detail** | Hero | `thumbnailUrl` | medium | 1200px, ~200KB |
+| **Restaurant Detail** | Gallery preview | `images[].url` | medium | 1200px, ~200KB |
 | **Restaurant Detail** | Gallery fullscreen | `images[].urls.fullscreen` | fullscreen | 2400px, ~500KB |
-| **Menu Screen**       | Item image         | `imageUrl`                 | medium     | 1200px, ~200KB |
-| **Menu Screen**       | Item zoom          | `imageUrls.fullscreen`     | fullscreen | 2400px, ~500KB |
+| **Menu Screen** | Item image | `imageUrl` | medium | 1200px, ~200KB |
+| **Menu Screen** | Item zoom | `imageUrls.fullscreen` | fullscreen | 2400px, ~500KB |
 
 ---
 
 ## 🔄 Migration Guide
 
 ### Stari kod (nastavlja raditi):
-
 ```jsx
 // Restaurant hero
 <Image source={{ uri: restaurant.thumbnailUrl }} />
@@ -254,7 +229,6 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ```
 
 ### Novi kod (optimizirano):
-
 ```jsx
 // Restaurant hero - eksplicitno medium
 <Image source={{ uri: restaurant.thumbnailUrls?.medium || restaurant.thumbnailUrl }} />
@@ -273,23 +247,17 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ### Restaurant Gallery
 
 **STARO (više ne radi):**
-
 ```jsx
-{
-  restaurant.images?.map((url) => (
-    <Image source={{ uri: url }} /> // ❌ url je sad objekt, ne string!
-  ));
-}
+{restaurant.images?.map((url) => (
+  <Image source={{ uri: url }} />  // ❌ url je sad objekt, ne string!
+))}
 ```
 
 **NOVO (mora se promijeniti):**
-
 ```jsx
-{
-  restaurant.images?.map((img) => (
-    <Image source={{ uri: img.url }} /> // ✅ Koristi img.url
-  ));
-}
+{restaurant.images?.map((img) => (
+  <Image source={{ uri: img.url }} />  // ✅ Koristi img.url
+))}
 ```
 
 ---
@@ -297,17 +265,13 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ## 💡 Best Practices
 
 ### 1. **Uvijek fallback na stari način**
-
 ```jsx
-<Image
-  source={{
-    uri: item.imageUrls?.thumbnail || item.imageUrl,
-  }}
-/>
+<Image source={{
+  uri: item.imageUrls?.thumbnail || item.imageUrl
+}} />
 ```
 
 ### 2. **Progresivno učitavanje**
-
 ```jsx
 <Image
   source={{ uri: item.imageUrls?.thumbnail }}
@@ -319,16 +283,13 @@ Ali sada imaš i **`imageUrls`** sa svim varijantama za optimalnu performansu.
 ```
 
 ### 3. **Fullscreen samo kad treba**
-
 ```jsx
 // NE učitavaj fullscreen odmah
-<TouchableOpacity
-  onPress={() => {
-    // Učitaj fullscreen tek kad user klikne
-    setFullscreenImage(item.imageUrls?.fullscreen);
-    setModalVisible(true);
-  }}
->
+<TouchableOpacity onPress={() => {
+  // Učitaj fullscreen tek kad user klikne
+  setFullscreenImage(item.imageUrls?.fullscreen);
+  setModalVisible(true);
+}}>
   <Image source={{ uri: item.imageUrls?.thumbnail }} />
 </TouchableOpacity>
 ```
@@ -342,35 +303,30 @@ Kad user uploada sliku (npr. review photo), backend vraća **instant response**:
 ```json
 {
   "id": 123,
-  "photos": [
-    {
-      "url": "...abc123-medium.jpg",
-      "urls": {
-        "thumbnail": "...abc123-thumb.jpg",
-        "medium": "...abc123-medium.jpg",
-        "fullscreen": "...abc123-full.jpg",
-        "processing": true, // ⚠️ Još se procesira!
-        "jobId": "12345"
-      }
+  "photos": [{
+    "url": "...abc123-medium.jpg",
+    "urls": {
+      "thumbnail": "...abc123-thumb.jpg",
+      "medium": "...abc123-medium.jpg",
+      "fullscreen": "...abc123-full.jpg",
+      "processing": true,  // ⚠️ Još se procesira!
+      "jobId": "12345"
     }
-  ]
+  }]
 }
 ```
 
 **Korištenje:**
-
 ```jsx
 // Prikaži local preview dok se procesira
-{
-  photo.urls?.processing ? (
-    <>
-      <Image source={{ uri: localImageUri }} /> // Lokalni preview
-      <ActivityIndicator /> // Spinner
-    </>
-  ) : (
-    <Image source={{ uri: photo.urls.medium }} /> // Gotova slika
-  );
-}
+{photo.urls?.processing ? (
+  <>
+    <Image source={{ uri: localImageUri }} />  // Lokalni preview
+    <ActivityIndicator />  // Spinner
+  </>
+) : (
+  <Image source={{ uri: photo.urls.medium }} />  // Gotova slika
+)}
 
 // Opciono: Poll za status
 if (photo.urls?.processing) {
@@ -383,12 +339,10 @@ if (photo.urls?.processing) {
 ## 🚀 Performance Benefits
 
 ### Prije:
-
 - Search lista: 20 restorana × 2MB = **40MB download** 😱
 - Učitavanje: **8-10 sekundi**
 
 ### Poslije:
-
 - Search lista: 20 restorana × 50KB = **1MB download** 🚀
 - Učitavanje: **<1 sekunda**
 
@@ -402,29 +356,29 @@ if (photo.urls?.processing) {
 interface Restaurant {
   id: number;
   name: string;
-  thumbnailUrl: string | null; // Automatski thumbnail (search) ili medium (detail)
-  thumbnailUrls?: ImageUrls | null; // Sve varijante
-  images?: GalleryImage[]; // ⚠️ NOVO: Objekt umjesto stringa
+  thumbnailUrl: string | null;  // Automatski thumbnail (search) ili medium (detail)
+  thumbnailUrls?: ImageUrls | null;  // Sve varijante
+  images?: GalleryImage[];  // ⚠️ NOVO: Objekt umjesto stringa
 }
 
 interface GalleryImage {
-  url: string; // Medium verzija
-  urls: ImageUrls; // Sve varijante
+  url: string;  // Medium verzija
+  urls: ImageUrls;  // Sve varijante
 }
 
 interface ImageUrls {
-  thumbnail: string; // 400x400, ~50KB
-  medium: string; // 1200px, ~200KB
-  fullscreen: string; // 2400px, ~500KB
-  processing?: boolean; // Ako se još procesira
-  jobId?: string; // Za polling statusa
+  thumbnail: string;   // 400x400, ~50KB
+  medium: string;      // 1200px, ~200KB
+  fullscreen: string;  // 2400px, ~500KB
+  processing?: boolean;  // Ako se još procesira
+  jobId?: string;  // Za polling statusa
 }
 
 interface MenuItem {
   id: number;
   name: string;
-  imageUrl: string | null; // Automatski thumbnail (search) ili medium (menu)
-  imageUrls?: ImageUrls | null; // Sve varijante
+  imageUrl: string | null;  // Automatski thumbnail (search) ili medium (menu)
+  imageUrls?: ImageUrls | null;  // Sve varijante
 }
 ```
 
@@ -440,32 +394,33 @@ A: Ne! Stari kod radi. Migriraj postepeno za bolju performansu.
 
 **Q: Što ako nema `imageUrls`?**
 A: Stare slike još nemaju varijante. Koristi fallback:
-
 ```jsx
 <Image source={{ uri: item.imageUrls?.thumbnail || item.imageUrl }} />
 ```
 
 **Q: Restaurant gallery se srušio!**
 A: Gallery sad vraća objekt, ne string. Promijeni:
-
 ```jsx
 // STARO: url (string)
-{
-  images.map((url) => <Image source={{ uri: url }} />);
-}
+{images.map(url => <Image source={{ uri: url }} />)}
 
 // NOVO: img.url (objekt)
-{
-  images.map((img) => <Image source={{ uri: img.url }} />);
-}
+{images.map(img => <Image source={{ uri: img.url }} />)}
 ```
 
 **Q: Kako znam da li slika ima varijante?**
 A: Provjeri `imageUrls`:
-
 ```jsx
 const hasVariants = !!item.imageUrls;
 ```
+
+---
+
+## 📞 Support
+
+Pitanja? Javi se backend timu ili provjeri:
+- [IMAGE_PROCESSING_GUIDE.md](./IMAGE_PROCESSING_GUIDE.md) - Detaljan developer guide
+- [IMAGE_SYSTEM_IMPLEMENTATION.md](./IMAGE_SYSTEM_IMPLEMENTATION.md) - Implementation details
 
 ---
 

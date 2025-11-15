@@ -6,9 +6,15 @@ const {
   UserSysadmin,
 } = require('../../models');
 const { Op } = require('sequelize');
-const { uploadToS3 } = require('../../utils/s3Upload');
+const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
+const { deleteFromS3 } = require('../../utils/s3Delete');
 const { getMediaUrl } = require('../../config/cdn');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const {
+  uploadImage,
+  getImageUrls,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 const {
   selectWinners,
   notifyAllParticipants,
@@ -112,9 +118,21 @@ const createCycle = async (req, res) => {
 
     // Upload header image if provided
     let headerImageUrl = null;
+    let imageUploadResult = null;
     if (file) {
       const folder = `leaderboard-cycles`;
-      headerImageUrl = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'leaderboard_cycle',
+          entityId: null,
+          priority: 10,
+        });
+        headerImageUrl = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading header image:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload header image' });
+      }
     }
 
     // Create the cycle - store as timezone-naive strings
@@ -425,9 +443,35 @@ const updateCycle = async (req, res) => {
 
     // Upload new header image if provided
     let headerImageUrl = cycle.headerImageUrl;
+    let imageUploadResult = null;
     if (file) {
+      // Delete old image variants before uploading new
+      if (headerImageUrl) {
+        const baseFileName = getBaseFileName(headerImageUrl);
+        const folder = getFolderFromKey(headerImageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
+      }
       const folder = `leaderboard-cycles`;
-      headerImageUrl = await uploadToS3(file, folder);
+      try {
+        imageUploadResult = await uploadImage(file, folder, {
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          entityType: 'leaderboard_cycle',
+          entityId: id,
+          priority: 10,
+        });
+        headerImageUrl = imageUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading header image:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload header image' });
+      }
     }
 
     // Update the cycle with local time conversion for dates
