@@ -567,16 +567,15 @@ async function updateRestaurant(req, res) {
           }
         }
       }
-      // Upload new thumbnail with optimistic processing
+      // Upload new thumbnail with synchronous processing for immediate feedback
       try {
         thumbnailUploadResult = await uploadImage(
           req.file,
           'restaurant_thumbnails',
           {
-            strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+            strategy: UPLOAD_STRATEGY.SYNC,
             entityType: 'restaurant',
             entityId: id,
-            priority: 10,
           },
         );
         thumbnailKey = thumbnailUploadResult.imageUrl;
