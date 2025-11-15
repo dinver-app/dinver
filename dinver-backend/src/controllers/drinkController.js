@@ -567,11 +567,20 @@ const deleteDrinkCategory = async (req, res) => {
 
     const drinkItems = await DrinkItem.findAll({ where: { categoryId: id } });
 
+    // Delete all image variants for each drink item
     for (const item of drinkItems) {
       if (item.imageUrl) {
-        const fileName = item.imageUrl.split('/').pop();
-        const key = `drink_items/${fileName}`;
-        await deleteFromS3(key);
+        const baseFileName = getBaseFileName(item.imageUrl);
+        const folder = getFolderFromKey(item.imageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
     }
 
