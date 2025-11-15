@@ -1542,14 +1542,13 @@ const addRestaurantImages = async (req, res) => {
 
     const folder = `restaurant_images/${restaurantSlug}`;
 
-    // Upload images with optimistic processing
+    // Upload images with synchronous processing for immediate availability
     const imageUploadResults = await Promise.all(
       files.map((file) =>
         uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'restaurant_gallery',
           entityId: id,
-          priority: 5,
         }),
       ),
     );
