@@ -143,17 +143,16 @@ const createDrinkItem = async (req, res) => {
     const lastPosition = existingItems[0]?.position ?? -1;
     const newPosition = lastPosition + 1;
 
-    // Handle image upload with new optimistic processing
+    // Handle image upload with synchronous processing for immediate availability
     let imageKey = null;
     let imageUploadResult = null;
     if (file) {
       const folder = 'drink_items';
       try {
         imageUploadResult = await uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'drink_item',
           entityId: null,
-          priority: 10,
         });
         imageKey = imageUploadResult.imageUrl;
       } catch (uploadError) {
@@ -268,10 +267,9 @@ const updateDrinkItem = async (req, res) => {
       const folder = 'drink_items';
       try {
         imageUploadResult = await uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'drink_item',
           entityId: id,
-          priority: 10,
         });
         imageKey = imageUploadResult.imageUrl;
       } catch (uploadError) {

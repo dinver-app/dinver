@@ -234,18 +234,17 @@ const createMenuItem = async (req, res) => {
     const lastPosition = existingItems[0]?.position ?? -1;
     const newPosition = lastPosition + 1;
 
-    // Handle image upload with new optimistic processing
+    // Handle image upload with synchronous processing for immediate availability
     let imageKey = null;
     let imageUploadResult = null;
     if (file) {
       const folder = 'menu_items';
       try {
-        // Use optimistic upload strategy for fast response
+        // Use sync upload strategy for immediate availability
         imageUploadResult = await uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'menu_item',
           entityId: null, // Will be set after creation
-          priority: 10,
         });
         imageKey = imageUploadResult.imageUrl; // Store base/medium variant key
       } catch (uploadError) {
@@ -490,10 +489,9 @@ const updateMenuItem = async (req, res) => {
       const folder = 'menu_items';
       try {
         imageUploadResult = await uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'menu_item',
           entityId: id,
-          priority: 10,
         });
         imageKey = imageUploadResult.imageUrl;
       } catch (uploadError) {
@@ -1110,6 +1108,9 @@ const getAllMenuItemsForAdmin = async (req, res) => {
         priceRange = `${parseFloat(itemData.minPrice).toFixed(2)} - ${parseFloat(itemData.maxPrice).toFixed(2)}€`;
       }
 
+      // For admin list view, use thumbnail and include all variants
+      const imageUrls = itemData.imageUrl ? getImageUrls(itemData.imageUrl) : null;
+
       return {
         ...itemData,
         name: (userTranslation || anyTranslation)?.name || '',
@@ -1117,8 +1118,9 @@ const getAllMenuItemsForAdmin = async (req, res) => {
         price:
           displayPrice != null ? parseFloat(displayPrice).toFixed(2) : null,
         imageUrl: itemData.imageUrl
-          ? getMediaUrl(itemData.imageUrl, 'image')
+          ? getMediaUrl(itemData.imageUrl, 'image', 'thumbnail')
           : null,
+        imageUrls: imageUrls,
         sizes: formattedSizes,
         priceRange: priceRange,
       };
