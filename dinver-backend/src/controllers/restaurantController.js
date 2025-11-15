@@ -378,9 +378,10 @@ const getRestaurantDetails = async (req, res) => {
 
     // Transformiramo keys u objekte s variantama za galeriju slika
     if (restaurantData.images && Array.isArray(restaurantData.images)) {
-      restaurantData.images = restaurantData.images.map((imageKey) =>
-        getImageUrls(imageKey),
-      );
+      restaurantData.images = restaurantData.images.map((imageKey) => ({
+        url: getMediaUrl(imageKey, 'image', 'medium'),
+        imageUrls: getImageUrls(imageKey),
+      }));
     }
 
     // Only include WiFi data if it's allowed and requested
@@ -423,7 +424,10 @@ async function viewRestaurant(req, res) {
       data.thumbnailUrl = getMediaUrl(data.thumbnailUrl, 'image');
     }
     if (data.images && Array.isArray(data.images)) {
-      data.images = data.images.map((key) => getImageUrls(key));
+      data.images = data.images.map((key) => ({
+        url: getMediaUrl(key, 'image', 'medium'),
+        imageUrls: getImageUrls(key),
+      }));
     }
 
     res.json(data);
