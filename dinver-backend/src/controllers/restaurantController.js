@@ -29,6 +29,7 @@ const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
+const { getCitiesCoordinates } = require('../../utils/geocoding');
 const {
   uploadImage,
   getImageUrls,
@@ -3707,15 +3708,13 @@ const getRestaurantsByIdsPost = async (req, res) => {
 
 const getRestaurantCities = async (req, res) => {
   try {
-    // Get all claimed restaurants with their place and coordinates
+    // Get all claimed restaurants with their place
     const restaurants = await Restaurant.findAll({
       where: {
         isClaimed: true,
         place: { [Op.ne]: null },
-        latitude: { [Op.ne]: null },
-        longitude: { [Op.ne]: null },
       },
-      attributes: ['place', 'latitude', 'longitude'],
+      attributes: ['place'],
     });
 
     // Group restaurants by place and count them
@@ -3727,17 +3726,30 @@ const getRestaurantCities = async (req, res) => {
         cityMap.set(place, {
           name: place,
           count: 0,
-          latitude: restaurant.latitude,
-          longitude: restaurant.longitude,
         });
       }
       cityMap.get(place).count += 1;
     });
 
-    // Convert to array and sort by count (descending)
-    const cities = Array.from(cityMap.values()).sort(
-      (a, b) => b.count - a.count,
-    );
+    // Get city names
+    const cityNames = Array.from(cityMap.keys());
+
+    // Fetch real city coordinates from Google Geocoding API
+    const cityCoordinatesMap = await getCitiesCoordinates(cityNames, 'Croatia');
+
+    // Combine data: city counts with real city coordinates
+    const cities = Array.from(cityMap.entries()).map(([cityName, cityData]) => {
+      const coordinates = cityCoordinatesMap.get(cityName);
+      return {
+        name: cityName,
+        count: cityData.count,
+        latitude: coordinates?.latitude || null,
+        longitude: coordinates?.longitude || null,
+      };
+    });
+
+    // Sort by count (descending)
+    cities.sort((a, b) => b.count - a.count);
 
     res.json({
       cities,
