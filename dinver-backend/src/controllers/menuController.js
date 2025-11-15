@@ -10,7 +10,7 @@ const {
   Coupon,
 } = require('../../models');
 const { Op } = require('sequelize');
-const { uploadToS3 } = require('../../utils/s3Upload');
+const { uploadToS3, getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const {
@@ -473,9 +473,19 @@ const updateMenuItem = async (req, res) => {
     let imageKey = menuItem.imageUrl;
     let imageUploadResult = null;
     if (file) {
+      // Delete old image variants before uploading new
       if (menuItem.imageUrl) {
-        const oldKey = menuItem.imageUrl.split('/').pop();
-        await deleteFromS3(`menu_items/${oldKey}`);
+        const baseFileName = getBaseFileName(menuItem.imageUrl);
+        const folder = getFolderFromKey(menuItem.imageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
       const folder = 'menu_items';
       try {
@@ -491,9 +501,19 @@ const updateMenuItem = async (req, res) => {
         return res.status(500).json({ error: 'Failed to upload image' });
       }
     } else if (removeImage === 'true') {
+      // Delete all image variants when removing image
       if (menuItem.imageUrl) {
-        const oldKey = menuItem.imageUrl.split('/').pop();
-        await deleteFromS3(`menu_items/${oldKey}`);
+        const baseFileName = getBaseFileName(menuItem.imageUrl);
+        const folder = getFolderFromKey(menuItem.imageUrl);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
       }
       imageKey = null;
     }
