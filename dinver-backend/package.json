@@ -8,7 +8,8 @@
     "test": "jest --passWithNoTests",
     "lint": "eslint .",
     "build": "npm run test",
-    "fill_data": "node scripts/populateRestaurants.js"
+    "fill_data": "node scripts/populateRestaurants.js",
+    "postinstall": "sed -i.bak \"s|from './block-hash'|from './block-hash.js'|g\" node_modules/image-hash/lib/index.js 2>/dev/null || true"
   },
   "keywords": [],
   "author": "",
