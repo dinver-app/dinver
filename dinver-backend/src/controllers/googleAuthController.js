@@ -50,12 +50,22 @@ const googleSignIn = async (req, res) => {
     if (!user) {
       isNewUser = true;
 
+      // Generate temporary username that user MUST change later
+      // Format: user_<6-digit-timestamp> (e.g., user_847392)
+      const tempUsername = `user_${Date.now().toString().slice(-6)}`;
+
+      // Generate name from firstName + lastName
+      const name = `${firstName} ${lastName}`.trim();
+
       // Create new user
       user = await User.create({
         googleId: googleId,
         email: email,
         firstName: firstName,
         lastName: lastName,
+        name: name,
+        username: tempUsername,
+        gender: 'undefined',
         profileImage: profileImage,
         password: null, // Google users don't have password
       });
@@ -80,8 +90,14 @@ const googleSignIn = async (req, res) => {
         userId: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
+        name: user.name,
+        username: user.username,
         email: user.email,
         phone: user.phone,
+        gender: user.gender,
+        bio: user.bio,
+        instagramUrl: user.instagramUrl,
+        tiktokUrl: user.tiktokUrl,
         role: user.role,
         language: user.language,
         banned: user.banned,
@@ -91,6 +107,7 @@ const googleSignIn = async (req, res) => {
       return res.status(201).json({
         message: 'Google sign up successful',
         isNewUser: true,
+        needsUsernameSetup: true, // Frontend should prompt user to choose a username
         user: userData,
         token: accessToken,
         refreshToken: refreshToken,
@@ -128,8 +145,14 @@ const googleSignIn = async (req, res) => {
       userId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: user.name,
+      username: user.username,
       email: user.email,
       phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
       role: user.role,
       language: user.language,
       banned: user.banned,

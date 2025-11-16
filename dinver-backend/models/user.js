@@ -69,6 +69,19 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'referralRewards',
       });
+
+      // Following system associations
+      // Users that this user is following
+      User.hasMany(models.UserFollow, {
+        foreignKey: 'followerId',
+        as: 'following',
+      });
+
+      // Users that follow this user
+      User.hasMany(models.UserFollow, {
+        foreignKey: 'followingId',
+        as: 'followers',
+      });
     }
   }
 
@@ -108,8 +121,30 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         unique: true,
       },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      username: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      gender: {
+        type: DataTypes.ENUM('male', 'female', 'other', 'undefined'),
+        allowNull: false,
+        defaultValue: 'undefined',
+      },
       bio: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(150),
+        allowNull: true,
+      },
+      instagramUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      tiktokUrl: {
+        type: DataTypes.STRING,
         allowNull: true,
       },
       streetAddress: {

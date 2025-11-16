@@ -171,9 +171,9 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 1,
       },
       visibility: {
-        type: DataTypes.ENUM('PUBLIC', 'PRIVATE'),
+        type: DataTypes.ENUM('ALL', 'FOLLOWERS', 'BUDDIES'),
         allowNull: false,
-        defaultValue: 'PUBLIC',
+        defaultValue: 'ALL',
       },
       // AI/ML scores for moderation
       nsfwScore: {

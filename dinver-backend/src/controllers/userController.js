@@ -56,8 +56,13 @@ const getUserProfile = async (req, res) => {
         'id',
         'firstName',
         'lastName',
-        'profileImage',
+        'name',
+        'username',
+        'gender',
         'bio',
+        'instagramUrl',
+        'tiktokUrl',
+        'profileImage',
         'streetAddress',
         'city',
         'country',
@@ -103,11 +108,16 @@ const getUserProfile = async (req, res) => {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: user.name,
+      username: user.username,
       email: user.email,
       phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
       birthDate: user.birthDate,
       profileImage: user.profileImage,
-      bio: user.bio,
       location: {
         street: user.streetAddress,
         city: user.city,
@@ -141,7 +151,12 @@ const updateUserProfile = async (req, res) => {
     const {
       firstName,
       lastName,
+      name,
+      username,
+      gender,
       bio,
+      instagramUrl,
+      tiktokUrl,
       streetAddress,
       city,
       country,
@@ -159,7 +174,12 @@ const updateUserProfile = async (req, res) => {
     const updates = {};
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
+    if (name !== undefined) updates.name = name;
+    if (username !== undefined) updates.username = username;
+    if (gender !== undefined) updates.gender = gender;
     if (bio !== undefined) updates.bio = bio;
+    if (instagramUrl !== undefined) updates.instagramUrl = instagramUrl;
+    if (tiktokUrl !== undefined) updates.tiktokUrl = tiktokUrl;
     if (streetAddress !== undefined) updates.streetAddress = streetAddress;
     if (city !== undefined) updates.city = city;
     if (country !== undefined) updates.country = country;
@@ -241,7 +261,12 @@ const updateUserProfile = async (req, res) => {
         'id',
         'firstName',
         'lastName',
+        'name',
+        'username',
+        'gender',
         'bio',
+        'instagramUrl',
+        'tiktokUrl',
         'streetAddress',
         'city',
         'country',
@@ -255,7 +280,12 @@ const updateUserProfile = async (req, res) => {
       id: updatedUser.id,
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
+      name: updatedUser.name,
+      username: updatedUser.username,
+      gender: updatedUser.gender,
       bio: updatedUser.bio,
+      instagramUrl: updatedUser.instagramUrl,
+      tiktokUrl: updatedUser.tiktokUrl,
       location: {
         street: updatedUser.streetAddress,
         city: updatedUser.city,

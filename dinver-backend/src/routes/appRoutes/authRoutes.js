@@ -11,6 +11,8 @@ router.post('/auth/login', authController.login);
 
 router.post('/auth/register', authController.register);
 
+router.get('/auth/check-username', authController.checkUsernameAvailability);
+
 router.post('/auth/logout', authController.logout);
 
 router.get('/auth/check-auth', authController.checkAuth);
