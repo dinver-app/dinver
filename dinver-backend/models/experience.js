@@ -14,6 +14,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'restaurant',
       });
 
+      Experience.belongsTo(models.Visit, {
+        foreignKey: 'visitId',
+        as: 'visit',
+      });
+
       Experience.hasMany(models.ExperienceMedia, {
         foreignKey: 'experienceId',
         as: 'media',
@@ -95,6 +100,15 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
         onDelete: 'CASCADE',
+      },
+      visitId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Visits',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
       },
       status: {
         type: DataTypes.ENUM('DRAFT', 'PENDING', 'APPROVED', 'REJECTED'),

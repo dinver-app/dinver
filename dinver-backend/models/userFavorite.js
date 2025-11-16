@@ -8,6 +8,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'restaurantId',
         as: 'restaurant',
       });
+
+      UserFavorite.belongsTo(models.Visit, {
+        foreignKey: 'removedForVisitId',
+        as: 'visit',
+      });
     }
   }
 
@@ -32,6 +37,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         references: {
           model: 'Restaurants',
+          key: 'id',
+        },
+      },
+      removedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      removedForVisitId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Visits',
           key: 'id',
         },
       },

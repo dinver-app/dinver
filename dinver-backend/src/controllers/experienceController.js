@@ -363,6 +363,86 @@ exports.createExperience = async (req, res) => {
   }
 };
 
+/**
+ * Delete Experience (user can delete within 14 days)
+ * DELETE /api/app/experiences/:id
+ */
+exports.deleteExperience = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Find the experience
+    const experience = await Experience.findOne({
+      where: { id, userId },
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+        },
+      ],
+    });
+
+    if (!experience) {
+      return res.status(404).json({ error: 'Experience not found' });
+    }
+
+    // Check if experience is within 14 days
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    if (experience.createdAt < fourteenDaysAgo) {
+      return res.status(403).json({
+        error: 'Cannot delete experience older than 14 days',
+        createdAt: experience.createdAt,
+      });
+    }
+
+    // Delete Experience media from S3
+    const { deleteFromS3 } = require('../../utils/s3Upload');
+    for (const media of experience.media) {
+      try {
+        // Delete main storage key
+        if (media.storageKey) {
+          await deleteFromS3(media.storageKey);
+          console.log(`Deleted experience media: ${media.storageKey}`);
+        }
+
+        // Delete thumbnails (if they have separate S3 keys)
+        if (media.thumbnails && Array.isArray(media.thumbnails)) {
+          for (const thumb of media.thumbnails) {
+            if (thumb.storageKey) {
+              await deleteFromS3(thumb.storageKey);
+            }
+          }
+        }
+
+        // Delete video formats (if they have separate S3 keys)
+        if (media.videoFormats && typeof media.videoFormats === 'object') {
+          for (const format of Object.values(media.videoFormats)) {
+            if (format.storageKey) {
+              await deleteFromS3(format.storageKey);
+            }
+          }
+        }
+      } catch (s3Error) {
+        console.error(`Error deleting experience media from S3:`, s3Error.message);
+      }
+    }
+
+    // Delete Experience record (CASCADE will delete ExperienceMedia, ExperienceLike, etc.)
+    await Experience.destroy({ where: { id: experience.id } });
+
+    res.status(200).json({
+      message: 'Experience deleted successfully',
+      deletedExperienceId: experience.id,
+    });
+  } catch (error) {
+    console.error('Error deleting experience:', error);
+    res.status(500).json({ error: 'Failed to delete experience' });
+  }
+};
+
 // Export existing functions (not modified here, but need to be included)
 // These would be the rest of your existing controller methods:
 // exports.getExperience = ...

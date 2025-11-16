@@ -37,6 +37,8 @@ router.get(
 
 router.get('/:id', appOptionalAuth, experienceController.getExperience);
 
+router.delete('/:id', appAuthenticateToken, experienceController.deleteExperience);
+
 // Interactions
 router.post('/:id/like', appAuthenticateToken, experienceController.likeExperience);
 router.delete('/:id/like', appAuthenticateToken, experienceController.unlikeExperience);

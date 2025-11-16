@@ -6,6 +6,7 @@ const sharp = require('sharp');
  * THUMBNAIL: Small preview images for lists, grids, avatars
  * MEDIUM: Standard display size for most UI contexts
  * FULLSCREEN: High quality for full-screen views and detail pages
+ * ORIGINAL: Highest quality for receipts, OCR, admin review, legal purposes
  */
 const IMAGE_SIZES = {
   THUMBNAIL: {
@@ -29,6 +30,13 @@ const IMAGE_SIZES = {
     suffix: '-full',
     fit: 'inside', // Scale to fit
   },
+  ORIGINAL: {
+    width: 3200,
+    height: null, // Maintain aspect ratio
+    quality: 92,
+    suffix: '-original',
+    fit: 'inside', // Scale to fit
+  },
 };
 
 /**
@@ -45,6 +53,7 @@ const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
  * @param {boolean} options.skipThumbnail - Skip thumbnail generation (default: false)
  * @param {boolean} options.skipMedium - Skip medium generation (default: false)
  * @param {boolean} options.skipFullscreen - Skip fullscreen generation (default: false)
+ * @param {boolean} options.skipOriginal - Skip original generation (default: false)
  * @returns {Promise<Object>} Processed image variants
  */
 async function processImage(imageBuffer, options = {}) {
@@ -53,6 +62,7 @@ async function processImage(imageBuffer, options = {}) {
     skipThumbnail = false,
     skipMedium = false,
     skipFullscreen = false,
+    skipOriginal = true, // Default TRUE - only create original for receipts
   } = options;
 
   try {
@@ -132,6 +142,29 @@ async function processImage(imageBuffer, options = {}) {
       }
       console.log(
         `Generated fullscreen: ${Math.round(variants.fullscreen.buffer.length / 1024)}KB`,
+      );
+    }
+
+    // Process original (high quality for OCR, admin review, legal)
+    if (!skipOriginal) {
+      const originalConfig = IMAGE_SIZES.ORIGINAL;
+      // Only resize if original is larger
+      if (width > originalConfig.width) {
+        variants.original = await generateVariant(
+          imageBuffer,
+          originalConfig,
+          outputFormat,
+        );
+      } else {
+        // Use optimized original if smaller than original size
+        variants.original = await generateVariant(
+          imageBuffer,
+          { ...originalConfig, width: null },
+          outputFormat,
+        );
+      }
+      console.log(
+        `Generated original: ${Math.round(variants.original.buffer.length / 1024)}KB`,
       );
     }
 

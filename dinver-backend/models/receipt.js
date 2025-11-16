@@ -28,6 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'reservationId',
         as: 'reservation',
       });
+
+      Receipt.belongsTo(models.Visit, {
+        foreignKey: 'visitId',
+        as: 'visit',
+      });
     }
 
     /**
@@ -295,6 +300,36 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
         comment: 'Confidence scores for individual fields',
+      },
+      visitId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Visits',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+        comment: 'Link to Visit (for new visit-based receipts)',
+      },
+      thumbnailUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for thumbnail variant (400x400)',
+      },
+      mediumUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for medium variant (1200px)',
+      },
+      fullscreenUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for fullscreen variant (2400px)',
+      },
+      originalUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for original high-quality variant (3200px, 92% quality) - for OCR, admin review, legal',
       },
     },
     {

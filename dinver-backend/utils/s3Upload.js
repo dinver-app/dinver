@@ -2,6 +2,8 @@ const {
   S3Client,
   PutObjectCommand,
   HeadObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
 } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
@@ -199,10 +201,95 @@ function getFolderFromKey(key) {
   return parts.join('/');
 }
 
+/**
+ * Delete image variants from S3
+ * Deletes thumbnail, medium, fullscreen, and original variants
+ *
+ * @param {string} thumbnailUrl - S3 key for thumbnail variant
+ * @param {string} mediumUrl - S3 key for medium variant
+ * @param {string} fullscreenUrl - S3 key for fullscreen variant
+ * @param {string} originalUrl - S3 key for original variant
+ * @returns {Promise<Object>} Deletion result
+ */
+async function deleteImageVariants(thumbnailUrl, mediumUrl, fullscreenUrl, originalUrl) {
+  try {
+    const bucketName =
+      process.env.AWS_S3_BUCKET_NAME || 'dinver-restaurant-thumbnails';
+
+    const keysToDelete = [];
+
+    if (thumbnailUrl) keysToDelete.push({ Key: thumbnailUrl });
+    if (mediumUrl) keysToDelete.push({ Key: mediumUrl });
+    if (fullscreenUrl) keysToDelete.push({ Key: fullscreenUrl });
+    if (originalUrl) keysToDelete.push({ Key: originalUrl });
+
+    if (keysToDelete.length === 0) {
+      console.log('No image variants to delete');
+      return { success: true, deletedCount: 0 };
+    }
+
+    // Delete all variants in a single batch operation
+    const deleteCommand = new DeleteObjectsCommand({
+      Bucket: bucketName,
+      Delete: {
+        Objects: keysToDelete,
+        Quiet: false,
+      },
+    });
+
+    const result = await s3Client.send(deleteCommand);
+
+    console.log(`Deleted ${keysToDelete.length} image variant(s) from S3:`, keysToDelete.map(k => k.Key));
+
+    return {
+      success: true,
+      deletedCount: keysToDelete.length,
+      deleted: result.Deleted || [],
+      errors: result.Errors || [],
+    };
+  } catch (error) {
+    console.error('Error deleting image variants from S3:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete single file from S3
+ *
+ * @param {string} key - S3 key to delete
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteFromS3(key) {
+  try {
+    if (!key) {
+      console.log('No key provided for deletion');
+      return false;
+    }
+
+    const bucketName =
+      process.env.AWS_S3_BUCKET_NAME || 'dinver-restaurant-thumbnails';
+
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    await s3Client.send(deleteCommand);
+    console.log(`Deleted file from S3: ${key}`);
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting file from S3:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   uploadToS3,
   uploadVariantsToS3,
   uploadBufferToS3,
   getBaseFileName,
   getFolderFromKey,
+  deleteImageVariants,
+  deleteFromS3,
 };

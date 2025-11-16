@@ -23,6 +23,7 @@ const {
   cleanupStaleVisitValidations,
 } = require('./cron/cleanupVisitValidations');
 const { runDataHealthChecks } = require('./cron/dataHealthCron');
+const { cleanupExpiredVisits } = require('./cron/cleanupExpiredVisits');
 dotenv.config();
 
 const app = express();
@@ -32,6 +33,9 @@ cron.schedule('0 3 * * *', createDailyBackups);
 
 // Čišćenje starih VisitValidation zapisa (svaki dan u 03:30)
 cron.schedule('30 3 * * *', cleanupStaleVisitValidations);
+
+// Čišćenje expired Visita (svaki sat) - briše Visite i Experiencese nakon 48h roka
+cron.schedule('0 * * * *', cleanupExpiredVisits);
 
 // Data health checks (svaki dan u 04:00) – log samo u konzolu za sada
 cron.schedule('0 4 * * *', async () => {
