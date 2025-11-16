@@ -18,8 +18,8 @@ import Coupons from "./pages/Coupons";
 import Referrals from "./pages/Referrals";
 import QRPrintRequests from "./pages/QRPrintRequests";
 import Types from "./pages/Types";
-import Receipts from "./pages/Receipts";
-import ReceiptDetails from "./pages/ReceiptDetails";
+import Visits from "./pages/Visits";
+import VisitDetail from "./pages/VisitDetail";
 import LeaderboardCycles from "./pages/LeaderboardCycles";
 import LeaderboardCycleDetails from "./pages/LeaderboardCycleDetails";
 import ReviewDetails from "./pages/ReviewDetails";
@@ -56,8 +56,8 @@ function App() {
             <Route path="/referrals" element={<Referrals />} />
             <Route path="/qr-print-requests" element={<QRPrintRequests />} />
             <Route path="/types" element={<Types />} />
-            <Route path="/receipts" element={<Receipts />} />
-            <Route path="/receipts/:id" element={<ReceiptDetails />} />
+            <Route path="/visits" element={<Visits />} />
+            <Route path="/visits/:id" element={<VisitDetail />} />
             <Route path="/reviews/:id" element={<ReviewDetails />} />
             <Route path="/leaderboard-cycles" element={<LeaderboardCycles />} />
             <Route

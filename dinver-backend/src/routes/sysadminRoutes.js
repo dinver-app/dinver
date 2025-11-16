@@ -19,7 +19,7 @@ const jsonMenuImportRoutes = require('./sysadminRoutes/jsonMenuImportRoutes');
 const referralRoutes = require('./sysadminRoutes/referralRoutes');
 const sizeRoutes = require('./sysadminRoutes/sizeRoutes');
 const waitListRoutes = require('./sysadminRoutes/waitListRoutes');
-const receiptRoutes = require('./sysadminRoutes/receiptRoutes');
+const visitRoutes = require('./sysadminRoutes/visitRoutes'); // NEW: Visit management
 const leaderboardCycleRoutes = require('./sysadminRoutes/leaderboardCycleRoutes');
 const reviewRoutes = require('./sysadminRoutes/reviewRoutes');
 const experienceRoutes = require('./sysadminRoutes/experienceRoutes');
@@ -46,7 +46,7 @@ router.use('/json-menu-import', jsonMenuImportRoutes);
 router.use(referralRoutes);
 router.use(sizeRoutes);
 router.use(waitListRoutes);
-router.use(receiptRoutes);
+router.use(visitRoutes); // NEW: Visit management (replaces receiptRoutes)
 router.use(leaderboardCycleRoutes);
 router.use(reviewRoutes);
 router.use(experienceRoutes); // Experience moderation za sysadmin
