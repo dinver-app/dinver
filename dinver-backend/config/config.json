@@ -5,7 +5,13 @@
     "database": "dinver",
     "host": "127.0.0.1",
     "port": 5433,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "pool": {
+      "max": 20,
+      "min": 5,
+      "acquire": 60000,
+      "idle": 10000
+    }
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
@@ -15,6 +21,12 @@
         "require": true,
         "rejectUnauthorized": false
       }
+    },
+    "pool": {
+      "max": 30,
+      "min": 10,
+      "acquire": 60000,
+      "idle": 10000
     }
   }
 }

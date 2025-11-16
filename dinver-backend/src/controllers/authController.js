@@ -2,6 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User, UserSettings, PushToken } = require('../../models');
+const { Op } = require('sequelize');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { generateTokens } = require('../../utils/tokenUtils');
@@ -12,17 +13,36 @@ const { sendPasswordResetEmail } = require('../../utils/emailService');
 
 const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, referralCode } =
+    const { firstName, lastName, name, username, email, password, phone, referralCode } =
       req.body;
 
-    // Normalize email to lowercase for consistency
-    const normalizedEmail = email.toLowerCase().trim();
+    // Validate required fields
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ error: 'Name is required and must be at least 2 characters long' });
+    }
 
+    if (!username || username.trim().length < 3) {
+      return res.status(400).json({ error: 'Username is required and must be at least 3 characters long' });
+    }
+
+    // Normalize email and username to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUsername = username.toLowerCase().trim();
+
+    // Check if email already exists
     const existingUser = await User.findOne({
       where: { email: normalizedEmail },
     });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Check if username already exists
+    const existingUsername = await User.findOne({
+      where: { username: normalizedUsername },
+    });
+    if (existingUsername) {
+      return res.status(400).json({ error: 'Username already exists' });
     }
 
     // Validate referral code BEFORE creating user
@@ -73,9 +93,12 @@ const register = async (req, res) => {
     const user = await User.create({
       firstName: firstName,
       lastName: lastName,
+      name: name.trim(),
+      username: normalizedUsername,
       email: normalizedEmail,
       password: hashedPassword,
       phone: phone || null,
+      gender: 'undefined',
       isPhoneVerified: false,
     });
 
@@ -173,8 +196,14 @@ const register = async (req, res) => {
       userId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: user.name,
+      username: user.username,
       email: user.email,
       phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
       role: user.role,
       language: user.language,
       banned: user.banned,
@@ -214,18 +243,32 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    console.log('Login attempt for email:', email);
+    const { email, username, password } = req.body;
+    const emailOrUsername = email || username;
 
-    // Normalize email to lowercase for consistency
-    const normalizedEmail = email.toLowerCase().trim();
+    if (!emailOrUsername) {
+      return res.status(400).json({ error: 'Email or username is required' });
+    }
 
-    const user = await User.findOne({ where: { email: normalizedEmail } });
+    console.log('Login attempt for:', emailOrUsername);
+
+    // Normalize to lowercase for consistency
+    const normalized = emailOrUsername.toLowerCase().trim();
+
+    // Try to find user by email or username
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: normalized },
+          { username: normalized }
+        ]
+      }
+    });
     console.log('User found:', user ? 'yes' : 'no');
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       console.log('Login failed: Invalid credentials');
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email/username or password' });
     }
 
     console.log('Password verified, generating tokens');
@@ -252,7 +295,14 @@ const login = async (req, res) => {
       userId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: user.name,
+      username: user.username,
       email: user.email,
+      phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
       role: user.role,
       language: user.language,
       banned: user.banned,
@@ -577,9 +627,17 @@ async function refreshToken(req, res) {
 
     // Filtriraj korisničke podatke
     const userData = {
+      userId: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      name: user.name,
+      username: user.username,
       email: user.email,
+      phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
       role: user.role,
       language: user.language,
       banned: user.banned,
@@ -618,9 +676,27 @@ const socialLogin = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user);
 
+    // Filtriraj korisničke podatke
+    const userData = {
+      userId: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      gender: user.gender,
+      bio: user.bio,
+      instagramUrl: user.instagramUrl,
+      tiktokUrl: user.tiktokUrl,
+      role: user.role,
+      language: user.language,
+      banned: user.banned,
+    };
+
     res.status(200).json({
       message: 'Social login successful',
-      user,
+      user: userData,
       token: accessToken,
       refreshToken: refreshToken,
     });
@@ -1382,6 +1458,67 @@ const resetPasswordForm = async (req, res) => {
   }
 };
 
+// Check username availability
+const checkUsernameAvailability = async (req, res) => {
+  try {
+    const { username } = req.query;
+
+    // Validate username is provided
+    if (!username) {
+      return res.status(400).json({
+        error: 'Username is required',
+        available: false
+      });
+    }
+
+    // Normalize username to lowercase
+    const normalizedUsername = username.toLowerCase().trim();
+
+    // Validate minimum length (3 characters)
+    if (normalizedUsername.length < 3) {
+      return res.status(400).json({
+        error: 'Username must be at least 3 characters long',
+        available: false,
+        username: normalizedUsername
+      });
+    }
+
+    // Validate allowed characters (only a-z, 0-9)
+    const usernameRegex = /^[a-z0-9]+$/;
+    if (!usernameRegex.test(normalizedUsername)) {
+      return res.status(400).json({
+        error: 'Username can only contain lowercase letters and numbers',
+        available: false,
+        username: normalizedUsername
+      });
+    }
+
+    // Check if username exists in database
+    const existingUser = await User.findOne({
+      where: { username: normalizedUsername },
+    });
+
+    if (existingUser) {
+      return res.status(200).json({
+        available: false,
+        username: normalizedUsername
+      });
+    }
+
+    // Username is available
+    res.status(200).json({
+      available: true,
+      username: normalizedUsername
+    });
+  } catch (error) {
+    console.error('Error checking username availability:', error);
+    res.status(500).json({
+      error: 'An error occurred while checking username availability',
+      available: false
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -1399,4 +1536,5 @@ module.exports = {
   requestPasswordReset,
   resetPassword,
   resetPasswordForm,
+  checkUsernameAvailability,
 };
