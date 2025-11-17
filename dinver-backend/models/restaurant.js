@@ -282,6 +282,11 @@ module.exports = (sequelize, DataTypes) => {
         comment:
           'OIB (Osobni identifikacijski broj) for fiscal receipt matching',
       },
+      lastGoogleUpdate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Timestamp of last automatic update from Google Places API',
+      },
     },
     {
       sequelize,

@@ -45,6 +45,10 @@ const {
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const crypto = require('crypto');
+const {
+  shouldUpdateFromGoogle,
+  updateRestaurantFromGoogle,
+} = require('../services/googlePlacesService');
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -2642,6 +2646,8 @@ const getFullRestaurantDetails = async (req, res) => {
         'thumbnailUrl',
         'slug',
         'isClaimed',
+        'placeId',
+        'lastGoogleUpdate',
         'foodTypes',
         'establishmentTypes',
         'establishmentPerks',
@@ -2668,6 +2674,21 @@ const getFullRestaurantDetails = async (req, res) => {
 
     if (!restaurant) {
       return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Background update for unclaimed restaurants from Google Places
+    // This runs asynchronously and doesn't block the response
+    if (
+      !restaurant.isClaimed &&
+      restaurant.placeId &&
+      shouldUpdateFromGoogle(restaurant.lastGoogleUpdate)
+    ) {
+      // Fire and forget - don't await
+      updateRestaurantFromGoogle(restaurant.placeId, restaurant.id).catch(
+        (err) => {
+          console.error('[Background] Google Places update error:', err);
+        },
+      );
     }
 
     // Transform restaurant data to include translations

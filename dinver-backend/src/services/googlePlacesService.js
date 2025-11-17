@@ -424,6 +424,80 @@ async function checkRestaurantExists(placeId) {
   return existing;
 }
 
+/**
+ * Check if restaurant should be updated from Google Places
+ * @param {Date|null} lastGoogleUpdate - Timestamp of last update
+ * @param {number} daysThreshold - Number of days before update is needed (default: 7)
+ * @returns {boolean} - True if update is needed
+ */
+function shouldUpdateFromGoogle(lastGoogleUpdate, daysThreshold = 7) {
+  // If never updated, should update
+  if (!lastGoogleUpdate) {
+    return true;
+  }
+
+  // Check if more than threshold days have passed
+  const now = new Date();
+  const lastUpdate = new Date(lastGoogleUpdate);
+  const daysSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60 * 24);
+
+  return daysSinceUpdate >= daysThreshold;
+}
+
+/**
+ * Update unclaimed restaurant data from Google Places API
+ * This runs asynchronously in the background and updates:
+ * - address, place, country
+ * - phone, websiteUrl
+ * - openingHours, priceLevel
+ *
+ * @param {string} placeId - Google Place ID
+ * @param {string} restaurantId - Restaurant database ID
+ * @returns {Promise<boolean>} - True if updated successfully
+ */
+async function updateRestaurantFromGoogle(placeId, restaurantId) {
+  try {
+    console.log(`[Background] Starting Google Places update for restaurant ${restaurantId}`);
+
+    // Fetch fresh data from Google Places API
+    const placeDetails = await getPlaceDetails(placeId);
+
+    // Transform to our format
+    const updatedData = transformToRestaurantData(placeDetails);
+
+    // Find restaurant
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      console.error(`[Background] Restaurant ${restaurantId} not found`);
+      return false;
+    }
+
+    // Only update if restaurant is unclaimed
+    if (restaurant.isClaimed) {
+      console.log(`[Background] Restaurant ${restaurantId} is claimed, skipping update`);
+      return false;
+    }
+
+    // Update only the fields we get from Google
+    await restaurant.update({
+      address: updatedData.address,
+      place: updatedData.place,
+      country: updatedData.country,
+      phone: updatedData.phone,
+      websiteUrl: updatedData.websiteUrl,
+      openingHours: updatedData.openingHours,
+      priceLevel: updatedData.priceLevel,
+      lastGoogleUpdate: new Date(),
+    });
+
+    console.log(`[Background] Successfully updated restaurant ${restaurantId} from Google Places`);
+    return true;
+  } catch (error) {
+    console.error(`[Background] Error updating restaurant ${restaurantId} from Google:`, error.message);
+    return false;
+  }
+}
+
 module.exports = {
   extractPlaceIdFromUrl,
   searchPlacesByText,
@@ -432,4 +506,6 @@ module.exports = {
   getPhotoUrl,
   checkRestaurantExists,
   getPlaceIdFromCoordinates,
+  shouldUpdateFromGoogle,
+  updateRestaurantFromGoogle,
 };
