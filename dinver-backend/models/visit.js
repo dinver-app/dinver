@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       restaurantId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true, // Allow null for fallback scenarios with manual restaurant data
         references: {
           model: 'Restaurants',
           key: 'id',
@@ -108,6 +108,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.UUID),
         allowNull: true,
         defaultValue: [],
+      },
+      manualRestaurantName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'User-provided restaurant name when not found in database',
+      },
+      manualRestaurantCity: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'User-provided restaurant city when not found in database',
       },
     },
     {

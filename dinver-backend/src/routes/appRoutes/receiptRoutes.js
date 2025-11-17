@@ -7,8 +7,10 @@ const {
 
 const {
   uploadReceipt,
-  getUserReceipts,
-} = require('../../controllers/receiptController');
+  searchRestaurants,
+  searchRestaurantsSimple,
+  getRestaurantDetails,
+} = require('../../controllers/appReceiptController');
 
 const router = express.Router();
 
@@ -69,7 +71,7 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
-// Mobile app routes
+// Upload receipt (with Claude OCR + Restaurant Matching)
 router.post(
   '/receipts',
   appApiKeyAuth,
@@ -79,6 +81,29 @@ router.post(
   uploadReceipt,
 );
 
-router.get('/receipts', appApiKeyAuth, appAuthenticateToken, getUserReceipts);
+// NEW: Simple restaurant search (diacritic-insensitive, all restaurants)
+// GET /api/app/restaurants/search?q=cingi
+router.get(
+  '/restaurants/search',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  searchRestaurantsSimple,
+);
+
+// LEGACY: Complex search with Google Places (kept for backward compatibility)
+router.get(
+  '/receipts/search-restaurants',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  searchRestaurants,
+);
+
+// Get restaurant details (for manual selection auto-creation)
+router.get(
+  '/receipts/restaurant-details/:placeId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  getRestaurantDetails,
+);
 
 module.exports = router;

@@ -150,14 +150,22 @@ async function getPlaceIdFromCoordinates(lat, lng) {
 /**
  * Search for places by text query
  */
-async function searchPlacesByText(query) {
+async function searchPlacesByText(query, lat = null, lng = null) {
   try {
+    const params = {
+      query,
+      key: GOOGLE_PLACES_API_KEY,
+      type: 'restaurant',
+    };
+
+    // Add location bias if coordinates provided
+    if (lat && lng) {
+      params.location = `${lat},${lng}`;
+      params.radius = 10000; // 10km radius
+    }
+
     const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
-      params: {
-        query,
-        key: GOOGLE_PLACES_API_KEY,
-        type: 'restaurant',
-      },
+      params,
     });
 
     console.log('Google Places API status:', response.data.status);
@@ -184,6 +192,11 @@ async function searchPlacesByText(query) {
       const addressParts = place.formatted_address ? place.formatted_address.split(',') : [];
       const place_name = addressParts.length > 1 ? addressParts[addressParts.length - 2].trim() : '';
 
+      const photoReference = place.photos?.[0]?.photo_reference;
+      const photoUrl = photoReference
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${GOOGLE_MAPS_API_KEY}`
+        : null;
+
       return {
         placeId: place.place_id,
         name: place.name,
@@ -192,7 +205,8 @@ async function searchPlacesByText(query) {
         rating: place.rating,
         userRatingsTotal: place.user_ratings_total,
         types: place.types,
-        photoReference: place.photos?.[0]?.photo_reference,
+        photoReference: photoReference,
+        photoUrl: photoUrl,
         location: place.geometry.location,
       };
     });

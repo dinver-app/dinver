@@ -32,9 +32,19 @@ router.get(
   visitController.getUserVisits,
 );
 
-// Create a new visit (scan receipt)
+// Create a new visit from existing receipt (NEW FLOW)
+// Body: { receiptId, restaurantId?, taggedBuddies?, restaurantData? }
 router.post(
   '/visits',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.createVisitFromReceipt,
+);
+
+// LEGACY: Create a new visit (old flow - scan receipt directly)
+// Kept for backward compatibility, but frontend should use new flow
+router.post(
+  '/visits/legacy',
   appApiKeyAuth,
   appAuthenticateToken,
   upload.single('receiptImage'),

@@ -52,12 +52,34 @@ router.post(
   visitController.rejectVisit,
 );
 
-// Receipt data updates
+// Receipt data updates (legacy - for editing fields)
 router.put(
   '/receipts/:id',
   sysadminAuthenticateToken,
   checkSysadmin,
   visitController.updateReceipt,
+);
+
+// Receipt review endpoints (new - with AI learning)
+router.get(
+  '/receipts/pending',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  visitController.getPendingReceipts,
+);
+
+router.post(
+  '/receipts/:id/approve',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  visitController.approveReceipt,
+);
+
+router.post(
+  '/receipts/:id/reject',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  visitController.rejectReceipt,
 );
 
 module.exports = router;

@@ -4,8 +4,423 @@ const { uploadVariantsToS3 } = require('../../utils/s3Upload');
 const { processImage } = require('../../utils/imageProcessor');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
+const {
+  searchPlacesByText,
+  getPlaceDetails,
+  transformToRestaurantData,
+} = require('../services/googlePlacesService');
+const { findRestaurantWithClaude } = require('../services/claudeOcrService');
 
-// Create a new visit (scan receipt)
+/**
+ * Generate unique slug for restaurant
+ * Handles Croatian special characters and ensures uniqueness
+ */
+const generateSlug = async (name) => {
+  const normalizedName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[čć]/g, 'c')
+    .replace(/[š]/g, 's')
+    .replace(/[ž]/g, 'z')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^\w\s-]/g, '');
+
+  const baseSlug = normalizedName
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w\-]+/g, '');
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (await Restaurant.findOne({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+};
+
+/**
+ * Create Visit from existing Receipt (NEW FLOW)
+ * Receipt must already exist (created by uploadReceipt in appReceiptController)
+ *
+ * POST /api/app/visits
+ * Body: { receiptId, restaurantId, taggedBuddies?, restaurantData?, manualRestaurantName?, manualRestaurantCity? }
+ */
+const createVisitFromReceipt = async (req, res) => {
+  try {
+    const { receiptId, restaurantId, taggedBuddies, restaurantData, manualRestaurantName, manualRestaurantCity } = req.body;
+    const userId = req.user.id;
+
+    // Validate required fields
+    if (!receiptId) {
+      return res.status(400).json({ error: 'Receipt ID is required' });
+    }
+
+    console.log(`[Visit Create] Creating visit from receipt ${receiptId} for user ${userId}`);
+
+    // Fetch the receipt
+    const receipt = await Receipt.findByPk(receiptId);
+
+    if (!receipt) {
+      return res.status(404).json({ error: 'Receipt not found' });
+    }
+
+    // Verify receipt belongs to this user
+    if (receipt.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Verify receipt doesn't already have a visit
+    if (receipt.visitId) {
+      return res.status(400).json({
+        error: 'Receipt already has a visit',
+        visitId: receipt.visitId,
+      });
+    }
+
+    // Determine final restaurantId
+    let finalRestaurantId = restaurantId || receipt.restaurantId;
+    let autoCreatedRestaurant = null;
+
+    // If restaurantData provided, create/find restaurant
+    if (restaurantData) {
+      try {
+        console.log('[Visit Create] Processing restaurant data...');
+
+        const parsedRestaurantData = typeof restaurantData === 'string'
+          ? JSON.parse(restaurantData)
+          : restaurantData;
+
+        // Check if restaurant already exists by placeId
+        const existingRestaurant = await Restaurant.findByPlaceId(
+          parsedRestaurantData.placeId,
+        );
+
+        if (existingRestaurant) {
+          console.log(
+            `[Visit Create] Restaurant already exists: ${existingRestaurant.name}`,
+          );
+          finalRestaurantId = existingRestaurant.id;
+        } else {
+          // Create new restaurant from Google Places data
+          console.log(
+            `[Visit Create] Creating new restaurant: ${parsedRestaurantData.name}`,
+          );
+
+          const newRestaurant = await Restaurant.create({
+            name: parsedRestaurantData.name,
+            address: parsedRestaurantData.address,
+            place: parsedRestaurantData.place || parsedRestaurantData.city,
+            country: parsedRestaurantData.country || 'Croatia',
+            latitude: parsedRestaurantData.latitude,
+            longitude: parsedRestaurantData.longitude,
+            phone: parsedRestaurantData.phone,
+            websiteUrl: parsedRestaurantData.websiteUrl || parsedRestaurantData.website,
+            placeId: parsedRestaurantData.placeId,
+            rating: parsedRestaurantData.rating,
+            priceLevel: parsedRestaurantData.priceLevel,
+            claimed: false,
+            lastGoogleUpdate: new Date(),
+          });
+
+          autoCreatedRestaurant = newRestaurant;
+          finalRestaurantId = newRestaurant.id;
+
+          console.log(
+            `[Visit Create] Created restaurant ID: ${newRestaurant.id}`,
+          );
+
+          // Log audit for restaurant creation
+          await logAudit({
+            userId,
+            action: ActionTypes.CREATE,
+            entity: Entities.RESTAURANT,
+            entityId: newRestaurant.id,
+            changes: {
+              new: {
+                name: newRestaurant.name,
+                source: 'user_visit_manual_selection',
+                placeId: newRestaurant.placeId,
+              },
+            },
+          });
+        }
+      } catch (autoCreateError) {
+        console.error(
+          '[Visit Create] Failed to process restaurant data:',
+          autoCreateError.message,
+        );
+        return res.status(500).json({
+          error: 'Failed to process restaurant data',
+        });
+      }
+    }
+
+    // FALLBACK: If no restaurant yet, try manual restaurant search
+    if (!finalRestaurantId && manualRestaurantName && manualRestaurantCity) {
+      try {
+        console.log(
+          `[Visit Create] Attempting Google Places search for manual input: "${manualRestaurantName}" in "${manualRestaurantCity}"`,
+        );
+
+        const searchQuery = `${manualRestaurantName} ${manualRestaurantCity}`;
+        const googleResults = await searchPlacesByText(searchQuery, null, null);
+
+        console.log(
+          `[Visit Create] Found ${googleResults.length} Google Places results for manual search`,
+        );
+
+        if (googleResults.length > 0) {
+          // Use Claude to find best match
+          const claudeMatch = await findRestaurantWithClaude(
+            {
+              merchantName: manualRestaurantName,
+              merchantAddress: manualRestaurantCity,
+            },
+            googleResults,
+          );
+
+          console.log(
+            `[Visit Create] Claude confidence for manual search: ${claudeMatch.confidence}`,
+          );
+
+          if (claudeMatch.confidence >= 0.85) {
+            const matchedPlaceId = claudeMatch.restaurantId;
+
+            // Check if restaurant already exists
+            const existingRestaurant = await Restaurant.findByPlaceId(matchedPlaceId);
+
+            if (existingRestaurant) {
+              console.log(
+                `[Visit Create] Found existing restaurant: ${existingRestaurant.name}`,
+              );
+              finalRestaurantId = existingRestaurant.id;
+            } else {
+              // Fetch full details and create restaurant
+              const placeDetails = await getPlaceDetails(matchedPlaceId);
+
+              if (placeDetails) {
+                const restaurantData = transformToRestaurantData(placeDetails);
+                const slug = await generateSlug(restaurantData.name);
+
+                const newRestaurant = await Restaurant.create({
+                  name: restaurantData.name,
+                  slug: slug,
+                  address: restaurantData.address,
+                  place: restaurantData.place,
+                  country: restaurantData.country || 'Croatia',
+                  latitude: restaurantData.latitude,
+                  longitude: restaurantData.longitude,
+                  phone: restaurantData.phone,
+                  websiteUrl: restaurantData.websiteUrl,
+                  placeId: restaurantData.placeId,
+                  priceLevel: restaurantData.priceLevel,
+                  openingHours: restaurantData.openingHours || null,
+                  isOpenNow: restaurantData.isOpenNow || null,
+                  claimed: false,
+                  lastGoogleUpdate: new Date(),
+                });
+
+                autoCreatedRestaurant = newRestaurant;
+                finalRestaurantId = newRestaurant.id;
+
+                console.log(
+                  `[Visit Create] Auto-created restaurant from manual search: ${newRestaurant.name}`,
+                );
+
+                // Log audit
+                await logAudit({
+                  userId,
+                  action: ActionTypes.CREATE,
+                  entity: Entities.RESTAURANT,
+                  entityId: newRestaurant.id,
+                  changes: {
+                    new: {
+                      name: newRestaurant.name,
+                      source: 'user_manual_input_google_places',
+                      placeId: newRestaurant.placeId,
+                    },
+                  },
+                });
+              }
+            }
+          } else {
+            console.log(
+              `[Visit Create] Claude confidence too low (${claudeMatch.confidence}), will create Visit with manual data only`,
+            );
+          }
+        } else {
+          console.log('[Visit Create] No Google Places results for manual search');
+        }
+      } catch (manualSearchError) {
+        console.error(
+          '[Visit Create] Manual restaurant search failed:',
+          manualSearchError.message,
+        );
+        // Continue - will create Visit with manual data only
+      }
+    }
+
+    // Validate we have either restaurantId OR manual restaurant data
+    if (!finalRestaurantId && (!manualRestaurantName || !manualRestaurantCity)) {
+      return res.status(400).json({
+        error: 'Restaurant ID or manual restaurant name and city are required',
+      });
+    }
+
+    // Validate restaurant exists (if we have finalRestaurantId)
+    let restaurant = null;
+    let wasInMustVisit = false;
+
+    if (finalRestaurantId) {
+      restaurant = await Restaurant.findByPk(finalRestaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ error: 'Restaurant not found' });
+      }
+
+      // Check if restaurant is in Must Visit list
+      const mustVisitEntry = await UserFavorite.findOne({
+        where: {
+          userId: userId,
+          restaurantId: finalRestaurantId,
+          removedAt: null,
+        },
+      });
+
+      wasInMustVisit = !!mustVisitEntry;
+
+      // If restaurant was in Must Visit, soft delete it
+      if (mustVisitEntry) {
+        await mustVisitEntry.update({
+          removedAt: new Date(),
+          removedForVisitId: null, // Will be set after visit creation
+        });
+      }
+    }
+
+    // Create the visit
+    const visit = await Visit.create({
+      userId: userId,
+      restaurantId: finalRestaurantId || null, // Can be null for fallback scenarios
+      receiptImageUrl: receipt.mediumUrl || receipt.imageUrl,
+      status: 'PENDING',
+      wasInMustVisit: wasInMustVisit,
+      submittedAt: new Date(),
+      taggedBuddies: taggedBuddies || [],
+      manualRestaurantName: !finalRestaurantId ? manualRestaurantName : null,
+      manualRestaurantCity: !finalRestaurantId ? manualRestaurantCity : null,
+    });
+
+    console.log(`[Visit Create] Visit created: ${visit.id}${!finalRestaurantId ? ' (with manual restaurant data)' : ''}`);
+
+    // Update Receipt with visitId and restaurantId
+    await receipt.update({
+      visitId: visit.id,
+      restaurantId: finalRestaurantId,
+    });
+
+    console.log(`[Visit Create] Receipt ${receipt.id} linked to visit ${visit.id}`);
+
+    // Update Must Visit entry if it was removed earlier
+    if (finalRestaurantId) {
+      const mustVisitEntry = await UserFavorite.findOne({
+        where: {
+          userId: userId,
+          restaurantId: finalRestaurantId,
+          removedAt: { [require('sequelize').Op.not]: null },
+          removedForVisitId: null,
+        },
+        order: [['removedAt', 'DESC']],
+      });
+
+      if (mustVisitEntry) {
+        await mustVisitEntry.update({
+          removedForVisitId: visit.id,
+        });
+        console.log(`[Visit Create] Updated Must Visit entry with visit ID`);
+      }
+    }
+
+    // Return the created visit with restaurant and receipt details
+    const visitWithDetails = await Visit.findByPk(visit.id, {
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'rating',
+            'priceLevel',
+            'address',
+            'place',
+            'thumbnailUrl',
+          ],
+        },
+        {
+          model: Receipt,
+          as: 'receipt',
+          attributes: [
+            'id',
+            'thumbnailUrl',
+            'mediumUrl',
+            'fullscreenUrl',
+            'originalUrl',
+            'status',
+            'oib',
+            'totalAmount',
+            'issueDate',
+          ],
+        },
+      ],
+    });
+
+    const response = {
+      ...visitWithDetails.get(),
+      receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
+      receipt: visitWithDetails.receipt ? {
+        id: visitWithDetails.receipt.id,
+        thumbnailUrl: visitWithDetails.receipt.thumbnailUrl ? getMediaUrl(visitWithDetails.receipt.thumbnailUrl, 'image') : null,
+        mediumUrl: visitWithDetails.receipt.mediumUrl ? getMediaUrl(visitWithDetails.receipt.mediumUrl, 'image') : null,
+        fullscreenUrl: visitWithDetails.receipt.fullscreenUrl ? getMediaUrl(visitWithDetails.receipt.fullscreenUrl, 'image') : null,
+        originalUrl: visitWithDetails.receipt.originalUrl ? getMediaUrl(visitWithDetails.receipt.originalUrl, 'image') : null,
+        status: visitWithDetails.receipt.status,
+        oib: visitWithDetails.receipt.oib,
+        totalAmount: visitWithDetails.receipt.totalAmount,
+        issueDate: visitWithDetails.receipt.issueDate,
+      } : null,
+      restaurant: visitWithDetails.restaurant ? {
+        ...visitWithDetails.restaurant.get(),
+        thumbnailUrl: visitWithDetails.restaurant.thumbnailUrl
+          ? getMediaUrl(visitWithDetails.restaurant.thumbnailUrl, 'image')
+          : null,
+        isNew: !!autoCreatedRestaurant,
+      } : null,
+    };
+
+    let message;
+    if (autoCreatedRestaurant) {
+      message = `Visit created! Novi restoran "${autoCreatedRestaurant.name}" dodan u sustav.`;
+    } else if (!finalRestaurantId) {
+      message = 'Visit created! Restoran će biti spojen od strane administratora.';
+    } else {
+      message = 'Visit created successfully. Waiting for admin approval.';
+    }
+
+    res.status(201).json({
+      message,
+      visit: response,
+    });
+  } catch (error) {
+    console.error('[Visit Create] Failed:', error);
+    res.status(500).json({ error: 'Failed to create visit' });
+  }
+};
+
+// LEGACY: Create a new visit (scan receipt) - OLD FLOW
+// Kept for backward compatibility, but should use createVisitFromReceipt instead
 const createVisit = async (req, res) => {
   try {
     const { restaurantId, taggedBuddies } = req.body;
@@ -605,7 +1020,8 @@ const deleteVisit = async (req, res) => {
 };
 
 module.exports = {
-  createVisit,
+  createVisitFromReceipt, // NEW: Create visit from existing receipt
+  createVisit, // LEGACY: Old flow (kept for backward compatibility)
   getUserVisits,
   getVisitById,
   retakeReceipt,
