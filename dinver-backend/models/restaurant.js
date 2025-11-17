@@ -70,6 +70,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      longDescription: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Detailed restaurant description (500-1000 chars) for AI context and partner descriptions',
+      },
       address: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -145,6 +150,17 @@ module.exports = (sequelize, DataTypes) => {
       userRatingsTotal: {
         type: DataTypes.INTEGER,
         allowNull: true,
+      },
+      dinverRating: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+        comment: 'Dinver custom rating (1.00-5.00) based on Experiences reviews system',
+      },
+      dinverReviewsCount: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'Count of Dinver reviews from Experiences system',
       },
       isOpenNow: {
         type: DataTypes.BOOLEAN,

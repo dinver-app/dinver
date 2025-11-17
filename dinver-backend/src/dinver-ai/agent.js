@@ -24,6 +24,9 @@ const {
 } = require('./dataAccess');
 // (formatters no longer used for replies; LLM crafts all natural text)
 const { generateNaturalReply } = require('./llm');
+// NEW: Comprehensive data enrichment and Claude AI
+const { buildComprehensiveRestaurantData } = require('./dataEnrichment');
+const { generateNaturalReplyWithClaude } = require('./llmClaude');
 const { logAiInteraction } = require('../utils/metrics');
 const {
   logIntentClassification,
@@ -256,6 +259,9 @@ async function handleHours({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -265,9 +271,10 @@ async function handleHours({
     const nameOrSlug = extractRestaurantNameOrSlug(text);
     restaurantBasic = await resolveRestaurantByName(nameOrSlug);
   }
+
+  // If no restaurant found, ask for clarification
   if (!restaurantBasic) {
-    // Delegate clarification to LLM (no fallback text)
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'hours',
       question: text,
@@ -279,86 +286,65 @@ async function handleHours({
     });
     return { text: textOut, restaurantId: null };
   }
-  const restaurant = await fetchRestaurantDetails(restaurantBasic.id);
 
-  const firstCondition =
-    !restaurant || !restaurant.openingHours || !restaurant.openingHours.periods;
+  // Get comprehensive data with formatted opening hours
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    restaurantBasic.id,
+    lang,
+  );
 
-  if (firstCondition) {
-    const textOut = await generateNaturalReply({
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'hours',
       question: text,
       data: {
         restaurant: { id: restaurantBasic.id, name: restaurantBasic.name },
-        missingHours: true,
+        error: 'Restaurant data not available',
       },
-      fallback: '',
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: restaurantBasic.id };
   }
-  const dayIndex = pickDayIndexFromText(text, lang);
-  const period = restaurant.openingHours.periods[dayIndex];
 
-  // Check if we have no data at all
-  const noDataCondition = !period || !period.open || !period.close;
-
-  if (noDataCondition) {
-    const textOut = await generateNaturalReply({
+  // Check if opening hours are available
+  if (
+    !comprehensiveData.openingHours ||
+    !comprehensiveData.openingHours.formatted
+  ) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'hours',
       question: text,
       data: {
-        restaurant: { id: restaurant.id, name: restaurant.name },
-        dayIndex,
-        open: null,
-        close: null,
-        openNow: computeOpenNow(restaurant.openingHours),
+        singleRestaurantMode: true,
+        ...comprehensiveData,
+        missingHours: true,
       },
-      fallback: '',
+      fallback:
+        lang === 'hr'
+          ? `Nažalost, nemam informacije o radnom vremenu za ${comprehensiveData.name}. ${comprehensiveData.phone ? `Možete ih kontaktirati na ${comprehensiveData.phone}.` : ''}`
+          : `Unfortunately, I don't have opening hours information for ${comprehensiveData.name}. ${comprehensiveData.phone ? `You can contact them at ${comprehensiveData.phone}.` : ''}`,
     });
-    return { text: textOut, restaurantId: restaurant.id };
+    return { text: textOut, restaurantId: comprehensiveData.id };
   }
 
-  // Check if restaurant is closed (empty time strings)
-  const isClosed = period.open.time === '' || period.close.time === '';
-
-  if (isClosed) {
-    const textOut = await generateNaturalReply({
-      lang,
-      intent: 'hours',
-      question: text,
-      data: {
-        restaurant: { id: restaurant.id, name: restaurant.name },
-        restaurantName: restaurant.name,
-        dayIndex,
-        open: period.open,
-        close: period.close,
-        openNow: computeOpenNow(restaurant.openingHours),
-        isClosed: true,
-      },
-      fallback: '',
-    });
-    return { text: textOut, restaurantId: restaurant.id };
-  }
-  const openNow = computeOpenNow(restaurant.openingHours);
-  const textOut = await generateNaturalReply({
+  // Generate response with Claude (has formatted hours and today's status)
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'hours',
     question: text,
     data: {
-      restaurant: { id: restaurant.id, name: restaurant.name },
-      dayIndex,
-      open: period.open,
-      close: period.close,
-      openNow: computeOpenNow(
-        restaurant.openingHours,
-        restaurant.customWorkingDays,
-      ),
+      singleRestaurantMode: true,
+      ...comprehensiveData,
     },
     fallback: '',
   });
-  return { text: textOut, restaurantId: restaurant.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleNearby({
@@ -369,6 +355,8 @@ async function handleNearby({
   filters,
   text,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
   const initialNearby = await findNearbyPartners({
     latitude,
     longitude,
@@ -384,9 +372,9 @@ async function handleNearby({
   });
 
   let nearby = [...initialNearby];
+
   // Filter by perk if requested
   if (filters && filters.perk) {
-    // Resolve to specific perk id (hr/en synonyms supported)
     const resolved = await resolvePerkIdByName(filters.perk);
     console.log('[AI][nearby] perk resolve', { input: filters.perk, resolved });
     if (resolved?.id) {
@@ -403,18 +391,14 @@ async function handleNearby({
       );
       nearby = enriched.filter(Boolean);
     } else {
-      // If we cannot resolve the perk name to an id, force empty to avoid hallucinations
       nearby = [];
     }
     console.log('[AI][nearby] after perk filter', {
       perk: filters.perk,
       count: nearby.length,
-      sample: nearby
-        .slice(0, 3)
-        .map((x) => x?.name)
-        .filter(Boolean),
     });
   }
+
   // Food type filter
   if (filters && filters.foodType) {
     const term = String(filters.foodType).toLowerCase();
@@ -433,7 +417,6 @@ async function handleNearby({
     console.log('[AI][nearby] after foodType filter', {
       foodType: term,
       count: nearby.length,
-      sample: nearby.slice(0, 3).map((x) => x.name),
     });
   }
 
@@ -445,59 +428,65 @@ async function handleNearby({
     return rb - ra;
   });
 
-  // Enrich for LLM: priceCategory + openNow + short description
+  // Get top 5 and enrich with comprehensive data
+  const top5 = nearby.slice(0, 5);
   const enrichedForLlm = await Promise.all(
-    nearby.slice(0, 5).map(async (r) => {
-      const details = await fetchRestaurantDetails(r.id);
-      const openNow = computeOpenNow(
-        details?.openingHours,
-        details?.customWorkingDays,
+    top5.map(async (r) => {
+      const comprehensiveData = await buildComprehensiveRestaurantData(
+        r.id,
+        lang,
       );
-      const priceLabel = details?.priceCategory
-        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
-        : null;
-      const descShort =
-        lang === 'hr' ? details?.description?.hr : details?.description?.en;
+      if (!comprehensiveData) return null;
+
+      // Add distance info from nearby search
       return {
-        id: r.id,
-        name: r.name,
-        thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key from database
+        ...comprehensiveData,
         distanceKm: r.distanceKm,
-        rating: r.rating || null,
-        priceCategory: priceLabel,
-        openNow,
-        address: details?.address || null,
-        place: details?.place || null,
-        description: descShort || '',
-        slug: details?.slug || null,
       };
     }),
   );
 
-  // Clearer fallback when no matches
-  let fallbackNearby = '';
+  const validRestaurants = enrichedForLlm.filter(Boolean);
 
   console.log('[AI][nearby] final', {
-    count: enrichedForLlm.length,
-    names: enrichedForLlm.slice(0, 5).map((x) => x.name),
+    count: validRestaurants.length,
+    names: validRestaurants.map((x) => x.name),
   });
 
-  const textOut = await generateNaturalReply({
+  // If no restaurants found
+  if (validRestaurants.length === 0) {
+    const textOut = await generateNaturalReplyWithClaude({
+      lang,
+      intent: 'nearby',
+      question: text || 'nearby',
+      data: { nearby: [], filters: filters || null, noResults: true },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, nema restorana u blizini koji odgovaraju vašim kriterijima.'
+          : 'Unfortunately, there are no restaurants nearby matching your criteria.',
+    });
+    return { text: textOut, restaurantId: null, restaurants: [] };
+  }
+
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'nearby',
     question: text || 'nearby',
-    data: { nearby: enrichedForLlm, filters: filters || null },
-    fallback: fallbackNearby,
+    data: { nearby: validRestaurants, filters: filters || null },
+    fallback: '',
   });
-  const restaurants = enrichedForLlm.map((r) => ({
+
+  const restaurants = validRestaurants.map((r) => ({
     id: r.id,
     name: r.name,
     address: r.address,
     place: r.place,
-    thumbnailUrl: r.thumbnailUrl || null, // Keep as raw key, transform when serving
+    thumbnailUrl: r.thumbnailUrl || null,
     distance: r.distanceKm,
     slug: r.slug || null,
   }));
+
   return { text: textOut, restaurantId: null, restaurants };
 }
 
@@ -632,23 +621,25 @@ async function handleMenuSearch({
 
       const restaurant = await fetchRestaurantDetails(preferRestaurantId);
 
-      const reply = await generateNaturalReply({
+      const comprehensiveData = await buildComprehensiveRestaurantData(
+        preferRestaurantId,
+        lang,
+      );
+
+      const reply = await generateNaturalReplyWithClaude({
         lang,
         intent: 'menu_search',
         question,
         data: {
+          singleRestaurantMode: true,
+          ...comprehensiveData,
           items: samples,
-          restaurant: { id: restaurant.id, name: restaurant.name },
           isGeneralMenu: true,
         },
         fallback: '',
       });
 
-      updateContext(threadId, {
-        restaurantId: preferRestaurantId,
-        intent: 'menu_search',
-      });
-
+      // Context update will be handled in chatAgent after handler returns
       return { text: reply, restaurantId: preferRestaurantId };
     }
   }
@@ -702,12 +693,17 @@ async function handleMenuSearch({
     const r =
       restaurantForScope ||
       (await fetchRestaurantDetails(restaurantIdForScope));
-    const textMax = await generateNaturalReply({
+    const comprehensiveData = await buildComprehensiveRestaurantData(
+      r?.id,
+      lang,
+    );
+    const textMax = await generateNaturalReplyWithClaude({
       lang,
       intent: 'menu_search',
       question,
       data: {
-        restaurant: { id: r?.id, name: r?.name },
+        singleRestaurantMode: true,
+        ...comprehensiveData,
         items: (items || []).map((x) => ({ name: x.name, price: x.price })),
         maxPrice: maxPrice ?? null,
         isMaxPriceQuery: true,
@@ -755,13 +751,18 @@ async function handleMenuSearch({
         const shuffled = all.slice().sort(() => Math.random() - 0.5);
         const sampleSize = Math.min(7, Math.max(5, Math.floor(all.length / 5)));
         const picks = shuffled.slice(0, sampleSize);
-        const textOut = await generateNaturalReply({
+        const comprehensiveData = await buildComprehensiveRestaurantData(
+          r?.id,
+          lang,
+        );
+        const textOut = await generateNaturalReplyWithClaude({
           lang,
           intent: 'menu_search',
           question,
           data: {
+            singleRestaurantMode: true,
+            ...comprehensiveData,
             items: picks,
-            restaurant: { id: r?.id, name: r?.name },
             isGeneralMenu: true,
           },
           fallback: '',
@@ -770,7 +771,7 @@ async function handleMenuSearch({
       }
     }
 
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'menu_search',
       question,
@@ -799,13 +800,18 @@ async function handleMenuSearch({
       const shuffled = all.slice().sort(() => Math.random() - 0.5);
       const sampleSize = Math.min(7, Math.max(5, Math.floor(all.length / 5)));
       const picks = shuffled.slice(0, sampleSize);
-      const textOut = await generateNaturalReply({
+      const comprehensiveData = await buildComprehensiveRestaurantData(
+        r?.id,
+        lang,
+      );
+      const textOut = await generateNaturalReplyWithClaude({
         lang,
         intent: 'menu_search',
         question,
         data: {
+          singleRestaurantMode: true,
+          ...comprehensiveData,
           items: picks,
-          restaurant: { id: r?.id, name: r?.name },
           isGeneralMenu: true,
         },
         fallback: '',
@@ -822,11 +828,19 @@ async function handleMenuSearch({
       restaurantForScope ||
       (await fetchRestaurantDetails(restaurantIdForScope));
     if (scoped && scoped.length > 0) {
-      const textScoped = await generateNaturalReply({
+      const comprehensiveData = await buildComprehensiveRestaurantData(
+        r?.id,
+        lang,
+      );
+      const textScoped = await generateNaturalReplyWithClaude({
         lang,
         intent: 'menu_search',
         question,
-        data: { items: scoped, restaurant: { id: r?.id, name: r?.name } },
+        data: {
+          singleRestaurantMode: true,
+          ...comprehensiveData,
+          items: scoped,
+        },
         fallback: '',
       });
       const items = scoped.map((it) => ({
@@ -841,13 +855,18 @@ async function handleMenuSearch({
       }));
       return { text: textScoped, restaurantId: r?.id || null, items };
     }
-    const textNf = await generateNaturalReply({
+    const comprehensiveDataNf = await buildComprehensiveRestaurantData(
+      r?.id,
+      lang,
+    );
+    const textNf = await generateNaturalReplyWithClaude({
       lang,
       intent: 'menu_search',
       question,
       data: {
+        singleRestaurantMode: true,
+        ...comprehensiveDataNf,
         items: [],
-        restaurant: { id: r?.id, name: r?.name },
         notFoundInThisRestaurant: true,
         term,
       },
@@ -859,7 +878,7 @@ async function handleMenuSearch({
   // Otherwise search across all partners
   const results = await searchMenuAcrossRestaurants(term);
   if (!results || results.length === 0) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'menu_search',
       question,
@@ -885,7 +904,7 @@ async function handleMenuSearch({
     item: r.item,
   }));
 
-  const textGlobal = await generateNaturalReply({
+  const textGlobal = await generateNaturalReplyWithClaude({
     lang,
     intent: 'menu_search',
     question,
@@ -932,6 +951,9 @@ async function handlePerks({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -941,8 +963,10 @@ async function handlePerks({
     const nameOrSlug = extractRestaurantNameOrSlug(text);
     restaurantBasic = await resolveRestaurantByName(nameOrSlug);
   }
+
+  // If no restaurant found, ask for clarification
   if (!restaurantBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'perks',
       question: text,
@@ -954,47 +978,40 @@ async function handlePerks({
     });
     return { text: textOut, restaurantId: null };
   }
-  const restaurant = await fetchRestaurantDetails(restaurantBasic.id);
-  if (!restaurant) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (already includes enriched perks)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    restaurantBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'perks',
       question: text,
-      data: {},
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: null };
   }
-  const { establishmentPerks } = await fetchTypesForRestaurant(restaurant);
-  if (!establishmentPerks || establishmentPerks.length === 0) {
-    const textOut = await generateNaturalReply({
-      lang,
-      intent: 'perks',
-      question: text,
-      data: { restaurant: { name: restaurant.name }, perks: [] },
-      fallback: '',
-    });
-    return { text: textOut, restaurantId: restaurant.id };
-  }
-  const target = (text || '').toLowerCase();
-  const perkMatch = establishmentPerks.find((p) => {
-    const name = (lang === 'hr' ? p.nameHr : p.nameEn).toLowerCase();
-    return target.includes(lang === 'hr' ? 'terasa' : 'terrace')
-      ? name.includes(lang === 'hr' ? 'terasa' : 'terrace')
-      : false || target.includes(name);
-  });
-  const textOut = await generateNaturalReply({
+
+  // Generate response with Claude (has all perks with names and icons)
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'perks',
     question: text,
     data: {
-      restaurant: { id: restaurant.id, name: restaurant.name },
-      perk: perkMatch || null,
-      perks: establishmentPerks,
+      singleRestaurantMode: true,
+      ...comprehensiveData,
     },
     fallback: '',
   });
-  return { text: textOut, restaurantId: restaurant.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleMealTypes({
@@ -1003,6 +1020,9 @@ async function handleMealTypes({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1012,8 +1032,10 @@ async function handleMealTypes({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'meal_types',
       question: text,
@@ -1025,37 +1047,40 @@ async function handleMealTypes({
     });
     return { text: textOut, restaurantId: null };
   }
-  const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (has mealTypes enriched)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'meal_types',
       question: text,
-      data: {},
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: null };
   }
-  const { mealTypes } = await fetchTypesForRestaurant(restaurant);
-  if (!mealTypes || mealTypes.length === 0) {
-    const textOut = await generateNaturalReply({
-      lang,
-      intent: 'meal_types',
-      question: text,
-      data: { restaurant: { name: restaurant.name }, mealTypes: [] },
-      fallback: '',
-    });
-    return { text: textOut, restaurantId: restaurant.id };
-  }
-  const names = mealTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  const textOut2 = await generateNaturalReply({
+
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'meal_types',
     question: text,
-    data: { restaurant: { name: restaurant.name }, mealTypes: names },
+    data: {
+      singleRestaurantMode: true,
+      ...comprehensiveData,
+    },
     fallback: '',
   });
-  return { text: textOut2, restaurantId: restaurant.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleDietaryTypes({
@@ -1064,6 +1089,9 @@ async function handleDietaryTypes({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1073,8 +1101,10 @@ async function handleDietaryTypes({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'dietary_types',
       question: text,
@@ -1086,37 +1116,40 @@ async function handleDietaryTypes({
     });
     return { text: textOut, restaurantId: null };
   }
-  const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (has dietaryTypes enriched)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'dietary_types',
       question: text,
-      data: {},
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: null };
   }
-  const { dietaryTypes } = await fetchTypesForRestaurant(restaurant);
-  if (!dietaryTypes || dietaryTypes.length === 0) {
-    const textOut = await generateNaturalReply({
-      lang,
-      intent: 'dietary_types',
-      question: text,
-      data: { restaurant: { name: restaurant.name }, dietaryTypes: [] },
-      fallback: '',
-    });
-    return { text: textOut, restaurantId: restaurant.id };
-  }
-  const names = dietaryTypes.map((m) => (lang === 'hr' ? m.nameHr : m.nameEn));
-  const textOut3 = await generateNaturalReply({
+
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'dietary_types',
     question: text,
-    data: { restaurant: { name: restaurant.name }, dietaryTypes: names },
+    data: {
+      singleRestaurantMode: true,
+      ...comprehensiveData,
+    },
     fallback: '',
   });
-  return { text: textOut3, restaurantId: restaurant.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleReservations({
@@ -1125,6 +1158,9 @@ async function handleReservations({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1134,8 +1170,10 @@ async function handleReservations({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'reservations',
       question: text,
@@ -1147,28 +1185,40 @@ async function handleReservations({
     });
     return { text: textOut, restaurantId: null };
   }
-  const restaurant = await fetchRestaurantDetails(rBasic.id);
-  if (!restaurant) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (has reservationEnabled + contact info)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'reservations',
       question: text,
-      data: {},
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: null };
   }
-  const textOut4 = await generateNaturalReply({
+
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'reservations',
     question: text,
     data: {
-      restaurant: { name: restaurant.name },
-      reservationEnabled: !!restaurant.reservationEnabled,
+      singleRestaurantMode: true,
+      ...comprehensiveData,
     },
     fallback: '',
   });
-  return { text: textOut4, restaurantId: restaurant.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleContact({
@@ -1177,6 +1227,9 @@ async function handleContact({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1186,8 +1239,10 @@ async function handleContact({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'contact',
       question: text,
@@ -1199,35 +1254,40 @@ async function handleContact({
     });
     return { text: textOut, restaurantId: null };
   }
-  const r = await fetchRestaurantDetails(rBasic.id);
-  if (!r) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (has phone, email, website, social links)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'contact',
       question: text,
-      data: {},
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: null };
   }
-  const links = [];
-  if (r.websiteUrl)
-    links.push(
-      lang === 'hr' ? `Web: ${r.websiteUrl}` : `Website: ${r.websiteUrl}`,
-    );
-  if (r.fbUrl) links.push(`Facebook: ${r.fbUrl}`);
-  if (r.igUrl) links.push(`Instagram: ${r.igUrl}`);
-  if (r.ttUrl) links.push(`TikTok: ${r.ttUrl}`);
-  if (r.phone) links.push((lang === 'hr' ? 'Telefon: ' : 'Phone: ') + r.phone);
-  if (r.email) links.push('Email: ' + r.email);
-  const textOut5 = await generateNaturalReply({
+
+  // Generate response with Claude (has all contact info)
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'contact',
     question: text,
-    data: { restaurant: { name: r.name }, links },
+    data: {
+      singleRestaurantMode: true,
+      ...comprehensiveData,
+    },
     fallback: '',
   });
-  return { text: textOut5, restaurantId: r.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleDescription({
@@ -1236,53 +1296,36 @@ async function handleDescription({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
   // In per-restaurant chat, preferRestaurantId is forced. Use it directly when present.
   if (preferRestaurantId) {
-    const details = await fetchRestaurantDetails(preferRestaurantId);
-    if (details) {
-      const types = await fetchTypesForRestaurant(details);
-      const priceLabel = details?.priceCategory
-        ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
-        : null;
-      const openNow = computeOpenNow(
-        details?.openingHours,
-        details?.customWorkingDays,
-      );
-      const descriptionText =
-        (lang === 'hr' ? details?.description?.hr : details?.description?.en) ||
-        '';
+    const comprehensiveData = await buildComprehensiveRestaurantData(
+      preferRestaurantId,
+      lang,
+    );
+
+    if (comprehensiveData) {
+      // Build data structure for AI with singleRestaurantMode flag
       const data = {
         singleRestaurantMode: true,
-        restaurant: {
-          id: details?.id,
-          name: details?.name,
-          address: details?.address || null,
-          place: details?.place || null,
-          thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key, transform when serving
-          openNow,
-          priceCategory: priceLabel,
-        },
-        description: descriptionText,
-        perks: (types?.establishmentPerks || []).map((p) => ({
-          id: p.id,
-          name: lang === 'hr' ? p.nameHr : p.nameEn,
-        })),
-        foodTypes: (types?.foodTypes || []).map((p) => ({
-          id: p.id,
-          name: lang === 'hr' ? p.nameHr : p.nameEn,
-        })),
+        ...comprehensiveData,
       };
-      const textOut = await generateNaturalReply({
+
+      // Use Claude AI for natural reply
+      const textOut = await generateNaturalReplyWithClaude({
         lang,
         intent: 'description',
         question: text,
         data,
         fallback: '',
       });
-      return { text: textOut, restaurantId: details.id };
+
+      return { text: textOut, restaurantId: comprehensiveData.id };
     }
   }
 
+  // Resolve restaurant from query
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1292,8 +1335,10 @@ async function handleDescription({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'description',
       question: text,
@@ -1307,52 +1352,42 @@ async function handleDescription({
     return { text: textOut, restaurantId: null };
   }
 
-  // Fetch rich details and build an overview payload
-  const details = await fetchRestaurantDetails(rBasic.id);
-  const types = details ? await fetchTypesForRestaurant(details) : null;
-  const priceLabel = details?.priceCategory
-    ? { hr: details.priceCategory.nameHr, en: details.priceCategory.nameEn }
-    : null;
-  const openNow = computeOpenNow(
-    details?.openingHours,
-    details?.customWorkingDays,
+  // Fetch comprehensive restaurant data
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
   );
-  const descriptionText =
-    (lang === 'hr' ? details?.description?.hr : details?.description?.en) || '';
 
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
+      lang,
+      intent: 'description',
+      question: text,
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
+    });
+    return { text: textOut, restaurantId: null };
+  }
+
+  // Build data structure for AI with singleRestaurantMode flag
   const data = {
     singleRestaurantMode: true,
-    restaurant: {
-      id: details?.id,
-      name: details?.name,
-      address: details?.address || null,
-      place: details?.place || null,
-      thumbnailUrl: details?.thumbnailUrl || null, // Keep as raw key, transform when serving
-      openNow,
-      priceCategory: priceLabel,
-      slug: details?.slug || null,
-    },
-    description: descriptionText,
-    perks:
-      types?.establishmentPerks?.map((p) => ({
-        id: p.id,
-        name: lang === 'hr' ? p.nameHr : p.nameEn,
-      })) || [],
-    foodTypes:
-      types?.foodTypes?.map((p) => ({
-        id: p.id,
-        name: lang === 'hr' ? p.nameHr : p.nameEn,
-      })) || [],
+    ...comprehensiveData,
   };
 
-  const textOut6 = await generateNaturalReply({
+  // Use Claude AI for natural reply
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'description',
     question: text,
     data,
     fallback: '',
   });
-  return { text: textOut6, restaurantId: details?.id || null };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 async function handleVirtualTour({
@@ -1446,6 +1481,9 @@ async function handleReviews({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1455,8 +1493,10 @@ async function handleReviews({
     const rName = extractRestaurantNameOrSlug(text);
     rBasic = await resolveRestaurantByName(rName);
   }
+
+  // If no restaurant found, ask for clarification
   if (!rBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'reviews',
       question: text,
@@ -1468,26 +1508,40 @@ async function handleReviews({
     });
     return { text: textOut, restaurantId: null };
   }
-  const summary = await fetchReviewsSummary(rBasic.id);
-  if (!summary || summary.totalReviews === 0) {
-    const textOut = await generateNaturalReply({
+
+  // Get comprehensive data (has ratings + reviews summary)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    rBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'reviews',
       question: text,
-      data: { reviews: [], totalReviews: 0 },
-      fallback: '',
+      data: { error: 'Restaurant not found' },
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
-    return { text: textOut, restaurantId: rBasic.id };
+    return { text: textOut, restaurantId: null };
   }
-  const { ratings, totalReviews } = summary;
-  const textOut9 = await generateNaturalReply({
+
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'reviews',
     question: text,
-    data: { ratings, totalReviews },
+    data: {
+      singleRestaurantMode: true,
+      ...comprehensiveData,
+    },
     fallback: '',
   });
-  return { text: textOut9, restaurantId: rBasic.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 // NEW: Handle "what_offers" intent
@@ -1497,6 +1551,9 @@ async function handleWhatOffers({
   restaurantQuery,
   preferRestaurantId,
 }) {
+  // NEW IMPLEMENTATION: Use comprehensive data enrichment and Claude AI
+
+  // Resolve restaurant
   const { match: resolved, candidates } = await resolveRestaurantFromText(
     restaurantQuery || text,
     preferRestaurantId,
@@ -1506,8 +1563,10 @@ async function handleWhatOffers({
     const nameOrSlug = extractRestaurantNameOrSlug(text);
     restaurantBasic = await resolveRestaurantByName(nameOrSlug);
   }
+
+  // If no restaurant found, ask for clarification
   if (!restaurantBasic) {
-    const textOut = await generateNaturalReply({
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'what_offers',
       question: text,
@@ -1520,9 +1579,14 @@ async function handleWhatOffers({
     return { text: textOut, restaurantId: null };
   }
 
-  const offerings = await getRestaurantOfferings(restaurantBasic.id, lang);
-  if (!offerings) {
-    const textOut = await generateNaturalReply({
+  // Get comprehensive data (has everything - menu, types, perks, etc.)
+  const comprehensiveData = await buildComprehensiveRestaurantData(
+    restaurantBasic.id,
+    lang,
+  );
+
+  if (!comprehensiveData) {
+    const textOut = await generateNaturalReplyWithClaude({
       lang,
       intent: 'what_offers',
       question: text,
@@ -1530,19 +1594,27 @@ async function handleWhatOffers({
         restaurant: { id: restaurantBasic.id, name: restaurantBasic.name },
         noData: true,
       },
-      fallback: '',
+      fallback:
+        lang === 'hr'
+          ? 'Nažalost, ne mogu pronaći informacije o tom restoranu.'
+          : 'Unfortunately, I cannot find information about that restaurant.',
     });
     return { text: textOut, restaurantId: restaurantBasic.id };
   }
 
-  const textOut = await generateNaturalReply({
+  // Generate response with Claude
+  const textOut = await generateNaturalReplyWithClaude({
     lang,
     intent: 'what_offers',
     question: text,
-    data: offerings,
+    data: {
+      singleRestaurantMode: true,
+      ...comprehensiveData,
+    },
     fallback: '',
   });
-  return { text: textOut, restaurantId: restaurantBasic.id };
+
+  return { text: textOut, restaurantId: comprehensiveData.id };
 }
 
 // NEW: Handle "combined_search" intent (multiple criteria)
@@ -2133,13 +2205,16 @@ async function chatAgent(input) {
       case 'data_provenance':
         return handleDataProvenance({ lang, text: message });
       default:
-        // No predefined phrase; let LLM craft a natural, scoped reply.
-        return generateNaturalReply({
+        // Out-of-scope: Use Claude to politely decline and redirect to restaurants
+        return generateNaturalReplyWithClaude({
           lang,
           intent: 'out_of_scope',
           question: message,
           data: {},
-          fallback: '',
+          fallback:
+            lang === 'hr'
+              ? 'Mogu pomoći samo s pitanjima vezanim za Dinver partner restorane. Mogu li vam pomoći pronaći restoran?'
+              : 'I can only help with questions about Dinver partner restaurants. Can I help you find a restaurant?',
         });
     }
 
@@ -2152,12 +2227,15 @@ async function chatAgent(input) {
       durationMs: null,
       note: 'fell through switch',
     });
-    return generateNaturalReply({
+    return generateNaturalReplyWithClaude({
       lang,
       intent: 'out_of_scope',
       question: message,
       data: {},
-      fallback: '',
+      fallback:
+        lang === 'hr'
+          ? 'Mogu pomoći samo s pitanjima vezanim za Dinver partner restorane. Mogu li vam pomoći pronaći restoran?'
+          : 'I can only help with questions about Dinver partner restaurants. Can I help you find a restaurant?',
     });
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -2172,7 +2250,7 @@ async function chatAgent(input) {
     return {
       text:
         lang === 'hr'
-          ? 'Izvinjavam se, dogodila se greška. Molim pokušajte ponovno.'
+          ? 'Ispričavam se, dogodila se greška. Molim pokušajte ponovno.'
           : 'Sorry, an error occurred. Please try again.',
       restaurantId: null,
     };

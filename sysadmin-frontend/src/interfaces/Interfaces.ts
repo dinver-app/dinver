@@ -22,6 +22,7 @@ export interface Restaurant {
   oib?: string;
   address: string;
   description?: string;
+  longDescription?: string;
   workingHoursInfo?: string;
   thumbnailUrl?: string;
   thumbnail?: string;
@@ -70,6 +71,7 @@ export interface Restaurant {
     language: string;
     name: string;
     description: string;
+    longDescription?: string;
   }[];
   dietaryTypes?: number[];
   wifiSsid?: string;

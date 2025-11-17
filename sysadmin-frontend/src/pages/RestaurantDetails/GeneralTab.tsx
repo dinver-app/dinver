@@ -18,6 +18,7 @@ interface Translation {
   language: string;
   name: string;
   description: string;
+  longDescription: string;
 }
 
 const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
@@ -53,6 +54,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           ?.description ||
         restaurant.description ||
         "",
+      longDescription: restaurant.longDescription || "",
     },
     {
       language: "en",
@@ -60,6 +62,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       description:
         restaurant.translations?.find((t) => t.language === "en")
           ?.description || "",
+      longDescription: restaurant.longDescription || "",
     },
   ]);
 
@@ -71,6 +74,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     ttUrl: "",
     phone: "",
     description: "",
+    longDescription: "",
   });
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
@@ -126,6 +130,22 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       return;
     }
 
+    if (field === "longDescription" && value.length > 1000) {
+      setErrors((prev) => ({
+        ...prev,
+        longDescription: t("long_description_too_long"),
+      }));
+      return;
+    }
+
+    // Clear errors if within limit
+    if (field === "description" || field === "longDescription") {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+
     setTranslations((prev) =>
       prev.map((translation) =>
         translation.language === language
@@ -136,7 +156,10 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     setIsDirty(true);
   };
 
-  const handleTranslate = async (language: string, field: "description") => {
+  const handleTranslate = async (
+    language: string,
+    field: "description" | "longDescription"
+  ) => {
     try {
       const sourceText =
         translations.find((t) => t.language === language)?.[field] || "";
@@ -195,6 +218,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       );
       formDataToSend.append("subdomain", formData.subdomain);
       formDataToSend.append("virtualTourUrl", formData.virtualTourUrl);
+      // Add longDescription (uses HR version as primary for AI)
+      formDataToSend.append(
+        "longDescription",
+        translations.find((t) => t.language === "hr")?.longDescription || ""
+      );
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
@@ -204,6 +232,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         language: t.language,
         name: formData.name, // Use the main name for both languages
         description: t.description,
+        longDescription: t.longDescription,
       }));
       formDataToSend.append("translations", JSON.stringify(translationsToSend));
 
@@ -398,6 +427,46 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                     )}
                     <div className="text-xs text-gray-500 ml-auto">
                       {translation.description.length}/150
+                    </div>
+                  </div>
+
+                  {/* Long Description for AI */}
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {t("restaurant_long_description")} (
+                        {translation.language.toUpperCase()}) -{" "}
+                        <span className="text-xs text-gray-500">Za AI kontekst</span>
+                      </label>
+                      <TranslateButton
+                        onClick={() =>
+                          handleTranslate(translation.language, "longDescription")
+                        }
+                        className="ml-2"
+                      />
+                    </div>
+                    <textarea
+                      value={translation.longDescription}
+                      onChange={(e) =>
+                        handleTranslationChange(
+                          translation.language,
+                          "longDescription",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Detaljniji opis restorana za AI asistenta (500-1000 znakova). Npr: 'Autentična talijanska taverna s više od 20 godina tradicije. Specijalizirani smo za domaću pastu i pizzu iz peći na drva. Naš chef Antonio dolazi iz Napulja...'"
+                      className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32 resize-none"
+                      maxLength={1000}
+                    />
+                    <div className="flex justify-between mt-1">
+                      {errors.longDescription && (
+                        <p className="text-sm text-red-500">
+                          {errors.longDescription}
+                        </p>
+                      )}
+                      <div className="text-xs text-gray-500 ml-auto">
+                        {translation.longDescription.length}/1000
+                      </div>
                     </div>
                   </div>
                 </div>
