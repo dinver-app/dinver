@@ -50,6 +50,35 @@ router.get(
   nearbyRestaurants,
 );
 
+// Google Places Import Routes (must come before :slug route)
+router.post(
+  '/restaurants/import-from-url',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.importRestaurantFromUrl,
+);
+
+router.get(
+  '/restaurants/search-places',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.searchGooglePlaces,
+);
+
+router.get(
+  '/restaurants/place-details/:placeId',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.getGooglePlaceDetails,
+);
+
+router.post(
+  '/restaurants/create-from-google',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.createRestaurantFromGoogle,
+);
+
 router.get('/restaurants/:slug', restaurantController.getRestaurantDetails);
 
 router.put(

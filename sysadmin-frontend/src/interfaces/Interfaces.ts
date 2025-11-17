@@ -65,6 +65,7 @@ export interface Restaurant {
   email?: string;
   thumbnailUrls?: { thumbnail: string; medium: string; fullscreen: string };
   place?: string;
+  country?: string;
   translations?: {
     language: string;
     name: string;

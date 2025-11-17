@@ -14,6 +14,7 @@ import {
   updateRestaurantAdmin,
   removeRestaurantAdmin,
 } from "../services/sysadminService";
+import ImportRestaurantModal from "../components/ImportRestaurantModal";
 
 const formatRating = (rating: number | undefined, language: string) => {
   if (rating === undefined) return "-";
@@ -61,6 +62,7 @@ const Restaurants = () => {
     useState<Restaurant | null>(null);
   const [isEditAdminModalOpen, setEditAdminModalOpen] = useState(false);
   const [adminToEdit, setAdminToEdit] = useState<any | null>(null);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchRestaurants(currentPage, searchTerm);
@@ -240,6 +242,12 @@ const Restaurants = () => {
           placeholder={t("search_restaurants")}
           className="px-3 py-2 text-xs border border-gray-300 rounded outline-gray-300"
         />
+        <button
+          onClick={() => setImportModalOpen(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition font-medium"
+        >
+          Import from Google
+        </button>
         <button onClick={() => setModalOpen(true)} className="primary-button">
           {t("add_restaurant")}
         </button>
@@ -754,6 +762,15 @@ const Restaurants = () => {
           </div>
         </div>
       )}
+
+      {/* Import from Google Modal */}
+      <ImportRestaurantModal
+        isOpen={isImportModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => {
+          fetchRestaurants(currentPage, searchTerm);
+        }}
+      />
     </div>
   );
 };

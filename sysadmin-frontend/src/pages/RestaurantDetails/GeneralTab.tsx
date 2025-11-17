@@ -28,6 +28,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     thumbnailUrl: restaurant.thumbnailUrl || "",
     address: restaurant.address || "",
     place: restaurant.place || "",
+    country: restaurant.country || "",
     websiteUrl: restaurant.websiteUrl || "",
     fbUrl: restaurant.fbUrl || "",
     igUrl: restaurant.igUrl || "",
@@ -170,6 +171,8 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       formDataToSend.append("restaurantId", restaurant.id || "");
       formDataToSend.append("name", formData.name);
       formDataToSend.append("address", formData.address);
+      formDataToSend.append("place", formData.place);
+      formDataToSend.append("country", formData.country);
       formDataToSend.append("oib", formData.oib);
       formDataToSend.append(
         "websiteUrl",
@@ -690,7 +693,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t("address")}
               </label>
@@ -710,6 +713,18 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                 type="text"
                 name="place"
                 value={formData.place}
+                onChange={handleInputChange}
+                className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("country")}
+              </label>
+              <input
+                type="text"
+                name="country"
+                value={formData.country}
                 onChange={handleInputChange}
                 className="block w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
