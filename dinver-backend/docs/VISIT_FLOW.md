@@ -3,11 +3,13 @@
 ## 📋 Pregled
 
 Novi sustav kreирanja Visita s **Receipt-first** pristupom:
+
 1. Korisnik skenira račun → Backend kreira Receipt s Claude OCR-om
 2. Backend automatski pokušava pronaći restoran (5-koračni algoritam)
 3. Korisnik potvrđuje → Visit se kreira i povezuje s Receiptom
 
 **Prednosti:**
+
 - ✅ Receipt i Visit su odvojeni entiteti
 - ✅ Receipt može postojati bez Visita (siročad za ručno procesiranje)
 - ✅ Visit uvijek ima kompletan Receipt
@@ -86,6 +88,7 @@ Novi sustav kreирanja Visita s **Receipt-first** pristupom:
 ```
 
 **Ključna pojednostavljenja:**
+
 - ✅ Bez kompleksne Google Places pretrage u frontendu
 - ✅ Bez URLova ili kompliciranih inputa
 - ✅ Samo: Pretraži listu → Ako nema, upiši ime + grad
@@ -99,17 +102,20 @@ Novi sustav kreирanja Visita s **Receipt-first** pristupom:
 Backend automatski pokušava pronaći restoran ovim redom:
 
 ### **Korak 1: OIB Točno Podudaranje** (samo Hrvatska)
+
 ```
 AKO Claude pročita OIB s računa:
   → Pretraži bazu: Restaurant.findOne({ oib: extractedOib })
   → AKO pronađe: ✅ MATCH! (100% sigurnost)
   → AKO ne pronađe: → Korak 1.5
 ```
+
 **Brzina:** Najbrži (točan DB lookup)
 **Sigurnost:** 100%
 **Pokrivenost:** Samo Hrvatska
 
 ### **Korak 1.5: Pretraga po Imenu** (postojeći restorani)
+
 ```
 AKO Claude pročita merchantName s računa:
   → Pretraži bazu: Restaurant.findAll({ name ILIKE '%merchantName%' })
@@ -119,12 +125,14 @@ AKO Claude pročita merchantName s računa:
   → AKO Claude sigurnost ≥ 0.80: ✅ MATCH!
   → AKO sigurnost < 0.80: → Korak 2
 ```
+
 **Brzina:** Brzo (DB pretraga + opcionalni filter udaljenosti)
 **Sigurnost:** 80%+
 **Pokrivenost:** Sve zemlje (radi bez GPS-a, ali bolje s GPS-om)
 **Primjer:** OCR pročita "CINGI LINGI CARDA" → Pronalazi "Restoran CINGI LINGI CARDA" u bazi
 
 ### **Korak 2: Geografsko + Claude Podudaranje** (postojeći restorani)
+
 ```
 AKO korisnik ima GPS koordinate:
   → Pretraži bazu: Restaurant.findNearby(lat, lng, 5km)
@@ -135,11 +143,13 @@ AKO korisnik ima GPS koordinate:
 INAČE (bez GPS-a):
   → Preskoči → Korak 2.5
 ```
+
 **Brzina:** Brzo (geo-filtrirani query + AI)
 **Sigurnost:** 80%+ (Claude odabire najbolje podudaranje)
 **Pokrivenost:** Bilo koja zemlja (gdje imamo restorane u bazi)
 
 ### **Korak 2.5: Google Places + Claude Podudaranje** (AUTO-KREIRANJE 🆕)
+
 ```
 AKO Claude pročita merchantName i merchantAddress:
   → Google Places Text Search: "{merchantName} {merchantAddress}"
@@ -152,6 +162,7 @@ AKO Claude pročita merchantName i merchantAddress:
       → AKO ne postoji: ✅ AUTO-KREIRAJ + MATCH! (novi restoran)
   → AKO sigurnost < 0.85: → Korak 3
 ```
+
 **Brzina:** Sporije (2 Google API poziva: Text Search + Place Details)
 **Sigurnost:** 85%+ (viši prag za auto-kreiranje)
 **Pokrivenost:** Globalno (sve što je na Google Places)
@@ -159,6 +170,7 @@ AKO Claude pročita merchantName i merchantAddress:
 **Magija:** Automatski popunjava bazu s novim restoranima! 🎉
 
 ### **Korak 3: Ručna Pretraga Fallback**
+
 ```
 AKO nijedan automatizirani korak ne uspije:
   → Vrati: { needsRestaurantSelection: true }
@@ -166,6 +178,7 @@ AKO nijedan automatizirani korak ne uspije:
   → Korisnik ručno pretražuje i odabire restoran
   → Ponovno šalje s restaurantId ili manualRestaurantName + manualRestaurantCity
 ```
+
 **Brzina:** Sporo (ručna intervencija)
 **Sigurnost:** 100% (korisnik odlučuje)
 **Pokrivenost:** Globalno (fallback za sve)
@@ -179,6 +192,7 @@ AKO nijedan automatizirani korak ne uspije:
 **Endpoint:** `POST /api/app/receipts`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
@@ -186,6 +200,7 @@ Content-Type: multipart/form-data
 ```
 
 **Request Body (FormData):**
+
 ```javascript
 {
   image: File,                    // OBAVEZNO: Slika računa
@@ -196,6 +211,7 @@ Content-Type: multipart/form-data
 ```
 
 **Response - Uspjeh (restoran pronađen):**
+
 ```json
 {
   "receiptId": 123,
@@ -208,13 +224,13 @@ Content-Type: multipart/form-data
     "place": "Ljubljana",
     "placeId": "ChIJN1t_tDeuEmsRUsoyG83frY4",
     "rating": 4.7,
-    "isNew": true  // true ako je auto-kreiran preko Koraka 2.5
+    "isNew": true // true ako je auto-kreiran preko Koraka 2.5
   },
   "extractedData": {
     "oib": "12345678901",
     "jir": "abc-123-def",
     "zki": "xyz789",
-    "totalAmount": 89.50,
+    "totalAmount": 89.5,
     "issueDate": "2025-01-17",
     "issueTime": "14:30:00",
     "merchantName": "Pop's Pizza",
@@ -224,13 +240,14 @@ Content-Type: multipart/form-data
 ```
 
 **Response - Potreban Odabir Restorana:**
+
 ```json
 {
   "receiptId": 124,
   "needsRestaurantSelection": true,
   "message": "Račun obrađen. Molimo odaberite restoran.",
   "extractedData": {
-    "totalAmount": 125.00,
+    "totalAmount": 125.0,
     "issueDate": "2025-01-17",
     "merchantName": "Nepoznati Restoran",
     "merchantAddress": "Neka Adresa 123"
@@ -239,6 +256,7 @@ Content-Type: multipart/form-data
 ```
 
 **Greške:**
+
 ```json
 // 400 - Nema slike
 { "error": "Receipt image is required" }
@@ -267,6 +285,7 @@ Content-Type: multipart/form-data
 **Endpoint:** `POST /api/app/visits`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
@@ -274,6 +293,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```javascript
 {
   receiptId: 123,                       // OBAVEZNO: Iz uploadReceipt responsa
@@ -304,6 +324,7 @@ Content-Type: application/json
 ```
 
 **Kada poslati što:**
+
 - **restaurantId**: Korisnik pronašao restoran u listi → Pošalji samo restaurantId
 - **restaurantData**: Korisnik odabrao iz Google Places → Pošalji cijeli objekt (backend auto-kreira)
 - **manualRestaurantName + manualRestaurantCity**: Korisnik nije pronašao → Pošalji ručne podatke
@@ -312,6 +333,7 @@ Content-Type: application/json
   - Ako ne pronađe → Visit kreiran s fallback podacima (admin povezuje ručno)
 
 **Response - Uspjeh:**
+
 ```json
 {
   "message": "Visit created successfully. Waiting for admin approval.",
@@ -341,7 +363,7 @@ Content-Type: application/json
       "originalUrl": "...",
       "status": "pending",
       "oib": "12345678901",
-      "totalAmount": 89.50,
+      "totalAmount": 89.5,
       "issueDate": "2025-01-17"
     }
   }
@@ -349,6 +371,7 @@ Content-Type: application/json
 ```
 
 **Response - Uspjeh (Fallback - Restoran će biti povezan ručno):**
+
 ```json
 {
   "message": "Visit created! Restoran će biti spojen od strane administratora.",
@@ -365,6 +388,7 @@ Content-Type: application/json
 ```
 
 **Greške:**
+
 ```json
 // 400 - Nema receiptId
 { "error": "Receipt ID is required" }
@@ -392,11 +416,13 @@ Content-Type: application/json
 **Endpoint:** `GET /api/app/restaurants/search`
 
 **Query Parametri:**
+
 ```
 q=cingi lingi              // OBAVEZNO: Query za pretragu (min 2 znaka)
 ```
 
 **Značajke:**
+
 - ✅ Pretražuje SVE restorane u bazi
 - ✅ Bez dijakritika: "cingi" pronalazi "čingi", "Cingi", "ČINGI"
 - ✅ Case-insensitive: "LINGI" pronalazi "lingi", "Lingi"
@@ -405,6 +431,7 @@ q=cingi lingi              // OBAVEZNO: Query za pretragu (min 2 znaka)
 - ✅ Bez Google Placesa - jednostavno i brzo!
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -427,6 +454,7 @@ q=cingi lingi              // OBAVEZNO: Query za pretragu (min 2 znaka)
 ```
 
 **Greške:**
+
 ```json
 // 400 - Query prekratak
 { "error": "Unesite najmanje 2 znaka za pretragu" }
@@ -442,12 +470,14 @@ q=cingi lingi              // OBAVEZNO: Query za pretragu (min 2 znaka)
 **Endpoint:** `GET /api/app/visits`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
 ```
 
 **Response:**
+
 ```json
 {
   "visits": [
@@ -473,7 +503,7 @@ X-Api-Key: {api-key}
       "receipt": {
         "id": 123,
         "thumbnailUrl": "...",
-        "totalAmount": 89.50,
+        "totalAmount": 89.5,
         "issueDate": "2025-01-17"
       }
     }
@@ -482,6 +512,7 @@ X-Api-Key: {api-key}
 ```
 
 **Greške:**
+
 ```json
 // 401 - Neautoriziran
 { "error": "Unauthorized" }
@@ -494,12 +525,14 @@ X-Api-Key: {api-key}
 **Endpoint:** `GET /api/app/visits/:visitId`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
 ```
 
 **Response:**
+
 ```json
 {
   "visit": {
@@ -532,7 +565,7 @@ X-Api-Key: {api-key}
       "originalUrl": "...",
       "status": "pending",
       "oib": "12345678901",
-      "totalAmount": 89.50,
+      "totalAmount": 89.5,
       "issueDate": "2025-01-17"
     },
     "experience": null
@@ -541,6 +574,7 @@ X-Api-Key: {api-key}
 ```
 
 **Greške:**
+
 ```json
 // 404 - Visit nije pronađen
 { "error": "Visit not found" }
@@ -556,6 +590,7 @@ X-Api-Key: {api-key}
 **Endpoint:** `PUT /api/app/visits/:visitId/retake`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
@@ -563,18 +598,21 @@ Content-Type: multipart/form-data
 ```
 
 **Request Body (FormData):**
+
 ```javascript
 {
-  receiptImage: File  // OBAVEZNO: Nova slika računa
+  receiptImage: File; // OBAVEZNO: Nova slika računa
 }
 ```
 
 **Kada koristiti:**
+
 - Visit je u statusu `REJECTED`
 - Unutar 48 sati od retakeDeadline
 - Korisnik uploaduje novi, ispravan račun
 
 **Response:**
+
 ```json
 {
   "message": "Receipt retake submitted successfully",
@@ -588,6 +626,7 @@ Content-Type: multipart/form-data
 ```
 
 **Greške:**
+
 ```json
 // 404 - Visit nije pronađen
 { "error": "Visit not found" }
@@ -612,12 +651,14 @@ Content-Type: multipart/form-data
 **Endpoint:** `GET /api/app/visits/restaurant/:restaurantId/check`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
 ```
 
 **Response:**
+
 ```json
 {
   "hasVisited": true,
@@ -626,6 +667,7 @@ X-Api-Key: {api-key}
 ```
 
 **Ili:**
+
 ```json
 {
   "hasVisited": false,
@@ -634,6 +676,7 @@ X-Api-Key: {api-key}
 ```
 
 **Greške:**
+
 ```json
 // 404 - Restoran nije pronađen
 { "error": "Restaurant not found" }
@@ -646,17 +689,20 @@ X-Api-Key: {api-key}
 **Endpoint:** `DELETE /api/app/visits/:visitId`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
 ```
 
 **Pravila:**
+
 - Visit može biti obrisan samo unutar 14 dana od kreiranja
 - Korisnik može obrisati samo svoje visite
 - Brisanje je trajno (hard delete)
 
 **Response:**
+
 ```json
 {
   "message": "Visit deleted successfully"
@@ -664,6 +710,7 @@ X-Api-Key: {api-key}
 ```
 
 **Greške:**
+
 ```json
 // 404 - Visit nije pronađen
 { "error": "Visit not found" }
@@ -690,6 +737,7 @@ Ovi endpointi su dostupni za posebne slučajeve ili backward compatibility.
 **⚠️ NAPOMENA:** Ovaj endpoint je zadržan za backward compatibility. **Preporučujemo korištenje novog Receipt-first flowa** (POST /api/app/receipts → POST /api/app/visits).
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
@@ -697,6 +745,7 @@ Content-Type: multipart/form-data
 ```
 
 **Request Body (FormData):**
+
 ```javascript
 {
   restaurantId: 456,           // OBAVEZNO: ID restorana
@@ -706,6 +755,7 @@ Content-Type: multipart/form-data
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Visit created successfully. Waiting for admin approval.",
@@ -727,6 +777,7 @@ Content-Type: multipart/form-data
 **⚠️ NAPOMENA:** Za jednostavnu pretragu koristite **GET /api/app/restaurants/search** umjesto ovog endpointa.
 
 **Query Parametri:**
+
 ```
 query=pizza               // OBAVEZNO: Traženi pojam
 lat=45.815000            // OPCIONALNO: GPS latitude
@@ -734,11 +785,13 @@ lng=15.982000            // OPCIONALNO: GPS longitude
 ```
 
 **Značajke:**
+
 - Kombinira pretragu baze + Google Places API
 - Vraća rezultate s dodatnim Google Places podacima
 - Sporo i skupo (Google API pozivi)
 
 **Response:**
+
 ```json
 {
   "database": [
@@ -770,16 +823,19 @@ lng=15.982000            // OPCIONALNO: GPS longitude
 **Endpoint:** `GET /api/app/receipts/restaurant-details/:placeId`
 
 **Headers:**
+
 ```
 Authorization: Bearer {token}
 X-Api-Key: {api-key}
 ```
 
 **Kada koristiti:**
+
 - Korisnik odabrao restoran iz Google Places rezultata
 - Potrebni potpuni detalji za kreiranje restorana
 
 **Response:**
+
 ```json
 {
   "name": "Pop's Pizza Ljubljana",
@@ -803,6 +859,7 @@ X-Api-Key: {api-key}
 ```
 
 **Greške:**
+
 ```json
 // 404 - Place nije pronađen
 { "error": "Place not found" }
@@ -1043,6 +1100,7 @@ async function createVisitWithManualRestaurant(
 ### Ekran Greške Validacije (Slika Nije Račun)
 
 **Kada validacija ne prođe (slika nije valjani račun):**
+
 ```
 ┌──────────────────────────────────┐
 │  ❌ Slika nije račun             │
@@ -1063,6 +1121,7 @@ async function createVisitWithManualRestaurant(
 ```
 
 **Savjet za implementaciju:**
+
 - Automatski omogućiti korisniku da ponovno fotografira odmah
 - Ne spremaj nevalidnu sliku
 - Razmisli o prikazu kamere odmah nakon greške
@@ -1072,6 +1131,7 @@ async function createVisitWithManualRestaurant(
 ### Ekran Potvrde (Nakon Uploada Računa)
 
 **Kada je restoran pronađen (needsRestaurantSelection: false):**
+
 ```
 ┌──────────────────────────────────┐
 │  ✅ Restoran pronađen!           │
@@ -1093,6 +1153,7 @@ async function createVisitWithManualRestaurant(
 ### Ekran Ručne Pretrage
 
 **Kada je restoran potrebno ručno odabrati:**
+
 ```
 ┌──────────────────────────────────┐
 │  🔍 Pretražite restorane         │
@@ -1116,6 +1177,7 @@ async function createVisitWithManualRestaurant(
 ```
 
 **Ako klikne "Nije na listi":**
+
 ```
 ┌──────────────────────────────────┐
 │  ✍️ Unesite podatke o restoranu  │
@@ -1145,6 +1207,7 @@ async function createVisitWithManualRestaurant(
 ### Validacija Slike (Korak 1)
 
 Backend koristi Claude Haiku 4.5 za validaciju slike prije procesiranja:
+
 - Kompresira slike preko 4.5MB
 - Provjerava da li slika sadrži indikatore računa (OIB, JIR, ZKI, datum, iznos)
 - Blokira menije, fotografije hrane, zamućene slike
@@ -1152,6 +1215,7 @@ Backend koristi Claude Haiku 4.5 za validaciju slike prije procesiranja:
 ### OCR Izvlačenje (Korak 4)
 
 Claude OCR izvlači:
+
 - **Fiskalni podaci:** OIB, JIR, ZKI
 - **Transakcijski podaci:** Ukupan iznos, datum, vrijeme
 - **Podaci o trgovcu:** Ime, adresa (pazi na dvostruke adrese!)
@@ -1160,6 +1224,7 @@ Claude OCR izvlači:
 ### Auto-Kreiranje Restorana
 
 Kada backend pronađe restoran na Google Placesima:
+
 1. Dohvaća potpune detalje (Place Details API)
 2. Generira unique slug (normalizira hrvatske znakove)
 3. Kreira restoran u bazi sa svim podacima:
@@ -1173,6 +1238,7 @@ Kada backend pronađe restoran na Google Placesima:
 ### Fallback Mehanizam
 
 Ako nijedan automatski korak ne uspije:
+
 1. Visit se kreira s `restaurantId = null`
 2. Sprema se `manualRestaurantName` i `manualRestaurantCity`
 3. Admin vidi ove podatke u sysadmin sučelju
@@ -1235,28 +1301,34 @@ Ako nijedan automatski korak ne uspije:
 ## 🧪 Scenariji Testiranja
 
 ### 1. Validni Račun s OIB Podudarnjem (Hrvatska)
+
 - Uploadaj hrvatski račun s poznatim OIB-om
 - Očekivano: Validacija prođe, trenutno podudaranje preko Koraka 1
 
 ### 2. Nevaljana Slika (Nije Račun)
+
 - Uploadaj fotografiju hrane, menija, ili zamućenu sliku
 - Očekivano: Greška "Slika ne izgleda kao račun..."
 
 ### 3. Geo + Claude Podudaranje
+
 - Uploadaj račun iz poznatog restorana (bez OIB-a)
 - S GPS-om unutar 5km
 - Očekivano: Podudaranje preko Koraka 2
 
 ### 4. Google Places Auto-Kreiranje
+
 - Uploadaj račun iz NOVOG restorana
 - Očekivano: Auto-kreiranje preko Koraka 2.5, restoran dodan u bazu
 
 ### 5. Ručna Pretraga - Pronađen u Bazi
+
 - Pretraži "cingi lingi"
 - Odaberi restoran iz liste
 - Očekivano: Visit kreiran s postojećim restoranom
 
 ### 6. Ručna Pretraga - Fallback
+
 - Pretraži restoran koji ne postoji
 - Klikni "Nije na listi"
 - Upiši "Pizzeria Nova" + "Zagreb"
@@ -1269,8 +1341,10 @@ Ako nijedan automatski korak ne uspije:
 ## 🆘 Česta Pitanja
 
 ### Problem: "Slika ne izgleda kao račun"
+
 **Uzrok:** Validacija slike nije prošla - uploadana slika ne izgleda kao račun
 **Česti razlozi:**
+
 - Fotografija menija umjesto računa
 - Fotografija hrane/jela
 - Preveć zamućeno ili izvan fokusa
@@ -1278,22 +1352,27 @@ Ako nijedan automatski korak ne uspije:
 - Poslovna kartica ili drugi dokument
 
 **Rješenje:**
+
 - Napravi jasnu, fokusiranu fotografiju pravog računa
 - Osiguraj dobro osvjetljenje
 - Fotografiraj cijeli račun (ne obrezano)
 - Provjeri da je tekst na računu čitljiv
 
 ### Problem: "Receipt already has a visit"
+
 **Uzrok:** Pokušaj kreiranja više visita iz istog računa
 **Rješenje:** Svaki račun može imati samo jedan visit
 
 ### Problem: "Receipt not found"
+
 **Uzrok:** receiptId nevažeći ili račun pripada drugom korisniku
 **Rješenje:** Provjeri receiptId iz uploadReceipt responsa
 
 ### Problem: Restoran nije pronađen automatski
+
 **Uzrok:** OCR nije pročitao dovolj podataka ili restoran ne postoji u bazi ni na Googleu
 **Rješenje:**
+
 1. Korisnik pretražuje ručno
 2. Ako pronađe u listi - odabere
 3. Ako ne pronađe - upiše ime + grad (backend pokušava Google Places)
@@ -1319,6 +1398,7 @@ Ako nijedan automatski korak ne uspije:
 ## 📝 Changelog
 
 **v2.1 - Kompletan API Dokumentacija (17.11.2025)**
+
 - ✅ Dodani svi Visit endpointi (GET, PUT, DELETE)
 - ✅ Dokumentiran `restaurantData` parametar u POST /visits
 - ✅ Dodan endpoint za retake računa (48h rok)
@@ -1328,6 +1408,7 @@ Ako nijedan automatski korak ne uspije:
 - ✅ Dokumentirani Google Places endpointi za detalje restorana
 
 **v2.0 - Jednostavni Sustav (17.01.2025)**
+
 - ✅ Jednostavni search endpoint (bez dijakritika)
 - ✅ Fallback mehanizam s ručnim unosom (samo ime + grad)
 - ✅ Backend rukuje svom Google Places logikom
@@ -1335,6 +1416,7 @@ Ako nijedan automatski korak ne uspije:
 - ✅ Admin može ručno povezati restorane u sysadminu
 
 **v1.0 - Receipt-first Flow**
+
 - ✅ Odvojeni Receipt i Visit entiteti
 - ✅ Claude OCR s validacijom
 - ✅ 5-koračni algoritam traženja
