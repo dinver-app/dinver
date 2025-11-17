@@ -32,6 +32,8 @@ const aiMenuSearch = require('./appRoutes/ai/menuSearchRoutes');
 const receiptRoutes = require('./appRoutes/receiptRoutes');
 const leaderboardCycleRoutes = require('./appRoutes/leaderboardCycleRoutes');
 const followRoutes = require('./appRoutes/followRoutes');
+const visitRoutes = require('./appRoutes/visitRoutes');
+const mustVisitRoutes = require('./appRoutes/mustVisitRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -67,5 +69,7 @@ router.use(aiMenuSearch);
 router.use(receiptRoutes);
 router.use(leaderboardCycleRoutes);
 router.use(followRoutes);
+router.use(visitRoutes);
+router.use(mustVisitRoutes);
 
 module.exports = router;

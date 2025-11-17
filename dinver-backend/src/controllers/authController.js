@@ -705,34 +705,41 @@ const socialLogin = async (req, res) => {
   }
 };
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/auth/google/callback',
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ where: { googleId: profile.id } });
-        if (!user) {
-          // Normalize email to lowercase for consistency
-          const normalizedEmail = profile.emails[0].value.toLowerCase().trim();
+// Only initialize Google OAuth if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: '/auth/google/callback',
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          let user = await User.findOne({ where: { googleId: profile.id } });
+          if (!user) {
+            // Normalize email to lowercase for consistency
+            const normalizedEmail = profile.emails[0].value.toLowerCase().trim();
 
-          user = await User.create({
-            googleId: profile.id,
-            firstName: profile.name.givenName,
-            lastName: profile.name.familyName,
-            email: normalizedEmail,
-          });
+            user = await User.create({
+              googleId: profile.id,
+              firstName: profile.name.givenName,
+              lastName: profile.name.familyName,
+              email: normalizedEmail,
+            });
+          }
+          done(null, user);
+        } catch (error) {
+          done(error, null);
         }
-        done(null, user);
-      } catch (error) {
-        done(error, null);
-      }
-    },
-  ),
-);
+      },
+    ),
+  );
+} else {
+  console.warn(
+    'Warning: Google OAuth not configured. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET not found in environment variables.',
+  );
+}
 
 passport.serializeUser((user, done) => {
   done(null, user.id);

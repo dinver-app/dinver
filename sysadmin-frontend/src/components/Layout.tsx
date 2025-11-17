@@ -100,8 +100,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       icon: <QrCodeIcon className="h-4 w-4 mr-3" />,
     },
     {
-      name: "Receipts",
-      path: "/receipts",
+      name: "Visits",
+      path: "/visits",
       icon: <ReceiptRefundIcon className="h-4 w-4 mr-3" />,
     },
     {

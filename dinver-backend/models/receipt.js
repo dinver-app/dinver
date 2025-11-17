@@ -28,6 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'reservationId',
         as: 'reservation',
       });
+
+      Receipt.belongsTo(models.Visit, {
+        foreignKey: 'visitId',
+        as: 'visit',
+      });
     }
 
     /**
@@ -286,7 +291,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'Device information for fraud detection',
       },
       ocrMethod: {
-        type: DataTypes.ENUM('vision', 'gpt', 'vision+gpt', 'manual'),
+        type: DataTypes.ENUM('vision', 'gpt', 'vision+gpt', 'claude', 'manual'),
         allowNull: true,
         defaultValue: 'vision',
         comment: 'OCR method used for extraction',
@@ -295,6 +300,68 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSONB,
         allowNull: true,
         comment: 'Confidence scores for individual fields',
+      },
+      visitId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Visits',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+        comment: 'Link to Visit (for new visit-based receipts)',
+      },
+      thumbnailUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for thumbnail variant (400x400)',
+      },
+      mediumUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for medium variant (1200px)',
+      },
+      fullscreenUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for fullscreen variant (2400px)',
+      },
+      originalUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'S3 key for original high-quality variant (3200px, 92% quality) - for OCR, admin review, legal',
+      },
+      predictedData: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        comment: 'AI predicted fields (what Claude extracted) - for training and comparison',
+      },
+      correctedData: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        comment: 'Human corrected fields (what sysadmin approved) - ground truth for training',
+      },
+      correctionsMade: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'Number of fields that were corrected by sysadmin',
+      },
+      accuracy: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        comment: 'Percentage of fields that were correct (0-100)',
+      },
+      usedForTraining: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Whether this receipt was used for prompt improvement',
+      },
+      modelVersion: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Claude model version used (e.g., "claude-3-5-sonnet-20250122")',
       },
     },
     {

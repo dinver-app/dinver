@@ -78,6 +78,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      country: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       latitude: {
         type: DataTypes.DECIMAL,
         allowNull: false,
@@ -278,6 +282,11 @@ module.exports = (sequelize, DataTypes) => {
         comment:
           'OIB (Osobni identifikacijski broj) for fiscal receipt matching',
       },
+      lastGoogleUpdate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Timestamp of last automatic update from Google Places API',
+      },
     },
     {
       sequelize,
@@ -285,5 +294,63 @@ module.exports = (sequelize, DataTypes) => {
       tableName: 'Restaurants',
     },
   );
+
+  /**
+   * Find restaurants within a radius using Haversine formula
+   * @param {number} lat - Latitude
+   * @param {number} lng - Longitude
+   * @param {number} radiusKm - Radius in kilometers (default 5km)
+   * @param {object} options - Additional query options (limit, where, attributes, etc.)
+   * @returns {Promise<Restaurant[]>}
+   */
+  Restaurant.findNearby = async function (lat, lng, radiusKm = 5, options = {}) {
+    if (!lat || !lng) {
+      throw new Error('Latitude and longitude are required for nearby search');
+    }
+
+    const { limit = 50, where = {}, attributes, include } = options;
+
+    // Haversine formula in SQL
+    // distance = 6371 * acos(cos(radians(lat1)) * cos(radians(lat2)) * cos(radians(lng2) - radians(lng1)) + sin(radians(lat1)) * sin(radians(lat2)))
+    const haversineDistance = sequelize.literal(
+      `6371 * acos(
+        cos(radians(${lat})) * cos(radians(latitude)) *
+        cos(radians(longitude) - radians(${lng})) +
+        sin(radians(${lat})) * sin(radians(latitude))
+      )`,
+    );
+
+    const restaurants = await Restaurant.findAll({
+      where: {
+        ...where,
+        latitude: { [sequelize.Sequelize.Op.ne]: null },
+        longitude: { [sequelize.Sequelize.Op.ne]: null },
+      },
+      attributes: {
+        include: [[haversineDistance, 'distance']],
+        ...(attributes ? { attributes } : {}),
+      },
+      having: sequelize.where(haversineDistance, '<=', radiusKm),
+      order: [[sequelize.literal('distance'), 'ASC']],
+      limit: limit,
+      ...(include ? { include } : {}),
+    });
+
+    return restaurants;
+  };
+
+  /**
+   * Find restaurant by Google Places ID (for duplicate prevention)
+   * @param {string} placeId - Google Places ID
+   * @returns {Promise<Restaurant|null>}
+   */
+  Restaurant.findByPlaceId = async function (placeId) {
+    if (!placeId) return null;
+
+    return await Restaurant.findOne({
+      where: { placeId: placeId },
+    });
+  };
+
   return Restaurant;
 };

@@ -23,6 +23,15 @@ const {
   extractWithGPTVision,
 } = require('../services/gptNormalizerService');
 const {
+  extractReceiptWithClaude,
+  findRestaurantWithClaude,
+  MODEL_VERSION,
+} = require('../services/claudeOcrService');
+const {
+  searchPlacesByText,
+  getPlaceDetails,
+} = require('../services/googlePlacesService');
+const {
   calculateAutoApproveScore,
   calculateConsistencyScore,
 } = require('../services/decisionEngine');
@@ -52,6 +61,7 @@ const uploadReceipt = async (req, res) => {
       gpsAccuracy,
       declaredTotal,
       restaurantId,
+      restaurantData, // Optional: Google Places data for auto-creating restaurant
       deviceInfo,
     } = req.body;
     const file = req.file;
@@ -211,63 +221,86 @@ const uploadReceipt = async (req, res) => {
     }
     const imageKey = imageUploadResult.imageUrl;
 
-    // === STEP 3: OCR Processing (Vision → Parser → GPT) ===
-    let ocrMethod = 'vision';
+    // === STEP 3: OCR Processing with Claude 3.5 Sonnet ===
+    let ocrMethod = 'claude';
     let rawOcrText = null;
     let visionConfidence = null;
     let parserConfidence = null;
     let extractedFields = {};
     let fieldConfidences = {};
+    let predictedData = null; // For training/learning
+    let modelVersion = MODEL_VERSION;
 
     try {
-      // Try Google Vision first
-      console.log('Attempting OCR with Google Vision...');
-      const visionResult = await extractReceiptWithVision(processedBuffer);
+      // Try Claude OCR first (primary method)
+      console.log('Attempting OCR with Claude 3.5 Sonnet...');
+      const claudeResult = await extractReceiptWithClaude(
+        processedBuffer,
+        contentType,
+      );
 
-      if (visionResult && visionResult.success) {
-        ocrMethod = 'vision';
-        rawOcrText = visionResult.rawText;
-        visionConfidence = visionResult.visionConfidence;
-        parserConfidence = visionResult.parserConfidence;
-        extractedFields = visionResult.fields;
-        fieldConfidences = visionResult.confidences;
+      if (claudeResult) {
+        ocrMethod = 'claude';
+        extractedFields = {
+          oib: claudeResult.oib,
+          jir: claudeResult.jir,
+          zki: claudeResult.zki,
+          totalAmount: claudeResult.totalAmount,
+          issueDate: claudeResult.issueDate,
+          issueTime: claudeResult.issueTime,
+          merchantName: claudeResult.merchantName,
+          merchantAddress: claudeResult.merchantAddress,
+        };
+        fieldConfidences = claudeResult.confidence || {};
+        visionConfidence = claudeResult.confidence?.overall || 0.85;
+        parserConfidence = claudeResult.confidence?.overall || 0.85;
+        modelVersion = claudeResult.modelVersion;
+
+        // Store predicted data for training
+        predictedData = {
+          fields: extractedFields,
+          confidences: fieldConfidences,
+          extractionTime: claudeResult.extractionTime,
+          notes: claudeResult.notes,
+        };
 
         console.log(
-          `Vision OCR successful. Parser confidence: ${parserConfidence}`,
+          `Claude OCR successful. Overall confidence: ${visionConfidence.toFixed(2)}`,
         );
-
-        // If parser confidence is low, try GPT normalization
-        if (parserConfidence < 0.6) {
-          console.log('Parser confidence low, trying GPT normalization...');
-          const gptResult = await normalizeWithGPT(rawOcrText, visionResult);
-
-          if (gptResult) {
-            ocrMethod = 'vision+gpt';
-            // Merge GPT results with Vision results (prefer GPT for uncertain fields)
-            Object.keys(gptResult).forEach((key) => {
-              if (gptResult[key] !== null && fieldConfidences[key] < 0.7) {
-                extractedFields[key] = gptResult[key];
-                fieldConfidences[key] = 0.8; // GPT-normalized fields get 0.8 confidence
-              }
-            });
-            console.log('GPT normalization applied');
-          }
-        }
       } else {
-        // Vision failed, try GPT Vision as fallback
-        console.log('Vision OCR failed, trying GPT Vision...');
-        const gptVisionResult = await extractWithGPTVision(processedBuffer);
+        // Claude failed, fallback to Vision + Parser
+        console.log('Claude OCR failed, falling back to Vision...');
+        const visionResult = await extractReceiptWithVision(processedBuffer);
 
-        if (gptVisionResult) {
-          ocrMethod = 'gpt';
-          extractedFields = gptVisionResult;
-          visionConfidence = 0.7;
-          parserConfidence = 0.7;
-          // Assign default confidences
-          Object.keys(extractedFields).forEach((key) => {
-            fieldConfidences[key] = extractedFields[key] ? 0.7 : 0;
-          });
-          console.log('GPT Vision fallback successful');
+        if (visionResult && visionResult.success) {
+          ocrMethod = 'vision';
+          rawOcrText = visionResult.rawText;
+          visionConfidence = visionResult.visionConfidence;
+          parserConfidence = visionResult.parserConfidence;
+          extractedFields = visionResult.fields;
+          fieldConfidences = visionResult.confidences;
+
+          console.log(
+            `Vision OCR fallback successful. Parser confidence: ${parserConfidence}`,
+          );
+
+          // If parser confidence is low, try GPT normalization
+          if (parserConfidence < 0.6) {
+            console.log('Parser confidence low, trying GPT normalization...');
+            const gptResult = await normalizeWithGPT(rawOcrText, visionResult);
+
+            if (gptResult) {
+              ocrMethod = 'vision+gpt';
+              // Merge GPT results with Vision results
+              Object.keys(gptResult).forEach((key) => {
+                if (gptResult[key] !== null && fieldConfidences[key] < 0.7) {
+                  extractedFields[key] = gptResult[key];
+                  fieldConfidences[key] = 0.8;
+                }
+              });
+              console.log('GPT normalization applied');
+            }
+          }
         }
       }
     } catch (ocrError) {
@@ -364,6 +397,9 @@ const uploadReceipt = async (req, res) => {
       fraudFlags,
       ocrMethod,
       fieldConfidences,
+      // Learning/training fields for Claude OCR
+      predictedData: predictedData,
+      modelVersion: modelVersion,
       // Legacy ocrData for backwards compatibility
       ocrData: imageMeta
         ? {
@@ -374,16 +410,283 @@ const uploadReceipt = async (req, res) => {
         : null,
     };
 
-    // Auto-match restaurant by OIB if not provided
-    if (!restaurantId && extractedFields.oib) {
-      const matchedRestaurant = await Restaurant.findOne({
-        where: { oib: extractedFields.oib },
-      });
-      if (matchedRestaurant) {
-        receiptData.restaurantId = matchedRestaurant.id;
-      }
-    } else if (restaurantId) {
+    // === STEP 8: Restaurant Matching & Auto-Creation ===
+    let needsRestaurantSelection = false;
+    let autoCreatedRestaurant = null;
+
+    if (restaurantId) {
+      // User manually selected restaurant
       receiptData.restaurantId = restaurantId;
+    } else if (restaurantData) {
+      // User provided restaurant data from Google Places - auto-create if needed
+      try {
+        console.log('[Restaurant Auto-Create] Processing restaurant data...');
+
+        // Parse restaurantData if it's a string
+        const parsedRestaurantData = typeof restaurantData === 'string'
+          ? JSON.parse(restaurantData)
+          : restaurantData;
+
+        // Check if restaurant already exists by placeId
+        const existingRestaurant = await Restaurant.findByPlaceId(
+          parsedRestaurantData.placeId,
+        );
+
+        if (existingRestaurant) {
+          console.log(
+            `[Restaurant Auto-Create] Restaurant already exists: ${existingRestaurant.name}`,
+          );
+          receiptData.restaurantId = existingRestaurant.id;
+        } else {
+          // Create new restaurant from Google Places data
+          console.log(
+            `[Restaurant Auto-Create] Creating new restaurant: ${parsedRestaurantData.name}`,
+          );
+
+          const newRestaurant = await Restaurant.create({
+            name: parsedRestaurantData.name,
+            address: parsedRestaurantData.address,
+            place: parsedRestaurantData.place || parsedRestaurantData.city,
+            country: parsedRestaurantData.country || 'Croatia',
+            latitude: parsedRestaurantData.latitude,
+            longitude: parsedRestaurantData.longitude,
+            phone: parsedRestaurantData.phone,
+            websiteUrl: parsedRestaurantData.websiteUrl || parsedRestaurantData.website,
+            placeId: parsedRestaurantData.placeId,
+            rating: parsedRestaurantData.rating,
+            priceLevel: parsedRestaurantData.priceLevel,
+            claimed: false, // Auto-created restaurants are unclaimed
+            lastGoogleUpdate: new Date(),
+          });
+
+          autoCreatedRestaurant = newRestaurant;
+          receiptData.restaurantId = newRestaurant.id;
+
+          console.log(
+            `[Restaurant Auto-Create] Created restaurant ID: ${newRestaurant.id}`,
+          );
+
+          // Log audit for restaurant creation
+          await logAudit({
+            userId,
+            action: ActionTypes.CREATE,
+            entity: Entities.RESTAURANT,
+            entityId: newRestaurant.id,
+            changes: {
+              new: {
+                name: newRestaurant.name,
+                source: 'user_receipt_upload',
+                placeId: newRestaurant.placeId,
+              },
+            },
+          });
+        }
+      } catch (autoCreateError) {
+        console.error(
+          '[Restaurant Auto-Create] Failed:',
+          autoCreateError.message,
+        );
+        needsRestaurantSelection = true;
+      }
+    } else {
+      // Try auto-matching from database
+
+      // Step 1: Try exact OIB match (fastest and most reliable, Croatia only)
+      if (extractedFields.oib) {
+        const matchedByOib = await Restaurant.findOne({
+          where: { oib: extractedFields.oib },
+        });
+        if (matchedByOib) {
+          console.log(`[Restaurant Match] Matched by OIB: ${matchedByOib.name}`);
+          receiptData.restaurantId = matchedByOib.id;
+        }
+      }
+
+      // Step 2: If no OIB match, try geographic + Claude intelligent matching
+      if (!receiptData.restaurantId && ocrMethod === 'claude' && locationLat && locationLng) {
+        try {
+          console.log('[Restaurant Match] Attempting geographic + Claude matching...');
+
+          // Find restaurants within 5km radius (geo-filtered search)
+          const nearbyRestaurants = await Restaurant.findNearby(
+            parseFloat(locationLat),
+            parseFloat(locationLng),
+            5, // 5km radius
+            {
+              limit: 50,
+              attributes: ['id', 'name', 'oib', 'address', 'place', 'placeId'],
+            },
+          );
+
+          console.log(
+            `[Restaurant Match] Found ${nearbyRestaurants.length} restaurants within 5km`,
+          );
+
+          if (nearbyRestaurants.length > 0) {
+            const claudeMatch = await findRestaurantWithClaude(
+              extractedFields,
+              nearbyRestaurants,
+            );
+
+            // Use match if confidence is high enough
+            if (claudeMatch.restaurantId && claudeMatch.confidence >= 0.80) {
+              console.log(
+                `[Restaurant Match] Matched by Claude: ${claudeMatch.restaurantId} (confidence: ${claudeMatch.confidence}, method: ${claudeMatch.matchedBy})`,
+              );
+              receiptData.restaurantId = claudeMatch.restaurantId;
+            } else {
+              console.log(
+                '[Restaurant Match] Claude confidence too low, needs manual selection',
+              );
+              needsRestaurantSelection = true;
+            }
+          } else {
+            console.log(
+              '[Restaurant Match] No restaurants found nearby, needs manual selection',
+            );
+            needsRestaurantSelection = true;
+          }
+        } catch (claudeMatchError) {
+          console.error(
+            '[Restaurant Match] Claude matching failed:',
+            claudeMatchError.message,
+          );
+          needsRestaurantSelection = true;
+        }
+      }
+
+      // Step 2.5: Try Google Places proactive search with Claude matching
+      // This step happens AFTER database matching fails and BEFORE manual fallback
+      if (
+        !receiptData.restaurantId &&
+        ocrMethod === 'claude' &&
+        extractedFields.merchantName &&
+        extractedFields.merchantAddress
+      ) {
+        try {
+          console.log('[Restaurant Match] Attempting Google Places proactive search...');
+
+          // Build search query from receipt data
+          const searchQuery = `${extractedFields.merchantName} ${extractedFields.merchantAddress}`;
+
+          console.log(`[Restaurant Match] Google search query: "${searchQuery}"`);
+
+          // Search Google Places (with location bias if GPS available)
+          const googleResults = await searchPlacesByText(
+            searchQuery,
+            locationLat || null,
+            locationLng || null,
+          );
+
+          console.log(
+            `[Restaurant Match] Found ${googleResults.length} Google Places results`,
+          );
+
+          if (googleResults.length > 0) {
+            // Use Claude to analyze Google results and find best match
+            const claudeMatch = await findRestaurantWithClaude(
+              extractedFields,
+              googleResults,
+            );
+
+            console.log(
+              `[Restaurant Match] Claude Google match confidence: ${claudeMatch.confidence}`,
+            );
+
+            // Auto-create if confidence is high enough
+            if (claudeMatch.restaurantId && claudeMatch.confidence >= 0.85) {
+              // The restaurantId here is actually the placeId from Google
+              const matchedPlaceId = claudeMatch.restaurantId;
+
+              console.log(
+                `[Restaurant Match] High confidence match (${claudeMatch.confidence}), fetching place details...`,
+              );
+
+              // Check if restaurant already exists by placeId
+              const existingRestaurant = await Restaurant.findByPlaceId(matchedPlaceId);
+
+              if (existingRestaurant) {
+                console.log(
+                  `[Restaurant Match] Restaurant already exists in database: ${existingRestaurant.name}`,
+                );
+                receiptData.restaurantId = existingRestaurant.id;
+              } else {
+                // Fetch full details from Google Places
+                const placeDetails = await getPlaceDetails(matchedPlaceId);
+
+                if (placeDetails) {
+                  console.log(
+                    `[Restaurant Match] Creating new restaurant from Google Places: ${placeDetails.name}`,
+                  );
+
+                  // Auto-create restaurant
+                  const newRestaurant = await Restaurant.create({
+                    name: placeDetails.name,
+                    address: placeDetails.address,
+                    place: placeDetails.place || placeDetails.city,
+                    country: placeDetails.country || 'Croatia',
+                    latitude: placeDetails.latitude,
+                    longitude: placeDetails.longitude,
+                    phone: placeDetails.phone,
+                    websiteUrl: placeDetails.websiteUrl,
+                    placeId: placeDetails.placeId,
+                    rating: placeDetails.rating,
+                    priceLevel: placeDetails.priceLevel,
+                    claimed: false,
+                    lastGoogleUpdate: new Date(),
+                  });
+
+                  autoCreatedRestaurant = newRestaurant;
+                  receiptData.restaurantId = newRestaurant.id;
+
+                  console.log(
+                    `[Restaurant Match] Auto-created restaurant ID: ${newRestaurant.id} (via Google Places + Claude)`,
+                  );
+
+                  // Log audit
+                  await logAudit({
+                    userId,
+                    action: ActionTypes.CREATE,
+                    entity: Entities.RESTAURANT,
+                    entityId: newRestaurant.id,
+                    changes: {
+                      new: {
+                        name: newRestaurant.name,
+                        source: 'receipt_google_places_auto_match',
+                        placeId: newRestaurant.placeId,
+                        confidence: claudeMatch.confidence,
+                      },
+                    },
+                  });
+                } else {
+                  console.log('[Restaurant Match] Failed to fetch place details from Google');
+                  needsRestaurantSelection = true;
+                }
+              }
+            } else {
+              console.log(
+                '[Restaurant Match] Claude Google confidence too low, needs manual selection',
+              );
+              needsRestaurantSelection = true;
+            }
+          } else {
+            console.log(
+              '[Restaurant Match] No Google Places results found',
+            );
+            needsRestaurantSelection = true;
+          }
+        } catch (googleMatchError) {
+          console.error(
+            '[Restaurant Match] Google Places matching failed:',
+            googleMatchError.message,
+          );
+          needsRestaurantSelection = true;
+        }
+      } else if (!receiptData.restaurantId) {
+        // No OIB, no Claude OCR, or insufficient data - needs manual selection
+        console.log('[Restaurant Match] Insufficient data for auto-matching');
+        needsRestaurantSelection = true;
+      }
     }
 
     const receipt = await Receipt.create(receiptData);
@@ -414,7 +717,12 @@ const uploadReceipt = async (req, res) => {
         'Račun poslan na provjeru. Detektirana potencijalna nepodudaranja.';
     }
 
-    res.status(201).json({
+    // Add info about restaurant auto-creation
+    if (autoCreatedRestaurant) {
+      message = `Novi restoran "${autoCreatedRestaurant.name}" dodan u sustav! Račun poslan na provjeru.`;
+    }
+
+    const response = {
       message,
       receiptId: receipt.id,
       autoApproveScore: Math.round(autoApproveScore * 100) / 100,
@@ -423,8 +731,30 @@ const uploadReceipt = async (req, res) => {
         totalAmount: extractedFields.totalAmount,
         issueDate: extractedFields.issueDate,
         merchantName: extractedFields.merchantName,
+        merchantAddress: extractedFields.merchantAddress,
       },
-    });
+      needsRestaurantSelection: needsRestaurantSelection,
+    };
+
+    // Include restaurant info if matched or created
+    if (receiptData.restaurantId) {
+      const restaurant = autoCreatedRestaurant
+        || await Restaurant.findByPk(receiptData.restaurantId, {
+            attributes: ['id', 'name', 'place', 'address'],
+          });
+
+      if (restaurant) {
+        response.restaurant = {
+          id: restaurant.id,
+          name: restaurant.name,
+          place: restaurant.place,
+          address: restaurant.address,
+          isNew: !!autoCreatedRestaurant,
+        };
+      }
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error('Error uploading receipt:', error);
     res.status(500).json({ error: 'Failed to upload receipt' });
@@ -1243,6 +1573,172 @@ const checkReservations = async (req, res) => {
   }
 };
 
+/**
+ * Search restaurants for receipt upload (Google Places + Database)
+ * Used when AI cannot find a match
+ * Works with or without GPS coordinates
+ */
+const searchRestaurantsForReceipt = async (req, res) => {
+  try {
+    const { query, lat, lng } = req.query;
+
+    if (!query) {
+      return res.status(400).json({
+        error: 'Query is required',
+      });
+    }
+
+    const hasGPS = lat && lng;
+
+    console.log(
+      `[Restaurant Search] Searching for: "${query}"${hasGPS ? ` near ${lat},${lng}` : ' (no GPS)'}`,
+    );
+
+    let databaseResults = [];
+
+    // Step 1: Search in database (only if GPS available)
+    if (hasGPS) {
+      const nearbyRestaurants = await Restaurant.findNearby(
+        parseFloat(lat),
+        parseFloat(lng),
+        10, // 10km radius for manual search
+        {
+          limit: 10,
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'latitude', 'longitude'],
+        },
+      );
+
+      // Filter by name similarity
+      const normalizedQuery = query.toLowerCase().trim();
+      databaseResults = nearbyRestaurants
+        .filter((r) => r.name.toLowerCase().includes(normalizedQuery))
+        .map((r) => ({
+          source: 'database',
+          restaurantId: r.id,
+          placeId: r.placeId,
+          name: r.name,
+          address: r.address,
+          place: r.place,
+          rating: r.rating,
+          distance: r.get('distance'),
+          existsInDatabase: true,
+        }));
+    }
+
+    // Step 2: Search Google Places (with or without GPS bias)
+    const googleResults = await searchPlacesByText(
+      query,
+      hasGPS ? lat : null,
+      hasGPS ? lng : null,
+    );
+
+    // Check which Google Places results already exist in database
+    const enrichedGoogleResults = await Promise.all(
+      googleResults.map(async (place) => {
+        const existsInDb = await Restaurant.findByPlaceId(place.placeId);
+
+        return {
+          source: 'google',
+          restaurantId: existsInDb?.id || null,
+          placeId: place.placeId,
+          name: place.name,
+          address: place.address,
+          place: place.place,
+          rating: place.rating,
+          userRatingsTotal: place.userRatingsTotal,
+          photoUrl: place.photoUrl,
+          existsInDatabase: !!existsInDb,
+        };
+      }),
+    );
+
+    // Merge results (prioritize database, then unique Google results)
+    const allResults = [...databaseResults];
+    const existingPlaceIds = new Set(
+      databaseResults.map((r) => r.placeId).filter(Boolean),
+    );
+
+    for (const googleResult of enrichedGoogleResults) {
+      if (!existingPlaceIds.has(googleResult.placeId)) {
+        allResults.push(googleResult);
+      }
+    }
+
+    console.log(
+      `[Restaurant Search] Found ${allResults.length} results (${databaseResults.length} from DB, ${enrichedGoogleResults.length} from Google)`,
+    );
+
+    res.status(200).json({
+      results: allResults,
+      totalResults: allResults.length,
+    });
+  } catch (error) {
+    console.error('[Restaurant Search] Failed:', error);
+    res.status(500).json({ error: 'Failed to search restaurants' });
+  }
+};
+
+/**
+ * Get restaurant details for receipt (prepare data for auto-creation)
+ * Returns full restaurant data ready for auto-creation
+ */
+const getRestaurantDetailsForReceipt = async (req, res) => {
+  try {
+    const { placeId } = req.params;
+
+    if (!placeId) {
+      return res.status(400).json({ error: 'Place ID is required' });
+    }
+
+    // Check if already exists in database
+    const existingRestaurant = await Restaurant.findByPlaceId(placeId);
+
+    if (existingRestaurant) {
+      return res.status(200).json({
+        existsInDatabase: true,
+        restaurant: {
+          id: existingRestaurant.id,
+          name: existingRestaurant.name,
+          address: existingRestaurant.address,
+          place: existingRestaurant.place,
+          country: existingRestaurant.country,
+          placeId: existingRestaurant.placeId,
+        },
+      });
+    }
+
+    // Fetch from Google Places
+    const placeDetails = await getPlaceDetails(placeId);
+
+    if (!placeDetails) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Return data ready for auto-creation (will be sent back with receipt upload)
+    res.status(200).json({
+      existsInDatabase: false,
+      restaurantData: {
+        placeId: placeDetails.placeId,
+        name: placeDetails.name,
+        address: placeDetails.address,
+        place: placeDetails.place,
+        city: placeDetails.city,
+        country: placeDetails.country,
+        latitude: placeDetails.latitude,
+        longitude: placeDetails.longitude,
+        phone: placeDetails.phone,
+        websiteUrl: placeDetails.websiteUrl,
+        rating: placeDetails.rating,
+        priceLevel: placeDetails.priceLevel,
+        photoUrl: placeDetails.photoUrl,
+      },
+    });
+  } catch (error) {
+    console.error('[Restaurant Details] Failed:', error);
+    res.status(500).json({ error: 'Failed to get restaurant details' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   getUserReceipts,
@@ -1252,4 +1748,6 @@ module.exports = {
   approveReceipt,
   rejectReceipt,
   checkReservations,
+  searchRestaurantsForReceipt,
+  getRestaurantDetailsForReceipt,
 };
