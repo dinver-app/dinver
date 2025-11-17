@@ -529,6 +529,7 @@ async function updateRestaurant(req, res) {
       oib,
       priceCategoryId,
       description,
+      longDescription,
       translations = [],
       wifiSsid,
       wifiPassword,
@@ -632,6 +633,7 @@ async function updateRestaurant(req, res) {
       email,
       oib: oibValue,
       description,
+      longDescription, // Detailed description for AI context
       thumbnailUrl: thumbnailKey, // Spremamo samo key
       priceCategoryId,
       wifiSsid,

@@ -5,6 +5,115 @@ const { v4: uuidv4 } = require('uuid');
 const { AiThread, AiMessage } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const { getImageUrls } = require('../../services/imageUploadService');
+const ctxStore = require('../dinver-ai/contextStore');
+
+/**
+ * Reconstruct context from conversation history
+ * This allows context to persist even after in-memory store expires (20 min TTL)
+ *
+ * @param {string} threadId - Thread UUID
+ * @returns {Promise<Object|null>} - Reconstructed context or null
+ */
+async function reconstructContextFromHistory(threadId) {
+  if (!threadId) return null;
+
+  try {
+    // Check if context already exists in memory (fast path)
+    const existingCtx = ctxStore.get(threadId);
+    if (existingCtx) {
+      console.log('[Context] Using existing in-memory context for thread:', threadId);
+      return existingCtx;
+    }
+
+    // Load thread with recent messages from database
+    const thread = await AiThread.findOne({
+      where: { id: threadId },
+      include: [
+        {
+          model: AiMessage,
+          as: 'messages',
+        },
+      ],
+      order: [[{ model: AiMessage, as: 'messages' }, 'createdAt', 'DESC']],
+    });
+
+    if (!thread || !thread.messages || thread.messages.length === 0) {
+      console.log('[Context] No thread or messages found for:', threadId);
+      return null;
+    }
+
+    // Limit to last 20 messages for context reconstruction (performance)
+    const recentMessages = thread.messages.slice(0, 20);
+
+    console.log(`[Context] Reconstructing from ${recentMessages.length} messages for thread:`, threadId);
+
+    // Reconstruct context from messages
+    const ctx = {
+      restaurantHistory: [],
+      searchHistory: [],
+      intentHistory: [],
+      lastRestaurantId: null,
+    };
+
+    // Process messages in chronological order (oldest first for proper history)
+    const chronologicalMessages = [...recentMessages].reverse();
+
+    for (const msg of chronologicalMessages) {
+      // Extract restaurantId from reply object
+      if (msg.role === 'assistant' && msg.reply && msg.reply.restaurantId) {
+        const rid = msg.reply.restaurantId;
+        if (!ctx.restaurantHistory.includes(rid)) {
+          ctx.restaurantHistory.push(rid);
+        }
+        ctx.lastRestaurantId = rid; // Most recent one
+      }
+
+      // Extract search terms from user messages (simple keyword extraction)
+      if (msg.role === 'user' && msg.text) {
+        const searchKeywords = msg.text.toLowerCase().match(/\b(pizza|burger|pasta|steak|sushi|ramen|biftek|ćevap|pljeskavic|gulaš)\w*/gi);
+        if (searchKeywords) {
+          searchKeywords.forEach(term => {
+            if (!ctx.searchHistory.includes(term)) {
+              ctx.searchHistory.push(term);
+            }
+          });
+        }
+      }
+
+      // Extract intent from reply if available
+      if (msg.reply && msg.reply.intent) {
+        if (!ctx.intentHistory.includes(msg.reply.intent)) {
+          ctx.intentHistory.push(msg.reply.intent);
+        }
+      }
+    }
+
+    // Limit arrays to prevent unbounded growth
+    ctx.restaurantHistory = ctx.restaurantHistory.slice(-5); // Last 5 restaurants
+    ctx.searchHistory = ctx.searchHistory.slice(-10); // Last 10 search terms
+    ctx.intentHistory = ctx.intentHistory.slice(-5); // Last 5 intents
+
+    // Use thread.restaurantId as fallback for lastRestaurantId
+    if (!ctx.lastRestaurantId && thread.restaurantId) {
+      ctx.lastRestaurantId = thread.restaurantId;
+    }
+
+    // Store reconstructed context in memory for future requests
+    ctxStore.set(threadId, ctx);
+
+    console.log('[Context] Reconstructed context:', {
+      threadId,
+      lastRestaurantId: ctx.lastRestaurantId,
+      restaurantCount: ctx.restaurantHistory.length,
+      searchCount: ctx.searchHistory.length,
+    });
+
+    return ctx;
+  } catch (error) {
+    console.error('[Context] Error reconstructing context:', error);
+    return null;
+  }
+}
 
 async function findOrCreateActiveThread({
   userId,
@@ -95,6 +204,12 @@ module.exports = {
       const userId = req.user?.id; // iz JWT middleware-a
 
       if (!threadId) threadId = uuidv4();
+
+      // Reconstruct context from conversation history if threadId exists
+      // This ensures context persists even after in-memory store expires (20 min TTL)
+      if (threadId && userId) {
+        await reconstructContextFromHistory(threadId);
+      }
 
       const reply = await chatAgent({
         message,
