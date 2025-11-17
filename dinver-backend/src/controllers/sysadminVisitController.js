@@ -76,16 +76,16 @@ exports.getAllVisits = async (req, res) => {
         ? {
             ...visit.receipt.get(),
             thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
+              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image', 'original')
               : null,
             mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
+              ? getMediaUrl(visit.receipt.mediumUrl, 'image', 'original')
               : null,
             fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
+              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image', 'original')
               : null,
             originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image')
+              ? getMediaUrl(visit.receipt.originalUrl, 'image', 'original')
               : null,
           }
         : null,
@@ -196,16 +196,16 @@ exports.getVisitById = async (req, res) => {
         ? {
             ...visit.receipt.get(),
             thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
+              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image', 'original')
               : null,
             mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
+              ? getMediaUrl(visit.receipt.mediumUrl, 'image', 'original')
               : null,
             fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
+              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image', 'original')
               : null,
             originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image')
+              ? getMediaUrl(visit.receipt.originalUrl, 'image', 'original')
               : null,
           }
         : null,
