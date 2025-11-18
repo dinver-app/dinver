@@ -66,6 +66,18 @@ export const deleteRestaurantThumbnail = async (id: string) => {
   }
 };
 
+export const deleteRestaurantProfilePicture = async (id: string) => {
+  try {
+    const response = await apiClient.delete(
+      `/api/sysadmin/restaurants/${id}/profile-picture`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting restaurant profile picture:", error);
+    throw error;
+  }
+};
+
 export const updateWorkingHours = async (
   id: string,
   workingHours: any,

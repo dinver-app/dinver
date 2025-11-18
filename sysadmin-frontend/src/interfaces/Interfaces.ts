@@ -26,6 +26,7 @@ export interface Restaurant {
   workingHoursInfo?: string;
   thumbnailUrl?: string;
   thumbnail?: string;
+  profilePicture?: string;
   latitude?: number;
   longitude?: number;
   placeId?: string;

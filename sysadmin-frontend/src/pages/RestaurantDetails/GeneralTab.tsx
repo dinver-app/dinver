@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   updateRestaurant,
   deleteRestaurantThumbnail,
+  deleteRestaurantProfilePicture,
 } from "../../services/restaurantService";
 import { Restaurant } from "../../interfaces/Interfaces";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,8 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     name: restaurant.name || "",
     thumbnail: restaurant.thumbnail || "",
     thumbnailUrl: restaurant.thumbnailUrl || "",
+    profilePicture: restaurant.profilePicture || "",
+    profilePictureUrl: restaurant.profilePicture || "",
     address: restaurant.address || "",
     place: restaurant.place || "",
     country: restaurant.country || "",
@@ -73,6 +76,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   ]);
 
   const [file, setFile] = useState<File | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [errors, setErrors] = useState({
     websiteUrl: "",
     fbUrl: "",
@@ -86,7 +90,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteProfilePictureModal, setShowDeleteProfilePictureModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingProfilePicture, setIsDeletingProfilePicture] = useState(false);
 
   const validateInput = (name: string, value: string) => {
     let error = "";
@@ -232,6 +238,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       if (file) {
         formDataToSend.append("thumbnail", file);
       }
+      if (profilePictureFile) {
+        formDataToSend.append("profilePicture", profilePictureFile);
+      }
 
       // Add translations as a JSON string
       const translationsToSend = translations.map((t) => ({
@@ -244,6 +253,10 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
 
       await updateRestaurant(restaurant.id || "", formDataToSend);
       onUpdate({ ...restaurant, ...formData, translations });
+
+      // Reset file states after successful save
+      setFile(null);
+      setProfilePictureFile(null);
 
       // Show success toast
       toast.success(t("changes_saved_successfully"), { id: toastId });
@@ -273,6 +286,25 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const handleDeleteProfilePicture = async () => {
+    setIsDeletingProfilePicture(true);
+    try {
+      await deleteRestaurantProfilePicture(restaurant.id || "");
+      setFormData((prev) => ({
+        ...prev,
+        profilePicture: "",
+        profilePictureUrl: "",
+      }));
+      onUpdate({ ...restaurant, profilePicture: "" });
+      toast.success(t("profile_picture_deleted_successfully"));
+    } catch (error) {
+      toast.error(t("failed_to_delete_profile_picture"));
+    } finally {
+      setIsDeletingProfilePicture(false);
+      setShowDeleteProfilePictureModal(false);
     }
   };
 
@@ -723,6 +755,98 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           />
         </div>
 
+        {/* Profile Picture */}
+        <div className="border-b border-gray-200 pb-6">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">
+            {t("profile_picture")}
+          </h3>
+
+          <p className="text-sm text-gray-500 mb-3">
+            {t("recommendation")}: 1:1 (800×800 px)
+          </p>
+
+          {formData.profilePictureUrl ? (
+            <div className="inline-block">
+              <div className="relative group w-64 h-64">
+                <img
+                  src={formData.profilePictureUrl}
+                  alt={t("profile_picture")}
+                  className="w-full h-full object-cover rounded-md shadow-sm"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+                      onClick={() =>
+                        document.getElementById("profilePictureInput")?.click()
+                      }
+                    >
+                      {t("change")}
+                    </button>
+                    <button
+                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium"
+                      onClick={() => setShowDeleteProfilePictureModal(true)}
+                    >
+                      {t("delete")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="w-64 h-64 border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer rounded-md hover:bg-gray-100 transition-colors"
+              onClick={() => document.getElementById("profilePictureInput")?.click()}
+            >
+              <svg
+                className="w-8 h-8 text-gray-400 mb-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                ></path>
+              </svg>
+              <span className="text-sm text-gray-500">
+                {t("click_to_add_image")}
+              </span>
+            </div>
+          )}
+
+          <input
+            id="profilePictureInput"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                const selectedFile = e.target.files[0];
+                setProfilePictureFile(selectedFile);
+                setIsDirty(true);
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    profilePictureUrl: event.target?.result as string,
+                  }));
+                };
+                reader.readAsDataURL(selectedFile);
+              }
+            }}
+          />
+
+          {profilePictureFile && (
+            <p className="text-sm text-amber-600 mt-2">
+              {t("click_save_to_upload_image")}
+            </p>
+          )}
+        </div>
+
         {/* Subdomain */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1016,6 +1140,59 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                 disabled={isDeleting}
               >
                 {isDeleting ? t("deleting") : t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteProfilePictureModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowDeleteProfilePictureModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <div className="flex items-center mb-4 gap-1">
+              <svg
+                className="w-12 h-12 mr-2 border border-gray-200 rounded-lg p-3 text-gray-900"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("delete_profile_picture")}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t("are_you_sure_you_want_to_delete_this_image")}
+                </p>
+              </div>
+            </div>
+            <div className="h-line mb-4"></div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteProfilePictureModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleDeleteProfilePicture}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                disabled={isDeletingProfilePicture}
+              >
+                {isDeletingProfilePicture ? t("deleting") : t("delete")}
               </button>
             </div>
           </div>

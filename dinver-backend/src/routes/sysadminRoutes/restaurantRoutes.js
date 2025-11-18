@@ -83,7 +83,10 @@ router.get('/restaurants/:slug', restaurantController.getRestaurantDetails);
 
 router.put(
   '/restaurants/details/:id',
-  upload.single('thumbnail'),
+  upload.fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'profilePicture', maxCount: 1 }
+  ]),
   sysadminAuthenticateToken,
   checkSysadmin,
   restaurantController.updateRestaurant,
@@ -130,6 +133,13 @@ router.delete(
   sysadminAuthenticateToken,
   checkSysadmin,
   restaurantController.deleteRestaurantThumbnail,
+);
+
+router.delete(
+  '/restaurants/:id/profile-picture',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  restaurantController.deleteRestaurantProfilePicture,
 );
 
 router.put(
