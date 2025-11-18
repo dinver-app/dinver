@@ -70,11 +70,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      longDescription: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Detailed restaurant description (500-1000 chars) for AI context and partner descriptions',
-      },
       address: {
         type: DataTypes.STRING,
         allowNull: false,

@@ -450,10 +450,18 @@ async function upsertRestaurantTranslations(restaurantId, translations) {
   for (const t of translations) {
     const [translation, created] = await RestaurantTranslation.findOrCreate({
       where: { restaurantId, language: t.language },
-      defaults: { name: t.name, description: t.description },
+      defaults: {
+        name: t.name,
+        description: t.description,
+        longDescription: t.longDescription,
+      },
     });
     if (!created) {
-      await translation.update({ name: t.name, description: t.description });
+      await translation.update({
+        name: t.name,
+        description: t.description,
+        longDescription: t.longDescription,
+      });
     }
   }
 }
@@ -529,7 +537,6 @@ async function updateRestaurant(req, res) {
       oib,
       priceCategoryId,
       description,
-      longDescription,
       translations = [],
       wifiSsid,
       wifiPassword,
@@ -633,7 +640,6 @@ async function updateRestaurant(req, res) {
       email,
       oib: oibValue,
       description,
-      longDescription, // Detailed description for AI context
       thumbnailUrl: thumbnailKey, // Spremamo samo key
       priceCategoryId,
       wifiSsid,
