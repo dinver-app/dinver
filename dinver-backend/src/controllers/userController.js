@@ -175,7 +175,42 @@ const updateUserProfile = async (req, res) => {
     if (firstName !== undefined) updates.firstName = firstName;
     if (lastName !== undefined) updates.lastName = lastName;
     if (name !== undefined) updates.name = name;
-    if (username !== undefined) updates.username = username;
+
+    // Posebno rukovanje username-om - dozvoli promjenu samo svaka 2 tjedna
+    if (username !== undefined && username !== user.username) {
+      if (user.usernameLastChanged) {
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+        if (new Date(user.usernameLastChanged) > twoWeeksAgo) {
+          const nextChangeDate = new Date(user.usernameLastChanged);
+          nextChangeDate.setDate(nextChangeDate.getDate() + 14);
+
+          return res.status(400).json({
+            error: 'You can only change your username once every 2 weeks',
+            nextChangeAvailable: nextChangeDate.toISOString(),
+          });
+        }
+      }
+
+      // Provjeri je li username već zauzet
+      const existingUser = await User.findOne({
+        where: {
+          username,
+          id: { [Op.ne]: userId },
+        },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          error: 'This username is already taken',
+        });
+      }
+
+      updates.username = username;
+      updates.usernameLastChanged = new Date();
+    }
+
     if (gender !== undefined) updates.gender = gender;
     if (bio !== undefined) updates.bio = bio;
     if (instagramUrl !== undefined) updates.instagramUrl = instagramUrl;
