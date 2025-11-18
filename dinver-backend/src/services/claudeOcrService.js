@@ -82,7 +82,8 @@ CRITICAL RULES:
    - Second address (below restaurant name) is the ACTUAL restaurant location
    - Extract the restaurant location address as merchantAddress (not the firm address)
    - Look for "Restoran" or restaurant name, then extract the address below it
-10. Do NOT invent data - only extract what you clearly see
+10. Extract ALL line items from the receipt (food, drinks, etc)
+11. Do NOT invent data - only extract what you clearly see
 
 Return this EXACT JSON structure:
 {
@@ -94,6 +95,14 @@ Return this EXACT JSON structure:
   "issueTime": "HH:MM or null",
   "merchantName": "string or null",
   "merchantAddress": "string or null",
+  "items": [
+    {
+      "name": "Item name as shown on receipt",
+      "quantity": number or 1,
+      "unitPrice": number or null,
+      "totalPrice": number
+    }
+  ],
   "confidence": {
     "oib": 0.0 to 1.0,
     "jir": 0.0 to 1.0,
@@ -103,6 +112,7 @@ Return this EXACT JSON structure:
     "issueTime": 0.0 to 1.0,
     "merchantName": 0.0 to 1.0,
     "merchantAddress": 0.0 to 1.0,
+    "items": 0.0 to 1.0,
     "overall": 0.0 to 1.0
   },
   "notes": "Any warnings or observations (optional)"
@@ -114,11 +124,15 @@ IMPORTANT: Be very precise with Croatian fiscal receipt format. Look for:
 - ZKI code (labeled as "ZKI" followed by alphanumeric)
 - Total/Ukupno for total amount
 - Date in DD.MM.YYYY format
-- Time in HH:MM format`;
+- Time in HH:MM format
+- Line items listed between header and total (usually with quantity and price)
+- Items may have format like: "Pizza Margherita 1x 85,00 EUR" or "Coca Cola 0.5l 2x 15,00 30,00"
+- If quantity not visible, assume 1
+- If only total price visible (not unit price), set unitPrice to null`;
 
     const response = await client.messages.create({
       model: MODEL_VERSION,
-      max_tokens: 2048,
+      max_tokens: 4096, // Increased for line items extraction
       temperature: 0, // Deterministic for data extraction
       messages: [
         {

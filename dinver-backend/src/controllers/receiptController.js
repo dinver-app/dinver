@@ -971,6 +971,7 @@ const getReceiptById = async (req, res) => {
       issueTime: receipt.issueTime,
       merchantName: receipt.merchantName,
       merchantAddress: receipt.merchantAddress,
+      items: receipt.predictedData?.items || [],
     };
 
     // User-declared data
@@ -2131,6 +2132,180 @@ const markAsUsedForTraining = async (req, res) => {
   }
 };
 
+/**
+ * Get receipt analytics - business insights about items sold per restaurant
+ * GET /api/sysadmin/receipt-analytics?restaurantId=X&dateFrom=Y&dateTo=Z
+ */
+const getReceiptAnalytics = async (req, res) => {
+  try {
+    const { restaurantId, dateFrom, dateTo } = req.query;
+
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurantId is required' });
+    }
+
+    // Build where clause for filtering
+    const whereClause = {
+      restaurantId,
+      status: 'approved', // Only approved receipts have valid items
+    };
+
+    if (dateFrom) {
+      whereClause.verifiedAt = { ...whereClause.verifiedAt, [Op.gte]: new Date(dateFrom) };
+    }
+    if (dateTo) {
+      const endDate = new Date(dateTo);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.verifiedAt = { ...whereClause.verifiedAt, [Op.lte]: endDate };
+    }
+
+    // Fetch all approved receipts for this restaurant
+    const receipts = await Receipt.findAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'predictedData',
+        'totalAmount',
+        'issueDate',
+        'issueTime',
+        'verifiedAt',
+        'submittedAt',
+      ],
+      include: [
+        {
+          model: Restaurant,
+          attributes: ['id', 'name'],
+        },
+      ],
+      order: [['verifiedAt', 'DESC']],
+    });
+
+    // Extract all items from receipts
+    const itemsMap = new Map(); // itemName -> { count, totalRevenue, prices, dates }
+    const categoryMap = new Map(); // category -> count (if we add categories later)
+    let totalItems = 0;
+    let totalReceipts = receipts.length;
+    let totalRevenue = 0;
+    const dailyStats = new Map(); // date -> { items, revenue, receipts }
+
+    receipts.forEach((receipt) => {
+      const receiptDate = receipt.issueDate || receipt.verifiedAt?.toISOString().split('T')[0];
+      const items = receipt.predictedData?.items || [];
+      const receiptTotal = parseFloat(receipt.totalAmount) || 0;
+
+      totalRevenue += receiptTotal;
+
+      // Initialize daily stats
+      if (receiptDate) {
+        if (!dailyStats.has(receiptDate)) {
+          dailyStats.set(receiptDate, { items: 0, revenue: 0, receipts: 0 });
+        }
+        const dayStats = dailyStats.get(receiptDate);
+        dayStats.receipts += 1;
+        dayStats.revenue += receiptTotal;
+      }
+
+      items.forEach((item) => {
+        totalItems += item.quantity || 1;
+
+        if (receiptDate) {
+          dailyStats.get(receiptDate).items += item.quantity || 1;
+        }
+
+        const itemName = item.name.trim();
+        const itemPrice = item.totalPrice || 0;
+
+        if (!itemsMap.has(itemName)) {
+          itemsMap.set(itemName, {
+            name: itemName,
+            count: 0,
+            totalRevenue: 0,
+            prices: [],
+            firstSeen: receiptDate,
+            lastSeen: receiptDate,
+          });
+        }
+
+        const itemData = itemsMap.get(itemName);
+        itemData.count += item.quantity || 1;
+        itemData.totalRevenue += itemPrice;
+        itemData.prices.push(itemPrice);
+        if (receiptDate > itemData.lastSeen) {
+          itemData.lastSeen = receiptDate;
+        }
+      });
+    });
+
+    // Calculate top items
+    const topItems = Array.from(itemsMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20)
+      .map((item) => ({
+        name: item.name,
+        count: item.count,
+        revenue: Math.round(item.totalRevenue * 100) / 100,
+        avgPrice: Math.round((item.totalRevenue / item.count) * 100) / 100,
+        firstSeen: item.firstSeen,
+        lastSeen: item.lastSeen,
+      }));
+
+    // Calculate price distribution
+    const priceRanges = {
+      '0-5': 0,
+      '5-10': 0,
+      '10-20': 0,
+      '20-50': 0,
+      '50+': 0,
+    };
+
+    itemsMap.forEach((item) => {
+      const avgPrice = item.totalRevenue / item.count;
+      if (avgPrice < 5) priceRanges['0-5'] += item.count;
+      else if (avgPrice < 10) priceRanges['5-10'] += item.count;
+      else if (avgPrice < 20) priceRanges['10-20'] += item.count;
+      else if (avgPrice < 50) priceRanges['20-50'] += item.count;
+      else priceRanges['50+'] += item.count;
+    });
+
+    // Format daily trends
+    const dailyTrends = Array.from(dailyStats.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, stats]) => ({
+        date,
+        items: stats.items,
+        revenue: Math.round(stats.revenue * 100) / 100,
+        receipts: stats.receipts,
+        avgItemsPerReceipt: Math.round((stats.items / stats.receipts) * 100) / 100,
+      }));
+
+    // Overview stats
+    const overview = {
+      totalReceipts,
+      totalItems,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      uniqueItems: itemsMap.size,
+      avgItemsPerReceipt: totalReceipts > 0 ? Math.round((totalItems / totalReceipts) * 100) / 100 : 0,
+      avgRevenuePerReceipt: totalReceipts > 0 ? Math.round((totalRevenue / totalReceipts) * 100) / 100 : 0,
+    };
+
+    res.json({
+      overview,
+      topItems,
+      priceDistribution: priceRanges,
+      dailyTrends,
+      restaurant: receipts[0]?.Restaurant
+        ? {
+            id: receipts[0].Restaurant.id,
+            name: receipts[0].Restaurant.name,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error('Error getting receipt analytics:', error);
+    res.status(500).json({ error: 'Failed to get receipt analytics' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   getUserReceipts,
@@ -2146,4 +2321,6 @@ module.exports = {
   getOcrAnalytics,
   getTrainingData,
   markAsUsedForTraining,
+  // Receipt Analytics (Business Insights)
+  getReceiptAnalytics,
 };

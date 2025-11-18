@@ -63,6 +63,12 @@ export interface Receipt {
     issueTime?: string;
     merchantName?: string;
     merchantAddress?: string;
+    items?: Array<{
+      name: string;
+      quantity: number;
+      unitPrice?: number | null;
+      totalPrice: number;
+    }>;
   };
   declared?: {
     total?: number;
@@ -254,6 +260,21 @@ class ReceiptService {
     );
     return response.data;
   }
+
+  async getReceiptAnalytics(
+    restaurantId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<any> {
+    const params = new URLSearchParams({ restaurantId });
+    if (dateFrom) params.append("dateFrom", dateFrom);
+    if (dateTo) params.append("dateTo", dateTo);
+
+    const response = await apiClient.get(
+      `/api/sysadmin/receipt-analytics?${params}`
+    );
+    return response.data;
+  }
 }
 
 export const receiptService = new ReceiptService();
@@ -265,3 +286,56 @@ export const getTrainingData = (query?: string) =>
   receiptService.getTrainingData(query);
 export const markAsUsedForTraining = (receiptIds: string[]) =>
   receiptService.markAsUsedForTraining(receiptIds);
+
+// Receipt Analytics types
+export interface ReceiptAnalyticsOverview {
+  totalReceipts: number;
+  totalItems: number;
+  totalRevenue: number;
+  uniqueItems: number;
+  avgItemsPerReceipt: number;
+  avgRevenuePerReceipt: number;
+}
+
+export interface TopItem {
+  name: string;
+  count: number;
+  revenue: number;
+  avgPrice: number;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+export interface PriceDistribution {
+  "0-5": number;
+  "5-10": number;
+  "10-20": number;
+  "20-50": number;
+  "50+": number;
+}
+
+export interface DailyTrend {
+  date: string;
+  items: number;
+  revenue: number;
+  receipts: number;
+  avgItemsPerReceipt: number;
+}
+
+export interface ReceiptAnalyticsResponse {
+  overview: ReceiptAnalyticsOverview;
+  topItems: TopItem[];
+  priceDistribution: PriceDistribution;
+  dailyTrends: DailyTrend[];
+  restaurant: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export const getReceiptAnalytics = (
+  restaurantId: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<ReceiptAnalyticsResponse> =>
+  receiptService.getReceiptAnalytics(restaurantId, dateFrom, dateTo);

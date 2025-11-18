@@ -435,6 +435,75 @@ const ReceiptDetailsContent: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Extracted Line Items */}
+            {receipt.extracted?.items && receipt.extracted.items.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-900 mb-2">
+                  Receipt Items ({receipt.extracted.items.length})
+                </h4>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          Item
+                        </th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                          Qty
+                        </th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Unit
+                        </th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {receipt.extracted.items.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {item.name}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600 text-center">
+                            {item.quantity || 1}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600 text-right">
+                            {item.unitPrice != null
+                              ? `€${item.unitPrice.toFixed(2)}`
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">
+                            €{item.totalPrice.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-2 text-sm font-semibold text-gray-900 text-right"
+                        >
+                          Total:
+                        </td>
+                        <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                          €
+                          {receipt.extracted.items
+                            .reduce(
+                              (sum: number, item: any) =>
+                                sum + (item.totalPrice || 0),
+                              0
+                            )
+                            .toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {receipt.ocrData && (
               <div className="mb-6">
                 <h4 className="text-md font-medium text-gray-900 mb-2">
