@@ -13,7 +13,7 @@ const { sendPasswordResetEmail } = require('../../utils/emailService');
 
 const register = async (req, res) => {
   try {
-    const { firstName, lastName, name, username, email, password, phone, referralCode } =
+    const { name, username, email, password, phone, referralCode } =
       req.body;
 
     // Validate required fields
@@ -74,8 +74,7 @@ const register = async (req, res) => {
         const referrer = await User.findByPk(refCode.userId);
         if (referrer) {
           referrerData = {
-            firstName: referrer.firstName,
-            lastName: referrer.lastName,
+            name: referrer.name,
             email: referrer.email,
           };
         }
@@ -91,8 +90,6 @@ const register = async (req, res) => {
     // Only create user if referral validation passed (or no referral code provided)
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      firstName: firstName,
-      lastName: lastName,
       name: name.trim(),
       username: normalizedUsername,
       email: normalizedEmail,
@@ -194,8 +191,6 @@ const register = async (req, res) => {
     // Filtriraj korisničke podatke
     const userData = {
       userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -293,8 +288,6 @@ const login = async (req, res) => {
     // Filtriraj korisničke podatke
     const userData = {
       userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -628,8 +621,6 @@ async function refreshToken(req, res) {
     // Filtriraj korisničke podatke
     const userData = {
       userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -657,7 +648,7 @@ async function refreshToken(req, res) {
 
 const socialLogin = async (req, res) => {
   try {
-    const { email, firstName, lastName, photoURL, provider } = req.body;
+    const { email, name, photoURL, provider } = req.body;
 
     // Normalize email to lowercase for consistency
     const normalizedEmail = email.toLowerCase().trim();
@@ -665,10 +656,21 @@ const socialLogin = async (req, res) => {
     let user = await User.findOne({ where: { email: normalizedEmail } });
 
     if (!user) {
+      // Generate username from email or name
+      const baseUsername = (name || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+      let username = baseUsername;
+      let counter = 1;
+
+      // Ensure unique username
+      while (await User.findOne({ where: { username } })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
       user = await User.create({
         email: normalizedEmail,
-        firstName: firstName,
-        lastName: lastName,
+        name: name || email.split('@')[0],
+        username,
         photoURL,
         provider,
       });
@@ -679,8 +681,6 @@ const socialLogin = async (req, res) => {
     // Filtriraj korisničke podatke
     const userData = {
       userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -721,10 +721,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             // Normalize email to lowercase for consistency
             const normalizedEmail = profile.emails[0].value.toLowerCase().trim();
 
+            // Generate full name
+            const fullName = profile.displayName || `${profile.name.givenName} ${profile.name.familyName}`;
+
+            // Generate username from email or name
+            const baseUsername = (fullName || normalizedEmail.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+            let username = baseUsername;
+            let counter = 1;
+
+            // Ensure unique username
+            while (await User.findOne({ where: { username } })) {
+              username = `${baseUsername}${counter}`;
+              counter++;
+            }
+
             user = await User.create({
               googleId: profile.id,
-              firstName: profile.name.givenName,
-              lastName: profile.name.familyName,
+              name: fullName,
+              username,
               email: normalizedEmail,
             });
           }
