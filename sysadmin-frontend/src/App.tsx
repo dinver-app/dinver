@@ -27,6 +27,7 @@ import Experiences from "./pages/Experiences";
 import ExperienceDetails from "./pages/ExperienceDetails";
 import UserExperienceStats from "./pages/UserExperienceStats";
 import OcrAnalytics from "./pages/OcrAnalytics";
+import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
               element={<UserExperienceStats />}
             />
             <Route path="/ocr-analytics" element={<OcrAnalytics />} />
+            <Route path="/receipt-analytics" element={<ReceiptAnalytics />} />
           </Route>
         </Routes>
       </Router>

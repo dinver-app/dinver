@@ -23,6 +23,7 @@ const visitRoutes = require('./sysadminRoutes/visitRoutes'); // NEW: Visit manag
 const leaderboardCycleRoutes = require('./sysadminRoutes/leaderboardCycleRoutes');
 const reviewRoutes = require('./sysadminRoutes/reviewRoutes');
 const experienceRoutes = require('./sysadminRoutes/experienceRoutes');
+const receiptRoutes = require('./sysadminRoutes/receiptRoutes'); // Receipt & OCR Analytics
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -46,9 +47,10 @@ router.use('/json-menu-import', jsonMenuImportRoutes);
 router.use(referralRoutes);
 router.use(sizeRoutes);
 router.use(waitListRoutes);
-router.use(visitRoutes); // NEW: Visit management (replaces receiptRoutes)
+router.use(visitRoutes); // NEW: Visit management
 router.use(leaderboardCycleRoutes);
 router.use(reviewRoutes);
 router.use(experienceRoutes); // Experience moderation za sysadmin
+router.use(receiptRoutes); // Receipt management, OCR Analytics & Receipt Analytics
 
 module.exports = router;

@@ -13,6 +13,7 @@ const {
   getOcrAnalytics,
   getTrainingData,
   markAsUsedForTraining,
+  getReceiptAnalytics,
 } = require('../../controllers/receiptController');
 
 const router = express.Router();
@@ -73,6 +74,14 @@ router.post(
   sysadminAuthenticateToken,
   checkSysadmin,
   markAsUsedForTraining,
+);
+
+// Receipt Analytics (Business Insights) routes
+router.get(
+  '/receipt-analytics',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  getReceiptAnalytics,
 );
 
 module.exports = router;

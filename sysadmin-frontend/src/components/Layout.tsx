@@ -21,6 +21,7 @@ import {
   TrophyIcon,
   SparklesIcon,
   CpuChipIcon,
+  ShoppingBagIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -119,6 +120,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       name: "OCR Analytics",
       path: "/ocr-analytics",
       icon: <CpuChipIcon className="h-4 w-4 mr-3" />,
+    },
+    {
+      name: "Receipt Analytics",
+      path: "/receipt-analytics",
+      icon: <ShoppingBagIcon className="h-4 w-4 mr-3" />,
     },
   ];
 
