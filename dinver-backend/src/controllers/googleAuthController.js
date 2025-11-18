@@ -61,8 +61,6 @@ const googleSignIn = async (req, res) => {
       user = await User.create({
         googleId: googleId,
         email: email,
-        firstName: firstName,
-        lastName: lastName,
         name: name,
         username: tempUsername,
         gender: 'undefined',
@@ -88,8 +86,6 @@ const googleSignIn = async (req, res) => {
       // Filter user data
       const userData = {
         userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
         name: user.name,
         username: user.username,
         email: user.email,
@@ -143,8 +139,6 @@ const googleSignIn = async (req, res) => {
     // Filter user data
     const userData = {
       userId: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,

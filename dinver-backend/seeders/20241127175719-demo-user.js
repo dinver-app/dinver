@@ -10,10 +10,11 @@ module.exports = {
       'Users',
       [
         {
-          firstName: 'Demo',
-          lastName: 'User',
+          name: 'Demo User',
+          username: 'demouser',
           email: 'demo_user@example.com',
           password: hashedPassword,
+          gender: 'undefined',
           createdAt: new Date(),
           updatedAt: new Date(),
         },

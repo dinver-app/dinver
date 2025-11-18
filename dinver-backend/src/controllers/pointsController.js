@@ -140,7 +140,7 @@ const getUserPoints = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['firstName', 'lastName'],
+          attributes: ['name'],
         },
       ],
     });
@@ -222,7 +222,7 @@ const getGlobalPointsStats = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
       order: [['totalPoints', 'DESC']],
@@ -235,7 +235,7 @@ const getGlobalPointsStats = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
         {
           model: Restaurant,
@@ -259,7 +259,7 @@ const getGlobalPointsStats = async (req, res) => {
         id: activity.id,
         userId: activity.userId,
         userName: activity.user
-          ? `${activity.user.firstName} ${activity.user.lastName}`
+          ? activity.user.name
           : 'Unknown',
         restaurantId: activity.restaurantId,
         restaurantName: activity.restaurant

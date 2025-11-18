@@ -28,8 +28,7 @@ const handleClaimRequest = async (req, res) => {
         userDetails = `
           <h3>Detalji korisnika iz sustava</h3>
           <p><strong>User ID:</strong> ${user.id}</p>
-          <p><strong>Ime:</strong> ${user.firstName}</p>
-          <p><strong>Prezime:</strong> ${user.lastName}</p>
+          <p><strong>Ime:</strong> ${user.name}</p>
           <p><strong>Email:</strong> ${user.email}</p>
           <p><strong>Telefon:</strong> ${user.phone || 'Nije unesen'}</p>
           <p><strong>Registriran:</strong> ${new Date(user.createdAt).toLocaleDateString('hr-HR')}</p>

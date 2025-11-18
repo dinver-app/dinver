@@ -232,7 +232,7 @@ const getAllCycles = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
+              attributes: ['id', 'name', 'profileImage'],
             },
           ],
         },
@@ -261,7 +261,7 @@ const getAllCycles = async (req, res) => {
       cycleData.participantCount = cycle.participants.length;
       cycleData.winnerCount = cycle.winners.length;
       cycleData.creatorName = cycle.creator?.user
-        ? `${cycle.creator.user.firstName} ${cycle.creator.user.lastName}`
+        ? cycle.creator.user.name
         : 'Unknown';
       return cycleData;
     });
@@ -298,7 +298,7 @@ const getCycleById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
+              attributes: ['id', 'name', 'profileImage'],
             },
           ],
         },
@@ -311,8 +311,8 @@ const getCycleById = async (req, res) => {
               as: 'user',
               attributes: [
                 'id',
-                'firstName',
-                'lastName',
+                'name',
+                
                 'email',
                 'city',
                 'profileImage',
@@ -330,8 +330,8 @@ const getCycleById = async (req, res) => {
               as: 'user',
               attributes: [
                 'id',
-                'firstName',
-                'lastName',
+                'name',
+                
                 'email',
                 'city',
                 'profileImage',
@@ -352,7 +352,7 @@ const getCycleById = async (req, res) => {
       ? getMediaUrl(cycle.headerImageUrl, 'image')
       : null;
     cycleData.creatorName = cycle.creator?.user
-      ? `${cycle.creator.user.firstName} ${cycle.creator.user.lastName}`
+      ? cycle.creator.user.name
       : 'Unknown';
 
     // Add computed fields
@@ -650,8 +650,8 @@ const getCycleParticipants = async (req, res) => {
           as: 'user',
           attributes: [
             'id',
-            'firstName',
-            'lastName',
+            'name',
+            
             'email',
             'city',
             'profileImage',
@@ -668,7 +668,7 @@ const getCycleParticipants = async (req, res) => {
       const participantData = participant.toJSON();
       participantData.rank = offset + index + 1;
       participantData.userName = participant.user
-        ? `${participant.user.firstName} ${participant.user.lastName}`
+        ? participant.user.name
         : 'Unknown';
       return participantData;
     });
@@ -703,8 +703,8 @@ const getCycleWinners = async (req, res) => {
           as: 'user',
           attributes: [
             'id',
-            'firstName',
-            'lastName',
+            'name',
+            
             'email',
             'city',
             'profileImage',
@@ -717,7 +717,7 @@ const getCycleWinners = async (req, res) => {
     const winnersWithNames = winners.map((winner) => {
       const winnerData = winner.toJSON();
       winnerData.userName = winner.user
-        ? `${winner.user.firstName} ${winner.user.lastName}`
+        ? winner.user.name
         : 'Unknown';
       winnerData.rankOrdinal = winner.getRankOrdinal();
       winnerData.formattedPoints = winner.getFormattedPoints();
@@ -752,7 +752,7 @@ const getActiveCycle = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
+              attributes: ['id', 'name', 'profileImage'],
             },
           ],
         },
@@ -834,8 +834,8 @@ const getCycleLeaderboard = async (req, res) => {
           as: 'user',
           attributes: [
             'id',
-            'firstName',
-            'lastName',
+            'name',
+            
             'email',
             'city',
             'profileImage',
@@ -852,7 +852,7 @@ const getCycleLeaderboard = async (req, res) => {
       const participantData = participant.toJSON();
       participantData.rank = offset + index + 1;
       participantData.userName = participant.user
-        ? `${participant.user.firstName} ${participant.user.lastName}`
+        ? participant.user.name
         : 'Unknown';
       participantData.formattedPoints = participant.getFormattedPoints();
       return participantData;
@@ -929,7 +929,7 @@ const getCycleHistory = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName', 'profileImage'],
+              attributes: ['id', 'name', 'profileImage'],
             },
           ],
           order: [['rank', 'ASC']],
@@ -950,7 +950,7 @@ const getCycleHistory = async (req, res) => {
       cycleData.winners = cycle.winners.map((winner) => {
         const winnerData = winner.toJSON();
         winnerData.userName = winner.user
-          ? `${winner.user.firstName} ${winner.user.lastName}`
+          ? winner.user.name
           : 'Unknown';
         winnerData.rankOrdinal = winner.getRankOrdinal();
         winnerData.formattedPoints = winner.getFormattedPoints();

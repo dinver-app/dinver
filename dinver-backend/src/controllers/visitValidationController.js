@@ -133,7 +133,7 @@ const adminScanUserToken = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
       ],
     });

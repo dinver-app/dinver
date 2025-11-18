@@ -154,7 +154,7 @@ async function listSysadmins(req, res) {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'email', 'firstName', 'lastName'],
+          attributes: ['id', 'email', 'name'],
         },
       ],
     });
@@ -233,8 +233,7 @@ async function listUsers(req, res) {
       ? {
           [Op.or]: [
             { email: { [Op.iLike]: `%${search}%` } },
-            { firstName: { [Op.iLike]: `%${search}%` } },
-            { lastName: { [Op.iLike]: `%${search}%` } },
+            { name: { [Op.iLike]: `%${search}%` } },
           ],
         }
       : {};
@@ -244,8 +243,7 @@ async function listUsers(req, res) {
       attributes: [
         'id',
         'email',
-        'firstName',
-        'lastName',
+        'name',
         'role',
         'createdAt',
         'banned',
@@ -269,7 +267,7 @@ async function listUsers(req, res) {
 // Create a new user
 async function createUser(req, res) {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, name } = req.body;
 
     // Check if the user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -284,8 +282,7 @@ async function createUser(req, res) {
     const user = await User.create({
       email,
       password: hashedPassword,
-      firstName,
-      lastName,
+      name,
       role: 'user',
     });
 
@@ -353,7 +350,7 @@ async function getRestaurantAdmins(req, res) {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'email', 'firstName', 'lastName'],
+          attributes: ['id', 'email', 'name'],
         },
       ],
     });
@@ -475,7 +472,7 @@ async function updateRestaurantAdminRole(req, res) {
 async function listAllUsers(req, res) {
   try {
     const users = await User.findAll({
-      attributes: ['id', 'email', 'firstName', 'lastName'],
+      attributes: ['id', 'email', 'name'],
     });
     res.json(users);
   } catch (error) {
@@ -535,8 +532,7 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
         [Op.or]: [
           { text: { [Op.iLike]: `%${search}%` } },
           { '$Restaurant.name$': { [Op.iLike]: `%${search}%` } },
-          { '$User.firstName$': { [Op.iLike]: `%${search}%` } },
-          { '$User.lastName$': { [Op.iLike]: `%${search}%` } },
+          { '$User.name$': { [Op.iLike]: `%${search}%` } },
         ],
       };
     }
@@ -554,7 +550,7 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
           {
             model: User,
             as: 'user',
-            attributes: ['id', 'firstName', 'lastName', 'email'],
+            attributes: ['id', 'name', 'email'],
           },
         ],
         attributes: [
@@ -584,8 +580,7 @@ async function getAllReviewsForClaimedRestaurants(req, res) {
       }
       reviewsByRestaurant[restaurantName].push({
         ...review.toJSON(),
-        userFirstName: review.user.firstName || 'Unknown',
-        userLastName: review.user.lastName || 'Unknown',
+        userName: review.user.name || 'Unknown',
         userEmail: review.user.email || 'Unknown',
       });
     });
@@ -629,7 +624,7 @@ async function getReviewById(req, res) {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
       attributes: [
@@ -652,8 +647,7 @@ async function getReviewById(req, res) {
 
     res.json({
       ...review.toJSON(),
-      userFirstName: review.user.firstName || 'Unknown',
-      userLastName: review.user.lastName || 'Unknown',
+      userName: review.user.name || 'Unknown',
       userEmail: review.user.email || 'Unknown',
       restaurantName: review.restaurant.name,
     });

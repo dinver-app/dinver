@@ -62,7 +62,7 @@ const createQRPrintRequest = async (req, res) => {
     const htmlContent = `
       <h2>Novi zahtjev za QR naljepnice</h2>
       <h3>Restoran: ${restaurant?.name || ''}</h3>
-      <p><strong>Korisnik:</strong> ${user?.firstName} ${user?.lastName} (${user?.email})</p>
+      <p><strong>Korisnik:</strong> ${user?.name} (${user?.email})</p>
       <p><strong>Količina:</strong> ${quantity}</p>
       ${customText ? `<p><strong>Custom tekst:</strong> ${customText}</p>` : ''}
       <ul>
@@ -79,7 +79,7 @@ const createQRPrintRequest = async (req, res) => {
       <p>Zahtjev kreiran: ${new Date().toLocaleString('hr-HR')}</p>
     `;
 
-    const textContent = `Novi zahtjev za QR naljepnice\nRestoran: ${restaurant?.name || ''}\nKorisnik: ${user?.firstName} ${user?.lastName} (${user?.email})\nKoličina: ${quantity}${customText ? `\nCustom tekst: ${customText}` : ''}`;
+    const textContent = `Novi zahtjev za QR naljepnice\nRestoran: ${restaurant?.name || ''}\nKorisnik: ${user?.name} (${user?.email})\nKoličina: ${quantity}${customText ? `\nCustom tekst: ${customText}` : ''}`;
 
     // Slanje maila (dev mode samo log)
     const data = {
@@ -119,7 +119,7 @@ const getQRPrintRequests = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
     });
@@ -151,12 +151,12 @@ const getAllQRPrintRequests = async (req, res) => {
       {
         model: User,
         as: 'user',
-        attributes: ['id', 'firstName', 'lastName', 'email'],
+        attributes: ['id', 'name', 'email'],
         where: search
           ? {
               [Sequelize.Op.or]: [
-                { firstName: { [Sequelize.Op.iLike]: `%${search}%` } },
-                { lastName: { [Sequelize.Op.iLike]: `%${search}%` } },
+                
+                
                 { email: { [Sequelize.Op.iLike]: `%${search}%` } },
               ],
             }

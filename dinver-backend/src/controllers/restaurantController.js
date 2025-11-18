@@ -2750,7 +2750,7 @@ const getFullRestaurantDetails = async (req, res) => {
           {
             model: User,
             as: 'user',
-            attributes: ['id', 'firstName', 'lastName'],
+            attributes: ['id', 'name'],
           },
         ],
         order: [['createdAt', 'DESC']],
@@ -3807,8 +3807,8 @@ const submitClaimForm = async (req, res) => {
       dietaryTypes,
       priceCategoryId,
       contactInfo,
-      firstName,
-      lastName,
+      name,
+      
       email,
       phone,
       workingHours,
@@ -3918,8 +3918,7 @@ const submitClaimForm = async (req, res) => {
 
 👤 KONTAKT INFORMACIJE
 ───────────────────────────────────────────────────────────────
-• Ime: ${firstName || 'N/A'}
-• Prezime: ${lastName || 'N/A'}
+• Ime: ${name || 'N/A'}
 • Email: ${email || 'N/A'}
 • Telefon: ${phone || 'N/A'}
 

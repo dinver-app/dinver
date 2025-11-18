@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
           {
             model: sequelize.models.User,
             as: 'referredUser',
-            attributes: ['firstName', 'lastName', 'email'],
+            attributes: ['name', 'email'],
           },
         ],
         order: [['createdAt', 'DESC']],

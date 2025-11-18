@@ -177,7 +177,7 @@ const createReview = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
     });
@@ -285,7 +285,7 @@ const getRestaurantReviews = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'email', 'firstName', 'lastName'],
+          attributes: ['id', 'email', 'name'],
         },
       ],
       order,
@@ -520,7 +520,7 @@ const updateReview = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
     });
@@ -635,7 +635,7 @@ const markReviewAsElite = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: Restaurant,
@@ -711,7 +711,7 @@ const removeEliteFromReview = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         { model: Restaurant, as: 'restaurant', attributes: ['id', 'name'] },
       ],
