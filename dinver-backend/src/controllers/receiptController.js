@@ -1135,6 +1135,47 @@ const updateReceiptData = async (req, res) => {
 };
 
 /**
+ * Calculate how many fields were corrected by comparing predicted vs corrected data
+ * @param {Object} predictedFields - Original AI predicted fields
+ * @param {Object} correctedFields - Human corrected fields
+ * @returns {number} Number of fields that were corrected
+ */
+const calculateCorrections = (predictedFields, correctedFields) => {
+  if (!predictedFields || !correctedFields) return 0;
+
+  let corrections = 0;
+  const fieldsToCompare = ['oib', 'jir', 'zki', 'totalAmount', 'issueDate', 'issueTime', 'restaurantId'];
+
+  for (const field of fieldsToCompare) {
+    const predicted = predictedFields[field];
+    const corrected = correctedFields[field];
+
+    // Normalize for comparison
+    const predictedStr = String(predicted || '').trim().toLowerCase();
+    const correctedStr = String(corrected || '').trim().toLowerCase();
+
+    // If values differ, count as correction
+    if (predictedStr !== correctedStr && corrected != null) {
+      corrections++;
+    }
+  }
+
+  return corrections;
+};
+
+/**
+ * Calculate accuracy percentage
+ * @param {number} correctionsMade - Number of fields corrected
+ * @param {number} totalFields - Total number of fields checked
+ * @returns {number} Accuracy percentage (0-100)
+ */
+const calculateAccuracy = (correctionsMade, totalFields = 7) => {
+  if (totalFields === 0) return 100;
+  const correctFields = totalFields - correctionsMade;
+  return Math.round((correctFields / totalFields) * 100 * 100) / 100; // 2 decimals
+};
+
+/**
  * Approve receipt
  */
 const approveReceipt = async (req, res) => {
@@ -1278,6 +1319,26 @@ const approveReceipt = async (req, res) => {
       hasReservationBonus || false,
     );
 
+    // Build corrected data for ML training comparison
+    const correctedFields = {
+      restaurantId,
+      totalAmount: parseFloat(totalAmount),
+      jir: jir?.trim() || null,
+      zki: zki?.trim() || null,
+      oib: oib?.trim() || null,
+      issueDate,
+      issueTime,
+    };
+
+    // Calculate accuracy metrics for ML tracking
+    const predictedFields = receipt.predictedData?.fields || null;
+    const correctionsMade = predictedFields
+      ? calculateCorrections(predictedFields, correctedFields)
+      : null;
+    const accuracy = correctionsMade !== null
+      ? calculateAccuracy(correctionsMade)
+      : null;
+
     // Update receipt
     await receipt.update({
       restaurantId,
@@ -1293,6 +1354,10 @@ const approveReceipt = async (req, res) => {
       pointsAwarded,
       hasReservationBonus: hasReservationBonus || false,
       reservationId: reservationId || null,
+      // ML Training fields
+      correctedData: correctedFields,
+      correctionsMade: correctionsMade,
+      accuracy: accuracy,
     });
 
     // Award points
@@ -1739,6 +1804,333 @@ const getRestaurantDetailsForReceipt = async (req, res) => {
   }
 };
 
+/**
+ * Get OCR Analytics for sysadmin dashboard
+ * Returns overall stats, accuracy metrics, and model performance
+ */
+const getOcrAnalytics = async (req, res) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    const whereClause = {
+      ocrMethod: { [Op.ne]: null }, // Only receipts with OCR data
+    };
+
+    // Add date filter if provided
+    if (dateFrom || dateTo) {
+      whereClause.submittedAt = {};
+      if (dateFrom) {
+        whereClause.submittedAt[Op.gte] = new Date(dateFrom);
+      }
+      if (dateTo) {
+        whereClause.submittedAt[Op.lte] = new Date(dateTo);
+      }
+    }
+
+    // Get all receipts with OCR data
+    const receipts = await Receipt.findAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'status',
+        'ocrMethod',
+        'modelVersion',
+        'predictedData',
+        'correctedData',
+        'correctionsMade',
+        'accuracy',
+        'visionConfidence',
+        'parserConfidence',
+        'autoApproveScore',
+        'submittedAt',
+        'verifiedAt',
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    // Calculate overall statistics
+    const totalReceipts = receipts.length;
+    const approvedReceipts = receipts.filter((r) => r.status === 'approved');
+    const totalApproved = approvedReceipts.length;
+
+    // Only calculate accuracy for approved receipts with correctedData
+    const receiptsWithAccuracy = approvedReceipts.filter(
+      (r) => r.accuracy !== null && r.accuracy !== undefined,
+    );
+
+    const avgAccuracy =
+      receiptsWithAccuracy.length > 0
+        ? receiptsWithAccuracy.reduce((sum, r) => sum + parseFloat(r.accuracy || 0), 0) /
+          receiptsWithAccuracy.length
+        : null;
+
+    const avgCorrections =
+      receiptsWithAccuracy.length > 0
+        ? receiptsWithAccuracy.reduce((sum, r) => sum + (r.correctionsMade || 0), 0) /
+          receiptsWithAccuracy.length
+        : null;
+
+    // Stats by OCR method
+    const methodStats = {};
+    ['claude', 'vision', 'vision+gpt', 'gpt', 'manual'].forEach((method) => {
+      const methodReceipts = receipts.filter((r) => r.ocrMethod === method);
+      const methodApproved = methodReceipts.filter((r) => r.status === 'approved');
+      const methodWithAccuracy = methodApproved.filter(
+        (r) => r.accuracy !== null && r.accuracy !== undefined,
+      );
+
+      methodStats[method] = {
+        total: methodReceipts.length,
+        approved: methodApproved.length,
+        rejected: methodReceipts.filter((r) => r.status === 'rejected').length,
+        pending: methodReceipts.filter((r) => r.status === 'pending').length,
+        avgAccuracy:
+          methodWithAccuracy.length > 0
+            ? methodWithAccuracy.reduce((sum, r) => sum + parseFloat(r.accuracy || 0), 0) /
+              methodWithAccuracy.length
+            : null,
+        avgCorrections:
+          methodWithAccuracy.length > 0
+            ? methodWithAccuracy.reduce((sum, r) => sum + (r.correctionsMade || 0), 0) /
+              methodWithAccuracy.length
+            : null,
+      };
+    });
+
+    // Stats by model version (for Claude)
+    const modelStats = {};
+    const claudeReceipts = receipts.filter((r) => r.ocrMethod === 'claude');
+    claudeReceipts.forEach((receipt) => {
+      const version = receipt.modelVersion || 'unknown';
+      if (!modelStats[version]) {
+        modelStats[version] = [];
+      }
+      modelStats[version].push(receipt);
+    });
+
+    const modelVersionStats = {};
+    Object.entries(modelStats).forEach(([version, versionReceipts]) => {
+      const approved = versionReceipts.filter((r) => r.status === 'approved');
+      const withAccuracy = approved.filter(
+        (r) => r.accuracy !== null && r.accuracy !== undefined,
+      );
+
+      modelVersionStats[version] = {
+        total: versionReceipts.length,
+        approved: approved.length,
+        avgAccuracy:
+          withAccuracy.length > 0
+            ? withAccuracy.reduce((sum, r) => sum + parseFloat(r.accuracy || 0), 0) /
+              withAccuracy.length
+            : null,
+        avgCorrections:
+          withAccuracy.length > 0
+            ? withAccuracy.reduce((sum, r) => sum + (r.correctionsMade || 0), 0) /
+              withAccuracy.length
+            : null,
+      };
+    });
+
+    // Accuracy distribution (buckets: 100%, 90-99%, 80-89%, 70-79%, <70%)
+    const accuracyDistribution = {
+      perfect: 0, // 100%
+      excellent: 0, // 90-99%
+      good: 0, // 80-89%
+      fair: 0, // 70-79%
+      poor: 0, // <70%
+    };
+
+    receiptsWithAccuracy.forEach((receipt) => {
+      const acc = parseFloat(receipt.accuracy);
+      if (acc === 100) accuracyDistribution.perfect++;
+      else if (acc >= 90) accuracyDistribution.excellent++;
+      else if (acc >= 80) accuracyDistribution.good++;
+      else if (acc >= 70) accuracyDistribution.fair++;
+      else accuracyDistribution.poor++;
+    });
+
+    // Most common corrections (which fields are corrected most often)
+    const fieldCorrectionStats = {
+      oib: 0,
+      jir: 0,
+      zki: 0,
+      totalAmount: 0,
+      issueDate: 0,
+      issueTime: 0,
+      restaurantId: 0,
+    };
+
+    receiptsWithAccuracy.forEach((receipt) => {
+      const predicted = receipt.predictedData?.fields;
+      const corrected = receipt.correctedData;
+
+      if (predicted && corrected) {
+        Object.keys(fieldCorrectionStats).forEach((field) => {
+          const predictedVal = String(predicted[field] || '').trim().toLowerCase();
+          const correctedVal = String(corrected[field] || '').trim().toLowerCase();
+
+          if (predictedVal !== correctedVal && corrected[field] != null) {
+            fieldCorrectionStats[field]++;
+          }
+        });
+      }
+    });
+
+    // Recent receipts with low accuracy (for investigation)
+    const lowAccuracyReceipts = receiptsWithAccuracy
+      .filter((r) => parseFloat(r.accuracy) < 80)
+      .slice(0, 10)
+      .map((r) => ({
+        id: r.id,
+        accuracy: r.accuracy,
+        correctionsMade: r.correctionsMade,
+        ocrMethod: r.ocrMethod,
+        modelVersion: r.modelVersion,
+        submittedAt: r.submittedAt,
+      }));
+
+    res.json({
+      overview: {
+        totalReceipts,
+        totalApproved,
+        totalWithAccuracy: receiptsWithAccuracy.length,
+        avgAccuracy: avgAccuracy ? Math.round(avgAccuracy * 100) / 100 : null,
+        avgCorrections: avgCorrections ? Math.round(avgCorrections * 100) / 100 : null,
+      },
+      methodStats,
+      modelVersionStats,
+      accuracyDistribution,
+      fieldCorrectionStats,
+      lowAccuracyReceipts,
+    });
+  } catch (error) {
+    console.error('Error getting OCR analytics:', error);
+    res.status(500).json({ error: 'Failed to get OCR analytics' });
+  }
+};
+
+/**
+ * Get training data export for ML improvement
+ * Returns receipts with both predicted and corrected data
+ */
+const getTrainingData = async (req, res) => {
+  try {
+    const { limit = 100, offset = 0, minAccuracy, maxAccuracy, ocrMethod } = req.query;
+
+    const whereClause = {
+      status: 'approved', // Only approved receipts
+      predictedData: { [Op.ne]: null }, // Must have predicted data
+      correctedData: { [Op.ne]: null }, // Must have corrected data
+    };
+
+    // Filter by accuracy range
+    if (minAccuracy !== undefined || maxAccuracy !== undefined) {
+      whereClause.accuracy = {};
+      if (minAccuracy !== undefined) {
+        whereClause.accuracy[Op.gte] = parseFloat(minAccuracy);
+      }
+      if (maxAccuracy !== undefined) {
+        whereClause.accuracy[Op.lte] = parseFloat(maxAccuracy);
+      }
+    }
+
+    // Filter by OCR method
+    if (ocrMethod) {
+      whereClause.ocrMethod = ocrMethod;
+    }
+
+    const receipts = await Receipt.findAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'ocrMethod',
+        'modelVersion',
+        'predictedData',
+        'correctedData',
+        'correctionsMade',
+        'accuracy',
+        'fieldConfidences',
+        'visionConfidence',
+        'parserConfidence',
+        'submittedAt',
+        'verifiedAt',
+        'usedForTraining',
+      ],
+      order: [['verifiedAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    const totalCount = await Receipt.count({ where: whereClause });
+
+    // Format training data
+    const trainingData = receipts.map((receipt) => ({
+      id: receipt.id,
+      ocrMethod: receipt.ocrMethod,
+      modelVersion: receipt.modelVersion,
+      input: {
+        // What Claude predicted
+        fields: receipt.predictedData?.fields || {},
+        confidences: receipt.fieldConfidences || {},
+      },
+      groundTruth: {
+        // What sysadmin corrected to
+        fields: receipt.correctedData || {},
+      },
+      metrics: {
+        accuracy: receipt.accuracy,
+        correctionsMade: receipt.correctionsMade,
+        visionConfidence: receipt.visionConfidence,
+        parserConfidence: receipt.parserConfidence,
+      },
+      metadata: {
+        submittedAt: receipt.submittedAt,
+        verifiedAt: receipt.verifiedAt,
+        usedForTraining: receipt.usedForTraining,
+      },
+    }));
+
+    res.json({
+      trainingData,
+      pagination: {
+        total: totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + parseInt(limit) < totalCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting training data:', error);
+    res.status(500).json({ error: 'Failed to get training data' });
+  }
+};
+
+/**
+ * Mark receipts as used for training
+ */
+const markAsUsedForTraining = async (req, res) => {
+  try {
+    const { receiptIds } = req.body;
+
+    if (!Array.isArray(receiptIds) || receiptIds.length === 0) {
+      return res.status(400).json({ error: 'receiptIds array is required' });
+    }
+
+    await Receipt.update(
+      { usedForTraining: true },
+      { where: { id: { [Op.in]: receiptIds } } },
+    );
+
+    res.json({
+      message: `Marked ${receiptIds.length} receipts as used for training`,
+      count: receiptIds.length,
+    });
+  } catch (error) {
+    console.error('Error marking receipts as used for training:', error);
+    res.status(500).json({ error: 'Failed to mark receipts' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   getUserReceipts,
@@ -1750,4 +2142,8 @@ module.exports = {
   checkReservations,
   searchRestaurantsForReceipt,
   getRestaurantDetailsForReceipt,
+  // OCR Analytics & Training
+  getOcrAnalytics,
+  getTrainingData,
+  markAsUsedForTraining,
 };

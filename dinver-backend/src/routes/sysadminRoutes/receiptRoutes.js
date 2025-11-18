@@ -10,6 +10,9 @@ const {
   approveReceipt,
   rejectReceipt,
   checkReservations,
+  getOcrAnalytics,
+  getTrainingData,
+  markAsUsedForTraining,
 } = require('../../controllers/receiptController');
 
 const router = express.Router();
@@ -50,6 +53,26 @@ router.post(
   sysadminAuthenticateToken,
   checkSysadmin,
   rejectReceipt,
+);
+
+// OCR Analytics & Training routes
+router.get(
+  '/ocr-analytics',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  getOcrAnalytics,
+);
+router.get(
+  '/training-data',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  getTrainingData,
+);
+router.post(
+  '/training-data/mark-used',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  markAsUsedForTraining,
 );
 
 module.exports = router;

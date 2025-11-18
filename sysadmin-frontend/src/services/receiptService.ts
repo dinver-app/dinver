@@ -232,6 +232,36 @@ class ReceiptService {
 
     return response.data;
   }
+
+  async getOcrAnalytics(query: string = ""): Promise<any> {
+    const response = await apiClient.get(
+      `/api/sysadmin/ocr-analytics?${query}`
+    );
+    return response.data;
+  }
+
+  async getTrainingData(query: string = ""): Promise<any> {
+    const response = await apiClient.get(
+      `/api/sysadmin/training-data?${query}`
+    );
+    return response.data;
+  }
+
+  async markAsUsedForTraining(receiptIds: string[]): Promise<any> {
+    const response = await apiClient.post(
+      `/api/sysadmin/training-data/mark-used`,
+      { receiptIds }
+    );
+    return response.data;
+  }
 }
 
 export const receiptService = new ReceiptService();
+
+// Export standalone functions for backward compatibility
+export const getOcrAnalytics = (query?: string) =>
+  receiptService.getOcrAnalytics(query);
+export const getTrainingData = (query?: string) =>
+  receiptService.getTrainingData(query);
+export const markAsUsedForTraining = (receiptIds: string[]) =>
+  receiptService.markAsUsedForTraining(receiptIds);
