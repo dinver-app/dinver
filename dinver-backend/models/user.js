@@ -190,6 +190,10 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
+      usernameLastChanged: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       sequelize,

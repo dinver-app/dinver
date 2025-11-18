@@ -1035,5 +1035,6 @@
   "no_approved_experiences": "Još nema odobrenih objava",
   "no_experiences_yet": "Još nema objava",
   "error_assigning_moderator": "Greška pri dodjeli moderatora",
-  "all_experiences": "Sve objave"
+  "all_experiences": "Sve objave",
+  "restaurant_long_description": "Detaljni opis restorana"
 }

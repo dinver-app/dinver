@@ -129,7 +129,7 @@ async function findOrCreateActiveThread({
       where: {
         id: threadId,
         userId,
-        isReadOnly: false,
+        isReadOnly: false, // Only find non-locked threads
       },
     });
     const expired =
@@ -145,7 +145,7 @@ async function findOrCreateActiveThread({
         userId,
         restaurantId: restaurantId || null,
         title: (titleSeed || '').toString().slice(0, 120) || null,
-        isReadOnly: false,
+        isReadOnly: false, // TODO: Remove field after frontend updated
         messageCount: 0,
         lastMessageAt: now,
         expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
@@ -159,7 +159,7 @@ async function findOrCreateActiveThread({
     userId,
     restaurantId: restaurantId || null,
     title: (titleSeed || '').toString().slice(0, 120) || null,
-    isReadOnly: false,
+    isReadOnly: false, // TODO: Remove field after frontend updated
     messageCount: 0,
     lastMessageAt: now,
     expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
@@ -176,12 +176,16 @@ async function appendDbMessage(thread, role, text, reply = null) {
   });
   const now = new Date();
   const newCount = (thread.messageCount || 0) + 1;
-  const shouldLock =
-    newCount >= 8 || (thread.expiresAt && new Date(thread.expiresAt) < now);
+
+  // Hard limit: Lock thread after 200 messages for performance
+  // Frontend can load 200 messages (~400KB) in reasonable time (~500ms)
+  const MAX_MESSAGES = 200;
+  const shouldLock = newCount >= MAX_MESSAGES;
+
   await thread.update({
     messageCount: newCount,
     lastMessageAt: now,
-    isReadOnly: shouldLock ? true : thread.isReadOnly,
+    isReadOnly: shouldLock, // Lock after 200 messages
   });
 }
 
@@ -330,7 +334,7 @@ module.exports = {
           createdAt: t.createdAt,
           lastMessageAt: t.lastMessageAt,
           messageCount: t.messageCount,
-          readOnly: !!t.isReadOnly,
+          readOnly: !!t.isReadOnly, // Locked after 200 messages
         },
       });
     } catch (err) {
@@ -360,6 +364,7 @@ module.exports = {
           'createdAt',
         ],
       });
+
       return res.status(200).json({ threads: items });
     } catch (err) {
       console.error('AI list threads error', err);
@@ -371,6 +376,8 @@ module.exports = {
     try {
       const { id } = req.params || {};
       const userId = req.user?.id;
+      const { limit = 50, offset = 0 } = req.query || {}; // Pagination support
+
       if (!userId)
         return res.status(401).json({ error: 'User must be logged in' });
 
@@ -379,9 +386,16 @@ module.exports = {
       });
       if (!thread) return res.status(404).json({ error: 'not found' });
 
+      // Get total message count for pagination
+      const totalMessages = await AiMessage.count({ where: { threadId: id } });
+
+      // Fetch messages with pagination
+      // Order DESC first to get latest messages, then reverse for chronological order
       const messages = await AiMessage.findAll({
         where: { threadId: id },
-        order: [['createdAt', 'ASC']],
+        order: [['createdAt', 'DESC']],
+        limit: parseInt(limit) || 50,
+        offset: parseInt(offset) || 0,
         attributes: ['id', 'role', 'text', 'reply', 'createdAt'],
       });
 
@@ -450,6 +464,13 @@ module.exports = {
         return messageData;
       });
 
+      // Reverse to chronological order (oldest first)
+      const chronologicalMessages = transformedMessages.reverse();
+
+      // Calculate pagination metadata
+      const parsedLimit = parseInt(limit) || 50;
+      const parsedOffset = parseInt(offset) || 0;
+
       return res.status(200).json({
         thread: {
           id: thread.id,
@@ -459,7 +480,13 @@ module.exports = {
           messageCount: thread.messageCount,
           lastMessageAt: thread.lastMessageAt,
           createdAt: thread.createdAt,
-          messages: transformedMessages,
+          messages: chronologicalMessages,
+        },
+        pagination: {
+          total: totalMessages,
+          limit: parsedLimit,
+          offset: parsedOffset,
+          hasMore: parsedOffset + parsedLimit < totalMessages,
         },
       });
     } catch (err) {
