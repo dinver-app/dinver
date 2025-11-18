@@ -2,16 +2,17 @@ const express = require('express');
 const {
   appApiKeyAuth,
   appAuthenticateToken,
+  appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
 const leaderboardCycleController = require('../../controllers/leaderboardCycleController');
 
 const router = express.Router();
 
-// Get active cycle with user's position
+// Get active cycle with user's position (auth optional)
 router.get(
   '/leaderboard/active',
   appApiKeyAuth,
-  appAuthenticateToken,
+  appOptionalAuth,
   leaderboardCycleController.getActiveCycle,
 );
 
