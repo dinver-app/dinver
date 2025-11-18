@@ -18,7 +18,6 @@ import {
   DocumentTextIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ClockIcon,
 } from "@heroicons/react/24/outline";
 import { getOcrAnalytics } from "../services/receiptService";
 
