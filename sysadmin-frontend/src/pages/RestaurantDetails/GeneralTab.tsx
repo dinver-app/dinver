@@ -54,7 +54,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           ?.description ||
         restaurant.description ||
         "",
-      longDescription: restaurant.longDescription || "",
+      longDescription:
+        restaurant.translations?.find((t) => t.language === "hr")
+          ?.longDescription ||
+        restaurant.longDescription ||
+        "",
     },
     {
       language: "en",
@@ -62,7 +66,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       description:
         restaurant.translations?.find((t) => t.language === "en")
           ?.description || "",
-      longDescription: restaurant.longDescription || "",
+      longDescription:
+        restaurant.translations?.find((t) => t.language === "en")
+          ?.longDescription || "",
     },
   ]);
 
