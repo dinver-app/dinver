@@ -26,6 +26,7 @@ import ReviewDetails from "./pages/ReviewDetails";
 import Experiences from "./pages/Experiences";
 import ExperienceDetails from "./pages/ExperienceDetails";
 import UserExperienceStats from "./pages/UserExperienceStats";
+import OcrAnalytics from "./pages/OcrAnalytics";
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
               path="/experiences/users/:userId/stats"
               element={<UserExperienceStats />}
             />
+            <Route path="/ocr-analytics" element={<OcrAnalytics />} />
           </Route>
         </Routes>
       </Router>
