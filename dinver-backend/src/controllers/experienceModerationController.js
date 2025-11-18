@@ -42,7 +42,7 @@ exports.getModerationQueue = async (req, res) => {
             {
               model: User,
               as: 'author',
-              attributes: ['id', 'firstName', 'lastName', 'profileImage', 'email'],
+              attributes: ['id', 'name', 'profileImage', 'email'],
             },
             {
               model: Restaurant,
@@ -58,7 +58,7 @@ exports.getModerationQueue = async (req, res) => {
         {
           model: User,
           as: 'moderator',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
           required: false,
         },
       ],
@@ -360,7 +360,7 @@ exports.getReports = async (req, res) => {
             {
               model: User,
               as: 'author',
-              attributes: ['id', 'firstName', 'lastName', 'email'],
+              attributes: ['id', 'name', 'email'],
             },
             {
               model: ExperienceMedia,
@@ -373,7 +373,7 @@ exports.getReports = async (req, res) => {
         {
           model: User,
           as: 'reporter',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -505,7 +505,7 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profileImage'],
+          attributes: ['id', 'name', 'email', 'phone', 'profileImage'],
         },
         {
           model: Restaurant,
@@ -534,7 +534,7 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
           required: false,
         },
       ],
@@ -549,7 +549,7 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'],
+          attributes: ['id', 'name', 'email', 'profileImage'],
         },
         {
           model: LeaderboardCycle,
@@ -567,7 +567,7 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'],
+          attributes: ['id', 'name', 'email', 'profileImage'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -580,7 +580,7 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'reporter',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
     });
@@ -592,13 +592,13 @@ exports.getExperienceDetails = async (req, res) => {
         {
           model: User,
           as: 'moderator',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
           required: false,
         },
         {
           model: User,
           as: 'decisionMaker',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
           required: false,
         },
       ],
@@ -663,7 +663,7 @@ exports.getUserExperienceStats = async (req, res) => {
     const { userId } = req.params;
 
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'],
+      attributes: ['id', 'name', 'email', 'profileImage'],
     });
 
     if (!user) {

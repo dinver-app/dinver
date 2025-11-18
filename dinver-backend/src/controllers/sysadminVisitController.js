@@ -31,7 +31,7 @@ exports.getAllVisits = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'email', 'phone', 'profileImage'],
+          attributes: ['id', 'username', 'name', 'email', 'phone', 'profileImage'],
         },
         {
           model: Restaurant,
@@ -130,8 +130,7 @@ exports.getVisitById = async (req, res) => {
           attributes: [
             'id',
             'username',
-            'firstName',
-            'lastName',
+            'name',
             'email',
             'phone',
             'profileImage',
@@ -555,7 +554,7 @@ exports.getPendingReceipts = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'username', 'name', 'email'],
         },
         {
           model: Restaurant,

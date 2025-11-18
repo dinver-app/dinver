@@ -847,7 +847,7 @@ const getAllReceipts = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: Restaurant,
@@ -862,7 +862,7 @@ const getAllReceipts = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
         },
@@ -903,7 +903,7 @@ const getReceiptById = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: Restaurant,
@@ -918,7 +918,7 @@ const getReceiptById = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
         },
@@ -1214,7 +1214,7 @@ const approveReceipt = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: Restaurant,
@@ -1491,7 +1491,7 @@ const rejectReceipt = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
       ],
     });

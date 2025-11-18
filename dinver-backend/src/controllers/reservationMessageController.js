@@ -88,7 +88,7 @@ const getReservationMessages = async (req, res) => {
         {
           model: User,
           as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -205,7 +205,7 @@ const sendMessage = async (req, res) => {
         {
           model: User,
           as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
     });
@@ -518,7 +518,7 @@ const createSuggestion = async (req, res) => {
         {
           model: User,
           as: 'sender',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
     });

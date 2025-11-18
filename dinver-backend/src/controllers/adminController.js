@@ -96,7 +96,7 @@ async function getRestaurantAdmins(req, res) {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'email', 'firstName', 'lastName'],
+          attributes: ['id', 'email', 'name'],
         },
       ],
     });

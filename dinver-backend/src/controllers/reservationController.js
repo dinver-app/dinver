@@ -172,7 +172,7 @@ const createReservation = async (req, res) => {
             {
               model: User,
               as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
           order: [['createdAt', 'ASC']],
@@ -189,7 +189,7 @@ const createReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['email', 'firstName', 'lastName', 'pushToken'],
+          attributes: ['email', 'name', 'pushToken'],
         },
       ],
     });
@@ -211,8 +211,8 @@ const createReservation = async (req, res) => {
             ...reservation.toJSON(),
             user: {
               id: user.id,
-              firstName: user.firstName,
-              lastName: user.lastName,
+              name: user.name,
+              
               email: user.email,
             },
             restaurant,
@@ -338,7 +338,7 @@ const getRestaurantReservations = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
           required: false, // LEFT JOIN to include custom reservations
         },
       ],
@@ -367,7 +367,7 @@ const confirmReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -427,7 +427,7 @@ const confirmReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -441,7 +441,7 @@ const confirmReservation = async (req, res) => {
             {
               model: User,
               as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
           order: [['createdAt', 'ASC']],
@@ -528,7 +528,7 @@ const declineReservation = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -660,7 +660,7 @@ const suggestAlternativeTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -936,7 +936,7 @@ const cancelReservation = async (req, res) => {
             {
               model: User,
               as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
           order: [['createdAt', 'ASC']],
@@ -980,7 +980,7 @@ const cancelReservationByRestaurant = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -1054,7 +1054,7 @@ const cancelReservationByRestaurant = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -1068,7 +1068,7 @@ const cancelReservationByRestaurant = async (req, res) => {
             {
               model: User,
               as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
           order: [['createdAt', 'ASC']],
@@ -1154,7 +1154,7 @@ const getReservationHistory = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'name'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -1188,7 +1188,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -1315,7 +1315,7 @@ const acceptSuggestedTime = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          attributes: ['id', 'name', 'email', 'phone'],
         },
         {
           model: Restaurant,
@@ -1542,7 +1542,7 @@ const createCustomReservation = async (req, res) => {
             {
               model: User,
               as: 'sender',
-              attributes: ['id', 'firstName', 'lastName'],
+              attributes: ['id', 'name'],
             },
           ],
           order: [['createdAt', 'ASC']],

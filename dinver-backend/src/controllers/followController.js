@@ -204,8 +204,8 @@ const getFollowers = async (req, res) => {
     const searchCondition = search
       ? {
           [Op.or]: [
-            { firstName: { [Op.iLike]: `%${search}%` } },
-            { lastName: { [Op.iLike]: `%${search}%` } },
+            { name: { [Op.iLike]: `%${search}%` } },
+            { username: { [Op.iLike]: `%${search}%` } },
           ],
         }
       : {};
@@ -222,8 +222,6 @@ const getFollowers = async (req, res) => {
           as: 'follower',
           attributes: [
             'id',
-            'firstName',
-            'lastName',
             'name',
             'username',
             'gender',
@@ -251,8 +249,6 @@ const getFollowers = async (req, res) => {
 
         return {
           id: follow.follower.id,
-          firstName: follow.follower.firstName,
-          lastName: follow.follower.lastName,
           name: follow.follower.name,
           username: follow.follower.username,
           gender: follow.follower.gender,
@@ -331,8 +327,8 @@ const getFollowing = async (req, res) => {
     const searchCondition = search
       ? {
           [Op.or]: [
-            { firstName: { [Op.iLike]: `%${search}%` } },
-            { lastName: { [Op.iLike]: `%${search}%` } },
+            { name: { [Op.iLike]: `%${search}%` } },
+            { username: { [Op.iLike]: `%${search}%` } },
           ],
         }
       : {};
@@ -349,8 +345,6 @@ const getFollowing = async (req, res) => {
           as: 'following',
           attributes: [
             'id',
-            'firstName',
-            'lastName',
             'name',
             'username',
             'gender',
@@ -378,8 +372,6 @@ const getFollowing = async (req, res) => {
 
         return {
           id: follow.following.id,
-          firstName: follow.following.firstName,
-          lastName: follow.following.lastName,
           name: follow.following.name,
           username: follow.following.username,
           gender: follow.following.gender,
@@ -458,8 +450,8 @@ const getBuddies = async (req, res) => {
     const searchCondition = search
       ? {
           [Op.or]: [
-            { firstName: { [Op.iLike]: `%${search}%` } },
-            { lastName: { [Op.iLike]: `%${search}%` } },
+            { name: { [Op.iLike]: `%${search}%` } },
+            { username: { [Op.iLike]: `%${search}%` } },
           ],
         }
       : {};
@@ -527,8 +519,6 @@ const getBuddies = async (req, res) => {
       },
       attributes: [
         'id',
-        'firstName',
-        'lastName',
         'name',
         'username',
         'gender',
@@ -545,8 +535,6 @@ const getBuddies = async (req, res) => {
       const buddyData = buddyIds.find((b) => b.user_id === buddy.id);
       return {
         id: buddy.id,
-        firstName: buddy.firstName,
-        lastName: buddy.lastName,
         name: buddy.name,
         username: buddy.username,
         gender: buddy.gender,
@@ -686,8 +674,6 @@ const searchUsers = async (req, res) => {
       where: whereCondition,
       attributes: [
         'id',
-        'firstName',
-        'lastName',
         'name',
         'username',
         'gender',
@@ -711,8 +697,6 @@ const searchUsers = async (req, res) => {
 
         return {
           id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
           name: user.name,
           username: user.username,
           gender: user.gender,
@@ -773,8 +757,6 @@ const getUserProfileWithStats = async (req, res) => {
     const user = await User.findByPk(targetUserId, {
       attributes: [
         'id',
-        'firstName',
-        'lastName',
         'name',
         'username',
         'gender',
@@ -845,8 +827,6 @@ const getUserProfileWithStats = async (req, res) => {
       success: true,
       data: {
         id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
         name: user.name,
         username: user.username,
         gender: user.gender,

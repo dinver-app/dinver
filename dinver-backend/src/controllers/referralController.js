@@ -24,7 +24,7 @@ const getMyReferralCode = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['firstName', 'lastName', 'email'],
+          attributes: ['name', 'email'],
         },
       ],
     });
@@ -43,7 +43,7 @@ const getMyReferralCode = async (req, res) => {
           {
             model: User,
             as: 'user',
-            attributes: ['firstName', 'lastName', 'email'],
+            attributes: ['name', 'email'],
           },
         ],
       });
@@ -103,7 +103,7 @@ const getMyReferrals = async (req, res) => {
         {
           model: User,
           as: 'referredUser',
-          attributes: ['firstName', 'lastName', 'email'],
+          attributes: ['name', 'email'],
         },
         {
           model: Restaurant,
@@ -387,7 +387,7 @@ const getMyRewards = async (req, res) => {
             {
               model: User,
               as: 'referredUser',
-              attributes: ['firstName', 'lastName'],
+              attributes: ['name'],
             },
           ],
         },
@@ -439,7 +439,7 @@ const validateReferralCode = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['firstName', 'lastName'],
+          attributes: ['name'],
         },
       ],
     });
@@ -453,7 +453,7 @@ const validateReferralCode = async (req, res) => {
 
     res.json({
       valid: true,
-      referrerName: `${referralCode.user.firstName} ${referralCode.user.lastName}`,
+      referrerName: referralCode.user.name,
       totalReferrals: referralCode.totalReferrals,
     });
   } catch (error) {
@@ -479,12 +479,12 @@ const getAllReferrals = async (req, res) => {
         {
           model: User,
           as: 'referrer',
-          attributes: ['firstName', 'lastName', 'email'],
+          attributes: ['name', 'email'],
           where: search
             ? {
                 [Op.or]: [
-                  { firstName: { [Op.iLike]: `%${search}%` } },
-                  { lastName: { [Op.iLike]: `%${search}%` } },
+                  
+                  
                   { email: { [Op.iLike]: `%${search}%` } },
                 ],
               }
@@ -493,7 +493,7 @@ const getAllReferrals = async (req, res) => {
         {
           model: User,
           as: 'referredUser',
-          attributes: ['firstName', 'lastName', 'email'],
+          attributes: ['name', 'email'],
         },
         {
           model: ReferralCode,
@@ -585,15 +585,15 @@ const applyReferralCodeEndpoint = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['firstName', 'lastName', 'email'],
+          attributes: ['name', 'email'],
         },
       ],
     });
 
     const referrerData = refCode?.user
       ? {
-          firstName: refCode.user.firstName,
-          lastName: refCode.user.lastName,
+          name: refCode.user.name,
+          
           email: refCode.user.email,
         }
       : null;

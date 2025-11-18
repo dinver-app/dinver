@@ -763,7 +763,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
     case 'new_reservation_admin':
       subject = 'Nova rezervacija u vašem restoranu';
       text =
-        `Korisnik ${reservation.user.firstName} ${reservation.user.lastName} (${reservation.user.email}) je napravio novu rezervaciju u vašem restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime}.
+        `Korisnik ${reservation.user.name} (${reservation.user.email}) je napravio novu rezervaciju u vašem restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime}.
 ` +
         `Broj gostiju: ${reservation.guests}
 ` +
@@ -775,12 +775,12 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
           <h1>📋 Nova rezervacija</h1>
           <p>Imate novu rezervaciju u vašem restoranu.</p>
         </div>
-        
+
         <div class="card">
           <h3 style="margin-top: 0;">Detalji rezervacije</h3>
           <div class="detail-row">
             <span class="detail-label">👤 Korisnik:</span>
-            <span class="detail-value">${reservation.user.firstName} ${reservation.user.lastName}</span>
+            <span class="detail-value">${reservation.user.name}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">📧 Email:</span>

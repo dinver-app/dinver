@@ -54,8 +54,6 @@ const getUserProfile = async (req, res) => {
     const user = await User.findByPk(userId, {
       attributes: [
         'id',
-        'firstName',
-        'lastName',
         'name',
         'username',
         'gender',
@@ -106,8 +104,6 @@ const getUserProfile = async (req, res) => {
 
     const response = {
       id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -149,8 +145,6 @@ const updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const {
-      firstName,
-      lastName,
       name,
       username,
       gender,
@@ -172,8 +166,6 @@ const updateUserProfile = async (req, res) => {
 
     // Ažuriramo samo poslane podatke
     const updates = {};
-    if (firstName !== undefined) updates.firstName = firstName;
-    if (lastName !== undefined) updates.lastName = lastName;
     if (name !== undefined) updates.name = name;
 
     // Posebno rukovanje username-om - dozvoli promjenu samo svaka 2 tjedna
@@ -294,8 +286,6 @@ const updateUserProfile = async (req, res) => {
     const updatedUser = await User.findByPk(userId, {
       attributes: [
         'id',
-        'firstName',
-        'lastName',
         'name',
         'username',
         'gender',
@@ -313,8 +303,6 @@ const updateUserProfile = async (req, res) => {
 
     const response = {
       id: updatedUser.id,
-      firstName: updatedUser.firstName,
-      lastName: updatedUser.lastName,
       name: updatedUser.name,
       username: updatedUser.username,
       gender: updatedUser.gender,
