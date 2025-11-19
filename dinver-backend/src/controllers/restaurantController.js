@@ -1613,24 +1613,19 @@ const addRestaurantImages = async (req, res) => {
 
     const folder = `restaurant_images/${restaurantSlug}`;
 
-    // Upload images with OPTIMISTIC strategy for fast response (<1s) and background processing
-    // Avoids Heroku 30s timeout - returns immediately with placeholders, processes in background
+    // Upload images synchronously with all variants (thumb, medium, fullscreen)
+    // Processing is fast with Sharp (~300-500ms per image), parallel upload = ~3-5s for 10 images
     const imageUploadResults = await Promise.all(
       files.map((file) =>
         uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
+          strategy: UPLOAD_STRATEGY.SYNC,
           entityType: 'restaurant_gallery',
           entityId: id,
-          priority: 5,
         }),
       ),
     );
 
     const imageKeys = imageUploadResults.map((result) => result.imageUrl);
-    const jobIds = imageUploadResults
-      .filter((result) => result.jobId)
-      .map((result) => result.jobId);
-
     const updatedImageKeys = [...(restaurant.images || []), ...imageKeys];
 
     // Spremamo samo keys u bazu
@@ -1657,8 +1652,6 @@ const addRestaurantImages = async (req, res) => {
     res.json({
       message: 'Images added successfully',
       images: responseImages,
-      jobIds: jobIds, // For frontend polling
-      processing: jobIds.length > 0, // Indicates background processing
     });
   } catch (error) {
     console.error('Error adding images:', error);

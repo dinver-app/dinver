@@ -3,8 +3,6 @@ import {
   addRestaurantImages,
   deleteRestaurantImage,
   updateImageOrder,
-  getJobStatus,
-  getRestaurantById,
 } from "../../services/restaurantService";
 import toast from "react-hot-toast";
 import { Restaurant } from "../../interfaces/Interfaces";
@@ -12,7 +10,6 @@ import { useTranslation } from "react-i18next";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import imageCompression from "browser-image-compression";
 
 type RestaurantImage = {
   url: string;
@@ -39,56 +36,6 @@ const Images = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDeleteImageModalOpen, setIsDeleteImageModalOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const compressImage = async (file: File): Promise<File> => {
-    try {
-      const options = {
-        maxSizeMB: 1, // Max 1MB per image
-        maxWidthOrHeight: 2400, // Max dimension
-        useWebWorker: true,
-        fileType: file.type,
-      };
-      const compressedFile = await imageCompression(file, options);
-      return compressedFile;
-    } catch (error) {
-      console.error("Error compressing image:", error);
-      return file; // Return original if compression fails
-    }
-  };
-
-  const pollJobStatus = async (jobIds: string[]): Promise<boolean> => {
-    const checkJobs = async (): Promise<boolean> => {
-      try {
-        const statuses = await Promise.all(
-          jobIds.map((id) => getJobStatus(id))
-        );
-        const allCompleted = statuses.every(
-          (s) => s.status === "completed" || s.status === "failed"
-        );
-        return allCompleted;
-      } catch (error) {
-        console.error("Error checking job status:", error);
-        return false;
-      }
-    };
-
-    return new Promise((resolve) => {
-      const interval = setInterval(async () => {
-        const done = await checkJobs();
-        if (done) {
-          clearInterval(interval);
-          resolve(true);
-        }
-      }, 2000); // Poll every 2 seconds
-
-      // Timeout after 2 minutes
-      setTimeout(() => {
-        clearInterval(interval);
-        resolve(false);
-      }, 120000);
-    });
-  };
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -108,73 +55,22 @@ const Images = ({
         return;
       }
 
-      const toastId = toast.loading(t("compressing_images"));
-      setIsProcessing(true);
-
+      const toastId = toast.loading(t("uploading_images"));
       try {
-        // Compress images
-        const compressedFiles = await Promise.all(
-          selectedFiles.map((file) => compressImage(file))
-        );
-
-        toast.loading(t("uploading_images"), { id: toastId });
-
-        // Upload images
         const data = await addRestaurantImages(
           restaurant.id,
           restaurant.slug || "",
-          compressedFiles
+          selectedFiles
         );
-
-        // If background processing, poll for completion
-        if (data.processing && data.jobIds && data.jobIds.length > 0) {
-          toast.loading(t("processing_images"), { id: toastId });
-
-          const completed = await pollJobStatus(data.jobIds);
-
-          if (completed) {
-            // Refresh images from server
-            try {
-              const updatedRestaurant = await getRestaurantById(restaurant.id);
-              setImages(updatedRestaurant.images || data.images);
-              setReorderedImages(updatedRestaurant.images || data.images);
-              onUpdate({
-                ...restaurant,
-                images: updatedRestaurant.images || data.images,
-              });
-              toast.success(t("images_uploaded_successfully"), { id: toastId });
-            } catch (refreshError) {
-              // If refresh fails, use data from upload response
-              console.error("Failed to refresh images:", refreshError);
-              setImages(data.images);
-              setReorderedImages(data.images);
-              onUpdate({ ...restaurant, images: data.images });
-              toast.success(t("images_uploaded_successfully"), { id: toastId });
-            }
-          } else {
-            // Timeout - images still processing in background
-            setImages(data.images);
-            setReorderedImages(data.images);
-            onUpdate({ ...restaurant, images: data.images });
-            toast.success(t("images_processing_in_background"), {
-              id: toastId,
-            });
-          }
-        } else {
-          // No background processing needed
-          setImages(data.images);
-          setReorderedImages(data.images);
-          onUpdate({ ...restaurant, images: data.images });
-          toast.success(t("images_uploaded_successfully"), { id: toastId });
-        }
-
+        setImages(data.images);
+        setReorderedImages(data.images);
+        onUpdate({ ...restaurant, images: data.images });
+        toast.success(t("images_uploaded_successfully"), { id: toastId });
         // Reset the input after successful upload
         event.target.value = "";
       } catch (error) {
         console.error("Failed to upload images", error);
         toast.error(t("failed_to_upload_images"), { id: toastId });
-      } finally {
-        setIsProcessing(false);
       }
     }
   };
