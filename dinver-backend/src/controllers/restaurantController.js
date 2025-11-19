@@ -49,10 +49,13 @@ const {
   shouldUpdateFromGoogle,
   updateRestaurantFromGoogle,
 } = require('../services/googlePlacesService');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 
 const getRestaurantsList = async (req, res) => {
   try {
+    const userEmail = req.user?.email;
     const restaurants = await Restaurant.findAll({
+      where: addTestFilter({}, userEmail),
       attributes: ['id', 'name', 'slug'],
     });
     res.json(restaurants);
@@ -94,8 +97,11 @@ const getAllRestaurants = async (req, res) => {
           }
         : {};
 
+    const userEmail = req.user?.email;
+    const finalWhereClause = addTestFilter(whereClause, userEmail);
+
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
-      where: whereClause,
+      where: finalWhereClause,
       attributes: [
         'id',
         'name',
@@ -611,35 +617,31 @@ async function updateRestaurant(req, res) {
     // Handle profilePicture upload
     const profilePictureFile = req.files?.profilePicture?.[0];
     if (profilePictureFile) {
-      // Delete old profile picture variants before uploading new
+      // Delete old profile picture before uploading new (single file with QUICK strategy)
       if (profilePictureKey) {
-        const baseFileName = getBaseFileName(profilePictureKey);
-        const folder = getFolderFromKey(profilePictureKey);
-        const variants = ['thumb', 'medium', 'full'];
-        for (const variant of variants) {
-          const key = `${folder}/${baseFileName}-${variant}.jpg`;
-          try {
-            await deleteFromS3(key);
-          } catch (error) {
-            console.error(`Failed to delete ${key}:`, error);
-          }
+        try {
+          await deleteFromS3(profilePictureKey);
+        } catch (error) {
+          console.error(`Failed to delete profile picture:`, error);
         }
       }
-      // Upload new profile picture with synchronous processing
+      // Upload new profile picture with QUICK strategy (fast, thumbnail only)
       try {
         profilePictureUploadResult = await uploadImage(
           profilePictureFile,
           'restaurant_profile_pictures',
           {
-            strategy: UPLOAD_STRATEGY.SYNC,
-            entityType: 'restaurant',
-            entityId: id,
+            strategy: UPLOAD_STRATEGY.QUICK,
+            maxWidth: 400, // Profile picture size
+            quality: 85, // Good balance
           },
         );
         profilePictureKey = profilePictureUploadResult.imageUrl;
       } catch (uploadError) {
         console.error('Error uploading profile picture:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload profile picture' });
+        return res
+          .status(500)
+          .json({ error: 'Failed to upload profile picture' });
       }
     }
 
@@ -730,6 +732,15 @@ async function updateRestaurant(req, res) {
         );
       }
       responseData.thumbnailUrls = thumbnailUrls;
+    }
+
+    // Prepare profilePicture URL (QUICK strategy - single file)
+    if (responseData.profilePicture) {
+      responseData.profilePicture = getMediaUrl(
+        responseData.profilePicture,
+        'image',
+        'original',
+      );
     }
 
     // Transformiramo galeriju slika za response s variantama
@@ -1602,13 +1613,14 @@ const addRestaurantImages = async (req, res) => {
 
     const folder = `restaurant_images/${restaurantSlug}`;
 
-    // Upload images with synchronous processing for immediate availability
+    // Upload images with optimistic strategy for fast response and background processing
     const imageUploadResults = await Promise.all(
       files.map((file) =>
         uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.SYNC,
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
           entityType: 'restaurant_gallery',
           entityId: id,
+          priority: 5, // Medium priority for gallery images
         }),
       ),
     );
@@ -2078,8 +2090,11 @@ const getAllRestaurantsWithDetails = async (req, res) => {
           }
         : {};
 
+    const userEmail = req.user?.email;
+    const finalWhereClause = addTestFilter(whereClause, userEmail);
+
     const restaurants = await Restaurant.findAll({
-      where: whereClause,
+      where: finalWhereClause,
       attributes: [
         'id',
         'name',
@@ -2141,7 +2156,9 @@ const getSampleRestaurants = async (req, res) => {
     const userId = req.user?.id;
 
     // Uvijek dohvaćamo istih 50 restorana (prvih 50 po imenu)
+    const userEmail = req.user?.email;
     const sampleRestaurants = await Restaurant.findAll({
+      where: addTestFilter({}, userEmail),
       attributes: [
         'id',
         'name',
@@ -2358,6 +2375,9 @@ const getNewRestaurants = async (req, res) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     // Dohvati claim logove za zadnjih mjesec dana
+    const userEmail = req.user?.email;
+    const restaurantWhere = addTestFilter({}, userEmail);
+
     const claimLogs = await ClaimLog.findAll({
       where: {
         createdAt: { [Op.gte]: monthAgo },
@@ -2367,6 +2387,7 @@ const getNewRestaurants = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
+          where: restaurantWhere,
           attributes: [
             'id',
             'name',
@@ -2462,6 +2483,9 @@ const getAllNewRestaurants = async (req, res) => {
     monthAgo.setDate(monthAgo.getDate() - 30);
 
     // Dohvati claim logove za zadnjih mjesec dana
+    const userEmail = req.user?.email;
+    const restaurantWhere = addTestFilter({}, userEmail);
+
     const claimLogs = await ClaimLog.findAll({
       where: {
         createdAt: { [Op.gte]: monthAgo },
@@ -2471,6 +2495,7 @@ const getAllNewRestaurants = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
+          where: restaurantWhere,
           attributes: [
             'id',
             'name',
@@ -2548,6 +2573,9 @@ const nearYou = async (req, res) => {
     const userLon = parseFloat(longitude);
 
     // Get all restaurants (only claimed)
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ isClaimed: true }, userEmail);
+
     const restaurants = await Restaurant.findAll({
       attributes: [
         'id',
@@ -2565,7 +2593,7 @@ const nearYou = async (req, res) => {
         'isClaimed',
         'priceCategoryId',
       ],
-      where: { isClaimed: true },
+      where: whereClause,
     });
 
     // Calculate distance for each restaurant and filter those within 60km
@@ -2621,10 +2649,11 @@ const nearYou = async (req, res) => {
 
 const getPartners = async (req, res) => {
   try {
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ isClaimed: true }, userEmail);
+
     const partners = await Restaurant.findAll({
-      where: {
-        isClaimed: true,
-      },
+      where: whereClause,
       attributes: [
         'id',
         'name',
@@ -2904,10 +2933,12 @@ const getFullRestaurantDetails = async (req, res) => {
       finalRestaurantData.images &&
       Array.isArray(finalRestaurantData.images)
     ) {
-      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) => ({
-        url: getMediaUrl(imageKey, 'image', 'medium'),
-        imageUrls: getImageUrls(imageKey),
-      }));
+      finalRestaurantData.images = finalRestaurantData.images.map(
+        (imageKey) => ({
+          url: getMediaUrl(imageKey, 'image', 'medium'),
+          imageUrls: getImageUrls(imageKey),
+        }),
+      );
     }
 
     // Transform review photos URLs
@@ -3295,17 +3326,11 @@ const deleteRestaurantProfilePicture = async (req, res) => {
         .json({ error: 'Restaurant has no profile picture' });
     }
 
-    // Delete profile picture variants from S3
-    const baseFileName = getBaseFileName(restaurant.profilePicture);
-    const folder = getFolderFromKey(restaurant.profilePicture);
-    const variants = ['thumb', 'medium', 'full'];
-    for (const variant of variants) {
-      const key = `${folder}/${baseFileName}-${variant}.jpg`;
-      try {
-        await deleteFromS3(key);
-      } catch (error) {
-        console.error(`Failed to delete ${key}:`, error);
-      }
+    // Delete profile picture from S3 (single file with QUICK strategy)
+    try {
+      await deleteFromS3(restaurant.profilePicture);
+    } catch (error) {
+      console.error(`Failed to delete profile picture:`, error);
     }
 
     // Update restaurant to remove profile picture URL
@@ -3336,8 +3361,11 @@ const getRestaurantBySubdomain = async (req, res) => {
       return res.status(400).json({ error: 'Subdomain is required' });
     }
 
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ subdomain }, userEmail);
+
     const restaurant = await Restaurant.findOne({
-      where: { subdomain },
+      where: whereClause,
       attributes: ['id', 'slug', 'name'],
     });
 
@@ -3482,12 +3510,18 @@ const getRestaurantsMap = async (req, res) => {
     }
 
     // Get all restaurants with coordinates (only claimed)
-    const restaurants = await Restaurant.findAll({
-      where: {
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter(
+      {
         latitude: { [Op.not]: null },
         longitude: { [Op.not]: null },
         isClaimed: true,
       },
+      userEmail,
+    );
+
+    const restaurants = await Restaurant.findAll({
+      where: whereClause,
       attributes: [
         'id',
         'name',
@@ -3896,7 +3930,7 @@ const submitClaimForm = async (req, res) => {
       priceCategoryId,
       contactInfo,
       name,
-      
+
       email,
       phone,
       workingHours,
@@ -4133,7 +4167,10 @@ const importRestaurantFromUrl = async (req, res) => {
 
     // Add photo URL for preview
     if (restaurantData.photoReference) {
-      restaurantData.previewPhotoUrl = getPhotoUrl(restaurantData.photoReference, 800);
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
     }
 
     res.json({
@@ -4185,7 +4222,7 @@ const searchGooglePlaces = async (req, res) => {
             ? getPhotoUrl(result.photoReference, 400)
             : null,
         };
-      })
+      }),
     );
 
     res.json({
@@ -4243,7 +4280,10 @@ const getGooglePlaceDetails = async (req, res) => {
 
     // Add photo URL for preview
     if (restaurantData.photoReference) {
-      restaurantData.previewPhotoUrl = getPhotoUrl(restaurantData.photoReference, 800);
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
     }
 
     res.json({
@@ -4332,7 +4372,7 @@ const createRestaurantFromGoogle = async (req, res) => {
         name: restaurant.name,
         placeId: restaurant.placeId,
         source: 'google_places',
-      }
+      },
     );
 
     res.status(201).json({

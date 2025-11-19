@@ -302,6 +302,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'Timestamp of last automatic update from Google Places API',
       },
+      isTest: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Flag to mark test restaurants visible only to whitelisted users',
+      },
     },
     {
       sequelize,

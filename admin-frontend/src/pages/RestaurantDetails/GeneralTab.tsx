@@ -195,8 +195,21 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
         description: t.description,
       }));
       formDataToSend.append("translations", JSON.stringify(translationsToSend));
-      await updateRestaurant(restaurant.id || "", formDataToSend);
-      onUpdate({ ...restaurant, ...formData, translations });
+
+      const updatedRestaurant = await updateRestaurant(restaurant.id || "", formDataToSend);
+
+      // Use response from backend for URLs (especially for uploaded images)
+      const updatedFormData = {
+        ...formData,
+        thumbnailUrl: updatedRestaurant.thumbnailUrl || formData.thumbnailUrl,
+      };
+
+      setFormData(updatedFormData);
+      onUpdate({ ...restaurant, ...updatedFormData, translations });
+
+      // Reset file state after successful save
+      setFile(null);
+
       toast.success(t("changes_saved_successfully"), { id: toastId });
       setSaveStatus(t("all_changes_saved"));
       setIsDirty(false);

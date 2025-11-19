@@ -15,7 +15,6 @@ const bcrypt = require('bcrypt');
 const { getMediaUrl } = require('../../config/cdn');
 const {
   uploadImage,
-  getImageUrls,
   UPLOAD_STRATEGY,
 } = require('../../services/imageUploadService');
 
@@ -460,20 +459,18 @@ const updateProfileImage = async (req, res) => {
 
     // If user already has a profile image, delete it from S3
     if (user.profileImage) {
-      const oldKey = user.profileImage.split('/').pop();
-      await deleteFromS3(`user_profile_images/${oldKey}`);
+      await deleteFromS3(user.profileImage);
     }
 
-    // Upload new image to S3
+    // Upload new image to S3 with QUICK strategy (fast, thumbnail only)
     const folder = 'user_profile_images';
     let imageUrl = null;
     let imageUploadResult = null;
     try {
       imageUploadResult = await uploadImage(file, folder, {
-        strategy: UPLOAD_STRATEGY.OPTIMISTIC,
-        entityType: 'user',
-        entityId: userId,
-        priority: 10,
+        strategy: UPLOAD_STRATEGY.QUICK,
+        maxWidth: 400, // Thumbnail size for profile pictures
+        quality: 85, // Good balance between quality and speed
       });
       imageUrl = imageUploadResult.imageUrl;
     } catch (uploadError) {
@@ -484,26 +481,9 @@ const updateProfileImage = async (req, res) => {
     // Update user's profile image
     await user.update({ profileImage: imageUrl });
 
-    // Prepare image URLs with variants
-    let imageUrls = null;
-    if (imageUrl) {
-      if (imageUploadResult && imageUploadResult.status === 'processing') {
-        imageUrls = {
-          thumbnail: imageUploadResult.urls.thumbnail,
-          medium: imageUploadResult.urls.medium,
-          fullscreen: imageUploadResult.urls.fullscreen,
-          processing: true,
-          jobId: imageUploadResult.jobId,
-        };
-      } else {
-        imageUrls = getImageUrls(imageUrl);
-      }
-    }
-
     res.json({
       message: 'Profile image updated successfully',
-      imageUrl: imageUrl ? getMediaUrl(imageUrl, 'image', 'medium') : null,
-      imageUrls: imageUrls,
+      imageUrl: imageUrl ? getMediaUrl(imageUrl, 'image', 'original') : null,
     });
   } catch (error) {
     console.error('Error updating profile image:', error);
@@ -524,9 +504,8 @@ const deleteProfileImage = async (req, res) => {
       return res.status(400).json({ error: 'No profile image to delete' });
     }
 
-    // Delete image from S3
-    const key = user.profileImage.split('/').pop();
-    await deleteFromS3(`user_profile_images/${key}`);
+    // Delete image from S3 (single file with QUICK strategy)
+    await deleteFromS3(user.profileImage);
 
     // Update user's profile image to null
     await user.update({ profileImage: null });
