@@ -734,6 +734,15 @@ async function updateRestaurant(req, res) {
       responseData.thumbnailUrls = thumbnailUrls;
     }
 
+    // Prepare profilePicture URL (QUICK strategy - single file)
+    if (responseData.profilePicture) {
+      responseData.profilePicture = getMediaUrl(
+        responseData.profilePicture,
+        'image',
+        'original',
+      );
+    }
+
     // Transformiramo galeriju slika za response s variantama
     if (responseData.images) {
       responseData.images = responseData.images.map((imageKey) =>
@@ -1604,13 +1613,14 @@ const addRestaurantImages = async (req, res) => {
 
     const folder = `restaurant_images/${restaurantSlug}`;
 
-    // Upload images with synchronous processing for immediate availability
+    // Upload images with optimistic strategy for fast response and background processing
     const imageUploadResults = await Promise.all(
       files.map((file) =>
         uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.SYNC,
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
           entityType: 'restaurant_gallery',
           entityId: id,
+          priority: 5, // Medium priority for gallery images
         }),
       ),
     );

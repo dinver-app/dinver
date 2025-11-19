@@ -41,6 +41,15 @@ const Images = ({
     }
     if (event.target.files) {
       const selectedFiles = Array.from(event.target.files);
+
+      // Limit to maximum 10 images at once
+      if (selectedFiles.length > 10) {
+        toast.error(t("max_10_images_allowed"));
+        // Reset the input
+        event.target.value = "";
+        return;
+      }
+
       const toastId = toast.loading(t("uploading_images"));
       try {
         const data = await addRestaurantImages(
@@ -52,6 +61,8 @@ const Images = ({
         setReorderedImages(data.images);
         onUpdate({ ...restaurant, images: data.images });
         toast.success(t("images_uploaded_successfully"), { id: toastId });
+        // Reset the input after successful upload
+        event.target.value = "";
       } catch (error) {
         console.error("Failed to upload images", error);
         toast.error(t("failed_to_upload_images"), { id: toastId });

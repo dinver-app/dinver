@@ -251,8 +251,17 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       }));
       formDataToSend.append("translations", JSON.stringify(translationsToSend));
 
-      await updateRestaurant(restaurant.id || "", formDataToSend);
-      onUpdate({ ...restaurant, ...formData, translations });
+      const updatedRestaurant = await updateRestaurant(restaurant.id || "", formDataToSend);
+
+      // Use response from backend for URLs (especially for uploaded images)
+      const updatedFormData = {
+        ...formData,
+        thumbnailUrl: updatedRestaurant.thumbnailUrl || formData.thumbnailUrl,
+        profilePictureUrl: updatedRestaurant.profilePicture || formData.profilePictureUrl,
+      };
+
+      setFormData(updatedFormData);
+      onUpdate({ ...restaurant, ...updatedFormData, translations });
 
       // Reset file states after successful save
       setFile(null);

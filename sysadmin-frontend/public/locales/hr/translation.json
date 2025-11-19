@@ -212,6 +212,7 @@
   "no_restaurant_images": "Trenutno nema slika restorana",
   "uploading_images": "Učitavanje slika...",
   "deleting_image": "Brisanje slike...",
+  "max_10_images_allowed": "Možete učitati maksimalno 10 slika odjednom",
   "manage_your_working_hours": "Upravljaj radnim vremenom restorana.",
   "manage_your_restaurant_images": "Upravljaj slikama restorana.",
   "reorder_images": "Sortiraj slike",

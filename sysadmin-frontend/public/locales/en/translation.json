@@ -206,6 +206,7 @@
   "no_restaurant_images": "Currently there are no restaurant images",
   "uploading_images": "Uploading images...",
   "deleting_image": "Deleting image...",
+  "max_10_images_allowed": "You can upload a maximum of 10 images at once",
   "manage_your_working_hours": "Manage your working hours.",
   "manage_your_restaurant_images": "Manage your restaurant images.",
   "reorder_images": "Reorder images",
