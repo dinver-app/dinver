@@ -1,6 +1,7 @@
 'use strict';
 const { Restaurant, Sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 
 // Sysadmin search restaurants by name/address/place
 const searchRestaurants = async (req, res) => {
@@ -18,8 +19,11 @@ const searchRestaurants = async (req, res) => {
         }
       : {};
 
+    const userEmail = req.user?.email;
+    const finalWhere = addTestFilter(where, userEmail);
+
     const result = await Restaurant.findAndCountAll({
-      where,
+      where: finalWhere,
       attributes: [
         'id',
         'name',
@@ -69,6 +73,13 @@ const nearbyRestaurants = async (req, res) => {
     `,
     );
 
+    const userEmail = req.user?.email;
+    const baseWhere = {
+      latitude: { [Op.ne]: null },
+      longitude: { [Op.ne]: null },
+    };
+    const finalWhere = addTestFilter(baseWhere, userEmail);
+
     const rows = await Restaurant.findAll({
       attributes: [
         'id',
@@ -80,10 +91,7 @@ const nearbyRestaurants = async (req, res) => {
         'longitude',
         [distanceLiteral, 'distance'],
       ],
-      where: {
-        latitude: { [Op.ne]: null },
-        longitude: { [Op.ne]: null },
-      },
+      where: finalWhere,
       order: Sequelize.literal('distance ASC'),
       limit: parseInt(limit),
     });

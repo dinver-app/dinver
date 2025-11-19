@@ -12,6 +12,7 @@ const {
   UserFavorite,
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 
 // ----------------- Lightweight cache for viewCounts -----------------
 let viewCountsCache = {
@@ -264,6 +265,9 @@ module.exports = {
       }
 
       // Base restaurant query - maknuti sve include-ove osim PriceCategory
+      const userEmail = req.user?.email;
+      const baseWhere = addTestFilter({ isClaimed: true }, userEmail);
+
       let restaurantQuery = {
         attributes: [
           'id',
@@ -282,10 +286,7 @@ module.exports = {
           'priceCategoryId',
           'createdAt',
         ],
-        where: {
-          // Uvijek vraćamo samo claimane (partnerske) restorane
-          isClaimed: true,
-        },
+        where: baseWhere,
         include: [
           {
             model: PriceCategory,

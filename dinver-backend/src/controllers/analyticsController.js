@@ -12,6 +12,7 @@ const {
   ClaimLog,
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 
 // Helper: Valid event types
 const VALID_EVENT_TYPES = [
@@ -842,8 +843,14 @@ const getPopularRestaurants = async (req, res) => {
     });
 
     const restaurantIds = clicks.map((c) => c.restaurant_id);
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter(
+      { id: restaurantIds, isClaimed: true },
+      userEmail,
+    );
+
     const restaurants = await Restaurant.findAll({
-      where: { id: restaurantIds, isClaimed: true },
+      where: whereClause,
       attributes: [
         'id',
         'name',

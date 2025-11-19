@@ -49,10 +49,13 @@ const {
   shouldUpdateFromGoogle,
   updateRestaurantFromGoogle,
 } = require('../services/googlePlacesService');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 
 const getRestaurantsList = async (req, res) => {
   try {
+    const userEmail = req.user?.email;
     const restaurants = await Restaurant.findAll({
+      where: addTestFilter({}, userEmail),
       attributes: ['id', 'name', 'slug'],
     });
     res.json(restaurants);
@@ -94,8 +97,11 @@ const getAllRestaurants = async (req, res) => {
           }
         : {};
 
+    const userEmail = req.user?.email;
+    const finalWhereClause = addTestFilter(whereClause, userEmail);
+
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
-      where: whereClause,
+      where: finalWhereClause,
       attributes: [
         'id',
         'name',
@@ -2078,8 +2084,11 @@ const getAllRestaurantsWithDetails = async (req, res) => {
           }
         : {};
 
+    const userEmail = req.user?.email;
+    const finalWhereClause = addTestFilter(whereClause, userEmail);
+
     const restaurants = await Restaurant.findAll({
-      where: whereClause,
+      where: finalWhereClause,
       attributes: [
         'id',
         'name',
@@ -2141,7 +2150,9 @@ const getSampleRestaurants = async (req, res) => {
     const userId = req.user?.id;
 
     // Uvijek dohvaćamo istih 50 restorana (prvih 50 po imenu)
+    const userEmail = req.user?.email;
     const sampleRestaurants = await Restaurant.findAll({
+      where: addTestFilter({}, userEmail),
       attributes: [
         'id',
         'name',
@@ -2358,6 +2369,9 @@ const getNewRestaurants = async (req, res) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
     // Dohvati claim logove za zadnjih mjesec dana
+    const userEmail = req.user?.email;
+    const restaurantWhere = addTestFilter({}, userEmail);
+
     const claimLogs = await ClaimLog.findAll({
       where: {
         createdAt: { [Op.gte]: monthAgo },
@@ -2367,6 +2381,7 @@ const getNewRestaurants = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
+          where: restaurantWhere,
           attributes: [
             'id',
             'name',
@@ -2462,6 +2477,9 @@ const getAllNewRestaurants = async (req, res) => {
     monthAgo.setDate(monthAgo.getDate() - 30);
 
     // Dohvati claim logove za zadnjih mjesec dana
+    const userEmail = req.user?.email;
+    const restaurantWhere = addTestFilter({}, userEmail);
+
     const claimLogs = await ClaimLog.findAll({
       where: {
         createdAt: { [Op.gte]: monthAgo },
@@ -2471,6 +2489,7 @@ const getAllNewRestaurants = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
+          where: restaurantWhere,
           attributes: [
             'id',
             'name',
@@ -2548,6 +2567,9 @@ const nearYou = async (req, res) => {
     const userLon = parseFloat(longitude);
 
     // Get all restaurants (only claimed)
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ isClaimed: true }, userEmail);
+
     const restaurants = await Restaurant.findAll({
       attributes: [
         'id',
@@ -2565,7 +2587,7 @@ const nearYou = async (req, res) => {
         'isClaimed',
         'priceCategoryId',
       ],
-      where: { isClaimed: true },
+      where: whereClause,
     });
 
     // Calculate distance for each restaurant and filter those within 60km
@@ -2621,10 +2643,11 @@ const nearYou = async (req, res) => {
 
 const getPartners = async (req, res) => {
   try {
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ isClaimed: true }, userEmail);
+
     const partners = await Restaurant.findAll({
-      where: {
-        isClaimed: true,
-      },
+      where: whereClause,
       attributes: [
         'id',
         'name',
@@ -3336,8 +3359,11 @@ const getRestaurantBySubdomain = async (req, res) => {
       return res.status(400).json({ error: 'Subdomain is required' });
     }
 
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({ subdomain }, userEmail);
+
     const restaurant = await Restaurant.findOne({
-      where: { subdomain },
+      where: whereClause,
       attributes: ['id', 'slug', 'name'],
     });
 
@@ -3482,12 +3508,15 @@ const getRestaurantsMap = async (req, res) => {
     }
 
     // Get all restaurants with coordinates (only claimed)
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter({
+      latitude: { [Op.not]: null },
+      longitude: { [Op.not]: null },
+      isClaimed: true,
+    }, userEmail);
+
     const restaurants = await Restaurant.findAll({
-      where: {
-        latitude: { [Op.not]: null },
-        longitude: { [Op.not]: null },
-        isClaimed: true,
-      },
+      where: whereClause,
       attributes: [
         'id',
         'name',
