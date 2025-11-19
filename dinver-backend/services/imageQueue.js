@@ -1,7 +1,6 @@
 const Queue = require('bull');
 const { processImage } = require('../utils/imageProcessor');
 const { uploadVariantsToS3 } = require('../utils/s3Upload');
-const Redis = require('ioredis');
 
 // Redis configuration
 // Parse REDIS_URL if available (Heroku format), otherwise use individual params
