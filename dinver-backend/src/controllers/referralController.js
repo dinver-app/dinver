@@ -103,7 +103,7 @@ const getMyReferrals = async (req, res) => {
         {
           model: User,
           as: 'referredUser',
-          attributes: ['name', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: Restaurant,
@@ -479,12 +479,12 @@ const getAllReferrals = async (req, res) => {
         {
           model: User,
           as: 'referrer',
-          attributes: ['name', 'email'],
+          attributes: ['id', 'name', 'email'],
           where: search
             ? {
                 [Op.or]: [
-                  
-                  
+
+
                   { email: { [Op.iLike]: `%${search}%` } },
                 ],
               }
@@ -493,7 +493,7 @@ const getAllReferrals = async (req, res) => {
         {
           model: User,
           as: 'referredUser',
-          attributes: ['name', 'email'],
+          attributes: ['id', 'name', 'email'],
         },
         {
           model: ReferralCode,

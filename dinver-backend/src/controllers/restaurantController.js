@@ -570,8 +570,12 @@ async function updateRestaurant(req, res) {
 
     let thumbnailKey = restaurant.thumbnailUrl;
     let thumbnailUploadResult = null;
+    let profilePictureKey = restaurant.profilePicture;
+    let profilePictureUploadResult = null;
 
-    if (req.file) {
+    // Handle thumbnail upload
+    const thumbnailFile = req.files?.thumbnail?.[0];
+    if (thumbnailFile) {
       // Delete old thumbnail variants before uploading new
       if (thumbnailKey) {
         const baseFileName = getBaseFileName(thumbnailKey);
@@ -589,7 +593,7 @@ async function updateRestaurant(req, res) {
       // Upload new thumbnail with synchronous processing for immediate feedback
       try {
         thumbnailUploadResult = await uploadImage(
-          req.file,
+          thumbnailFile,
           'restaurant_thumbnails',
           {
             strategy: UPLOAD_STRATEGY.SYNC,
@@ -601,6 +605,41 @@ async function updateRestaurant(req, res) {
       } catch (uploadError) {
         console.error('Error uploading thumbnail:', uploadError);
         return res.status(500).json({ error: 'Failed to upload thumbnail' });
+      }
+    }
+
+    // Handle profilePicture upload
+    const profilePictureFile = req.files?.profilePicture?.[0];
+    if (profilePictureFile) {
+      // Delete old profile picture variants before uploading new
+      if (profilePictureKey) {
+        const baseFileName = getBaseFileName(profilePictureKey);
+        const folder = getFolderFromKey(profilePictureKey);
+        const variants = ['thumb', 'medium', 'full'];
+        for (const variant of variants) {
+          const key = `${folder}/${baseFileName}-${variant}.jpg`;
+          try {
+            await deleteFromS3(key);
+          } catch (error) {
+            console.error(`Failed to delete ${key}:`, error);
+          }
+        }
+      }
+      // Upload new profile picture with synchronous processing
+      try {
+        profilePictureUploadResult = await uploadImage(
+          profilePictureFile,
+          'restaurant_profile_pictures',
+          {
+            strategy: UPLOAD_STRATEGY.SYNC,
+            entityType: 'restaurant',
+            entityId: id,
+          },
+        );
+        profilePictureKey = profilePictureUploadResult.imageUrl;
+      } catch (uploadError) {
+        console.error('Error uploading profile picture:', uploadError);
+        return res.status(500).json({ error: 'Failed to upload profile picture' });
       }
     }
 
@@ -641,6 +680,7 @@ async function updateRestaurant(req, res) {
       oib: oibValue,
       description,
       thumbnailUrl: thumbnailKey, // Spremamo samo key
+      profilePicture: profilePictureKey, // Spremamo samo key
       priceCategoryId,
       wifiSsid,
       wifiPassword,
@@ -3240,6 +3280,54 @@ const deleteRestaurantThumbnail = async (req, res) => {
   }
 };
 
+const deleteRestaurantProfilePicture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findByPk(id);
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    if (!restaurant.profilePicture) {
+      return res
+        .status(400)
+        .json({ error: 'Restaurant has no profile picture' });
+    }
+
+    // Delete profile picture variants from S3
+    const baseFileName = getBaseFileName(restaurant.profilePicture);
+    const folder = getFolderFromKey(restaurant.profilePicture);
+    const variants = ['thumb', 'medium', 'full'];
+    for (const variant of variants) {
+      const key = `${folder}/${baseFileName}-${variant}.jpg`;
+      try {
+        await deleteFromS3(key);
+      } catch (error) {
+        console.error(`Failed to delete ${key}:`, error);
+      }
+    }
+
+    // Update restaurant to remove profile picture URL
+    await restaurant.update({ profilePicture: null });
+
+    // Log the delete action
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: ActionTypes.DELETE,
+      entity: Entities.IMAGES,
+      entityId: restaurant.id,
+      restaurantId: restaurant.id,
+      changes: { old: restaurant.profilePicture },
+    });
+
+    res.json({ message: 'Profile picture deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting profile picture:', error);
+    res.status(500).json({ error: 'Failed to delete profile picture' });
+  }
+};
+
 const getRestaurantBySubdomain = async (req, res) => {
   try {
     const { subdomain } = req.params;
@@ -4281,6 +4369,7 @@ module.exports = {
   addRestaurantImages,
   deleteRestaurantImage,
   deleteRestaurantThumbnail,
+  deleteRestaurantProfilePicture,
   updateImageOrder,
   getRestaurantById,
   getCustomWorkingDays,
