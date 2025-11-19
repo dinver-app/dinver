@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import imageCompression from "browser-image-compression";
 
 type RestaurantImage = { url: string; imageUrls: { thumbnail: string; medium: string; fullscreen: string } };
 
@@ -52,10 +53,32 @@ const Images = ({
 
       const toastId = toast.loading(t("uploading_images"));
       try {
+        // Compress images before upload for faster upload times
+        const compressionOptions = {
+          maxSizeMB: 1,          // Maximum 1MB per image
+          maxWidthOrHeight: 1920, // Maximum 1920px width or height
+          useWebWorker: true,     // Use web worker for better performance
+          fileType: 'image/jpeg', // Convert to JPEG for smaller size
+        };
+
+        console.log('Compressing images...');
+        const compressedFiles = await Promise.all(
+          selectedFiles.map(async (file) => {
+            try {
+              const compressed = await imageCompression(file, compressionOptions);
+              console.log(`Compressed ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressed.size / 1024 / 1024).toFixed(2)}MB`);
+              return compressed;
+            } catch (error) {
+              console.error(`Failed to compress ${file.name}, using original`, error);
+              return file; // Fallback to original if compression fails
+            }
+          })
+        );
+
         const data = await addRestaurantImages(
           restaurant.id,
           restaurant.slug || "",
-          selectedFiles
+          compressedFiles
         );
         setImages(data.images);
         setReorderedImages(data.images);

@@ -71,9 +71,9 @@ redisClient.connect().catch(console.error);
 redisClient.on('error', (err) => console.log('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Connected to Redis'));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Add X-Robots-Tag header to prevent search engine indexing
 app.use((req, res, next) => {
