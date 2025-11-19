@@ -617,29 +617,23 @@ async function updateRestaurant(req, res) {
     // Handle profilePicture upload
     const profilePictureFile = req.files?.profilePicture?.[0];
     if (profilePictureFile) {
-      // Delete old profile picture variants before uploading new
+      // Delete old profile picture before uploading new (single file with QUICK strategy)
       if (profilePictureKey) {
-        const baseFileName = getBaseFileName(profilePictureKey);
-        const folder = getFolderFromKey(profilePictureKey);
-        const variants = ['thumb', 'medium', 'full'];
-        for (const variant of variants) {
-          const key = `${folder}/${baseFileName}-${variant}.jpg`;
-          try {
-            await deleteFromS3(key);
-          } catch (error) {
-            console.error(`Failed to delete ${key}:`, error);
-          }
+        try {
+          await deleteFromS3(profilePictureKey);
+        } catch (error) {
+          console.error(`Failed to delete profile picture:`, error);
         }
       }
-      // Upload new profile picture with synchronous processing
+      // Upload new profile picture with QUICK strategy (fast, thumbnail only)
       try {
         profilePictureUploadResult = await uploadImage(
           profilePictureFile,
           'restaurant_profile_pictures',
           {
-            strategy: UPLOAD_STRATEGY.SYNC,
-            entityType: 'restaurant',
-            entityId: id,
+            strategy: UPLOAD_STRATEGY.QUICK,
+            maxWidth: 400, // Profile picture size
+            quality: 85, // Good balance
           },
         );
         profilePictureKey = profilePictureUploadResult.imageUrl;
@@ -3322,17 +3316,11 @@ const deleteRestaurantProfilePicture = async (req, res) => {
         .json({ error: 'Restaurant has no profile picture' });
     }
 
-    // Delete profile picture variants from S3
-    const baseFileName = getBaseFileName(restaurant.profilePicture);
-    const folder = getFolderFromKey(restaurant.profilePicture);
-    const variants = ['thumb', 'medium', 'full'];
-    for (const variant of variants) {
-      const key = `${folder}/${baseFileName}-${variant}.jpg`;
-      try {
-        await deleteFromS3(key);
-      } catch (error) {
-        console.error(`Failed to delete ${key}:`, error);
-      }
+    // Delete profile picture from S3 (single file with QUICK strategy)
+    try {
+      await deleteFromS3(restaurant.profilePicture);
+    } catch (error) {
+      console.error(`Failed to delete profile picture:`, error);
     }
 
     // Update restaurant to remove profile picture URL
