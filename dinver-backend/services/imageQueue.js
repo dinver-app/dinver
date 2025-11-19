@@ -4,13 +4,31 @@ const { uploadVariantsToS3 } = require('../utils/s3Upload');
 const Redis = require('ioredis');
 
 // Redis configuration
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-};
+// Parse REDIS_URL if available (Heroku format), otherwise use individual params
+let redisConfig;
+
+if (process.env.REDIS_URL) {
+  // Parse Redis URL (redis://user:password@host:port)
+  const redisUrl = new URL(process.env.REDIS_URL);
+  redisConfig = {
+    host: redisUrl.hostname,
+    port: parseInt(redisUrl.port, 10),
+    password: redisUrl.password || undefined,
+    username: redisUrl.username !== 'default' ? redisUrl.username : undefined,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    tls: redisUrl.protocol === 'rediss:' ? {} : undefined, // Enable TLS for rediss://
+  };
+} else {
+  // Fallback to individual environment variables
+  redisConfig = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  };
+}
 
 // Create Bull queue for image processing
 const imageQueue = new Queue('image-processing', {
