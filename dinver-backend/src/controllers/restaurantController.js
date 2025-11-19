@@ -645,7 +645,9 @@ async function updateRestaurant(req, res) {
         profilePictureKey = profilePictureUploadResult.imageUrl;
       } catch (uploadError) {
         console.error('Error uploading profile picture:', uploadError);
-        return res.status(500).json({ error: 'Failed to upload profile picture' });
+        return res
+          .status(500)
+          .json({ error: 'Failed to upload profile picture' });
       }
     }
 
@@ -2927,10 +2929,12 @@ const getFullRestaurantDetails = async (req, res) => {
       finalRestaurantData.images &&
       Array.isArray(finalRestaurantData.images)
     ) {
-      finalRestaurantData.images = finalRestaurantData.images.map((imageKey) => ({
-        url: getMediaUrl(imageKey, 'image', 'medium'),
-        imageUrls: getImageUrls(imageKey),
-      }));
+      finalRestaurantData.images = finalRestaurantData.images.map(
+        (imageKey) => ({
+          url: getMediaUrl(imageKey, 'image', 'medium'),
+          imageUrls: getImageUrls(imageKey),
+        }),
+      );
     }
 
     // Transform review photos URLs
@@ -3509,11 +3513,14 @@ const getRestaurantsMap = async (req, res) => {
 
     // Get all restaurants with coordinates (only claimed)
     const userEmail = req.user?.email;
-    const whereClause = addTestFilter({
-      latitude: { [Op.not]: null },
-      longitude: { [Op.not]: null },
-      isClaimed: true,
-    }, userEmail);
+    const whereClause = addTestFilter(
+      {
+        latitude: { [Op.not]: null },
+        longitude: { [Op.not]: null },
+        isClaimed: true,
+      },
+      userEmail,
+    );
 
     const restaurants = await Restaurant.findAll({
       where: whereClause,
@@ -3925,7 +3932,7 @@ const submitClaimForm = async (req, res) => {
       priceCategoryId,
       contactInfo,
       name,
-      
+
       email,
       phone,
       workingHours,
@@ -4162,7 +4169,10 @@ const importRestaurantFromUrl = async (req, res) => {
 
     // Add photo URL for preview
     if (restaurantData.photoReference) {
-      restaurantData.previewPhotoUrl = getPhotoUrl(restaurantData.photoReference, 800);
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
     }
 
     res.json({
@@ -4214,7 +4224,7 @@ const searchGooglePlaces = async (req, res) => {
             ? getPhotoUrl(result.photoReference, 400)
             : null,
         };
-      })
+      }),
     );
 
     res.json({
@@ -4272,7 +4282,10 @@ const getGooglePlaceDetails = async (req, res) => {
 
     // Add photo URL for preview
     if (restaurantData.photoReference) {
-      restaurantData.previewPhotoUrl = getPhotoUrl(restaurantData.photoReference, 800);
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
     }
 
     res.json({
@@ -4361,7 +4374,7 @@ const createRestaurantFromGoogle = async (req, res) => {
         name: restaurant.name,
         placeId: restaurant.placeId,
         source: 'google_places',
-      }
+      },
     );
 
     res.status(201).json({
