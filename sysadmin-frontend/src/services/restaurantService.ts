@@ -185,6 +185,13 @@ export const updateImageOrder = async (id: string, images: string[]) => {
   }
 };
 
+export const getJobStatus = async (jobId: string) => {
+  const response = await apiClient.get(
+    `api/image-processing/job/${jobId}/status`
+  );
+  return response.data;
+};
+
 export const handleClaimStatus = async (
   restaurantId: string,
   offer: string,
