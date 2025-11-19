@@ -1613,14 +1613,16 @@ const addRestaurantImages = async (req, res) => {
 
     const folder = `restaurant_images/${restaurantSlug}`;
 
-    // Upload images synchronously with all variants (thumb, medium, fullscreen)
-    // Processing is fast with Sharp (~300-500ms per image), parallel upload = ~3-5s for 10 images
+    // Upload images optimistically - return immediately, process in background
+    // This provides instant feedback to users while images are being processed
+    // Images will be available within seconds via CDN
     const imageUploadResults = await Promise.all(
       files.map((file) =>
         uploadImage(file, folder, {
-          strategy: UPLOAD_STRATEGY.SYNC,
+          strategy: UPLOAD_STRATEGY.OPTIMISTIC,
           entityType: 'restaurant_gallery',
           entityId: id,
+          priority: 5, // High priority for user-uploaded images
         }),
       ),
     );

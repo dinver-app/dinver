@@ -23,6 +23,7 @@
     "@tiptap/react": "^3.7.2",
     "@tiptap/starter-kit": "^3.7.2",
     "axios": "^1.7.9",
+    "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "formik": "^2.4.6",
     "i18next": "^24.2.2",
