@@ -1,4 +1,4 @@
-const { User, UserFollow, Experience } = require('../../models');
+const { User, UserFollow, Experience, UserPoints } = require('../../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../../models');
 
@@ -753,7 +753,7 @@ const getUserProfileWithStats = async (req, res) => {
       req.params.userId === 'me' ? req.user.id : req.params.userId;
     const currentUserId = req.user.id;
 
-    // Get user
+    // Get user with points
     const user = await User.findByPk(targetUserId, {
       attributes: [
         'id',
@@ -767,6 +767,13 @@ const getUserProfileWithStats = async (req, res) => {
         'city',
         'country',
         'createdAt',
+      ],
+      include: [
+        {
+          model: UserPoints,
+          as: 'points',
+          attributes: ['totalPoints', 'level', 'levelName'],
+        },
       ],
     });
 
@@ -844,6 +851,13 @@ const getUserProfileWithStats = async (req, res) => {
         },
         experienceStats: {
           totalExperiences: experienceCount,
+        },
+        pointsStats: {
+          totalPoints: user.points
+            ? Math.round(parseFloat(user.points.totalPoints) * 10) / 10
+            : 0,
+          level: user.points ? user.points.level : 1,
+          levelName: user.points ? user.points.levelName : 'Bronze',
         },
         followStatus: followStatus
           ? {
