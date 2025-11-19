@@ -14,7 +14,10 @@ import "react-image-gallery/styles/css/image-gallery.css";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import imageCompression from "browser-image-compression";
 
-type RestaurantImage = { url: string; imageUrls: { thumbnail: string; medium: string; fullscreen: string } };
+type RestaurantImage = {
+  url: string;
+  imageUrls: { thumbnail: string; medium: string; fullscreen: string };
+};
 
 const Images = ({
   restaurant,
@@ -24,7 +27,9 @@ const Images = ({
   onUpdate: (updatedRestaurant: Restaurant) => void;
 }) => {
   const { t } = useTranslation();
-  const [images, setImages] = useState<RestaurantImage[]>(restaurant.images || []);
+  const [images, setImages] = useState<RestaurantImage[]>(
+    restaurant.images || []
+  );
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -151,10 +156,9 @@ const Images = ({
             setImages(data.images);
             setReorderedImages(data.images);
             onUpdate({ ...restaurant, images: data.images });
-            toast.success(
-              t("images_processing_in_background"),
-              { id: toastId }
-            );
+            toast.success(t("images_processing_in_background"), {
+              id: toastId,
+            });
           }
         } else {
           // No background processing needed
@@ -176,7 +180,9 @@ const Images = ({
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click();
+    if (!isProcessing) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleDeleteImageConfirmation = (image: RestaurantImage) => {
@@ -221,7 +227,7 @@ const Images = ({
   const handleSaveImageOrder = async () => {
     try {
       // Send URLs to the backend
-      const imageUrls = reorderedImages.map(img => img.url);
+      const imageUrls = reorderedImages.map((img) => img.url);
       await updateImageOrder(restaurant.id || "", imageUrls);
       setImages(reorderedImages);
       setReorderedImages(reorderedImages);
@@ -266,9 +272,12 @@ const Images = ({
           />
           <button
             onClick={handleUploadClick}
-            className="primary-button px-3 py-1.5"
+            disabled={isProcessing}
+            className={`primary-button px-3 py-1.5 ${
+              isProcessing ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            {t("upload_images")}
+            {isProcessing ? t("uploading") : t("upload_images")}
           </button>
           <button
             onClick={() => setIsOrderModalOpen(true)}
@@ -323,7 +332,7 @@ const Images = ({
             <ImageGallery
               items={images.map((image) => ({
                 original: image.imageUrls?.fullscreen || image.url,
-                thumbnail: image.imageUrls?.thumbnail || image.url
+                thumbnail: image.imageUrls?.thumbnail || image.url,
               }))}
               startIndex={currentImageIndex}
               showThumbnails={false}
