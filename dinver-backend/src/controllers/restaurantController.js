@@ -3864,11 +3864,17 @@ const getRestaurantsByIdsPost = async (req, res) => {
 const getRestaurantCities = async (req, res) => {
   try {
     // Get all claimed restaurants with their place
-    const restaurants = await Restaurant.findAll({
-      where: {
+    const userEmail = req.user?.email;
+    const whereClause = addTestFilter(
+      {
         isClaimed: true,
         place: { [Op.ne]: null },
       },
+      userEmail,
+    );
+
+    const restaurants = await Restaurant.findAll({
+      where: whereClause,
       attributes: ['place'],
     });
 
