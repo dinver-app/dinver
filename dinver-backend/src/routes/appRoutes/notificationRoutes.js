@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Notification, User, Restaurant } = require('../../models');
-const { appAuthenticateToken } = require('../../middleware/authMiddleware');
+const { Notification, User, Restaurant } = require('../../../models');
+const { appAuthenticateToken } = require('../../middleware/roleMiddleware');
 const { Op } = require('sequelize');
 
 /**
