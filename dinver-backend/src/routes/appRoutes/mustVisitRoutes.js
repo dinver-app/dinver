@@ -3,6 +3,7 @@ const mustVisitController = require('../../controllers/mustVisitController');
 const {
   appApiKeyAuth,
   appAuthenticateToken,
+  appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -37,6 +38,22 @@ router.get(
   appApiKeyAuth,
   appAuthenticateToken,
   mustVisitController.checkIsMustVisit,
+);
+
+// Get other user's Must Visit list (public viewing with optional auth)
+router.get(
+  '/users/:userId/must-visit',
+  appApiKeyAuth,
+  appOptionalAuth,
+  mustVisitController.getUserMustVisitList,
+);
+
+// Get other user's Visited list (public viewing with optional auth)
+router.get(
+  '/users/:userId/visited',
+  appApiKeyAuth,
+  appOptionalAuth,
+  mustVisitController.getUserVisitedList,
 );
 
 module.exports = router;

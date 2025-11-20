@@ -82,6 +82,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: [],
       },
+      profileVisibility: {
+        type: DataTypes.ENUM('public', 'followers', 'buddies'),
+        allowNull: false,
+        defaultValue: 'public',
+        comment: 'Who can see user profile: public (everyone), followers (only people who follow you), buddies (mutual followers only)',
+      },
     },
     {
       sequelize,
