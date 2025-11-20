@@ -12,6 +12,7 @@ const appRoutes = require('./routes/appRoutes');
 const translateRoutes = require('./routes/translateRoutes');
 const restaurantPostRoutes = require('./routes/appRoutes/restaurantPostRoutes');
 const landingRoutes = require('./routes/landingRoutes');
+const notificationRoutes = require('./routes/appRoutes/notificationRoutes');
 
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
@@ -24,6 +25,7 @@ const {
 } = require('./cron/cleanupVisitValidations');
 const { runDataHealthChecks } = require('./cron/dataHealthCron');
 const { cleanupExpiredVisits } = require('./cron/cleanupExpiredVisits');
+const { cleanupOldNotifications } = require('./cron/cleanupNotifications');
 dotenv.config();
 
 const app = express();
@@ -54,6 +56,9 @@ cron.schedule('0 4 * * *', async () => {
     console.error('[DataHealth] error', e?.message || e);
   }
 });
+
+// Čišćenje starih notifikacija (svaki dan u 02:00) - briše notifikacije starije od 30 dana
+cron.schedule('0 2 * * *', cleanupOldNotifications);
 
 // Initialize client.
 const redisClient = createClient({
@@ -175,6 +180,7 @@ app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/translate', translateRoutes);
 app.use('/api/app', appRoutes);
 app.use('/api/app', restaurantPostRoutes);
+app.use('/api/app/notifications', notificationRoutes);
 app.use('/api/landing', landingRoutes);
 app.get('/', (req, res) => {
   res.send('Welcome to the Dinver App!');

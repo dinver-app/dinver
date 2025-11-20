@@ -7,7 +7,7 @@ const {
 } = require('../../models');
 const { Op } = require('sequelize');
 const {
-  sendPushNotificationToUsers,
+  createAndSendNotificationToUsers,
 } = require('../../utils/pushNotificationService');
 
 // Helpers: format for notification copy
@@ -221,11 +221,14 @@ const sendMessage = async (req, res) => {
 
         if (admins.length > 0) {
           const adminUserIds = admins.map((admin) => admin.userId);
-          await sendPushNotificationToUsers(adminUserIds, {
+          await createAndSendNotificationToUsers(adminUserIds, {
+            type: 'new_message_from_user',
             title: 'Nova poruka od korisnika! 💬',
             body: `Nova poruka u rezervaciji za ${formatDateDisplay(
               reservation.date,
             )} u ${formatTimeDisplay(reservation.time)}`,
+            actorUserId: userId,
+            restaurantId: reservation.restaurantId,
             data: {
               type: 'new_message_from_user',
               reservationId: reservation.id,
@@ -236,11 +239,14 @@ const sendMessage = async (req, res) => {
         }
       } else {
         // Admin je poslao poruku - obavijesti korisnika
-        await sendPushNotificationToUsers([reservation.userId], {
+        await createAndSendNotificationToUsers([reservation.userId], {
+          type: 'new_message_from_restaurant',
           title: 'Nova poruka od restorana! 💬',
           body: `${reservation.restaurant.name} vam je poslao novu poruku (rezervacija ${formatDateDisplay(
             reservation.date,
           )} u ${formatTimeDisplay(reservation.time)})`,
+          actorUserId: userId,
+          restaurantId: reservation.restaurantId,
           data: {
             type: 'new_message_from_restaurant',
             reservationId: reservation.id,

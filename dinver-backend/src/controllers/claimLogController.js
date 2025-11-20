@@ -2,7 +2,7 @@ const { ClaimLog, Restaurant } = require('../../models');
 const mailgun = require('mailgun-js');
 const { format } = require('date-fns');
 const {
-  sendPushNotificationToAllUsers,
+  createAndSendNotificationToLoggedInUsers,
 } = require('../../utils/pushNotificationService');
 
 const mg = mailgun({
@@ -70,12 +70,14 @@ const handleClaimStatus = async (req, res) => {
         `Poštovani,\n\nS veseljem vas obavještavamo da je dogovorena nova suradnja s restoranom ${restaurant.name}.\nSuradnju je dogovorio/la ${req.user.email} dana ${format(new Date(), 'dd.MM.yyyy.')} s ponudom: ${offerHR}.\n\nSrdačan pozdrav,\nDinver Team`,
       );
 
-      // Pošalji push notifikaciju svim korisnicima o novom restoranu
+      // Pošalji push notifikaciju i spremi u bazu za logirane korisnike o novom restoranu
       try {
         const place = restaurant.place || 'Dinver aplikaciji';
-        await sendPushNotificationToAllUsers({
+        await createAndSendNotificationToLoggedInUsers({
+          type: 'new_restaurant',
           title: `Novi restoran na Dinveru | ${place}! 🍽️`,
           body: `Restoran "${restaurant.name}" se pridružio Dinveru! Pogledaj što sve nudi!`,
+          restaurantId: restaurant.id,
           data: {
             type: 'new_restaurant',
             restaurantId: restaurant.id,
@@ -83,12 +85,15 @@ const handleClaimStatus = async (req, res) => {
             place: restaurant.place,
           },
         });
+        console.log(
+          `[Notification] Created new_restaurant notifications for logged-in users (${restaurant.name})`,
+        );
       } catch (error) {
         console.error(
-          'Error sending push notification for new restaurant claim:',
+          'Error creating notification for new restaurant claim:',
           error,
         );
-        // Ne prekida flow ako push notifikacija ne uspije
+        // Ne prekida flow ako notifikacija ne uspije
       }
 
       return res.status(201).json({
