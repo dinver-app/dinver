@@ -1,5 +1,5 @@
 const { Expo } = require('expo-server-sdk');
-const { PushToken } = require('../models');
+const { PushToken, Notification, User } = require('../models');
 
 // Kreiraj novu instancu Expo SDK
 const expo = new Expo();
@@ -174,10 +174,218 @@ const sendPushNotificationToLoggedInUsers = async (message) => {
   }
 };
 
+/**
+ * Kreiraj i pošalji notifikaciju jednom korisniku (SPREMA U BAZU + ŠALJE PUSH)
+ * @param {string} userId - User ID koji prima notifikaciju
+ * @param {Object} notification - Notification objekt
+ * @param {string} notification.type - Tip notifikacije (npr. 'new_restaurant', 'user_followed_you')
+ * @param {string} notification.title - Naslov notifikacije
+ * @param {string} notification.body - Tekst notifikacije
+ * @param {Object} notification.data - Dodatni podaci (restaurantId, actorUserId, itd.)
+ * @param {string} notification.actorUserId - ID korisnika koji je napravio akciju (opciono)
+ * @param {string} notification.restaurantId - ID restorana vezanog uz notifikaciju (opciono)
+ */
+const createAndSendNotification = async (userId, notification) => {
+  try {
+    // 1. Spremi notifikaciju u bazu
+    const dbNotification = await Notification.create({
+      userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      data: notification.data || {},
+      actorUserId: notification.actorUserId || null,
+      restaurantId: notification.restaurantId || null,
+    });
+
+    console.log(
+      `[Notification] Created notification ${dbNotification.id} for user ${userId}`,
+    );
+
+    // 2. Pošalji push notifikaciju
+    try {
+      const pushResult = await sendPushNotificationToUsers([userId], {
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        sound: notification.sound || 'default',
+        badge: notification.badge,
+      });
+
+      // Označi kao poslano ako je uspješno
+      if (pushResult.success > 0) {
+        await dbNotification.update({
+          wasSent: true,
+          sentAt: new Date(),
+        });
+        console.log(
+          `[Notification] Push notification sent for ${dbNotification.id}`,
+        );
+      }
+    } catch (pushError) {
+      console.error(
+        `[Notification] Failed to send push notification for ${dbNotification.id}:`,
+        pushError,
+      );
+      // Ne bacaj error - notifikacija je spremljena u bazu, samo push nije poslan
+    }
+
+    return dbNotification;
+  } catch (error) {
+    console.error('[Notification] Error creating notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Kreiraj i pošalji notifikaciju više korisnika (SPREMA U BAZU + ŠALJE PUSH)
+ * @param {Array} userIds - Array user ID-jeva koji primaju notifikaciju
+ * @param {Object} notification - Notification objekt (isti format kao createAndSendNotification)
+ */
+const createAndSendNotificationToUsers = async (userIds, notification) => {
+  try {
+    const createdNotifications = [];
+
+    // Kreiraj notifikacije za sve korisnike u bazi
+    for (const userId of userIds) {
+      const dbNotification = await Notification.create({
+        userId,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        actorUserId: notification.actorUserId || null,
+        restaurantId: notification.restaurantId || null,
+      });
+      createdNotifications.push(dbNotification);
+    }
+
+    console.log(
+      `[Notification] Created ${createdNotifications.length} notifications`,
+    );
+
+    // Pošalji push notifikacije svim korisnicima
+    try {
+      const pushResult = await sendPushNotificationToUsers(userIds, {
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        sound: notification.sound || 'default',
+        badge: notification.badge,
+      });
+
+      // Označi sve kao poslano
+      if (pushResult.success > 0) {
+        await Notification.update(
+          { wasSent: true, sentAt: new Date() },
+          {
+            where: {
+              id: createdNotifications.map((n) => n.id),
+            },
+          },
+        );
+        console.log(
+          `[Notification] Push notifications sent (${pushResult.success} success, ${pushResult.failure} failed)`,
+        );
+      }
+    } catch (pushError) {
+      console.error(
+        '[Notification] Failed to send push notifications:',
+        pushError,
+      );
+      // Ne bacaj error - notifikacije su spremljene u bazu
+    }
+
+    return createdNotifications;
+  } catch (error) {
+    console.error('[Notification] Error creating notifications:', error);
+    throw error;
+  }
+};
+
+/**
+ * Kreiraj i pošalji notifikaciju SVIM korisnicima (SPREMA U BAZU + ŠALJE PUSH)
+ * @param {Object} notification - Notification objekt (isti format kao createAndSendNotification)
+ */
+const createAndSendNotificationToAllUsers = async (notification) => {
+  try {
+    // Dohvati sve user ID-eve
+    const users = await User.findAll({
+      attributes: ['id'],
+    });
+
+    const userIds = users.map((user) => user.id);
+
+    if (userIds.length === 0) {
+      console.log('[Notification] No users found to send notification to');
+      return [];
+    }
+
+    console.log(
+      `[Notification] Creating notification for ${userIds.length} users`,
+    );
+
+    // Koristi createAndSendNotificationToUsers za bulk operaciju
+    return await createAndSendNotificationToUsers(userIds, notification);
+  } catch (error) {
+    console.error(
+      '[Notification] Error creating notifications for all users:',
+      error,
+    );
+    throw error;
+  }
+};
+
+/**
+ * Kreiraj i pošalji notifikaciju samo LOGIRANIM korisnicima (SPREMA U BAZU + ŠALJE PUSH)
+ * @param {Object} notification - Notification objekt
+ */
+const createAndSendNotificationToLoggedInUsers = async (notification) => {
+  try {
+    // Dohvati sve user ID-eve koji imaju aktivne push tokene
+    const pushTokens = await PushToken.findAll({
+      where: {
+        isActive: true,
+        userId: { [require('sequelize').Op.ne]: null },
+      },
+      attributes: ['userId'],
+      group: ['userId'],
+    });
+
+    const userIds = pushTokens.map((pt) => pt.userId);
+
+    if (userIds.length === 0) {
+      console.log(
+        '[Notification] No logged-in users found to send notification to',
+      );
+      return [];
+    }
+
+    console.log(
+      `[Notification] Creating notification for ${userIds.length} logged-in users`,
+    );
+
+    return await createAndSendNotificationToUsers(userIds, notification);
+  } catch (error) {
+    console.error(
+      '[Notification] Error creating notifications for logged-in users:',
+      error,
+    );
+    throw error;
+  }
+};
+
 module.exports = {
+  // Original functions (za backward compatibility)
   sendPushNotification,
   sendPushNotificationToUser,
   sendPushNotificationToUsers,
   sendPushNotificationToAllUsers,
   sendPushNotificationToLoggedInUsers,
+
+  // New functions (spremaju u bazu + šalju push)
+  createAndSendNotification,
+  createAndSendNotificationToUsers,
+  createAndSendNotificationToAllUsers,
+  createAndSendNotificationToLoggedInUsers,
 };

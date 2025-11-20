@@ -17,6 +17,7 @@ const getUserSettings = async (req, res) => {
             'smsNotifications',
             'isEmailVerified',
             'isPhoneVerified',
+            'profileVisibility',
           ],
         },
       ],
@@ -38,6 +39,7 @@ const getUserSettings = async (req, res) => {
           isEmailVerified: user.settings?.isEmailVerified,
           isPhoneVerified: user.settings?.isPhoneVerified,
         },
+        profileVisibility: user.settings?.profileVisibility || 'public',
       },
     };
 
@@ -64,11 +66,20 @@ const updateUserSettings = async (req, res) => {
 
     // Ažuriramo postavke ako su poslane
     if (settings) {
-      const { language, notifications } = settings;
+      const { language, notifications, profileVisibility } = settings;
 
       const settingsUpdates = {};
 
       if (language) settingsUpdates.language = language;
+      if (profileVisibility) {
+        // Validate profileVisibility value
+        if (!['public', 'followers', 'buddies'].includes(profileVisibility)) {
+          return res.status(400).json({
+            error: 'Invalid profileVisibility value. Must be: public, followers, or buddies',
+          });
+        }
+        settingsUpdates.profileVisibility = profileVisibility;
+      }
       if (notifications) {
         if (notifications.push !== undefined)
           settingsUpdates.pushNotifications = notifications.push;
@@ -103,6 +114,7 @@ const updateUserSettings = async (req, res) => {
             'smsNotifications',
             'isEmailVerified',
             'isPhoneVerified',
+            'profileVisibility',
           ],
         },
       ],
@@ -120,6 +132,7 @@ const updateUserSettings = async (req, res) => {
           isEmailVerified: updatedUser.settings?.isEmailVerified,
           isPhoneVerified: updatedUser.settings?.isPhoneVerified,
         },
+        profileVisibility: updatedUser.settings?.profileVisibility || 'public',
       },
     };
 

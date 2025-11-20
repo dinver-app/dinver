@@ -1,6 +1,7 @@
-const { User, UserFollow, Experience, UserPoints } = require('../../models');
+const { User, UserFollow, Experience, UserPoints, Notification } = require('../../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../../models');
+const { createAndSendNotification } = require('../../utils/pushNotificationService');
 
 /**
  * Follow a user
@@ -76,6 +77,36 @@ const followUser = async (req, res) => {
     const isBuddy = !!reverseFollow;
 
     await transaction.commit();
+
+    // Pošalji notifikaciju korisniku kojeg si zapratio (kao na Instagramu)
+    try {
+      const followerUser = await User.findByPk(currentUserId, {
+        attributes: ['username', 'name'],
+      });
+
+      await createAndSendNotification(targetUserId, {
+        type: 'user_followed_you',
+        title: 'Novi follower! 👤',
+        body: `${followerUser.username} te je zapratio!`,
+        actorUserId: currentUserId,
+        data: {
+          type: 'user_followed_you',
+          actorUserId: currentUserId,
+          followerUsername: followerUser.username,
+          followerName: followerUser.name,
+        },
+      });
+
+      console.log(
+        `[Notification] Created follow notification for user ${targetUserId} from ${currentUserId}`,
+      );
+    } catch (notifError) {
+      console.error(
+        'Error sending follow notification:',
+        notifError,
+      );
+      // Ne prekida flow ako notifikacija ne uspije
+    }
 
     return res.status(201).json({
       success: true,
@@ -153,6 +184,23 @@ const unfollowUser = async (req, res) => {
 
     // Delete the follow relationship
     await follow.destroy();
+
+    // Obriši notifikaciju o followanju (Instagram behavior)
+    try {
+      await Notification.destroy({
+        where: {
+          userId: targetUserId,
+          actorUserId: currentUserId,
+          type: 'user_followed_you',
+        },
+      });
+      console.log(
+        `[Notification] Deleted follow notification for user ${targetUserId} from ${currentUserId}`,
+      );
+    } catch (notifError) {
+      console.error('Error deleting follow notification:', notifError);
+      // Ne prekida flow ako brisanje notifikacije ne uspije
+    }
 
     return res.status(200).json({
       success: true,
