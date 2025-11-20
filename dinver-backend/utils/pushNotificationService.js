@@ -1,5 +1,6 @@
 const { Expo } = require('expo-server-sdk');
-const { PushToken, Notification, User } = require('../models');
+const { PushToken, Notification, User, UserSettings } = require('../models');
+const { getI18nForLanguage } = require('./i18n');
 
 // Kreiraj novu instancu Expo SDK
 const expo = new Expo();
@@ -179,34 +180,45 @@ const sendPushNotificationToLoggedInUsers = async (message) => {
  * @param {string} userId - User ID koji prima notifikaciju
  * @param {Object} notification - Notification objekt
  * @param {string} notification.type - Tip notifikacije (npr. 'new_restaurant', 'user_followed_you')
- * @param {string} notification.title - Naslov notifikacije
- * @param {string} notification.body - Tekst notifikacije
- * @param {Object} notification.data - Dodatni podaci (restaurantId, actorUserId, itd.)
+ * @param {string} notification.title - Naslov notifikacije (DEPRECATED - koristi type umjesto)
+ * @param {string} notification.body - Tekst notifikacije (DEPRECATED - koristi type umjesto)
+ * @param {Object} notification.data - Dodatni podaci (restaurantId, actorUserId, itd.) - koristi se za interpolaciju
  * @param {string} notification.actorUserId - ID korisnika koji je napravio akciju (opciono)
  * @param {string} notification.restaurantId - ID restorana vezanog uz notifikaciju (opciono)
  */
 const createAndSendNotification = async (userId, notification) => {
   try {
-    // 1. Spremi notifikaciju u bazu
+    // 1. Dohvati jezik korisnika iz UserSettings
+    const userSettings = await UserSettings.findOne({
+      where: { userId },
+    });
+    const userLanguage = userSettings?.language || 'en';
+    const t = getI18nForLanguage(userLanguage);
+
+    // 2. Generiši title i body prema jeziku korisnika
+    const title = t(`notifications.${notification.type}.title`, notification.data || {});
+    const body = t(`notifications.${notification.type}.body`, notification.data || {});
+
+    // 3. Spremi notifikaciju u bazu
     const dbNotification = await Notification.create({
       userId,
       type: notification.type,
-      title: notification.title,
-      body: notification.body,
+      title,
+      body,
       data: notification.data || {},
       actorUserId: notification.actorUserId || null,
       restaurantId: notification.restaurantId || null,
     });
 
     console.log(
-      `[Notification] Created notification ${dbNotification.id} for user ${userId}`,
+      `[Notification] Created notification ${dbNotification.id} for user ${userId} in language ${userLanguage}`,
     );
 
-    // 2. Pošalji push notifikaciju
+    // 4. Pošalji push notifikaciju
     try {
       const pushResult = await sendPushNotificationToUsers([userId], {
-        title: notification.title,
-        body: notification.body,
+        title,
+        body,
         data: notification.data || {},
         sound: notification.sound || 'default',
         badge: notification.badge,
@@ -245,37 +257,71 @@ const createAndSendNotification = async (userId, notification) => {
 const createAndSendNotificationToUsers = async (userIds, notification) => {
   try {
     const createdNotifications = [];
+    const pushMessagesByLanguage = {};
 
     // Kreiraj notifikacije za sve korisnike u bazi
     for (const userId of userIds) {
+      // Dohvati jezik korisnika iz UserSettings
+      const userSettings = await UserSettings.findOne({
+        where: { userId },
+      });
+      const userLanguage = userSettings?.language || 'en';
+      const t = getI18nForLanguage(userLanguage);
+
+      // Generiši title i body prema jeziku korisnika
+      const title = t(`notifications.${notification.type}.title`, notification.data || {});
+      const body = t(`notifications.${notification.type}.body`, notification.data || {});
+
       const dbNotification = await Notification.create({
         userId,
         type: notification.type,
-        title: notification.title,
-        body: notification.body,
+        title,
+        body,
         data: notification.data || {},
         actorUserId: notification.actorUserId || null,
         restaurantId: notification.restaurantId || null,
       });
       createdNotifications.push(dbNotification);
+
+      // Grupiši push tokene po jeziku za optimizaciju
+      if (!pushMessagesByLanguage[userLanguage]) {
+        pushMessagesByLanguage[userLanguage] = {
+          userIds: [],
+          title,
+          body,
+        };
+      }
+      pushMessagesByLanguage[userLanguage].userIds.push(userId);
     }
 
     console.log(
-      `[Notification] Created ${createdNotifications.length} notifications`,
+      `[Notification] Created ${createdNotifications.length} notifications in ${Object.keys(pushMessagesByLanguage).length} language(s)`,
     );
 
-    // Pošalji push notifikacije svim korisnicima
+    // Pošalji push notifikacije grupirane po jeziku
     try {
-      const pushResult = await sendPushNotificationToUsers(userIds, {
-        title: notification.title,
-        body: notification.body,
-        data: notification.data || {},
-        sound: notification.sound || 'default',
-        badge: notification.badge,
-      });
+      let totalSuccess = 0;
+      let totalFailure = 0;
+
+      for (const [language, messageData] of Object.entries(pushMessagesByLanguage)) {
+        const pushResult = await sendPushNotificationToUsers(messageData.userIds, {
+          title: messageData.title,
+          body: messageData.body,
+          data: notification.data || {},
+          sound: notification.sound || 'default',
+          badge: notification.badge,
+        });
+
+        totalSuccess += pushResult.success;
+        totalFailure += pushResult.failure;
+
+        console.log(
+          `[Notification] Sent ${pushResult.success} push notifications in ${language}`,
+        );
+      }
 
       // Označi sve kao poslano
-      if (pushResult.success > 0) {
+      if (totalSuccess > 0) {
         await Notification.update(
           { wasSent: true, sentAt: new Date() },
           {
@@ -285,7 +331,7 @@ const createAndSendNotificationToUsers = async (userIds, notification) => {
           },
         );
         console.log(
-          `[Notification] Push notifications sent (${pushResult.success} success, ${pushResult.failure} failed)`,
+          `[Notification] Push notifications sent (${totalSuccess} success, ${totalFailure} failed)`,
         );
       }
     } catch (pushError) {

@@ -1,0 +1,40 @@
+{
+  "notifications": {
+    "new_reservation": {
+      "title": "New reservation at your restaurant! 📅",
+      "body": "New reservation at restaurant {{restaurantName}}"
+    },
+    "reservation_confirmed": {
+      "title": "Reservation confirmed! ✅",
+      "body": "Your reservation at restaurant {{restaurantName}} is confirmed ({{date}}, {{time}})"
+    },
+    "reservation_declined": {
+      "title": "Reservation declined ❌",
+      "body": "Your reservation at restaurant {{restaurantName}} has been declined ({{date}}, {{time}})"
+    },
+    "alternative_time_suggested": {
+      "title": "Alternative reservation time suggested! ⏰",
+      "body": "Restaurant {{restaurantName}} has suggested an alternative reservation time ({{suggestedDate}}, {{suggestedTime}})"
+    },
+    "reservation_cancelled_by_restaurant": {
+      "title": "Restaurant has cancelled your reservation! ❌",
+      "body": "Restaurant {{restaurantName}} has cancelled your reservation for {{date}}, {{time}}"
+    },
+    "new_message_from_user": {
+      "title": "New message! 💬",
+      "body": "New message for reservation {{date}}, {{time}}"
+    },
+    "new_message_from_restaurant": {
+      "title": "New message! 💬",
+      "body": "Restaurant {{restaurantName}} has sent you a new message for reservation {{date}}, {{time}}"
+    },
+    "user_followed_you": {
+      "title": "New follower! 👤",
+      "body": "{{actorName}} started following you"
+    },
+    "new_restaurant": {
+      "title": "New restaurant on Dinver | {{place}}! 🍽️",
+      "body": "Restaurant \"{{restaurantName}}\" joined Dinver! Check it out!"
+    }
+  }
+}

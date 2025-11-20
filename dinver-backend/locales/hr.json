@@ -1,0 +1,40 @@
+{
+  "notifications": {
+    "new_reservation": {
+      "title": "Nova rezervacija u tvojem restoranu! 📅",
+      "body": "Nova rezervacija u restoranu {{restaurantName}}"
+    },
+    "reservation_confirmed": {
+      "title": "Rezervacija potvrđena! ✅",
+      "body": "Vaša rezervacija u restoranu {{restaurantName}} je potvrđena ({{date}}, {{time}})"
+    },
+    "reservation_declined": {
+      "title": "Rezervacija odbijena ❌",
+      "body": "Vaša rezervacija u restoranu {{restaurantName}} je odbijena ({{date}}, {{time}})"
+    },
+    "alternative_time_suggested": {
+      "title": "Predložen alternativni termin! ⏰",
+      "body": "Restoran {{restaurantName}} je predložio alternativni termin ({{suggestedDate}}, {{suggestedTime}})"
+    },
+    "reservation_cancelled_by_restaurant": {
+      "title": "Restoran je otkazao rezervaciju! ❌",
+      "body": "Restoran {{restaurantName}} je otkazao Vašu rezervaciju za {{date}}, {{time}}"
+    },
+    "new_message_from_user": {
+      "title": "Nova poruka! 💬",
+      "body": "Nova poruka za rezervaciju {{date}}, {{time}}"
+    },
+    "new_message_from_restaurant": {
+      "title": "Nova poruka! 💬",
+      "body": "Restoran {{restaurantName}} Vam je poslao novu poruku za rezervaciju {{date}}, {{time}}"
+    },
+    "user_followed_you": {
+      "title": "Novi pratitelj! 👤",
+      "body": "{{actorName}} je počeo/la pratiti Vas"
+    },
+    "new_restaurant": {
+      "title": "Novi restoran na Dinveru | {{place}}! 🍽️",
+      "body": "Restoran \"{{restaurantName}}\" se pridružio Dinveru! Pogledaj što sve nudi!"
+    }
+  }
+}
