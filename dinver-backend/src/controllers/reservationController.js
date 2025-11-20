@@ -212,7 +212,7 @@ const createReservation = async (req, res) => {
             user: {
               id: user.id,
               name: user.name,
-              
+
               email: user.email,
             },
             restaurant,
@@ -227,8 +227,6 @@ const createReservation = async (req, res) => {
       try {
         await createAndSendNotificationToUsers(adminUserIds, {
           type: 'new_reservation',
-          title: 'Nova rezervacija u tvojem restoranu! 📅',
-          body: `Nova rezervacija u ${restaurant.name}`,
           actorUserId: userId,
           restaurantId: restaurantId,
           data: {
@@ -473,18 +471,14 @@ const confirmReservation = async (req, res) => {
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
           type: 'reservation_confirmed',
-          title: 'Rezervacija potvrđena! ✅',
-          body: `Vaša rezervacija u ${reservation.restaurant.name} je potvrđena (${formatDateDisplay(
-            reservation.date,
-          )}, ${formatTimeDisplay(reservation.time)})`,
           restaurantId: reservation.restaurantId,
           data: {
             type: 'reservation_confirmed',
             reservationId: reservation.id,
             restaurantId: reservation.restaurantId,
             restaurantName: reservation.restaurant.name,
-            date: reservation.date,
-            time: reservation.time,
+            date: formatDateDisplay(reservation.date),
+            time: formatTimeDisplay(reservation.time),
           },
         });
       } catch (error) {
@@ -626,18 +620,14 @@ const declineReservation = async (req, res) => {
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
           type: 'reservation_declined',
-          title: 'Rezervacija odbijena ❌',
-          body: `Vaša rezervacija u ${reservation.restaurant.name} je odbijena (${formatDateDisplay(
-            reservation.date,
-          )}, ${formatTimeDisplay(reservation.time)})`,
           restaurantId: reservation.restaurantId,
           data: {
             type: 'reservation_declined',
             reservationId: reservation.id,
             restaurantId: reservation.restaurantId,
             restaurantName: reservation.restaurant.name,
-            date: reservation.date,
-            time: reservation.time,
+            date: formatDateDisplay(reservation.date),
+            time: formatTimeDisplay(reservation.time),
           },
         });
       } catch (error) {
@@ -808,18 +798,14 @@ const suggestAlternativeTime = async (req, res) => {
     try {
       await createAndSendNotificationToUsers([reservation.userId], {
         type: 'alternative_time_suggested',
-        title: 'Predložen alternativni termin! ⏰',
-        body: `${reservation.restaurant.name} je predložio alternativni termin (${formatDateDisplay(
-          suggestedDate,
-        )}, ${formatTimeDisplay(suggestedTime)})`,
         restaurantId: reservation.restaurantId,
         data: {
           type: 'alternative_time_suggested',
           reservationId: reservation.id,
           restaurantId: reservation.restaurantId,
           restaurantName: reservation.restaurant.name,
-          suggestedDate: suggestedDate,
-          suggestedTime: suggestedTime,
+          suggestedDate: formatDateDisplay(suggestedDate),
+          suggestedTime: formatTimeDisplay(suggestedTime),
         },
       });
     } catch (error) {
@@ -1112,18 +1098,14 @@ const cancelReservationByRestaurant = async (req, res) => {
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
           type: 'reservation_cancelled_by_restaurant',
-          title: 'Rezervacija otkazana od restorana ❌',
-          body: `Vaša rezervacija u ${reservation.restaurant.name} je otkazana od strane restorana (${formatDateDisplay(
-            reservation.date,
-          )}, ${formatTimeDisplay(reservation.time)})`,
           restaurantId: reservation.restaurantId,
           data: {
             type: 'reservation_cancelled_by_restaurant',
             reservationId: reservation.id,
             restaurantId: reservation.restaurantId,
             restaurantName: reservation.restaurant.name,
-            date: reservation.date,
-            time: reservation.time,
+            date: formatDateDisplay(reservation.date),
+            time: formatTimeDisplay(reservation.time),
             cancellationReason,
           },
         });

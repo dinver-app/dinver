@@ -1,7 +1,15 @@
-const { User, UserFollow, Experience, UserPoints, Notification } = require('../../models');
+const {
+  User,
+  UserFollow,
+  Experience,
+  UserPoints,
+  Notification,
+} = require('../../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../../models');
-const { createAndSendNotification } = require('../../utils/pushNotificationService');
+const {
+  createAndSendNotification,
+} = require('../../utils/pushNotificationService');
 
 /**
  * Follow a user
@@ -86,12 +94,11 @@ const followUser = async (req, res) => {
 
       await createAndSendNotification(targetUserId, {
         type: 'user_followed_you',
-        title: 'Novi follower! 👤',
-        body: `${followerUser.username} te je zapratio!`,
         actorUserId: currentUserId,
         data: {
           type: 'user_followed_you',
           actorUserId: currentUserId,
+          actorName: followerUser.name || followerUser.username,
           followerUsername: followerUser.username,
           followerName: followerUser.name,
         },
@@ -101,10 +108,7 @@ const followUser = async (req, res) => {
         `[Notification] Created follow notification for user ${targetUserId} from ${currentUserId}`,
       );
     } catch (notifError) {
-      console.error(
-        'Error sending follow notification:',
-        notifError,
-      );
+      console.error('Error sending follow notification:', notifError);
       // Ne prekida flow ako notifikacija ne uspije
     }
 

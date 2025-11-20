@@ -75,14 +75,12 @@ const handleClaimStatus = async (req, res) => {
         const place = restaurant.place || 'Dinver aplikaciji';
         await createAndSendNotificationToLoggedInUsers({
           type: 'new_restaurant',
-          title: `Novi restoran na Dinveru | ${place}! 🍽️`,
-          body: `Restoran "${restaurant.name}" se pridružio Dinveru! Pogledaj što sve nudi!`,
           restaurantId: restaurant.id,
           data: {
             type: 'new_restaurant',
             restaurantId: restaurant.id,
             restaurantName: restaurant.name,
-            place: restaurant.place,
+            place: place,
           },
         });
         console.log(

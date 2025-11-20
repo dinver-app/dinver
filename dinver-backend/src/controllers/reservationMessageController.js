@@ -223,10 +223,6 @@ const sendMessage = async (req, res) => {
           const adminUserIds = admins.map((admin) => admin.userId);
           await createAndSendNotificationToUsers(adminUserIds, {
             type: 'new_message_from_user',
-            title: 'Nova poruka od korisnika! 💬',
-            body: `Nova poruka u rezervaciji za ${formatDateDisplay(
-              reservation.date,
-            )} u ${formatTimeDisplay(reservation.time)}`,
             actorUserId: userId,
             restaurantId: reservation.restaurantId,
             data: {
@@ -234,6 +230,8 @@ const sendMessage = async (req, res) => {
               reservationId: reservation.id,
               restaurantId: reservation.restaurantId,
               messageId: message.id,
+              date: formatDateDisplay(reservation.date),
+              time: formatTimeDisplay(reservation.time),
             },
           });
         }
@@ -241,10 +239,6 @@ const sendMessage = async (req, res) => {
         // Admin je poslao poruku - obavijesti korisnika
         await createAndSendNotificationToUsers([reservation.userId], {
           type: 'new_message_from_restaurant',
-          title: 'Nova poruka od restorana! 💬',
-          body: `${reservation.restaurant.name} vam je poslao novu poruku (rezervacija ${formatDateDisplay(
-            reservation.date,
-          )} u ${formatTimeDisplay(reservation.time)})`,
           actorUserId: userId,
           restaurantId: reservation.restaurantId,
           data: {
@@ -253,6 +247,8 @@ const sendMessage = async (req, res) => {
             restaurantId: reservation.restaurantId,
             restaurantName: reservation.restaurant.name,
             messageId: message.id,
+            date: formatDateDisplay(reservation.date),
+            time: formatTimeDisplay(reservation.time),
           },
         });
       }
