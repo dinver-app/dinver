@@ -39,7 +39,7 @@ const canViewUserProfile = async (targetUserId, viewerUserId) => {
     const isFollowing = await UserFollow.findOne({
       where: {
         followerId: viewerUserId,
-        followeeId: targetUserId,
+        followingId: targetUserId,
       },
     });
 
@@ -55,13 +55,13 @@ const canViewUserProfile = async (targetUserId, viewerUserId) => {
       UserFollow.findOne({
         where: {
           followerId: viewerUserId,
-          followeeId: targetUserId,
+          followingId: targetUserId,
         },
       }),
       UserFollow.findOne({
         where: {
           followerId: targetUserId,
-          followeeId: viewerUserId,
+          followingId: viewerUserId,
         },
       }),
     ]);
