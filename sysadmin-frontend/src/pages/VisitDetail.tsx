@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { visitService } from '../services/visitService';
-import { Visit, UpdateReceiptPayload } from '../interfaces/Visit';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { visitService } from "../services/visitService";
+import { Visit, UpdateReceiptPayload } from "../interfaces/Visit";
+import toast from "react-hot-toast";
 
 const VisitDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -11,8 +11,9 @@ const VisitDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // Receipt form state
   const [receiptForm, setReceiptForm] = useState<UpdateReceiptPayload>({
@@ -36,7 +37,9 @@ const VisitDetail: React.FC = () => {
       // Initialize form with receipt data
       if (data.receipt) {
         setReceiptForm({
-          totalAmount: data.receipt.totalAmount,
+          totalAmount: data.receipt.totalAmount
+            ? Number(data.receipt.totalAmount)
+            : undefined,
           issueDate: data.receipt.issueDate,
           issueTime: data.receipt.issueTime,
           jir: data.receipt.jir,
@@ -47,7 +50,7 @@ const VisitDetail: React.FC = () => {
         });
       }
     } catch (err) {
-      toast.error('Failed to load visit');
+      toast.error("Failed to load visit");
       console.error(err);
     } finally {
       setLoading(false);
@@ -64,10 +67,10 @@ const VisitDetail: React.FC = () => {
     try {
       setSaving(true);
       await visitService.updateReceipt(visit.receipt.id, receiptForm);
-      toast.success('Receipt data updated successfully');
+      toast.success("Receipt data updated successfully");
       fetchVisit(); // Refresh data
     } catch (err) {
-      toast.error('Failed to update receipt');
+      toast.error("Failed to update receipt");
       console.error(err);
     } finally {
       setSaving(false);
@@ -86,7 +89,9 @@ const VisitDetail: React.FC = () => {
       !receiptForm.issueDate ||
       !receiptForm.issueTime
     ) {
-      toast.error('Please fill in all required receipt fields before approving');
+      toast.error(
+        "Please fill in all required receipt fields before approving"
+      );
       return;
     }
 
@@ -99,11 +104,11 @@ const VisitDetail: React.FC = () => {
       // Then approve
       const result = await visitService.approveVisit(visit.id);
       toast.success(
-        `Visit approved! ${result.pointsAwarded} points awarded to user.`,
+        `Visit approved! ${result.pointsAwarded} points awarded to user.`
       );
-      navigate('/visits');
+      navigate("/visits");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to approve visit');
+      toast.error(err.response?.data?.error || "Failed to approve visit");
       console.error(err);
     } finally {
       setSaving(false);
@@ -112,50 +117,63 @@ const VisitDetail: React.FC = () => {
 
   const handleReject = async () => {
     if (!visit?.id || !rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason');
+      toast.error("Please provide a rejection reason");
       return;
     }
 
     try {
       setSaving(true);
       await visitService.rejectVisit(visit.id, { reason: rejectionReason });
-      toast.success('Visit rejected successfully');
+      toast.success("Visit rejected successfully");
       setShowRejectModal(false);
-      navigate('/visits');
+      navigate("/visits");
     } catch (err) {
-      toast.error('Failed to reject visit');
+      toast.error("Failed to reject visit");
       console.error(err);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteConfirmText("");
+    setShowDeleteConfirm(true);
   };
 
   const handleDelete = async () => {
     if (!visit?.id) return;
 
+    const visitId = `#${visit.id.substring(0, 8)}`;
+
+    if (deleteConfirmText !== visitId) {
+      toast.error(`Please type "${visitId}" to confirm deletion`);
+      return;
+    }
+
     try {
       setSaving(true);
       await visitService.deleteVisit(visit.id);
-      toast.success('Visit deleted successfully');
-      navigate('/visits');
+      toast.success("Visit deleted successfully");
+      navigate("/visits");
     } catch (err) {
-      toast.error('Failed to delete visit');
+      toast.error("Failed to delete visit");
       console.error(err);
     } finally {
       setSaving(false);
       setShowDeleteConfirm(false);
+      setDeleteConfirmText("");
     }
   };
 
   const getStatusBadge = (status: string) => {
     const baseClasses =
-      'px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide inline-block';
+      "px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide inline-block";
     switch (status) {
-      case 'PENDING':
+      case "PENDING":
         return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case 'APPROVED':
+      case "APPROVED":
         return `${baseClasses} bg-green-100 text-green-800`;
-      case 'REJECTED':
+      case "REJECTED":
         return `${baseClasses} bg-red-100 text-red-800`;
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
@@ -163,12 +181,12 @@ const VisitDetail: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("hr-HR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -186,7 +204,7 @@ const VisitDetail: React.FC = () => {
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">Visit not found</p>
           <button
-            onClick={() => navigate('/visits')}
+            onClick={() => navigate("/visits")}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Visits
@@ -201,7 +219,7 @@ const VisitDetail: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <button
-          onClick={() => navigate('/visits')}
+          onClick={() => navigate("/visits")}
           className="flex items-center text-gray-600 hover:text-gray-900 mb-4 transition"
         >
           <svg
@@ -237,7 +255,7 @@ const VisitDetail: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            {visit.status === 'PENDING' && (
+            {visit.status === "PENDING" && (
               <>
                 <button
                   onClick={() => setShowRejectModal(true)}
@@ -251,12 +269,12 @@ const VisitDetail: React.FC = () => {
                   disabled={saving}
                   className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition"
                 >
-                  {saving ? 'Approving...' : 'Approve Visit'}
+                  {saving ? "Approving..." : "Approve Visit"}
                 </button>
               </>
             )}
             <button
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={handleDeleteClick}
               disabled={saving}
               className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition"
             >
@@ -325,21 +343,33 @@ const VisitDetail: React.FC = () => {
 
           {/* User Info */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">User Information</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              User Information
+            </h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-600">Name</label>
+                <label className="text-sm font-medium text-gray-600">
+                  Name
+                </label>
                 <p className="text-base text-gray-900">
-                  {visit.user ? `${visit.user.firstName} ${visit.user.lastName}` : 'N/A'}
+                  {visit.user ? `${visit.user.name}` : "N/A"}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Email</label>
-                <p className="text-base text-gray-900">{visit.user?.email || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Email
+                </label>
+                <p className="text-base text-gray-900">
+                  {visit.user?.email || "N/A"}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Phone</label>
-                <p className="text-base text-gray-900">{visit.user?.phone || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Phone
+                </label>
+                <p className="text-base text-gray-900">
+                  {visit.user?.phone || "N/A"}
+                </p>
               </div>
             </div>
           </div>
@@ -349,43 +379,73 @@ const VisitDetail: React.FC = () => {
             <h2 className="text-lg font-bold text-gray-900 mb-4">Restaurant</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-600">Name</label>
-                <p className="text-base text-gray-900 font-semibold">{visit.restaurant?.name || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Name
+                </label>
+                <p className="text-base text-gray-900 font-semibold">
+                  {visit.restaurant?.name || "N/A"}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Location</label>
-                <p className="text-base text-gray-900">{visit.restaurant?.place || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Location
+                </label>
+                <p className="text-base text-gray-900">
+                  {visit.restaurant?.place || "N/A"}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Address</label>
-                <p className="text-base text-gray-500">{visit.restaurant?.address || 'N/A'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Address
+                </label>
+                <p className="text-base text-gray-500">
+                  {visit.restaurant?.address || "N/A"}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Visit Metadata */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Visit Metadata</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              Visit Metadata
+            </h2>
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-600">Submitted At</label>
-                <p className="text-base text-gray-900">{formatDate(visit.submittedAt)}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Submitted At
+                </label>
+                <p className="text-base text-gray-900">
+                  {formatDate(visit.submittedAt)}
+                </p>
               </div>
               {visit.reviewedAt && (
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Reviewed At</label>
-                  <p className="text-base text-gray-900">{formatDate(visit.reviewedAt)}</p>
+                  <label className="text-sm font-medium text-gray-600">
+                    Reviewed At
+                  </label>
+                  <p className="text-base text-gray-900">
+                    {formatDate(visit.reviewedAt)}
+                  </p>
                 </div>
               )}
               {visit.rejectionReason && (
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Rejection Reason</label>
-                  <p className="text-base text-red-600">{visit.rejectionReason}</p>
+                  <label className="text-sm font-medium text-gray-600">
+                    Rejection Reason
+                  </label>
+                  <p className="text-base text-red-600">
+                    {visit.rejectionReason}
+                  </p>
                 </div>
               )}
               <div>
-                <label className="text-sm font-medium text-gray-600">Was in Must Visit?</label>
-                <p className="text-base text-gray-900">{visit.wasInMustVisit ? 'Yes' : 'No'}</p>
+                <label className="text-sm font-medium text-gray-600">
+                  Was in Must Visit?
+                </label>
+                <p className="text-base text-gray-900">
+                  {visit.wasInMustVisit ? "Yes" : "No"}
+                </p>
               </div>
             </div>
           </div>
@@ -393,8 +453,12 @@ const VisitDetail: React.FC = () => {
           {/* Experience Link */}
           {visit.experience && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-              <h2 className="text-lg font-bold text-purple-900 mb-2">Experience Posted</h2>
-              <p className="text-sm text-purple-700 mb-3">{visit.experience.title}</p>
+              <h2 className="text-lg font-bold text-purple-900 mb-2">
+                Experience Posted
+              </h2>
+              <p className="text-sm text-purple-700 mb-3">
+                {visit.experience.title}
+              </p>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">
                 {visit.experience.status}
               </span>
@@ -407,13 +471,15 @@ const VisitDetail: React.FC = () => {
           {visit.receipt && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-gray-900">Receipt Data (OCR)</h2>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Receipt Data (OCR)
+                </h2>
                 <button
                   onClick={handleSaveReceipt}
                   disabled={saving}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
 
@@ -421,23 +487,28 @@ const VisitDetail: React.FC = () => {
                 {/* Total Amount */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Total Amount * <span className="text-red-500">Required</span>
+                    Total Amount *{" "}
+                    <span className="text-red-500">Required</span>
                   </label>
                   <div className="relative">
                     <input
                       type="number"
                       step="0.01"
-                      value={receiptForm.totalAmount || ''}
+                      value={receiptForm.totalAmount || ""}
                       onChange={(e) =>
                         setReceiptForm({
                           ...receiptForm,
-                          totalAmount: e.target.value ? parseFloat(e.target.value) : undefined,
+                          totalAmount: e.target.value
+                            ? parseFloat(e.target.value)
+                            : undefined,
                         })
                       }
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0.00"
                     />
-                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      €
+                    </span>
                   </div>
                 </div>
 
@@ -448,9 +519,12 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    value={receiptForm.issueDate || ''}
+                    value={receiptForm.issueDate || ""}
                     onChange={(e) =>
-                      setReceiptForm({ ...receiptForm, issueDate: e.target.value })
+                      setReceiptForm({
+                        ...receiptForm,
+                        issueDate: e.target.value,
+                      })
                     }
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -463,9 +537,12 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="time"
-                    value={receiptForm.issueTime || ''}
+                    value={receiptForm.issueTime || ""}
                     onChange={(e) =>
-                      setReceiptForm({ ...receiptForm, issueTime: e.target.value })
+                      setReceiptForm({
+                        ...receiptForm,
+                        issueTime: e.target.value,
+                      })
                     }
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -478,7 +555,7 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={receiptForm.jir || ''}
+                    value={receiptForm.jir || ""}
                     onChange={(e) =>
                       setReceiptForm({ ...receiptForm, jir: e.target.value })
                     }
@@ -494,7 +571,7 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={receiptForm.zki || ''}
+                    value={receiptForm.zki || ""}
                     onChange={(e) =>
                       setReceiptForm({ ...receiptForm, zki: e.target.value })
                     }
@@ -510,7 +587,7 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={receiptForm.oib || ''}
+                    value={receiptForm.oib || ""}
                     onChange={(e) =>
                       setReceiptForm({ ...receiptForm, oib: e.target.value })
                     }
@@ -527,9 +604,12 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={receiptForm.merchantName || ''}
+                    value={receiptForm.merchantName || ""}
                     onChange={(e) =>
-                      setReceiptForm({ ...receiptForm, merchantName: e.target.value })
+                      setReceiptForm({
+                        ...receiptForm,
+                        merchantName: e.target.value,
+                      })
                     }
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Business name"
@@ -543,9 +623,12 @@ const VisitDetail: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={receiptForm.merchantAddress || ''}
+                    value={receiptForm.merchantAddress || ""}
                     onChange={(e) =>
-                      setReceiptForm({ ...receiptForm, merchantAddress: e.target.value })
+                      setReceiptForm({
+                        ...receiptForm,
+                        merchantAddress: e.target.value,
+                      })
                     }
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Business address"
@@ -556,7 +639,9 @@ const VisitDetail: React.FC = () => {
               {/* OCR Confidence Scores */}
               {visit.receipt.autoApproveScore !== undefined && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">OCR Confidence</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    OCR Confidence
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Auto-Approve Score:</span>
@@ -584,9 +669,12 @@ const VisitDetail: React.FC = () => {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Reject Visit</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Reject Visit
+            </h2>
             <p className="text-gray-600 mb-4">
-              Please provide a reason for rejecting this visit. The user will see this message.
+              Please provide a reason for rejecting this visit. The user will
+              see this message.
             </p>
             <textarea
               value={rejectionReason}
@@ -599,7 +687,7 @@ const VisitDetail: React.FC = () => {
               <button
                 onClick={() => {
                   setShowRejectModal(false);
-                  setRejectionReason('');
+                  setRejectionReason("");
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
               >
@@ -610,7 +698,7 @@ const VisitDetail: React.FC = () => {
                 disabled={!rejectionReason.trim() || saving}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
               >
-                {saving ? 'Rejecting...' : 'Reject Visit'}
+                {saving ? "Rejecting..." : "Reject Visit"}
               </button>
             </div>
           </div>
@@ -618,11 +706,11 @@ const VisitDetail: React.FC = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm && visit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
                 <svg
                   className="h-6 w-6 text-red-600"
                   fill="none"
@@ -633,29 +721,68 @@ const VisitDetail: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Delete Visit</h2>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete this visit? This action cannot be undone. All associated data (receipt, experience, images) will be permanently deleted.
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={saving}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-semibold"
-                >
-                  {saving ? 'Deleting...' : 'Yes, Delete'}
-                </button>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Delete Visit
+                </h3>
               </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-2">
+                Are you sure you want to delete this visit? This action cannot
+                be undone.
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                <p className="text-sm font-semibold text-red-800">
+                  Visit ID: #{visit.id.substring(0, 8)}
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  All associated data (receipt, experience, images) will be
+                  permanently deleted.
+                </p>
+              </div>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type{" "}
+                <span className="font-bold text-red-600">
+                  #{visit.id.substring(0, 8)}
+                </span>{" "}
+                to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type visit ID to confirm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText("");
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={
+                  saving || deleteConfirmText !== `#${visit.id.substring(0, 8)}`
+                }
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </div>

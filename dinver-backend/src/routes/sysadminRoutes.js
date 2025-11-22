@@ -24,6 +24,7 @@ const leaderboardCycleRoutes = require('./sysadminRoutes/leaderboardCycleRoutes'
 const reviewRoutes = require('./sysadminRoutes/reviewRoutes');
 const experienceRoutes = require('./sysadminRoutes/experienceRoutes');
 const receiptRoutes = require('./sysadminRoutes/receiptRoutes'); // Receipt & OCR Analytics
+const cacheRoutes = require('./sysadminRoutes/cacheRoutes'); // Google Places Cache Stats
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -52,5 +53,6 @@ router.use(leaderboardCycleRoutes);
 router.use(reviewRoutes);
 router.use(experienceRoutes); // Experience moderation za sysadmin
 router.use(receiptRoutes); // Receipt management, OCR Analytics & Receipt Analytics
+router.use(cacheRoutes); // Google Places Cache Stats & Management
 
 module.exports = router;

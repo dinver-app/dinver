@@ -77,11 +77,19 @@ CRITICAL RULES:
 6. Date format: YYYY-MM-DD (convert from DD.MM.YYYY if needed)
 7. Time format: HH:MM (24-hour format)
 8. Total amount in EUR as decimal number (use decimal point, not comma)
-9. IMPORTANT - Address extraction:
-   - First address (at top) is often the company/firm address
-   - Second address (below restaurant name) is the ACTUAL restaurant location
-   - Extract the restaurant location address as merchantAddress (not the firm address)
-   - Look for "Restoran" or restaurant name, then extract the address below it
+9. CRITICAL - Address extraction (most important rule):
+   Croatian receipts typically have TWO addresses:
+   a) TOP ADDRESS: Legal/company registration address (firma, sjedište društva) - IGNORE THIS!
+   b) BOTTOM ADDRESS: Actual restaurant location where meal was served - EXTRACT THIS!
+
+   RULES FOR merchantAddress:
+   - Look for keywords: "Restoran", "Objekt", "Poslovnica", "Lokacija:" before the address
+   - The restaurant address usually appears AFTER the restaurant/merchant name
+   - NEVER extract an address that contains: "d.o.o.", "j.d.o.o.", "d.d.", "obrt" (these are legal entities)
+   - If you see two addresses, ALWAYS choose the second one (restaurant location)
+   - Example wrong: "Trgovačko društvo XYZ d.o.o., Kralja Zvonimira 123, 31000 Osijek" ❌
+   - Example correct: "Restoran Ime, Vukovarska 45, 31327 Bilje" ✅
+   - When in doubt, extract the address closest to the items list (that's the serving location)
 10. Extract ALL line items from the receipt (food, drinks, etc)
 11. Do NOT invent data - only extract what you clearly see
 
@@ -259,9 +267,16 @@ Return ONLY this JSON structure:
 
 MATCHING RULES:
 - If OIB matches exactly → confidence 0.95+, matchedBy: "oib"
-- If name is very similar → confidence 0.80+, matchedBy: "name"
-- If name + address match → confidence 0.90+, matchedBy: "combined"
-- If uncertain → return null with low confidence`;
+- If restaurant name is very similar (>90% match) → confidence 0.85+, matchedBy: "name"
+- If name matches AND city/place is same or nearby → confidence 0.90+, matchedBy: "combined"
+
+IMPORTANT NOTES:
+- Merchant address from receipt is often the COMPANY/LEGAL address, NOT the actual restaurant location
+- Focus primarily on: RESTAURANT NAME match + CITY/PLACE match (not exact street address)
+- If restaurant name is unique and matches well, give high confidence even if street address differs
+- Example: "Čingi Lingi" name match + city "Bilje" is enough for 0.90+ confidence
+- Street address mismatch is acceptable if name + city match strongly
+- Only return null/low confidence if the restaurant name clearly doesn't match`;
 
     const response = await client.messages.create({
       model: MODEL_VERSION,

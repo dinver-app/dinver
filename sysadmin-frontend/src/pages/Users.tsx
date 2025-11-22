@@ -46,8 +46,7 @@ const Users = () => {
   const [totalWaitListEntries, setTotalWaitListEntries] = useState(0);
   const [newUser, setNewUser] = useState({
     email: "",
-    firstName: "",
-    lastName: "",
+    name: "",
     password: "",
     banned: false,
   });
@@ -174,8 +173,7 @@ const Users = () => {
       setModalOpen(false);
       setNewUser({
         email: "",
-        firstName: "",
-        lastName: "",
+        name: "",
         password: "",
         banned: false,
       });
@@ -301,10 +299,7 @@ const Users = () => {
                   >
                     <td className="py-2 px-4 text-sm w-64">{user.email}</td>
                     <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                      {user.firstName}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                      {user.lastName}
+                      {user.name}
                     </td>
                     <td className="py-2 px-4 text-sm text-gray-600 w-48">
                       {user.banned ? t("yes") : t("no")}
@@ -631,22 +626,9 @@ const Users = () => {
               </label>
               <input
                 type="text"
-                value={newUser.firstName}
+                value={newUser.name}
                 onChange={(e) =>
-                  setNewUser({ ...newUser, firstName: e.target.value })
-                }
-                className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                {t("last_name")}
-              </label>
-              <input
-                type="text"
-                value={newUser.lastName}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, lastName: e.target.value })
+                  setNewUser({ ...newUser, name: e.target.value })
                 }
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
               />

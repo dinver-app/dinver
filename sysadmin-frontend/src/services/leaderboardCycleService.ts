@@ -20,8 +20,7 @@ export interface LeaderboardCycle {
     id: string;
     user?: {
       id: string;
-      firstName: string;
-      lastName: string;
+      name: string;
     };
   };
   participants?: Array<{ id: string }>;
@@ -44,8 +43,7 @@ export interface CycleParticipant {
   updatedAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     city: string;
   };
@@ -66,8 +64,7 @@ export interface CycleWinner {
   updatedAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     city: string;
   };

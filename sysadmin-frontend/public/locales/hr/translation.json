@@ -724,7 +724,8 @@
     "search": "Pretraži",
     "select": "Odaberi",
     "click_to_zoom": "Klikni za uvećanje",
-    "change": "Promijeni"
+    "change": "Promijeni",
+    "delete": "Izbriši"
   },
   "receipts": {
     "details_title": "Detalji računa",

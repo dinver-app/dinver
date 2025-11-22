@@ -234,7 +234,7 @@ const ExperienceDetails: React.FC = () => {
                   {experience.author?.profileImage ? (
                     <img
                       src={experience.author.profileImage}
-                      alt={`${experience.author.firstName} ${experience.author.lastName}`}
+                      alt={`${experience.author.name}`}
                       className="w-10 h-10 rounded-full"
                     />
                   ) : (
@@ -244,8 +244,7 @@ const ExperienceDetails: React.FC = () => {
                   )}
                   <div>
                     <p className="font-medium text-gray-900">
-                      {experience.author?.firstName}{" "}
-                      {experience.author?.lastName}
+                      {experience.author?.name}
                     </p>
                     <p className="text-sm text-gray-600">
                       {experience.author?.email}
@@ -338,8 +337,7 @@ const ExperienceDetails: React.FC = () => {
                   </div>
                   {moderation.decidedBy && (
                     <p className="text-sm text-gray-600">
-                      {t("decided_by")}: {moderation.decidedBy.firstName}{" "}
-                      {moderation.decidedBy.lastName}
+                      {t("decided_by")}: {moderation.decidedBy.name}
                     </p>
                   )}
                   {moderation.decidedAt && (
@@ -562,7 +560,7 @@ const ExperienceDetails: React.FC = () => {
                               {view.user.profileImage ? (
                                 <img
                                   src={view.user.profileImage}
-                                  alt={`${view.user.firstName} ${view.user.lastName}`}
+                                  alt={`${view.user.name}`}
                                   className="w-8 h-8 rounded-full"
                                 />
                               ) : (
@@ -572,7 +570,7 @@ const ExperienceDetails: React.FC = () => {
                               )}
                               <div>
                                 <p className="font-medium text-gray-900">
-                                  {view.user.firstName} {view.user.lastName}
+                                  {view.user.name}
                                 </p>
                                 <p className="text-xs text-gray-600">
                                   {t(view.source.toLowerCase())}
@@ -635,7 +633,7 @@ const ExperienceDetails: React.FC = () => {
                           {like.user?.profileImage ? (
                             <img
                               src={like.user.profileImage}
-                              alt={`${like.user.firstName} ${like.user.lastName}`}
+                              alt={`${like.user.name}`}
                               className="w-8 h-8 rounded-full"
                             />
                           ) : (
@@ -645,7 +643,7 @@ const ExperienceDetails: React.FC = () => {
                           )}
                           <div>
                             <p className="font-medium text-gray-900">
-                              {like.user?.firstName} {like.user?.lastName}
+                              {like.user?.name}
                             </p>
                             <p className="text-xs text-gray-600">
                               {new Date(like.createdAt).toLocaleString()}
@@ -689,7 +687,7 @@ const ExperienceDetails: React.FC = () => {
                           {save.user?.profileImage ? (
                             <img
                               src={save.user.profileImage}
-                              alt={`${save.user.firstName} ${save.user.lastName}`}
+                              alt={`${save.user.name}`}
                               className="w-8 h-8 rounded-full"
                             />
                           ) : (
@@ -699,7 +697,7 @@ const ExperienceDetails: React.FC = () => {
                           )}
                           <div>
                             <p className="font-medium text-gray-900">
-                              {save.user?.firstName} {save.user?.lastName}
+                              {save.user?.name}
                             </p>
                             <p className="text-xs text-gray-600">
                               {new Date(save.createdAt).toLocaleString()}
@@ -765,8 +763,7 @@ const ExperienceDetails: React.FC = () => {
                         )}
                         <div className="flex items-center gap-2 text-xs text-gray-600">
                           <span>
-                            {t("reported_by")}: {report.reporter?.firstName}{" "}
-                            {report.reporter?.lastName}
+                            {t("reported_by")}: {report.reporter?.name}
                           </span>
                           <span>•</span>
                           <span>

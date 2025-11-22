@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
   UserIcon,
@@ -13,10 +13,10 @@ import {
   ChartBarIcon,
   PlayIcon,
   PhotoIcon,
-} from '@heroicons/react/24/outline';
+} from "@heroicons/react/24/outline";
 import experienceService, {
   UserExperienceStats as UserExperienceStatsType,
-} from '../services/experienceService';
+} from "../services/experienceService";
 
 const UserExperienceStats: React.FC = () => {
   const { t } = useTranslation();
@@ -38,8 +38,8 @@ const UserExperienceStats: React.FC = () => {
       const response = await experienceService.getUserExperienceStats(userId!);
       setStats(response.data);
     } catch (error) {
-      console.error('Error loading user stats:', error);
-      alert(t('error_loading_stats'));
+      console.error("Error loading user stats:", error);
+      alert(t("error_loading_stats"));
     } finally {
       setLoading(false);
     }
@@ -47,14 +47,14 @@ const UserExperienceStats: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+      case "APPROVED":
+        return "bg-green-100 text-green-800";
+      case "REJECTED":
+        return "bg-red-100 text-red-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -66,22 +66,27 @@ const UserExperienceStats: React.FC = () => {
     );
   }
 
-  const { user, stats: userStats, engagement, topExperiences, recentExperiences } =
-    stats;
+  const {
+    user,
+    stats: userStats,
+    engagement,
+    topExperiences,
+    recentExperiences,
+  } = stats;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate('/experiences')}
+          onClick={() => navigate("/experiences")}
           className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          {t('back_to_queue')}
+          {t("back_to_queue")}
         </button>
         <h1 className="text-2xl font-bold text-gray-900">
-          {t('user_experience_statistics')}
+          {t("user_experience_statistics")}
         </h1>
       </div>
 
@@ -91,7 +96,7 @@ const UserExperienceStats: React.FC = () => {
           {user.profileImage ? (
             <img
               src={user.profileImage}
-              alt={`${user.firstName} ${user.lastName}`}
+              alt={`${user.name}`}
               className="w-20 h-20 rounded-full"
             />
           ) : (
@@ -100,9 +105,7 @@ const UserExperienceStats: React.FC = () => {
             </div>
           )}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {user.firstName} {user.lastName}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
             <p className="text-gray-600">{user.email}</p>
           </div>
         </div>
@@ -113,7 +116,7 @@ const UserExperienceStats: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{t('total_experiences')}</p>
+              <p className="text-sm text-gray-600">{t("total_experiences")}</p>
               <p className="text-3xl font-bold text-gray-900">
                 {userStats.total}
               </p>
@@ -126,7 +129,7 @@ const UserExperienceStats: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t('approved_experiences')}
+                {t("approved_experiences")}
               </p>
               <p className="text-3xl font-bold text-gray-900">
                 {userStats.approved}
@@ -140,7 +143,7 @@ const UserExperienceStats: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t('rejected_experiences')}
+                {t("rejected_experiences")}
               </p>
               <p className="text-3xl font-bold text-gray-900">
                 {userStats.rejected}
@@ -154,7 +157,7 @@ const UserExperienceStats: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t('pending_experiences')}
+                {t("pending_experiences")}
               </p>
               <p className="text-3xl font-bold text-gray-900">
                 {userStats.pending}
@@ -169,7 +172,7 @@ const UserExperienceStats: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Approval Rate */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">{t('approval_rate')}</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("approval_rate")}</h3>
           <div className="flex items-center justify-center">
             <div className="relative w-48 h-48">
               <svg className="w-full h-full" viewBox="0 0 100 100">
@@ -188,7 +191,9 @@ const UserExperienceStats: React.FC = () => {
                   fill="none"
                   stroke="#10b981"
                   strokeWidth="10"
-                  strokeDasharray={`${userStats.approvalRate * 2.51327} 251.327`}
+                  strokeDasharray={`${
+                    userStats.approvalRate * 2.51327
+                  } 251.327`}
                   strokeLinecap="round"
                   transform="rotate(-90 50 50)"
                 />
@@ -197,7 +202,7 @@ const UserExperienceStats: React.FC = () => {
                 <span className="text-4xl font-bold text-gray-900">
                   {userStats.approvalRate.toFixed(1)}%
                 </span>
-                <span className="text-sm text-gray-600">{t('approved')}</span>
+                <span className="text-sm text-gray-600">{t("approved")}</span>
               </div>
             </div>
           </div>
@@ -206,14 +211,14 @@ const UserExperienceStats: React.FC = () => {
         {/* Engagement Stats */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4">
-            {t('engagement_statistics')}
+            {t("engagement_statistics")}
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-2">
                 <EyeIcon className="h-6 w-6 text-blue-600" />
                 <span className="font-medium text-gray-700">
-                  {t('total_views')}
+                  {t("total_views")}
                 </span>
               </div>
               <span className="text-2xl font-bold text-gray-900">
@@ -224,7 +229,7 @@ const UserExperienceStats: React.FC = () => {
               <div className="flex items-center gap-2">
                 <HeartIcon className="h-6 w-6 text-green-600" />
                 <span className="font-medium text-gray-700">
-                  {t('total_likes')}
+                  {t("total_likes")}
                 </span>
               </div>
               <span className="text-2xl font-bold text-gray-900">
@@ -235,7 +240,7 @@ const UserExperienceStats: React.FC = () => {
               <div className="flex items-center gap-2">
                 <BookmarkIcon className="h-6 w-6 text-yellow-600" />
                 <span className="font-medium text-gray-700">
-                  {t('total_saves')}
+                  {t("total_saves")}
                 </span>
               </div>
               <span className="text-2xl font-bold text-gray-900">
@@ -250,7 +255,7 @@ const UserExperienceStats: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600 mb-2">
-            {t('avg_likes_per_experience')}
+            {t("avg_likes_per_experience")}
           </p>
           <p className="text-2xl font-bold text-gray-900">
             {engagement.avgLikesPerExperience.toFixed(1)}
@@ -258,7 +263,7 @@ const UserExperienceStats: React.FC = () => {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600 mb-2">
-            {t('avg_views_per_experience')}
+            {t("avg_views_per_experience")}
           </p>
           <p className="text-2xl font-bold text-gray-900">
             {engagement.avgViewsPerExperience.toFixed(1)}
@@ -269,11 +274,11 @@ const UserExperienceStats: React.FC = () => {
       {/* Top Experiences */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4">
-          {t('top_experiences')} ({topExperiences.length})
+          {t("top_experiences")} ({topExperiences.length})
         </h3>
         {topExperiences.length === 0 ? (
           <p className="text-gray-600 text-center py-8">
-            {t('no_approved_experiences')}
+            {t("no_approved_experiences")}
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -292,7 +297,7 @@ const UserExperienceStats: React.FC = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      {exp.mediaKind === 'VIDEO' ? (
+                      {exp.mediaKind === "VIDEO" ? (
                         <PlayIcon className="h-12 w-12 text-gray-400" />
                       ) : (
                         <PhotoIcon className="h-12 w-12 text-gray-400" />
@@ -344,11 +349,11 @@ const UserExperienceStats: React.FC = () => {
       {/* Recent Experiences */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">
-          {t('recent_experiences')} ({recentExperiences.length})
+          {t("recent_experiences")} ({recentExperiences.length})
         </h3>
         {recentExperiences.length === 0 ? (
           <p className="text-gray-600 text-center py-8">
-            {t('no_experiences_yet')}
+            {t("no_experiences_yet")}
           </p>
         ) : (
           <div className="space-y-3">
@@ -367,7 +372,7 @@ const UserExperienceStats: React.FC = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      {exp.mediaKind === 'VIDEO' ? (
+                      {exp.mediaKind === "VIDEO" ? (
                         <PlayIcon className="h-6 w-6 text-gray-400" />
                       ) : (
                         <PhotoIcon className="h-6 w-6 text-gray-400" />

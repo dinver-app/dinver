@@ -17,8 +17,7 @@ export interface Experience {
   updatedAt: string;
   author?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     phone?: string;
     profileImage?: string;
@@ -66,13 +65,11 @@ export interface ModerationQueue {
   experience?: Experience;
   assignedTo?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
   };
   decidedBy?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
   };
 }
 
@@ -113,8 +110,7 @@ export interface ExperienceView {
   createdAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     profileImage?: string;
   };
 }
@@ -129,8 +125,7 @@ export interface ExperienceLike {
   createdAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     profileImage?: string;
   };
 }
@@ -144,8 +139,7 @@ export interface ExperienceSave {
   createdAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     profileImage?: string;
   };
 }
@@ -160,8 +154,7 @@ export interface ExperienceReport {
   createdAt: string;
   reporter?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
   };
 }
 
@@ -175,13 +168,11 @@ export interface ExperienceDetails {
     notes?: string;
     assignedTo?: {
       id: string;
-      firstName: string;
-      lastName: string;
+      name: string;
     };
     decidedBy?: {
       id: string;
-      firstName: string;
-      lastName: string;
+      name: string;
     };
     decidedAt?: string;
     slaDeadline: string;
@@ -197,8 +188,7 @@ export interface ExperienceDetails {
 export interface UserExperienceStats {
   user: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     profileImage?: string;
   };

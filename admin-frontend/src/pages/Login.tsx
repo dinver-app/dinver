@@ -33,11 +33,8 @@ const Login = () => {
       if (response) {
         const { user, token } = response;
         localStorage.setItem("language", user.language);
-        localStorage.setItem(
-          "admin_user_name",
-          user.firstName + " " + user.lastName
-        );
-        setUserName(user.firstName + " " + user.lastName);
+        localStorage.setItem("admin_user_name", user.name);
+        setUserName(user.name);
         if (token) localStorage.setItem("token", token);
         i18n.changeLanguage(user.language);
 

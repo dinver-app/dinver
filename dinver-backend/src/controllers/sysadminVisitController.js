@@ -6,7 +6,6 @@ const {
   Experience,
   ExperienceMedia,
 } = require('../../models');
-const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
 const { deleteImageVariants, deleteFromS3 } = require('../../utils/s3Upload');
 
@@ -31,7 +30,14 @@ exports.getAllVisits = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'name', 'email', 'phone', 'profileImage'],
+          attributes: [
+            'id',
+            'username',
+            'name',
+            'email',
+            'phone',
+            'profileImage',
+          ],
         },
         {
           model: Restaurant,
@@ -223,50 +229,6 @@ exports.getVisitById = async (req, res) => {
   } catch (error) {
     console.error('Error fetching visit:', error);
     res.status(500).json({ error: 'Failed to fetch visit' });
-  }
-};
-
-/**
- * Update receipt data (OCR fields)
- * PUT /api/sysadmin/receipts/:id
- */
-exports.updateReceipt = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const {
-      totalAmount,
-      issueDate,
-      issueTime,
-      jir,
-      zki,
-      oib,
-      merchantName,
-      merchantAddress,
-    } = req.body;
-
-    const receipt = await Receipt.findByPk(id);
-    if (!receipt) {
-      return res.status(404).json({ error: 'Receipt not found' });
-    }
-
-    await receipt.update({
-      totalAmount,
-      issueDate,
-      issueTime,
-      jir,
-      zki,
-      oib,
-      merchantName,
-      merchantAddress,
-    });
-
-    res.status(200).json({
-      message: 'Receipt updated successfully',
-      receipt: receipt.get(),
-    });
-  } catch (error) {
-    console.error('Error updating receipt:', error);
-    res.status(500).json({ error: 'Failed to update receipt' });
   }
 };
 
@@ -485,7 +447,10 @@ exports.deleteVisit = async (req, res) => {
             }
           }
         } catch (s3Error) {
-          console.error(`Error deleting experience media from S3:`, s3Error.message);
+          console.error(
+            `Error deleting experience media from S3:`,
+            s3Error.message,
+          );
         }
       }
 
@@ -531,235 +496,5 @@ exports.getVisitStats = async (req, res) => {
   } catch (error) {
     console.error('Error fetching visit stats:', error);
     res.status(500).json({ error: 'Failed to fetch visit stats' });
-  }
-};
-
-/**
- * Get all pending receipts for review (with AI predictions)
- * GET /api/sysadmin/receipts/pending
- */
-exports.getPendingReceipts = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, ocrMethod } = req.query;
-    const offset = (page - 1) * limit;
-
-    const whereClause = { status: 'pending' };
-    if (ocrMethod) {
-      whereClause.ocrMethod = ocrMethod;
-    }
-
-    const { count, rows: receipts } = await Receipt.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'name', 'email'],
-        },
-        {
-          model: Restaurant,
-          as: 'restaurant',
-          attributes: ['id', 'name', 'place', 'address', 'oib'],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-
-    // Transform receipts with CDN URLs
-    const receiptsWithUrls = receipts.map((receipt) => ({
-      ...receipt.get(),
-      thumbnailUrl: receipt.thumbnailUrl
-        ? getMediaUrl(receipt.thumbnailUrl, 'image', 'original')
-        : null,
-      mediumUrl: receipt.mediumUrl
-        ? getMediaUrl(receipt.mediumUrl, 'image', 'original')
-        : null,
-      fullscreenUrl: receipt.fullscreenUrl
-        ? getMediaUrl(receipt.fullscreenUrl, 'image', 'original')
-        : null,
-      originalUrl: receipt.originalUrl
-        ? getMediaUrl(receipt.originalUrl, 'image', 'original')
-        : null,
-    }));
-
-    res.status(200).json({
-      receipts: receiptsWithUrls,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / limit),
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching pending receipts:', error);
-    res.status(500).json({ error: 'Failed to fetch pending receipts' });
-  }
-};
-
-/**
- * Approve receipt with optional corrections (for AI learning)
- * POST /api/sysadmin/receipts/:id/approve
- */
-exports.approveReceipt = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const adminId = req.user.id;
-    const {
-      oib,
-      jir,
-      zki,
-      totalAmount,
-      issueDate,
-      issueTime,
-      merchantName,
-      merchantAddress,
-      restaurantId,
-    } = req.body;
-
-    const receipt = await Receipt.findByPk(id);
-    if (!receipt) {
-      return res.status(404).json({ error: 'Receipt not found' });
-    }
-
-    if (receipt.status !== 'pending') {
-      return res.status(400).json({ error: 'Receipt is not pending review' });
-    }
-
-    // Validate required fields
-    if (!oib || !jir || !zki || !totalAmount || !issueDate || !restaurantId) {
-      return res.status(400).json({
-        error: 'Missing required fields for approval',
-        required: ['oib', 'jir', 'zki', 'totalAmount', 'issueDate', 'restaurantId'],
-      });
-    }
-
-    // Store corrected data (what admin approved as correct)
-    const correctedData = {
-      oib,
-      jir,
-      zki,
-      totalAmount: parseFloat(totalAmount),
-      issueDate,
-      issueTime,
-      merchantName,
-      merchantAddress,
-      restaurantId: parseInt(restaurantId),
-    };
-
-    // Calculate accuracy if we have predicted data
-    let correctionsMade = 0;
-    let accuracy = null;
-
-    if (receipt.predictedData && receipt.predictedData.fields) {
-      const predicted = receipt.predictedData.fields;
-      const corrected = correctedData;
-
-      // Count fields that were corrected (changed from predicted)
-      const fieldsToCheck = ['oib', 'jir', 'zki', 'totalAmount', 'issueDate', 'issueTime', 'merchantName', 'merchantAddress'];
-      const totalFields = fieldsToCheck.length;
-      let correctFields = 0;
-
-      fieldsToCheck.forEach((field) => {
-        const predictedValue = predicted[field];
-        const correctedValue = corrected[field];
-
-        // Normalize for comparison
-        const predictedNorm = predictedValue !== null && predictedValue !== undefined
-          ? String(predictedValue).trim()
-          : null;
-        const correctedNorm = correctedValue !== null && correctedValue !== undefined
-          ? String(correctedValue).trim()
-          : null;
-
-        if (predictedNorm === correctedNorm) {
-          correctFields++;
-        } else {
-          correctionsMade++;
-          console.log(`Field "${field}" corrected: "${predictedNorm}" -> "${correctedNorm}"`);
-        }
-      });
-
-      accuracy = ((correctFields / totalFields) * 100).toFixed(2);
-      console.log(`Receipt accuracy: ${accuracy}% (${correctFields}/${totalFields} correct, ${correctionsMade} corrections)`);
-    }
-
-    // Update receipt with approved data
-    await receipt.update({
-      status: 'approved',
-      verifiedAt: new Date(),
-      verifierId: adminId,
-      // Update fields with corrected data
-      oib: correctedData.oib,
-      jir: correctedData.jir,
-      zki: correctedData.zki,
-      totalAmount: correctedData.totalAmount,
-      issueDate: correctedData.issueDate,
-      issueTime: correctedData.issueTime,
-      merchantName: correctedData.merchantName,
-      merchantAddress: correctedData.merchantAddress,
-      restaurantId: correctedData.restaurantId,
-      // Learning fields
-      correctedData: correctedData,
-      correctionsMade: correctionsMade,
-      accuracy: accuracy,
-    });
-
-    // Calculate and award points
-    const points = receipt.getPoints();
-    await receipt.update({ pointsAwarded: points });
-
-    res.status(200).json({
-      message: 'Receipt approved successfully',
-      receipt: receipt.get(),
-      pointsAwarded: points,
-      accuracy: accuracy,
-      correctionsMade: correctionsMade,
-    });
-  } catch (error) {
-    console.error('Error approving receipt:', error);
-    res.status(500).json({ error: 'Failed to approve receipt' });
-  }
-};
-
-/**
- * Reject receipt with reason
- * POST /api/sysadmin/receipts/:id/reject
- */
-exports.rejectReceipt = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({ error: 'Rejection reason is required' });
-    }
-
-    const receipt = await Receipt.findByPk(id);
-    if (!receipt) {
-      return res.status(404).json({ error: 'Receipt not found' });
-    }
-
-    if (receipt.status !== 'pending') {
-      return res.status(400).json({ error: 'Receipt is not pending review' });
-    }
-
-    await receipt.update({
-      status: 'rejected',
-      verifiedAt: new Date(),
-      verifierId: adminId,
-      rejectionReason: reason,
-    });
-
-    res.status(200).json({
-      message: 'Receipt rejected successfully',
-      receipt: receipt.get(),
-    });
-  } catch (error) {
-    console.error('Error rejecting receipt:', error);
-    res.status(500).json({ error: 'Failed to reject receipt' });
   }
 };

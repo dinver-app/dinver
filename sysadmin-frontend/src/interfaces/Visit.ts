@@ -2,8 +2,9 @@ export interface Visit {
   id: string;
   userId: string;
   restaurantId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   receiptImageUrl: string | null;
+  visitDate?: string | null;
   submittedAt: string;
   reviewedAt: string | null;
   reviewedBy: string | null;
@@ -18,8 +19,7 @@ export interface Visit {
   user?: {
     id: string;
     username: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     phone?: string;
     profileImage?: string;
@@ -47,10 +47,10 @@ export interface Receipt {
   fullscreenUrl?: string;
   originalUrl?: string;
   imageHash: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
 
   // OCR Fields
-  totalAmount?: number;
+  totalAmount?: number | string;
   issueDate?: string;
   issueTime?: string;
   jir?: string;
@@ -86,10 +86,10 @@ export interface Experience {
   userId: string;
   restaurantId: string;
   visitId?: string;
-  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
   title: string;
   description?: string;
-  mediaKind: 'VIDEO' | 'CAROUSEL';
+  mediaKind: "VIDEO" | "CAROUSEL";
   media?: ExperienceMedia[];
   likesCount: number;
   savesCount: number;
@@ -100,13 +100,13 @@ export interface Experience {
 
 export interface ExperienceMedia {
   id: string;
-  kind: 'IMAGE' | 'VIDEO';
+  kind: "IMAGE" | "VIDEO";
   storageKey: string;
   cdnUrl?: string;
   width?: number;
   height?: number;
   orderIndex: number;
-  transcodingStatus: 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED';
+  transcodingStatus: "PENDING" | "PROCESSING" | "DONE" | "FAILED";
 }
 
 export interface VisitsResponse {

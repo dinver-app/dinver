@@ -843,7 +843,8 @@
     "search": "Search",
     "select": "Select",
     "click_to_zoom": "Click to zoom",
-    "change": "Change"
+    "change": "Change",
+    "delete": "Delete"
   },
   "picker": {
     "choose_restaurant": "Choose Restaurant",

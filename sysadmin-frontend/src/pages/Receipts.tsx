@@ -268,7 +268,7 @@ const Receipts: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {receipt.user?.firstName} {receipt.user?.lastName}
+                      {receipt.user?.name}
                     </div>
                     <div className="text-sm text-gray-500">
                       {receipt.user?.email}
@@ -305,11 +305,12 @@ const Receipts: React.FC = () => {
                         >
                           {(receipt.autoApproveScore * 100).toFixed(0)}%
                         </span>
-                        {receipt.fraudFlags && receipt.fraudFlags.length > 0 && (
-                          <span className="text-xs text-red-600">
-                            ⚠️ {receipt.fraudFlags.length}
-                          </span>
-                        )}
+                        {receipt.fraudFlags &&
+                          receipt.fraudFlags.length > 0 && (
+                            <span className="text-xs text-red-600">
+                              ⚠️ {receipt.fraudFlags.length}
+                            </span>
+                          )}
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400">N/A</span>

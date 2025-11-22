@@ -33,15 +33,21 @@ interface Restaurant {
   slug: string;
 }
 
+const ALL_RESTAURANTS: Restaurant = {
+  id: "all",
+  name: "🌍 All Restaurants (Global)",
+  slug: "all",
+};
+
 const ReceiptAnalytics = () => {
   const [analytics, setAnalytics] = useState<ReceiptAnalyticsResponse | null>(
     null
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] =
-    useState<Restaurant | null>(null);
-  const [showRestaurantDropdown, setShowRestaurantDropdown] = useState(true);
+    useState<Restaurant | null>(ALL_RESTAURANTS); // Default to global view
+  const [showRestaurantDropdown, setShowRestaurantDropdown] = useState(false);
   const [restaurantSearch, setRestaurantSearch] = useState("");
   const [dateFilter, setDateFilter] = useState({
     dateFrom: "",
@@ -61,7 +67,7 @@ const ReceiptAnalytics = () => {
     fetchRestaurants();
   }, []);
 
-  // Fetch analytics when restaurant is selected
+  // Fetch analytics on mount (global view) and when restaurant changes
   useEffect(() => {
     if (selectedRestaurant) {
       fetchAnalytics();
@@ -178,6 +184,23 @@ const ReceiptAnalytics = () => {
                   />
                 </div>
                 <div className="py-1">
+                  {/* All Restaurants Option */}
+                  <button
+                    onClick={() => {
+                      setSelectedRestaurant(ALL_RESTAURANTS);
+                      setShowRestaurantDropdown(false);
+                      setRestaurantSearch("");
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm font-semibold hover:bg-gray-100 border-b border-gray-200 ${
+                      selectedRestaurant?.id === "all"
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-900"
+                    }`}
+                  >
+                    {ALL_RESTAURANTS.name}
+                  </button>
+
+                  {/* Individual Restaurants */}
                   {filteredRestaurants.length === 0 ? (
                     <div className="px-3 py-2 text-sm text-gray-500">
                       No restaurants found
@@ -252,20 +275,8 @@ const ReceiptAnalytics = () => {
         </div>
       )}
 
-      {/* No Restaurant Selected */}
-      {!selectedRestaurant && !loading && (
-        <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow">
-          <div className="text-center">
-            <ShoppingBagIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">
-              Please select a restaurant to view analytics
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Analytics Content */}
-      {!loading && analytics && selectedRestaurant && (
+      {!loading && analytics && (
         <>
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

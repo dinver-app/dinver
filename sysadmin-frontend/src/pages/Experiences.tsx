@@ -334,8 +334,7 @@ const Experiences: React.FC = () => {
                           {item.experience?.title || t("untitled_experience")}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          {item.experience?.author?.firstName}{" "}
-                          {item.experience?.author?.lastName} •{" "}
+                          {item.experience?.author?.name}•{" "}
                           {item.experience?.restaurant?.name}
                         </p>
                       </div>
@@ -428,8 +427,7 @@ const Experiences: React.FC = () => {
                       </span>
                       {item.assignedTo && (
                         <span>
-                          {t("assigned_to")}: {item.assignedTo.firstName}{" "}
-                          {item.assignedTo.lastName}
+                          {t("assigned_to")}: {item.assignedTo.name}
                         </span>
                       )}
                     </div>
@@ -486,8 +484,7 @@ const Experiences: React.FC = () => {
                         </button>
                         {item.decidedBy && (
                           <span className="text-sm text-gray-600 px-4 py-2">
-                            {t("decided_by")}: {item.decidedBy.firstName}{" "}
-                            {item.decidedBy.lastName}
+                            {t("decided_by")}: {item.decidedBy.name}
                           </span>
                         )}
                       </div>

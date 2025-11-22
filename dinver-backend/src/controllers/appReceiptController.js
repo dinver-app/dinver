@@ -68,6 +68,10 @@ const uploadReceipt = async (req, res) => {
     );
 
     // === STEP 1: Validate image is actually a receipt (BEFORE processing/uploading) ===
+    // OPTIMIZATION: Validation disabled for app uploads to save $0.01 + 3.4s per receipt
+    // Users upload from "receipt upload" screen, so they already expect to upload receipts
+    // Re-enable by uncommenting the code below if needed for fraud prevention
+    /*
     try {
       console.log('[Receipt Upload] Validating image is a receipt...');
       const validation = await validateReceiptWithClaude(
@@ -97,6 +101,8 @@ const uploadReceipt = async (req, res) => {
       console.error('[Receipt Upload] Validation failed:', validationError);
       // Continue processing even if validation fails (fail open)
     }
+    */
+    console.log('[Receipt Upload] Skipping validation (optimization enabled)');
 
     // === STEP 2: Calculate image hash for duplicate detection ===
     const imageHash = crypto

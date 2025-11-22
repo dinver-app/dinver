@@ -39,6 +39,9 @@ const LeaderboardCycles: React.FC = () => {
     null
   );
   const [isTriggering, setIsTriggering] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cycleToDelete, setCycleToDelete] = useState<LeaderboardCycle | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const navigate = useNavigate();
 
   const refreshCycles = async () => {
@@ -162,19 +165,36 @@ const LeaderboardCycles: React.FC = () => {
     }
   };
 
-  const handleDeleteCycle = async (cycle: LeaderboardCycle) => {
-    if (cycle.status !== "cancelled") {
-      toast.error("Only cancelled cycles can be deleted");
+  const handleDeleteCycleClick = (cycle: LeaderboardCycle, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (cycle.status !== "cancelled" && cycle.status !== "completed") {
+      toast.error("Only cancelled or completed cycles can be deleted");
       return;
     }
 
-    if (!window.confirm(t("are_you_sure_delete_cycle"))) {
+    setCycleToDelete(cycle);
+    setDeleteConfirmText("");
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!cycleToDelete) return;
+
+    const cycleName = i18n.language === "en" ? cycleToDelete.nameEn : cycleToDelete.nameHr;
+
+    if (deleteConfirmText !== cycleName) {
+      toast.error(`Please type "${cycleName}" to confirm deletion`);
       return;
     }
 
     try {
-      await leaderboardCycleService.deleteCycle(cycle.id);
+      await leaderboardCycleService.deleteCycle(cycleToDelete.id);
       toast.success("Cycle deleted successfully");
+
+      setShowDeleteModal(false);
+      setCycleToDelete(null);
+      setDeleteConfirmText("");
 
       // Refresh cycles without loading state
       await refreshCycles();
@@ -499,12 +519,9 @@ const LeaderboardCycles: React.FC = () => {
                             <XMarkIcon className="h-4 w-4" />
                           </button>
                         )}
-                        {cycle.status === "cancelled" && (
+                        {(cycle.status === "cancelled" || cycle.status === "completed") && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCycle(cycle);
-                            }}
+                            onClick={(e) => handleDeleteCycleClick(cycle, e)}
                             className="text-red-600 hover:text-red-900"
                             title={t("delete_cycle")}
                           >
@@ -629,6 +646,72 @@ const LeaderboardCycles: React.FC = () => {
         onCycleUpdated={handleCycleUpdated}
         cycle={selectedCycle}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && cycleToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <TrashIcon className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {t("delete_cycle")}
+                </h3>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-2">
+                {t("are_you_sure_delete_cycle")}
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                <p className="text-sm font-semibold text-red-800">
+                  {i18n.language === "en" ? cycleToDelete.nameEn : cycleToDelete.nameHr}
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  This action cannot be undone. All participant and winner data will be permanently deleted.
+                </p>
+              </div>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type <span className="font-bold text-red-600">
+                  {i18n.language === "en" ? cycleToDelete.nameEn : cycleToDelete.nameHr}
+                </span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type cycle name to confirm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCycleToDelete(null);
+                  setDeleteConfirmText("");
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteConfirmText !== (i18n.language === "en" ? cycleToDelete.nameEn : cycleToDelete.nameHr)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

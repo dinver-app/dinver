@@ -338,10 +338,7 @@ const Settings = () => {
                   >
                     <td className="py-2 px-4 text-sm">{sysadmin.user.email}</td>
                     <td className="py-2 px-4 text-sm text-gray-600">
-                      {sysadmin.user.firstName}
-                    </td>
-                    <td className="py-2 px-4 text-sm text-gray-600">
-                      {sysadmin.user.lastName}
+                      {sysadmin.user.name}
                     </td>
                     <td className="py-2 px-4 text-sm text-gray-600">
                       {format(new Date(sysadmin.createdAt), "dd.MM.yyyy.")}

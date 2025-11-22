@@ -342,8 +342,7 @@ To je prvo i najvaznije pravilo. Sada ću proci detaljnije sta sve skupljamo vez
 "updatedAt": "2025-07-28T13:14:31.216Z",
 "user": {
 "id": "d94da9cb-baac-4278-8531-65c59a461b4f",
-"firstName": "Mihael",
-"lastName": "Baivić"
+"name": "Mihael Baivić"
 }
 }
 ],

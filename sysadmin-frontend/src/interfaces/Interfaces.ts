@@ -1,8 +1,7 @@
 export interface User {
   id?: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   role: string;
   createdAt?: string;
   banned?: boolean;
@@ -62,7 +61,10 @@ export interface Restaurant {
   igUrl?: string;
   ttUrl?: string;
   phone?: string;
-  images?: Array<{ url: string; imageUrls: { thumbnail: string; medium: string; fullscreen: string } }>;
+  images?: Array<{
+    url: string;
+    imageUrls: { thumbnail: string; medium: string; fullscreen: string };
+  }>;
   reviewRating?: number;
   email?: string;
   thumbnailUrls?: { thumbnail: string; medium: string; fullscreen: string };
@@ -193,11 +195,14 @@ export interface Review {
   text: string;
   photos: string[];
   userId: string;
-  userFirstName: string;
-  userLastName: string;
+  userName?: string;
   userEmail: string;
   createdAt?: string;
   isElite?: boolean;
+  user?: {
+    name: string;
+    email: string;
+  };
 }
 
 export interface RestaurantReviews {

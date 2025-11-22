@@ -356,8 +356,7 @@ const Referrals = () => {
                   <tr key={referral.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {referral.referrer.firstName}{" "}
-                        {referral.referrer.lastName}
+                        {referral.referrer.name}
                       </div>
                       <div className="text-sm text-gray-500">
                         {referral.referrer.email}
@@ -365,8 +364,7 @@ const Referrals = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {referral.referredUser.firstName}{" "}
-                        {referral.referredUser.lastName}
+                        {referral.referredUser.name}
                       </div>
                       <div className="text-sm text-gray-500">
                         {referral.referredUser.email}

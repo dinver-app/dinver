@@ -31,10 +31,7 @@ const Login = () => {
       if (response) {
         const { user } = response;
         localStorage.setItem("language", user.language);
-        localStorage.setItem(
-          "sys_user_name",
-          user.firstName + " " + user.lastName
-        );
+        localStorage.setItem("sys_user_name", user.name);
         i18n.changeLanguage(user.language);
 
         toast.success(t("login_successful"));

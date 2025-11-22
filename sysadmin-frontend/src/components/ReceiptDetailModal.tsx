@@ -223,8 +223,7 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
                 </h4>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p>
-                    <strong>Name:</strong> {receipt.user?.firstName}{" "}
-                    {receipt.user?.lastName}
+                    <strong>Name:</strong> {receipt.user?.name}
                   </p>
                   <p>
                     <strong>Email:</strong> {receipt.user?.email}

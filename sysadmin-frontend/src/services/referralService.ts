@@ -16,13 +16,11 @@ export interface ReferralStats {
 export interface Referral {
   id: string;
   referrer: {
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
   };
   referredUser: {
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
   };
   referralCode: {
