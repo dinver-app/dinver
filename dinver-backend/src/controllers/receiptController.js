@@ -1449,28 +1449,51 @@ const approveReceipt = async (req, res) => {
       description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
 
-    // Create Visit automatically when receipt is approved
-    let createdVisit = null;
+    // Update existing Visit or create new one when receipt is approved
+    let visit = null;
     try {
-      createdVisit = await Visit.create({
-        userId: receipt.userId,
-        restaurantId: restaurantId,
-        receiptImageUrl: receipt.originalUrl || receipt.imageUrl, // Use original URL for best quality
-        status: 'APPROVED', // Auto-approved since receipt is already verified
-        wasInMustVisit: false, // This is a receipt-based visit
-        visitDate: new Date(issueDate), // Use receipt issue date as visit date
-        submittedAt: receipt.submittedAt,
-        reviewedAt: new Date(),
-        reviewedBy: req.user.id,
-      });
+      if (receipt.visitId) {
+        // Visit already exists (user created it before approval)
+        visit = await Visit.findByPk(receipt.visitId);
 
-      console.log(`[Receipt Approval] Created Visit ID: ${createdVisit.id} for Receipt ID: ${receipt.id}`);
+        if (visit) {
+          // Update existing Visit to APPROVED
+          await visit.update({
+            status: 'APPROVED',
+            visitDate: visit.visitDate || new Date(issueDate), // Use existing or receipt date
+            reviewedAt: new Date(),
+            reviewedBy: req.user.id,
+          });
 
-      // Link the visit to the receipt
-      await receipt.update({ visitId: createdVisit.id });
+          console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status`);
+        } else {
+          console.error(`[Receipt Approval] Visit ${receipt.visitId} not found, will create new one`);
+          visit = null; // Fall through to create new one
+        }
+      }
+
+      // If no existing Visit, create one (backward compatibility for old receipts)
+      if (!visit) {
+        visit = await Visit.create({
+          userId: receipt.userId,
+          restaurantId: restaurantId,
+          receiptImageUrl: receipt.originalUrl || receipt.imageUrl,
+          status: 'APPROVED',
+          wasInMustVisit: false,
+          visitDate: new Date(issueDate),
+          submittedAt: receipt.submittedAt,
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id,
+        });
+
+        console.log(`[Receipt Approval] Created new Visit ${visit.id} for Receipt ${receipt.id}`);
+
+        // Link the visit to the receipt
+        await receipt.update({ visitId: visit.id });
+      }
     } catch (visitError) {
-      console.error('[Receipt Approval] Failed to create Visit:', visitError);
-      // Don't fail the receipt approval if visit creation fails
+      console.error('[Receipt Approval] Failed to process Visit:', visitError);
+      // Don't fail the receipt approval if visit processing fails
       // The receipt is still approved and points are awarded
     }
 
