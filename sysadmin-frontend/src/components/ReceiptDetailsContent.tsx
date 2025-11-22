@@ -57,6 +57,8 @@ const ReceiptDetailsContent: React.FC<Props> = ({
           }
         : null
     );
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const pointsPreview =
     ((formData.totalAmount || 0) / 10) * (hasReservationBonus ? 1.2 : 1);
@@ -230,6 +232,30 @@ const ReceiptDetailsContent: React.FC<Props> = ({
     }
   };
 
+  const handleDeleteClick = () => {
+    setDeleteConfirmText("");
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    const receiptId = `#${receipt.id.substring(0, 8)}`;
+
+    if (deleteConfirmText !== receiptId) {
+      toast.error(`Please type "${receiptId}" to confirm deletion`);
+      return;
+    }
+
+    try {
+      await receiptService.deleteReceipt(receipt.id);
+      toast.success("Receipt deleted successfully");
+      setShowDeleteModal(false);
+      onClose();
+    } catch (error: any) {
+      console.error("Error deleting receipt:", error);
+      toast.error(error.response?.data?.error || "Failed to delete receipt");
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("hr-HR", {
       day: "2-digit",
@@ -311,8 +337,7 @@ const ReceiptDetailsContent: React.FC<Props> = ({
               </h4>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p>
-                  <strong>{t("common.name")}:</strong> {receipt.user?.firstName}{" "}
-                  {receipt.user?.lastName}
+                  <strong>{t("common.name")}:</strong> {receipt.user?.name}
                 </p>
                 <p>
                   <strong>{t("common.email")}:</strong> {receipt.user?.email}
@@ -863,6 +888,13 @@ const ReceiptDetailsContent: React.FC<Props> = ({
             >
               {t("common.back")}
             </button>
+
+            <button
+              onClick={handleDeleteClick}
+              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            >
+              {t("common.delete")}
+            </button>
           </div>
         </div>
 
@@ -905,6 +937,73 @@ const ReceiptDetailsContent: React.FC<Props> = ({
           userLat={numericLat}
           userLng={numericLng}
         />
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {t("common.delete")} Receipt
+                  </h3>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  Are you sure you want to delete this receipt? This action cannot be undone.
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+                  <p className="text-sm font-semibold text-red-800">
+                    Receipt ID: #{receipt.id.substring(0, 8)}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    All associated data including images will be permanently deleted.
+                  </p>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-bold text-red-600">
+                    #{receipt.id.substring(0, 8)}
+                  </span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type receipt ID to confirm"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteConfirmText("");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteConfirmText !== `#${receipt.id.substring(0, 8)}`}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t("common.delete")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

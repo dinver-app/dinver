@@ -82,8 +82,7 @@ export interface Receipt {
   // Relations
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
   };
   restaurant?: {
@@ -97,8 +96,7 @@ export interface Receipt {
     id: string;
     user?: {
       id: string;
-      firstName: string;
-      lastName: string;
+      name: string;
     };
   };
   matchedReservations?: Array<{
@@ -272,6 +270,13 @@ class ReceiptService {
 
     const response = await apiClient.get(
       `/api/sysadmin/receipt-analytics?${params}`
+    );
+    return response.data;
+  }
+
+  async deleteReceipt(id: string): Promise<{ message: string }> {
+    const response = await apiClient.delete(
+      `/api/sysadmin/receipts/${id}/delete`
     );
     return response.data;
   }

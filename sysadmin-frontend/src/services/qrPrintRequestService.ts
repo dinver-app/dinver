@@ -11,8 +11,7 @@ export interface QRPrintRequest {
   updatedAt: string;
   user?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
   };
   restaurant?: {

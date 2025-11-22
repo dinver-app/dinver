@@ -1086,7 +1086,7 @@ const triggerCycleCheck = async (req, res) => {
 };
 
 /**
- * Delete a cancelled cycle permanently
+ * Delete a cancelled or completed cycle permanently
  */
 const deleteCycle = async (req, res) => {
   try {
@@ -1099,10 +1099,10 @@ const deleteCycle = async (req, res) => {
       });
     }
 
-    // Only allow deletion of cancelled cycles
-    if (cycle.status !== 'cancelled') {
+    // Only allow deletion of cancelled or completed cycles
+    if (cycle.status !== 'cancelled' && cycle.status !== 'completed') {
       return res.status(400).json({
-        error: 'Only cancelled cycles can be deleted',
+        error: 'Only cancelled or completed cycles can be deleted',
       });
     }
 

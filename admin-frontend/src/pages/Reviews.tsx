@@ -134,7 +134,7 @@ const Reviews = () => {
                       className="hover:bg-gray-100 border-b border-gray-200"
                     >
                       <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                        {review.user.firstName} {review.user.lastName}
+                        {review.user.name}
                       </td>
                       <td className="py-2 px-4 text-sm text-gray-600 w-64">
                         {truncateComment(review.text, 30)}
@@ -261,8 +261,7 @@ const Reviews = () => {
             <div className="mb-4">
               <h3 className="text-sm font-semibold">{t("user")}</h3>
               <p className="text-xs text-gray-600">
-                {selectedReview.review.user.firstName}{" "}
-                {selectedReview.review.user.lastName}
+                {selectedReview.review.user.name}{" "}
               </p>
             </div>
 

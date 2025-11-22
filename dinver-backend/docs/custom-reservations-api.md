@@ -171,8 +171,7 @@ Now includes custom reservations in the response. Custom reservations will have:
     "canSendMessages": true,
     "user": {
       "id": "user-uuid",
-      "firstName": "Ana",
-      "lastName": "Anić",
+      "name": "Ana Anić",
       "email": "ana@email.com",
       "phone": "+385 91 123 4567"
     }
@@ -245,7 +244,7 @@ const isCustomReservation = reservation.isCustomReservation;
 // Display appropriate name
 const displayName = isCustomReservation
   ? reservation.guestName
-  : `${reservation.user.firstName} ${reservation.user.lastName}`;
+  : `${reservation.user.name}`;
 
 // Show/hide chat button
 const showChatButton = reservation.canSendMessages;

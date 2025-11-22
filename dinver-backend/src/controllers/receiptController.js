@@ -6,6 +6,7 @@ const {
   UserPointsHistory,
   Reservation,
   UserSettings,
+  Visit,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -31,6 +32,9 @@ const {
   searchPlacesByText,
   getPlaceDetails,
 } = require('../services/googlePlacesService');
+const {
+  searchPlacesWithCache,
+} = require('../services/googlePlacesCache');
 const {
   calculateAutoApproveScore,
   calculateConsistencyScore,
@@ -256,16 +260,17 @@ const uploadReceipt = async (req, res) => {
         parserConfidence = claudeResult.confidence?.overall || 0.85;
         modelVersion = claudeResult.modelVersion;
 
-        // Store predicted data for training
+        // Store predicted data for training (including items!)
         predictedData = {
           fields: extractedFields,
+          items: claudeResult.items || [], // Store extracted line items
           confidences: fieldConfidences,
           extractionTime: claudeResult.extractionTime,
           notes: claudeResult.notes,
         };
 
         console.log(
-          `Claude OCR successful. Overall confidence: ${visionConfidence.toFixed(2)}`,
+          `Claude OCR successful. Overall confidence: ${visionConfidence.toFixed(2)}. Items extracted: ${claudeResult.items?.length || 0}`,
         );
       } else {
         // Claude failed, fallback to Vision + Parser
@@ -529,7 +534,8 @@ const uploadReceipt = async (req, res) => {
             );
 
             // Use match if confidence is high enough
-            if (claudeMatch.restaurantId && claudeMatch.confidence >= 0.80) {
+            // Lowered threshold from 0.80 to 0.75 to reduce false negatives and avoid unnecessary Google API calls
+            if (claudeMatch.restaurantId && claudeMatch.confidence >= 0.75) {
               console.log(
                 `[Restaurant Match] Matched by Claude: ${claudeMatch.restaurantId} (confidence: ${claudeMatch.confidence}, method: ${claudeMatch.matchedBy})`,
               );
@@ -555,6 +561,59 @@ const uploadReceipt = async (req, res) => {
         }
       }
 
+      // Step 2.25: Try name-based database search before Google Places
+      // This catches restaurants that exist in DB but are outside the 5km geo-radius
+      // or when GPS accuracy is poor. Much cheaper than Google Places API.
+      if (!receiptData.restaurantId && extractedFields.merchantName) {
+        try {
+          console.log('[Restaurant Match] Attempting name-based DB search...');
+
+          const nameResults = await Restaurant.findAll({
+            where: {
+              name: {
+                [Op.iLike]: `%${extractedFields.merchantName}%`, // Case-insensitive LIKE
+              },
+            },
+            attributes: ['id', 'name', 'oib', 'address', 'place', 'placeId'],
+            limit: 10,
+          });
+
+          if (nameResults.length > 0) {
+            console.log(
+              `[Restaurant Match] Found ${nameResults.length} potential name matches in DB`,
+            );
+
+            const claudeMatch = await findRestaurantWithClaude(
+              extractedFields,
+              nameResults,
+            );
+
+            // Accept match if confidence is reasonable (0.75+)
+            // If only 1 result with good name match, accept even with 0.70+ confidence
+            const confidenceThreshold = nameResults.length === 1 ? 0.70 : 0.75;
+
+            if (claudeMatch.restaurantId && claudeMatch.confidence >= confidenceThreshold) {
+              console.log(
+                `[Restaurant Match] Matched by name search: ${claudeMatch.restaurantId} (confidence: ${claudeMatch.confidence}, matches: ${nameResults.length})`,
+              );
+              receiptData.restaurantId = claudeMatch.restaurantId;
+            } else {
+              console.log(
+                `[Restaurant Match] Name search confidence too low (${claudeMatch.confidence}), trying Google Places`,
+              );
+            }
+          } else {
+            console.log('[Restaurant Match] No name matches in DB, trying Google Places');
+          }
+        } catch (nameMatchError) {
+          console.error(
+            '[Restaurant Match] Name-based search failed:',
+            nameMatchError.message,
+          );
+          // Continue to Google Places fallback
+        }
+      }
+
       // Step 2.5: Try Google Places proactive search with Claude matching
       // This step happens AFTER database matching fails and BEFORE manual fallback
       if (
@@ -571,8 +630,9 @@ const uploadReceipt = async (req, res) => {
 
           console.log(`[Restaurant Match] Google search query: "${searchQuery}"`);
 
-          // Search Google Places (with location bias if GPS available)
-          const googleResults = await searchPlacesByText(
+          // Search Google Places with cache (with location bias if GPS available)
+          // Cache saves ~30% of API calls ($0.032 each) for popular restaurants
+          const googleResults = await searchPlacesWithCache(
             searchQuery,
             locationLat || null,
             locationLng || null,
@@ -1145,11 +1205,28 @@ const calculateCorrections = (predictedFields, correctedFields) => {
   if (!predictedFields || !correctedFields) return 0;
 
   let corrections = 0;
-  const fieldsToCompare = ['oib', 'jir', 'zki', 'totalAmount', 'issueDate', 'issueTime', 'restaurantId'];
+  // NOTE: restaurantId is NOT included because it's not extracted by OCR - it's matched afterward
+  const fieldsToCompare = ['oib', 'jir', 'zki', 'totalAmount', 'issueDate', 'issueTime'];
 
   for (const field of fieldsToCompare) {
     const predicted = predictedFields[field];
     const corrected = correctedFields[field];
+
+    // Skip comparison if predicted value doesn't exist (OCR didn't extract it)
+    if (predicted === null || predicted === undefined) {
+      continue;
+    }
+
+    // Special handling for issueTime - normalize HH:MM and HH:MM:SS to just HH:MM
+    if (field === 'issueTime') {
+      const predictedTime = String(predicted || '').trim().substring(0, 5); // HH:MM
+      const correctedTime = String(corrected || '').trim().substring(0, 5); // HH:MM
+      if (predictedTime !== correctedTime && corrected != null) {
+        corrections++;
+        console.log(`[Accuracy] Field "${field}" corrected: "${predicted}" -> "${corrected}"`);
+      }
+      continue;
+    }
 
     // Normalize for comparison
     const predictedStr = String(predicted || '').trim().toLowerCase();
@@ -1158,6 +1235,7 @@ const calculateCorrections = (predictedFields, correctedFields) => {
     // If values differ, count as correction
     if (predictedStr !== correctedStr && corrected != null) {
       corrections++;
+      console.log(`[Accuracy] Field "${field}" corrected: "${predicted}" -> "${corrected}"`);
     }
   }
 
@@ -1167,10 +1245,10 @@ const calculateCorrections = (predictedFields, correctedFields) => {
 /**
  * Calculate accuracy percentage
  * @param {number} correctionsMade - Number of fields corrected
- * @param {number} totalFields - Total number of fields checked
+ * @param {number} totalFields - Total number of fields checked (default 6: oib, jir, zki, totalAmount, issueDate, issueTime)
  * @returns {number} Accuracy percentage (0-100)
  */
-const calculateAccuracy = (correctionsMade, totalFields = 7) => {
+const calculateAccuracy = (correctionsMade, totalFields = 6) => {
   if (totalFields === 0) return 100;
   const correctFields = totalFields - correctionsMade;
   return Math.round((correctFields / totalFields) * 100 * 100) / 100; // 2 decimals
@@ -1371,6 +1449,54 @@ const approveReceipt = async (req, res) => {
       description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
 
+    // Update existing Visit or create new one when receipt is approved
+    let visit = null;
+    try {
+      if (receipt.visitId) {
+        // Visit already exists (user created it before approval)
+        visit = await Visit.findByPk(receipt.visitId);
+
+        if (visit) {
+          // Update existing Visit to APPROVED
+          await visit.update({
+            status: 'APPROVED',
+            visitDate: visit.visitDate || new Date(issueDate), // Use existing or receipt date
+            reviewedAt: new Date(),
+            reviewedBy: req.user.id,
+          });
+
+          console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status`);
+        } else {
+          console.error(`[Receipt Approval] Visit ${receipt.visitId} not found, will create new one`);
+          visit = null; // Fall through to create new one
+        }
+      }
+
+      // If no existing Visit, create one (backward compatibility for old receipts)
+      if (!visit) {
+        visit = await Visit.create({
+          userId: receipt.userId,
+          restaurantId: restaurantId,
+          receiptImageUrl: receipt.originalUrl || receipt.imageUrl,
+          status: 'APPROVED',
+          wasInMustVisit: false,
+          visitDate: new Date(issueDate),
+          submittedAt: receipt.submittedAt,
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id,
+        });
+
+        console.log(`[Receipt Approval] Created new Visit ${visit.id} for Receipt ${receipt.id}`);
+
+        // Link the visit to the receipt
+        await receipt.update({ visitId: visit.id });
+      }
+    } catch (visitError) {
+      console.error('[Receipt Approval] Failed to process Visit:', visitError);
+      // Don't fail the receipt approval if visit processing fails
+      // The receipt is still approved and points are awarded
+    }
+
     const user = await User.findByPk(receipt.userId, {
       include: [
         {
@@ -1465,6 +1591,7 @@ const approveReceipt = async (req, res) => {
     res.json({
       message: 'Receipt approved successfully',
       pointsAwarded,
+      visitId: createdVisit?.id || null, // Include created visit ID
     });
   } catch (error) {
     console.error('Error approving receipt:', error);
@@ -1814,21 +1941,22 @@ const getOcrAnalytics = async (req, res) => {
     const { dateFrom, dateTo } = req.query;
 
     const whereClause = {
+      status: 'approved', // Only approved receipts have correctedData (ground truth)
       ocrMethod: { [Op.ne]: null }, // Only receipts with OCR data
     };
 
-    // Add date filter if provided
+    // Add date filter if provided (use verifiedAt for approved receipts)
     if (dateFrom || dateTo) {
-      whereClause.submittedAt = {};
+      whereClause.verifiedAt = {};
       if (dateFrom) {
-        whereClause.submittedAt[Op.gte] = new Date(dateFrom);
+        whereClause.verifiedAt[Op.gte] = new Date(dateFrom);
       }
       if (dateTo) {
-        whereClause.submittedAt[Op.lte] = new Date(dateTo);
+        whereClause.verifiedAt[Op.lte] = new Date(dateTo);
       }
     }
 
-    // Get all receipts with OCR data
+    // Get all approved receipts with OCR data
     const receipts = await Receipt.findAll({
       where: whereClause,
       attributes: [
@@ -1849,13 +1977,12 @@ const getOcrAnalytics = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
-    // Calculate overall statistics
+    // Calculate overall statistics (all receipts are already approved)
     const totalReceipts = receipts.length;
-    const approvedReceipts = receipts.filter((r) => r.status === 'approved');
-    const totalApproved = approvedReceipts.length;
+    const totalApproved = receipts.length; // All are approved due to whereClause filter
 
-    // Only calculate accuracy for approved receipts with correctedData
-    const receiptsWithAccuracy = approvedReceipts.filter(
+    // Only calculate accuracy for receipts with correctedData
+    const receiptsWithAccuracy = receipts.filter(
       (r) => r.accuracy !== null && r.accuracy !== undefined,
     );
 
@@ -1871,20 +1998,17 @@ const getOcrAnalytics = async (req, res) => {
           receiptsWithAccuracy.length
         : null;
 
-    // Stats by OCR method
+    // Stats by OCR method (all receipts are already approved)
     const methodStats = {};
     ['claude', 'vision', 'vision+gpt', 'gpt', 'manual'].forEach((method) => {
       const methodReceipts = receipts.filter((r) => r.ocrMethod === method);
-      const methodApproved = methodReceipts.filter((r) => r.status === 'approved');
-      const methodWithAccuracy = methodApproved.filter(
+      const methodWithAccuracy = methodReceipts.filter(
         (r) => r.accuracy !== null && r.accuracy !== undefined,
       );
 
       methodStats[method] = {
         total: methodReceipts.length,
-        approved: methodApproved.length,
-        rejected: methodReceipts.filter((r) => r.status === 'rejected').length,
-        pending: methodReceipts.filter((r) => r.status === 'pending').length,
+        approved: methodReceipts.length, // All are approved
         avgAccuracy:
           methodWithAccuracy.length > 0
             ? methodWithAccuracy.reduce((sum, r) => sum + parseFloat(r.accuracy || 0), 0) /
@@ -1911,14 +2035,13 @@ const getOcrAnalytics = async (req, res) => {
 
     const modelVersionStats = {};
     Object.entries(modelStats).forEach(([version, versionReceipts]) => {
-      const approved = versionReceipts.filter((r) => r.status === 'approved');
-      const withAccuracy = approved.filter(
+      const withAccuracy = versionReceipts.filter(
         (r) => r.accuracy !== null && r.accuracy !== undefined,
       );
 
       modelVersionStats[version] = {
         total: versionReceipts.length,
-        approved: approved.length,
+        approved: versionReceipts.length, // All are approved
         avgAccuracy:
           withAccuracy.length > 0
             ? withAccuracy.reduce((sum, r) => sum + parseFloat(r.accuracy || 0), 0) /
@@ -1951,6 +2074,7 @@ const getOcrAnalytics = async (req, res) => {
     });
 
     // Most common corrections (which fields are corrected most often)
+    // Field correction stats (restaurantId excluded - not part of OCR)
     const fieldCorrectionStats = {
       oib: 0,
       jir: 0,
@@ -1958,7 +2082,6 @@ const getOcrAnalytics = async (req, res) => {
       totalAmount: 0,
       issueDate: 0,
       issueTime: 0,
-      restaurantId: 0,
     };
 
     receiptsWithAccuracy.forEach((receipt) => {
@@ -1967,6 +2090,16 @@ const getOcrAnalytics = async (req, res) => {
 
       if (predicted && corrected) {
         Object.keys(fieldCorrectionStats).forEach((field) => {
+          // Special handling for issueTime - normalize HH:MM and HH:MM:SS
+          if (field === 'issueTime') {
+            const predictedTime = String(predicted[field] || '').trim().substring(0, 5);
+            const correctedTime = String(corrected[field] || '').trim().substring(0, 5);
+            if (predictedTime !== correctedTime && corrected[field] != null) {
+              fieldCorrectionStats[field]++;
+            }
+            return;
+          }
+
           const predictedVal = String(predicted[field] || '').trim().toLowerCase();
           const correctedVal = String(corrected[field] || '').trim().toLowerCase();
 
@@ -2140,15 +2273,15 @@ const getReceiptAnalytics = async (req, res) => {
   try {
     const { restaurantId, dateFrom, dateTo } = req.query;
 
-    if (!restaurantId) {
-      return res.status(400).json({ error: 'restaurantId is required' });
-    }
-
     // Build where clause for filtering
     const whereClause = {
-      restaurantId,
       status: 'approved', // Only approved receipts have valid items
     };
+
+    // If restaurantId is provided, filter by it (otherwise show all restaurants)
+    if (restaurantId && restaurantId !== 'all') {
+      whereClause.restaurantId = restaurantId;
+    }
 
     if (dateFrom) {
       whereClause.verifiedAt = { ...whereClause.verifiedAt, [Op.gte]: new Date(dateFrom) };
@@ -2174,6 +2307,7 @@ const getReceiptAnalytics = async (req, res) => {
       include: [
         {
           model: Restaurant,
+          as: 'restaurant',
           attributes: ['id', 'name'],
         },
       ],
@@ -2206,6 +2340,9 @@ const getReceiptAnalytics = async (req, res) => {
       }
 
       items.forEach((item) => {
+        // Skip items without a name
+        if (!item.name) return;
+
         totalItems += item.quantity || 1;
 
         if (receiptDate) {
@@ -2306,6 +2443,58 @@ const getReceiptAnalytics = async (req, res) => {
   }
 };
 
+/**
+ * Delete receipt permanently (sysadmin only)
+ * DELETE /api/sysadmin/receipts/:id/delete
+ */
+const deleteReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const receipt = await Receipt.findByPk(id);
+    if (!receipt) {
+      return res.status(404).json({ error: 'Receipt not found' });
+    }
+
+    // Delete all receipt image variants from S3
+    if (
+      receipt.thumbnailUrl ||
+      receipt.mediumUrl ||
+      receipt.fullscreenUrl ||
+      receipt.originalUrl
+    ) {
+      try {
+        const { deleteImageVariants } = require('../utils/s3Upload');
+        const deleteResult = await deleteImageVariants(
+          receipt.thumbnailUrl,
+          receipt.mediumUrl,
+          receipt.fullscreenUrl,
+          receipt.originalUrl,
+        );
+        console.log(
+          `Deleted ${deleteResult.deletedCount} receipt image variant(s) from S3`,
+        );
+      } catch (s3Error) {
+        console.error(
+          'Error deleting receipt images from S3:',
+          s3Error.message,
+        );
+      }
+    }
+
+    // Delete the Receipt record
+    await Receipt.destroy({ where: { id: receipt.id } });
+
+    res.status(200).json({
+      message: 'Receipt deleted successfully',
+      deletedReceiptId: receipt.id,
+    });
+  } catch (error) {
+    console.error('Error deleting receipt:', error);
+    res.status(500).json({ error: 'Failed to delete receipt' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   getUserReceipts,
@@ -2314,6 +2503,7 @@ module.exports = {
   updateReceiptData,
   approveReceipt,
   rejectReceipt,
+  deleteReceipt,
   checkReservations,
   searchRestaurantsForReceipt,
   getRestaurantDetailsForReceipt,

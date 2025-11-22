@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  PieChart,
-  Pie,
-  Cell,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
   BarChart,
@@ -27,8 +24,8 @@ interface OcrAnalytics {
     totalReceipts: number;
     totalApproved: number;
     totalWithAccuracy: number;
-    avgAccuracy: number | null;
-    avgCorrections: number | null;
+    avgAccuracy: number | string | null;
+    avgCorrections: number | string | null;
   };
   methodStats: Record<
     string,
@@ -37,8 +34,8 @@ interface OcrAnalytics {
       approved: number;
       rejected: number;
       pending: number;
-      avgAccuracy: number | null;
-      avgCorrections: number | null;
+      avgAccuracy: number | string | null;
+      avgCorrections: number | string | null;
     }
   >;
   modelVersionStats: Record<
@@ -46,8 +43,8 @@ interface OcrAnalytics {
     {
       total: number;
       approved: number;
-      avgAccuracy: number | null;
-      avgCorrections: number | null;
+      avgAccuracy: number | string | null;
+      avgCorrections: number | string | null;
     }
   >;
   accuracyDistribution: {
@@ -60,13 +57,19 @@ interface OcrAnalytics {
   fieldCorrectionStats: Record<string, number>;
   lowAccuracyReceipts: Array<{
     id: string;
-    accuracy: number;
+    accuracy: number | string;
     correctionsMade: number;
     ocrMethod: string;
     modelVersion: string;
     submittedAt: string;
   }>;
 }
+
+// Helper function to safely format numbers that might be strings
+const toNumber = (value: number | string | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  return typeof value === 'string' ? parseFloat(value) : value;
+};
 
 const OcrAnalytics = () => {
   const [analytics, setAnalytics] = useState<OcrAnalytics | null>(null);
@@ -117,14 +120,6 @@ const OcrAnalytics = () => {
   }
 
   // Prepare chart data
-  const accuracyChartData = [
-    { name: "100%", value: analytics.accuracyDistribution.perfect, color: "#10b981" },
-    { name: "90-99%", value: analytics.accuracyDistribution.excellent, color: "#3b82f6" },
-    { name: "80-89%", value: analytics.accuracyDistribution.good, color: "#f59e0b" },
-    { name: "70-79%", value: analytics.accuracyDistribution.fair, color: "#f97316" },
-    { name: "<70%", value: analytics.accuracyDistribution.poor, color: "#ef4444" },
-  ];
-
   const fieldCorrectionChartData = Object.entries(analytics.fieldCorrectionStats).map(
     ([field, count]) => ({
       field: field.toUpperCase(),
@@ -225,7 +220,7 @@ const OcrAnalytics = () => {
               <p className="text-sm text-gray-600">Avg Accuracy</p>
               <p className="text-2xl font-bold text-blue-600">
                 {analytics.overview.avgAccuracy !== null
-                  ? `${analytics.overview.avgAccuracy.toFixed(1)}%`
+                  ? `${toNumber(analytics.overview.avgAccuracy).toFixed(1)}%`
                   : "N/A"}
               </p>
             </div>
@@ -239,7 +234,7 @@ const OcrAnalytics = () => {
               <p className="text-sm text-gray-600">Avg Corrections</p>
               <p className="text-2xl font-bold text-orange-600">
                 {analytics.overview.avgCorrections !== null
-                  ? analytics.overview.avgCorrections.toFixed(2)
+                  ? toNumber(analytics.overview.avgCorrections).toFixed(2)
                   : "N/A"}
               </p>
             </div>
@@ -248,49 +243,20 @@ const OcrAnalytics = () => {
         </div>
       </div>
 
-      {/* Charts Row 1: Accuracy Distribution & Field Corrections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Accuracy Distribution */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Accuracy Distribution
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={accuracyChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {accuracyChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <RechartsTooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Field Corrections */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Most Corrected Fields
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={fieldCorrectionChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="field" />
-              <YAxis />
-              <RechartsTooltip />
-              <Bar dataKey="corrections" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Field Corrections Chart */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Most Corrected Fields
+        </h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={fieldCorrectionChartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="field" />
+            <YAxis />
+            <RechartsTooltip />
+            <Bar dataKey="corrections" fill="#3b82f6" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Charts Row 2: Method Stats */}
@@ -362,12 +328,12 @@ const OcrAnalytics = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {stats.avgAccuracy !== null
-                          ? `${stats.avgAccuracy.toFixed(1)}%`
+                          ? `${toNumber(stats.avgAccuracy).toFixed(1)}%`
                           : "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {stats.avgCorrections !== null
-                          ? stats.avgCorrections.toFixed(2)
+                          ? toNumber(stats.avgCorrections).toFixed(2)
                           : "N/A"}
                       </td>
                     </tr>
@@ -418,12 +384,12 @@ const OcrAnalytics = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          receipt.accuracy >= 70
+                          toNumber(receipt.accuracy) >= 70
                             ? "bg-orange-100 text-orange-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {receipt.accuracy.toFixed(1)}%
+                        {toNumber(receipt.accuracy).toFixed(1)}%
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

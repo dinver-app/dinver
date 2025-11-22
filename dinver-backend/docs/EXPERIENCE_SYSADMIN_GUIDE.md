@@ -9,16 +9,19 @@ Svi endpointi zahtijevaju **sysadmin autentifikaciju**.
 ## 📊 Moderation Queue
 
 ### Get Moderation Queue
+
 ```
 GET /api/sysadmin/experiences/moderation/queue
 ```
 
 **Query Parameters:**
+
 - `state` - PENDING, IN_REVIEW, DECIDED, ESCALATED (default: PENDING)
 - `priority` - LOW, NORMAL, HIGH, URGENT
 - `page`, `limit`
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -45,11 +48,13 @@ GET /api/sysadmin/experiences/moderation/queue
 ---
 
 ### Approve Experience
+
 ```
 POST /api/sysadmin/experiences/moderation/:id/approve
 ```
 
 **Body:**
+
 ```json
 {
   "notes": "Odlična objava, sve u redu"
@@ -59,11 +64,13 @@ POST /api/sysadmin/experiences/moderation/:id/approve
 ---
 
 ### Reject Experience
+
 ```
 POST /api/sysadmin/experiences/moderation/:id/reject
 ```
 
 **Body:**
+
 ```json
 {
   "reason": "Neprikladan sadržaj koji krši pravila zajednice",
@@ -76,11 +83,13 @@ POST /api/sysadmin/experiences/moderation/:id/reject
 ## 📈 Detaljne Statistike
 
 ### Get Experience Details (SVE STATISTIKE)
+
 ```
 GET /api/sysadmin/experiences/:id/details
 ```
 
 **Vraća:**
+
 - Experience podatke (title, description, ratings, media)
 - Autora (ime, email, profil)
 - Restoran info
@@ -111,6 +120,7 @@ GET /api/sysadmin/experiences/:id/details
 - **Reports** (ako postoje)
 
 **Response primjer:**
+
 ```json
 {
   "data": {
@@ -145,11 +155,13 @@ GET /api/sysadmin/experiences/:id/details
 ---
 
 ### Get User Experience Stats
+
 ```
 GET /api/sysadmin/experiences/users/:userId/stats
 ```
 
 **Vraća:**
+
 - User info
 - **Ukupne statistike:**
   - Ukupno experiences
@@ -171,21 +183,25 @@ GET /api/sysadmin/experiences/users/:userId/stats
 ## 📋 Reports
 
 ### Get Reports
+
 ```
 GET /api/sysadmin/experiences/reports
 ```
 
 **Query:**
+
 - `state` - OPEN, IN_REVIEW, RESOLVED, DISMISSED
 
 ---
 
 ### Review Report
+
 ```
 POST /api/sysadmin/experiences/reports/:id/review
 ```
 
 **Body:**
+
 ```json
 {
   "state": "RESOLVED",
@@ -195,6 +211,7 @@ POST /api/sysadmin/experiences/reports/:id/review
 ```
 
 **Action Taken opcije:**
+
 - NONE
 - CONTENT_REMOVED
 - USER_WARNED
@@ -206,11 +223,13 @@ POST /api/sysadmin/experiences/reports/:id/review
 ## 📊 Dashboard Statistike
 
 ### Get Overall Stats
+
 ```
 GET /api/sysadmin/experiences/moderation/stats
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -235,12 +254,15 @@ GET /api/sysadmin/experiences/moderation/stats
 ## ⚠️ Važna pravila
 
 ### Receipt Validation
+
 **Korisnici mogu objaviti experience SAMO ako:**
+
 - Imaju **approved** ili **auto_approved** račun
 - Račun je iz **tog restorana**
 - Račun je iz **zadnjih 14 dana**
 
 Ako ne ispunjavaju uvjete, dobivaju error:
+
 ```json
 {
   "error": "Ne možete objaviti experience u ovom restoranu. Potreban je odobren račun iz zadnjih 14 dana.",
@@ -249,11 +271,13 @@ Ako ne ispunjavaju uvjete, dobivaju error:
 ```
 
 ### SLA (24 sata)
+
 - Svaki experience ima **slaDeadline** (24h od kreiranja)
 - Ako prođe deadline bez odluke → `slaViolated: true`
 - Cron job provjerava svaki sat
 
 ### Auto-eskalacija
+
 - Ako experience dobije **3+ reporta** → automatski se eskalira na **URGENT** priority
 
 ---
@@ -261,17 +285,20 @@ Ako ne ispunjavaju uvjete, dobivaju error:
 ## 🚀 S3 Optimizacija
 
 ### Storage struktura:
+
 ```
 experiences/{YYYY-MM}/{userId}/{kind}/{fileId}.ext
 ```
 
 Primjer:
+
 ```
 experiences/2025-11/user123/image/abc-def-123.jpg
 experiences/2025-11/user456/video/xyz-789.mp4
 ```
 
 **Prednosti:**
+
 - Brže učitavanje (organizirano po datumu)
 - Lako cleanup starih fileova
 - Cache headers: `public, max-age=31536000, immutable` (1 godina)
@@ -281,21 +308,25 @@ experiences/2025-11/user456/video/xyz-789.mp4
 ## 🎯 Workflow
 
 ### 1. Korisnik kreira Experience
+
 - Upload media → S3 (pre-signed URL)
 - Kreiranje experience → status: **PENDING**
 - Automatski ulazi u **ModerationQueue**
 
 ### 2. Sysadmin moderira
+
 - Vidi u queue (prikazano po priority)
 - Može assignati sebi ili drugom moderatoru
 - Pregleda media, title, description
 - **APPROVE** ili **REJECT**
 
 ### 3. Nakon odluke
+
 - **Approved** → pojavljuje se u feedu, korisnik dobiva notifikaciju
 - **Rejected** → ne pojavljuje se, korisnik dobiva notifikaciju s razlogom
 
 ### 4. Praćenje
+
 - Detaljno praćenje svakog posta (viewovi, likes, saves)
 - Praćenje po useru (koliko objava, approval rate, engagement)
 
@@ -304,6 +335,7 @@ experiences/2025-11/user456/video/xyz-789.mp4
 ## 💡 Korisni Queryi za Debugging
 
 ### Provjeri račune usera
+
 ```sql
 SELECT * FROM "Receipts"
 WHERE "userId" = 'user_uuid'
@@ -314,8 +346,9 @@ ORDER BY "createdAt" DESC;
 ```
 
 ### Provjeri pending experiences
+
 ```sql
-SELECT e.id, e.title, u."firstName", u."lastName", r.name as restaurant, e."createdAt"
+SELECT e.id, e.title, u."name", r.name as restaurant, e."createdAt"
 FROM "Experiences" e
 JOIN "Users" u ON e."userId" = u.id
 JOIN "Restaurants" r ON e."restaurantId" = r.id
@@ -324,6 +357,7 @@ ORDER BY e."createdAt" ASC;
 ```
 
 ### Provjeri SLA violations
+
 ```sql
 SELECT * FROM "ExperienceModerationQueues"
 WHERE "slaViolated" = true

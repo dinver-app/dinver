@@ -320,9 +320,7 @@ const QRPrintRequests = () => {
                   className="hover:bg-gray-100 border-b border-gray-200"
                 >
                   <td className="py-2 px-4 text-sm w-64">
-                    {req.user
-                      ? `${req.user.firstName} ${req.user.lastName} (${req.user.email})`
-                      : "-"}
+                    {req.user ? `${req.user.name} (${req.user.email})` : "-"}
                   </td>
                   <td className="py-2 px-4 text-sm w-64">
                     {req.restaurant ? req.restaurant.name : "-"}
@@ -449,7 +447,7 @@ const QRPrintRequests = () => {
                 <h3 className="text-sm font-semibold">{t("user")}</h3>
                 <p className="text-xs text-gray-600">
                   {selectedRequest.user
-                    ? `${selectedRequest.user.firstName} ${selectedRequest.user.lastName} (${selectedRequest.user.email})`
+                    ? `${selectedRequest.user.name} (${selectedRequest.user.email})`
                     : "-"}
                 </p>
               </div>

@@ -168,8 +168,7 @@ CREATE TABLE "LeaderboardCycleWinners" (
       "userName": "John Doe",
       "user": {
         "id": "uuid",
-        "firstName": "John",
-        "lastName": "Doe",
+        "name": "John Doe",
         "email": "john@example.com",
         "city": "Zagreb"
       }
@@ -196,8 +195,7 @@ CREATE TABLE "LeaderboardCycleWinners" (
       "userName": "John Doe",
       "user": {
         "id": "uuid",
-        "firstName": "John",
-        "lastName": "Doe",
+        "name": "John Doe",
         "email": "john@example.com",
         "city": "Zagreb"
       }
@@ -265,8 +263,7 @@ CREATE TABLE "LeaderboardCycleWinners" (
       "userName": "John Doe",
       "user": {
         "id": "uuid",
-        "firstName": "John",
-        "lastName": "Doe",
+        "name": "John Doe",
         "email": "john@example.com",
         "city": "Zagreb"
       }

@@ -9,6 +9,7 @@ const {
   updateReceiptData,
   approveReceipt,
   rejectReceipt,
+  deleteReceipt,
   checkReservations,
   getOcrAnalytics,
   getTrainingData,
@@ -54,6 +55,12 @@ router.post(
   sysadminAuthenticateToken,
   checkSysadmin,
   rejectReceipt,
+);
+router.delete(
+  '/receipts/:id/delete',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  deleteReceipt,
 );
 
 // OCR Analytics & Training routes

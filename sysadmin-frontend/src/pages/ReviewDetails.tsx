@@ -158,9 +158,7 @@ const ReviewDetails = () => {
             {review.restaurantName}
           </h2>
           <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>
-              {review.userFirstName} {review.userLastName}
-            </span>
+            <span>{review.user ? review.user.name : "-"}</span>
             <span>•</span>
             <span>
               {format(new Date(review.createdAt), "dd.MM.yyyy. HH:mm")}
@@ -268,7 +266,7 @@ const ReviewDetails = () => {
                   {t("name")}:
                 </span>
                 <p className="text-gray-900">
-                  {review.userFirstName} {review.userLastName}
+                  {review.user ? review.user.name : "-"}
                 </p>
               </div>
               <div>
@@ -305,7 +303,7 @@ const ReviewDetails = () => {
                 <div className="text-sm">
                   <p>
                     <span className="font-medium">{t("user")}:</span>{" "}
-                    {review.userFirstName} {review.userLastName}
+                    {review.user ? review.user.name : "-"}
                   </p>
                   <p>
                     <span className="font-medium">{t("restaurant")}:</span>{" "}
@@ -363,7 +361,7 @@ const ReviewDetails = () => {
                 <div className="text-sm">
                   <p>
                     <span className="font-medium">{t("user")}:</span>{" "}
-                    {review.userFirstName} {review.userLastName}
+                    {review.user ? review.user.name : "-"}
                   </p>
                   <p>
                     <span className="font-medium">{t("restaurant")}:</span>{" "}

@@ -123,7 +123,7 @@ const Reviews = () => {
                         {restaurant.restaurant}
                       </td>
                       <td className="py-2 px-4 text-sm text-gray-600 w-48">
-                        {review.userFirstName} {review.userLastName}
+                        {review.user?.name ?? "-"}
                       </td>
                       <td className="py-2 px-4 text-sm text-gray-600 w-64">
                         {truncateComment(review.text, 30)}

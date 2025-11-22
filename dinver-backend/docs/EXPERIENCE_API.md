@@ -42,12 +42,14 @@ The media upload process uses pre-signed URLs for secure, direct uploads to S3.
 Request a pre-signed URL for uploading media.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Body:**
+
 ```json
 {
-  "kind": "IMAGE",  // or "VIDEO"
+  "kind": "IMAGE", // or "VIDEO"
   "mimeType": "image/jpeg",
   "bytes": 2048576,
   "checksum": "optional-md5-checksum"
@@ -55,6 +57,7 @@ Request a pre-signed URL for uploading media.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Pre-signed URL generated successfully",
@@ -67,6 +70,7 @@ Request a pre-signed URL for uploading media.
 ```
 
 **Constraints:**
+
 - **Images**: Max 50MB, allowed types: `image/jpeg`, `image/png`, `image/webp`, `image/heic`
 - **Videos**: Max 50MB, max 30 seconds, allowed types: `video/mp4`, `video/quicktime`
 
@@ -87,9 +91,11 @@ curl -X PUT "<uploadUrl>" \
 Confirm the upload and start processing.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Body:**
+
 ```json
 {
   "storageKey": "experiences/user123/images/uuid.jpg",
@@ -98,6 +104,7 @@ Confirm the upload and start processing.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Media upload confirmed. Processing started.",
@@ -119,9 +126,11 @@ Confirm the upload and start processing.
 Create a new experience post.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Body:**
+
 ```json
 {
   "restaurantId": "uuid",
@@ -149,6 +158,7 @@ Create a new experience post.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Experience created successfully and submitted for moderation",
@@ -169,11 +179,13 @@ Create a new experience post.
 ```
 
 **Status Codes:**
+
 - `201 Created` - Experience created successfully
 - `400 Bad Request` - Invalid data (missing fields, too many images, etc.)
 - `404 Not Found` - Restaurant not found
 
 **Constraints:**
+
 - **Video experiences**: Only 1 video allowed
 - **Carousel experiences**: Max 10 images
 - **Required fields**: `restaurantId`, `title`, `media`
@@ -188,9 +200,11 @@ Create a new experience post.
 Get a single experience by ID.
 
 **Headers:**
+
 - `Authorization: Bearer <token>` (Optional)
 
 **Response:**
+
 ```json
 {
   "message": "Experience retrieved successfully",
@@ -212,8 +226,7 @@ Get a single experience by ID.
     "createdAt": "2025-11-04T18:00:00Z",
     "author": {
       "id": "user_uuid",
-      "firstName": "John",
-      "lastName": "Doe",
+      "name": "John Doe",
       "profileImage": "https://..."
     },
     "restaurant": {
@@ -247,6 +260,7 @@ Get a single experience by ID.
 ```
 
 **Status Codes:**
+
 - `200 OK` - Experience found
 - `404 Not Found` - Experience not found or not accessible (not approved)
 
@@ -261,12 +275,14 @@ Get a single experience by ID.
 Like an experience. Idempotent - calling multiple times has same effect.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 - `X-Device-ID: <device_id>` (Optional, for fraud detection)
 
 **Body:** Empty or `{}`
 
 **Response:**
+
 ```json
 {
   "message": "Experience liked successfully",
@@ -277,6 +293,7 @@ Like an experience. Idempotent - calling multiple times has same effect.
 ```
 
 **Points Awarded:**
+
 - Experience author receives **+0.05 points** (once per cycle)
 - Self-likes do not award points
 
@@ -289,9 +306,11 @@ Like an experience. Idempotent - calling multiple times has same effect.
 Remove a like from an experience.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "message": "Experience unliked successfully",
@@ -310,10 +329,12 @@ Remove a like from an experience.
 Save the restaurant from this experience to "My Map". Idempotent.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 - `X-Device-ID: <device_id>` (Optional)
 
 **Response:**
+
 ```json
 {
   "message": "Experience saved successfully",
@@ -324,6 +345,7 @@ Save the restaurant from this experience to "My Map". Idempotent.
 ```
 
 **Points Awarded:**
+
 - Experience author receives **+0.05 points** (once per cycle)
 
 **Note:** Saving is per restaurant, not per experience. If you save multiple experiences from the same restaurant, only one save is recorded.
@@ -337,9 +359,11 @@ Save the restaurant from this experience to "My Map". Idempotent.
 Remove the restaurant from "My Map".
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "message": "Experience unsaved successfully",
@@ -358,10 +382,12 @@ Remove the restaurant from "My Map".
 Track that a user viewed an experience. Used for analytics and recommendations.
 
 **Headers:**
+
 - `Authorization: Bearer <token>` (Optional)
 - `X-Device-ID: <device_id>` (Optional)
 
 **Body:**
+
 ```json
 {
   "durationMs": 5200,
@@ -372,6 +398,7 @@ Track that a user viewed an experience. Used for analytics and recommendations.
 ```
 
 **Source Options:**
+
 - `EXPLORE_FEED`
 - `TRENDING_FEED`
 - `USER_PROFILE`
@@ -381,6 +408,7 @@ Track that a user viewed an experience. Used for analytics and recommendations.
 - `MY_MAP`
 
 **Response:**
+
 ```json
 {
   "message": "View tracked successfully"
@@ -398,21 +426,25 @@ Track that a user viewed an experience. Used for analytics and recommendations.
 Get the explore feed with NEW or TRENDING experiences.
 
 **Headers:**
+
 - `Authorization: Bearer <token>` (Optional)
 
 **Query Parameters:**
+
 - `city` (optional): Filter by city (e.g., "Zagreb")
 - `sort` (optional): "NEW" (default) or "TRENDING"
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 20, max: 100)
 
 **Examples:**
+
 ```
 GET /api/app/experiences/explore?city=Zagreb&sort=TRENDING&page=1&limit=20
 GET /api/app/experiences/explore?sort=NEW
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Explore feed retrieved successfully",
@@ -442,6 +474,7 @@ GET /api/app/experiences/explore?sort=NEW
 ```
 
 **Sorting Logic:**
+
 - **NEW**: Sorted by `createdAt DESC`
 - **TRENDING**: Sorted by `engagementScore DESC` (weighted score with time decay)
 
@@ -456,13 +489,16 @@ GET /api/app/experiences/explore?sort=NEW
 Get all approved experiences by a specific user (profile grid).
 
 **Headers:**
+
 - `Authorization: Bearer <token>` (Optional)
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 20)
 
 **Response:**
+
 ```json
 {
   "message": "User experiences retrieved successfully",
@@ -482,12 +518,15 @@ Get all approved experiences by a specific user (profile grid).
 Get all experiences the current user has liked.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Query Parameters:**
+
 - `page`, `limit` (optional)
 
 **Response:**
+
 ```json
 {
   "message": "Liked experiences retrieved successfully",
@@ -507,12 +546,15 @@ Get all experiences the current user has liked.
 Get all restaurants the user has saved (from experiences).
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Query Parameters:**
+
 - `page`, `limit` (optional)
 
 **Response:**
+
 ```json
 {
   "message": "My Map retrieved successfully",
@@ -549,9 +591,11 @@ Get all restaurants the user has saved (from experiences).
 Report an experience for moderation review.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 
 **Body:**
+
 ```json
 {
   "reasonCode": "INAPPROPRIATE_CONTENT",
@@ -560,6 +604,7 @@ Report an experience for moderation review.
 ```
 
 **Reason Codes:**
+
 - `SPAM`
 - `INAPPROPRIATE_CONTENT`
 - `MISLEADING`
@@ -570,6 +615,7 @@ Report an experience for moderation review.
 - `OTHER`
 
 **Response:**
+
 ```json
 {
   "message": "Report submitted successfully",
@@ -582,6 +628,7 @@ Report an experience for moderation review.
 ```
 
 **Auto-Escalation:**
+
 - If an experience receives 3+ reports, it is automatically escalated to URGENT priority in the moderation queue.
 
 ---
@@ -597,14 +644,17 @@ All moderation endpoints require admin authentication.
 Get the moderation queue.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Query Parameters:**
+
 - `state` (optional): "PENDING", "IN_REVIEW", "DECIDED", "ESCALATED" (default: "PENDING")
 - `priority` (optional): "LOW", "NORMAL", "HIGH", "URGENT"
 - `page`, `limit` (optional)
 
 **Response:**
+
 ```json
 {
   "message": "Moderation queue retrieved successfully",
@@ -639,18 +689,21 @@ Get the moderation queue.
 Assign a moderator to an experience.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Body:**
+
 ```json
 {
   "moderatorId": "mod_uuid"
 }
 ```
 
-*If `moderatorId` is not provided, assigns to the current user.*
+_If `moderatorId` is not provided, assigns to the current user._
 
 **Response:**
+
 ```json
 {
   "message": "Moderator assigned successfully",
@@ -667,9 +720,11 @@ Assign a moderator to an experience.
 Approve an experience for public viewing.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Body:**
+
 ```json
 {
   "notes": "Content looks good. Approved."
@@ -677,6 +732,7 @@ Approve an experience for public viewing.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Experience approved successfully",
@@ -689,6 +745,7 @@ Approve an experience for public viewing.
 ```
 
 **Side Effects:**
+
 - Experience status changes to `APPROVED`
 - Experience becomes visible in feeds
 - User receives notification (if implemented)
@@ -702,9 +759,11 @@ Approve an experience for public viewing.
 Reject an experience.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Body:**
+
 ```json
 {
   "reason": "This content violates our community guidelines regarding inappropriate content.",
@@ -713,6 +772,7 @@ Reject an experience.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Experience rejected successfully",
@@ -725,6 +785,7 @@ Reject an experience.
 ```
 
 **Side Effects:**
+
 - Experience status changes to `REJECTED`
 - Experience is not visible in feeds
 - User receives notification with rejection reason
@@ -738,13 +799,16 @@ Reject an experience.
 Get all experience reports.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Query Parameters:**
+
 - `state` (optional): "OPEN", "IN_REVIEW", "RESOLVED", "DISMISSED"
 - `page`, `limit` (optional)
 
 **Response:**
+
 ```json
 {
   "message": "Reports retrieved successfully",
@@ -776,9 +840,11 @@ Get all experience reports.
 Review and resolve a report.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Body:**
+
 ```json
 {
   "state": "RESOLVED",
@@ -788,6 +854,7 @@ Review and resolve a report.
 ```
 
 **Action Taken Options:**
+
 - `NONE`
 - `CONTENT_REMOVED`
 - `USER_WARNED`
@@ -795,6 +862,7 @@ Review and resolve a report.
 - `FALSE_REPORT`
 
 **Response:**
+
 ```json
 {
   "message": "Report reviewed successfully",
@@ -811,9 +879,11 @@ Review and resolve a report.
 Get moderation statistics dashboard.
 
 **Headers:**
+
 - `Authorization: Bearer <admin-token>`
 
 **Response:**
+
 ```json
 {
   "message": "Moderation statistics retrieved successfully",
@@ -929,10 +999,10 @@ The Experience feature integrates with Dinver's existing points and leaderboard 
 
 ### Point Awards
 
-| Action | Points | Frequency |
-|--------|--------|-----------|
-| Like on your experience | +0.05 | Once per user per cycle |
-| Save on your experience | +0.05 | Once per user per cycle |
+| Action                  | Points | Frequency               |
+| ----------------------- | ------ | ----------------------- |
+| Like on your experience | +0.05  | Once per user per cycle |
+| Save on your experience | +0.05  | Once per user per cycle |
 
 ### Rules
 
@@ -944,6 +1014,7 @@ The Experience feature integrates with Dinver's existing points and leaderboard 
 ### Viewing Points
 
 Points are added to the user's `UserPointsHistory` with:
+
 - `actionType`: "EXPERIENCE_LIKE" or "EXPERIENCE_SAVE"
 - `pointsEarned`: 0.05
 - `experienceId`: Reference to the experience
@@ -968,6 +1039,7 @@ To prevent abuse, the following rate limits are enforced:
 - **All endpoints**: 1000 requests per 15 minutes
 
 Rate limit headers are included in responses:
+
 ```
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 45
@@ -989,16 +1061,19 @@ decayFactor = 0.5 ^ (hoursSinceCreation / 48)
 ```
 
 **Weights:**
+
 - Likes: 1.0
 - Saves: 2.0 (more valuable - indicates intent to visit)
 - Views: 0.1 (abundant, less valuable)
 - Completion rate: 0.5 (quality signal)
 
 **Time Decay:**
+
 - Half-life of 48 hours
 - Older content gradually loses ranking
 
 **Update Frequency:**
+
 - Scores recalculated every 5 minutes by cron job
 - 24h metrics updated every hour
 
@@ -1008,38 +1083,38 @@ decayFactor = 0.5 ^ (hoursSinceCreation / 48)
 
 The Experience feature uses several cron jobs:
 
-| Job | Schedule | Purpose |
-|-----|----------|---------|
-| Update Engagement Scores | Every 5 min | Recalculate trending scores |
-| Update 24h Metrics | Every 1 hour | Track recent activity |
-| Update Quality Metrics | Every 30 min | Calculate avg watch time, completion |
-| Check Moderation SLA | Every 1 hour | Flag overdue reviews |
-| Cleanup Old Views | Daily 3 AM | Remove view records older than 90 days |
+| Job                      | Schedule     | Purpose                                |
+| ------------------------ | ------------ | -------------------------------------- |
+| Update Engagement Scores | Every 5 min  | Recalculate trending scores            |
+| Update 24h Metrics       | Every 1 hour | Track recent activity                  |
+| Update Quality Metrics   | Every 30 min | Calculate avg watch time, completion   |
+| Check Moderation SLA     | Every 1 hour | Flag overdue reviews                   |
+| Cleanup Old Views        | Daily 3 AM   | Remove view records older than 90 days |
 
 ---
 
 ## Error Codes
 
-| Status | Error | Description |
-|--------|-------|-------------|
-| 400 | `INVALID_MEDIA_KIND` | Invalid kind (must be IMAGE or VIDEO) |
-| 400 | `INVALID_MIME_TYPE` | Unsupported file type |
-| 400 | `FILE_TOO_LARGE` | File exceeds size limit |
-| 400 | `TOO_MANY_IMAGES` | Carousel has >10 images |
-| 400 | `VIDEO_TOO_LONG` | Video exceeds 30 seconds |
-| 400 | `MISSING_REQUIRED_FIELDS` | Required fields not provided |
-| 400 | `ALREADY_LIKED` | User already liked this experience |
-| 400 | `NOT_APPROVED` | Cannot interact with non-approved experience |
-| 404 | `EXPERIENCE_NOT_FOUND` | Experience does not exist |
-| 404 | `RESTAURANT_NOT_FOUND` | Restaurant does not exist |
-| 404 | `FILE_NOT_FOUND` | Uploaded file not found in storage |
-| 429 | `RATE_LIMIT_EXCEEDED` | Too many requests |
+| Status | Error                     | Description                                  |
+| ------ | ------------------------- | -------------------------------------------- |
+| 400    | `INVALID_MEDIA_KIND`      | Invalid kind (must be IMAGE or VIDEO)        |
+| 400    | `INVALID_MIME_TYPE`       | Unsupported file type                        |
+| 400    | `FILE_TOO_LARGE`          | File exceeds size limit                      |
+| 400    | `TOO_MANY_IMAGES`         | Carousel has >10 images                      |
+| 400    | `VIDEO_TOO_LONG`          | Video exceeds 30 seconds                     |
+| 400    | `MISSING_REQUIRED_FIELDS` | Required fields not provided                 |
+| 400    | `ALREADY_LIKED`           | User already liked this experience           |
+| 400    | `NOT_APPROVED`            | Cannot interact with non-approved experience |
+| 404    | `EXPERIENCE_NOT_FOUND`    | Experience does not exist                    |
+| 404    | `RESTAURANT_NOT_FOUND`    | Restaurant does not exist                    |
+| 404    | `FILE_NOT_FOUND`          | Uploaded file not found in storage           |
+| 429    | `RATE_LIMIT_EXCEEDED`     | Too many requests                            |
 
 ---
 
 ## Webhooks (Future)
 
-*Not implemented in MVP, but planned for future:*
+_Not implemented in MVP, but planned for future:_
 
 - `experience.approved` - Fired when an experience is approved
 - `experience.rejected` - Fired when an experience is rejected
@@ -1053,6 +1128,7 @@ The Experience feature uses several cron jobs:
 ### Example Test Flow
 
 1. **Upload media**:
+
    ```bash
    curl -X POST http://localhost:3000/api/app/experiences/media/presign \
      -H "Authorization: Bearer $TOKEN" \
@@ -1061,12 +1137,14 @@ The Experience feature uses several cron jobs:
    ```
 
 2. **Upload to S3**:
+
    ```bash
    curl -X PUT "$UPLOAD_URL" --upload-file image.jpg \
      -H "Content-Type: image/jpeg"
    ```
 
 3. **Confirm upload**:
+
    ```bash
    curl -X POST http://localhost:3000/api/app/experiences/media/confirm \
      -H "Authorization: Bearer $TOKEN" \
@@ -1075,6 +1153,7 @@ The Experience feature uses several cron jobs:
    ```
 
 4. **Create experience**:
+
    ```bash
    curl -X POST http://localhost:3000/api/app/experiences \
      -H "Authorization: Bearer $TOKEN" \
@@ -1089,6 +1168,7 @@ The Experience feature uses several cron jobs:
    ```
 
 5. **Approve (as admin)**:
+
    ```bash
    curl -X POST http://localhost:3000/api/admin/experiences/moderation/$EXP_ID/approve \
      -H "Authorization: Bearer $ADMIN_TOKEN" \
@@ -1109,11 +1189,13 @@ The Experience feature uses several cron jobs:
 To add the Experience feature to an existing Dinver installation:
 
 1. **Run migrations**:
+
    ```bash
    npx sequelize-cli db:migrate
    ```
 
 2. **Register routes** in `src/app.js`:
+
    ```javascript
    const experienceRoutes = require('./routes/appRoutes/experienceRoutes');
    const userExperienceRoutes = require('./routes/appRoutes/userExperienceRoutes');
@@ -1125,6 +1207,7 @@ To add the Experience feature to an existing Dinver installation:
    ```
 
 3. **Register cron jobs** in `src/app.js`:
+
    ```javascript
    const experienceCron = require('./cron/experienceEngagementCron');
    const cron = require('node-cron');
@@ -1146,6 +1229,7 @@ To add the Experience feature to an existing Dinver installation:
    ```
 
 4. **Environment variables** (add to `.env`):
+
    ```
    AWS_CLOUDFRONT_DOMAIN=your-cloudfront-domain.cloudfront.net
    ```

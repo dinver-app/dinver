@@ -3,6 +3,7 @@
 ## 📱 Pregled Značajke
 
 **Dinver Experience** je TikTok/Instagram Reels-style social media feature za dijeljenje iskustava u restoranima. Korisnici mogu:
+
 - Kreirati video ili carousel (slike) objave o svom iskustvu u restoranu
 - Pregledavati feed objava drugih korisnika (NEW i TRENDING)
 - Lajkati, spremati (My Map) i gledati objave
@@ -48,6 +49,7 @@ dinver-app/
 ```
 
 **KORACI ZA ANALIZU:**
+
 1. Pronađi glavni `App.tsx` ili `index.js` file
 2. Lociraј navigation setup (npr. `src/navigation/AppNavigator.tsx`)
 3. Pogledaj postojeće API service fileove (npr. `src/services/api.ts`)
@@ -65,6 +67,7 @@ Svi API pozivi za Experience feature koriste **app JWT token** (ne admin/sysadmi
 **Endpoint baza**: `https://your-api.com/api/app/experiences`
 
 **Headers za sve requste:**
+
 ```javascript
 {
   'Authorization': `Bearer ${userToken}`,
@@ -73,6 +76,7 @@ Svi API pozivi za Experience feature koriste **app JWT token** (ne admin/sysadmi
 ```
 
 **Pronađi u kodu:**
+
 - Gdje se čuva JWT token (AsyncStorage, SecureStore, ili Context)
 - Kako se kreira axios/fetch instance sa default headerima
 - Primjer iz postojeće feature (npr. kako se dohvaćaju restorani)
@@ -112,34 +116,38 @@ export default apiClient;
 **VAŽNO**: Upload se radi direktno na S3, ne šalje se file na backend!
 
 #### Korak 1: Request Pre-signed URL
+
 ```
 POST /api/app/experiences/media/presigned-url
 ```
 
 **Body:**
+
 ```json
 {
-  "kind": "IMAGE",  // ili "VIDEO"
-  "mimeType": "image/jpeg",  // ili video/mp4, itd.
-  "bytes": 2485760,  // veličina u bajtima
-  "checksum": "abc123..."  // opcionalno, MD5 hash
+  "kind": "IMAGE", // ili "VIDEO"
+  "mimeType": "image/jpeg", // ili video/mp4, itd.
+  "bytes": 2485760, // veličina u bajtima
+  "checksum": "abc123..." // opcionalno, MD5 hash
 }
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
-    "uploadUrl": "https://s3.amazonaws.com/...",  // Za upload
+    "uploadUrl": "https://s3.amazonaws.com/...", // Za upload
     "fileId": "uuid-file-id",
     "storageKey": "experiences/2025-11/userId/image/uuid.jpg",
-    "cdnUrl": "https://cdn.dinver.com/experiences/...",  // Za prikaz
+    "cdnUrl": "https://cdn.dinver.com/experiences/...", // Za prikaz
     "expiresAt": "2025-11-04T19:00:00Z"
   }
 }
 ```
 
 #### Korak 2: Upload File na S3
+
 ```javascript
 // Upload direktno na S3 sa pre-signed URL
 await fetch(uploadUrl, {
@@ -147,29 +155,32 @@ await fetch(uploadUrl, {
   headers: {
     'Content-Type': mimeType,
   },
-  body: fileBlob,  // File kao blob/buffer
+  body: fileBlob, // File kao blob/buffer
 });
 ```
 
 #### Korak 3: Confirm Upload
+
 ```
 POST /api/app/experiences/media/confirm-upload
 ```
 
 **Body:**
+
 ```json
 {
   "fileId": "uuid-file-id",
-  "checksum": "abc123..."  // opcionalno
+  "checksum": "abc123..." // opcionalno
 }
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
     "fileId": "uuid-file-id",
-    "status": "PROCESSING",  // Backend pokreće transcoding
+    "status": "PROCESSING", // Backend pokreće transcoding
     "cdnUrl": "https://cdn.dinver.com/..."
   }
 }
@@ -184,10 +195,11 @@ POST /api/app/experiences
 ```
 
 **Body:**
+
 ```json
 {
   "restaurantId": "uuid-restaurant-id",
-  "mediaKind": "VIDEO",  // ili "CAROUSEL"
+  "mediaKind": "VIDEO", // ili "CAROUSEL"
   "media": [
     {
       "fileId": "uuid-file-id-1",
@@ -200,14 +212,15 @@ POST /api/app/experiences
   ],
   "title": "Najbolja pizza u gradu!",
   "description": "Probao sam njihovu Margherita pizzu i bila je fenomenalna...",
-  "foodRating": 5,       // 1-5
-  "serviceRating": 4,    // 1-5
+  "foodRating": 5, // 1-5
+  "serviceRating": 4, // 1-5
   "atmosphereRating": 5, // 1-5
-  "priceRating": 4       // 1-5
+  "priceRating": 4 // 1-5
 }
 ```
 
 **VALIDACIJE:**
+
 - User MORA imati approved račun u tom restoranu iz zadnjih 14 dana
 - Ako nema, vraća se **403 error** sa `errorCode: "NO_VALID_RECEIPT"`
 - `mediaKind: VIDEO` → točno 1 file u media arrayu
@@ -215,6 +228,7 @@ POST /api/app/experiences
 - Title je obavezan (min 3, max 100 znakova)
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -239,6 +253,7 @@ POST /api/app/experiences
 ```
 
 **Status Experience-a:**
+
 - `DRAFT` - još nije objavljen
 - `PENDING` - čeka moderaciju (ne prikazuje se u feedu)
 - `APPROVED` - odobren, prikazuje se u feedu
@@ -253,12 +268,14 @@ GET /api/app/experiences/feed?sortBy=NEW&city=Zagreb&page=1&limit=20
 ```
 
 **Query Parametri:**
+
 - `sortBy`: `NEW` (najnovije) ili `TRENDING` (po engagement score-u)
 - `city`: filtriranje po gradu (opcionalno)
 - `page`: stranica (default: 1)
 - `limit`: broj rezultata (default: 20, max: 50)
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -279,8 +296,7 @@ GET /api/app/experiences/feed?sortBy=NEW&city=Zagreb&page=1&limit=20
         "createdAt": "2025-11-04T18:00:00Z",
         "author": {
           "id": "uuid-user-id",
-          "firstName": "Ivan",
-          "lastName": "Horvat",
+          "name": "Ivan Horvat",
           "profileImage": "https://cdn.dinver.com/profiles/..."
         },
         "restaurant": {
@@ -312,7 +328,7 @@ GET /api/app/experiences/feed?sortBy=NEW&city=Zagreb&page=1&limit=20
         "userInteraction": {
           "hasLiked": false,
           "hasSaved": false,
-          "canLikeForPoints": true  // Može dobiti bodove za like
+          "canLikeForPoints": true // Može dobiti bodove za like
         }
       }
     ]
@@ -347,6 +363,7 @@ POST /api/app/experiences/:id/like
 **Body:** Prazan (ili možeš poslati `deviceId`, `ipAddress` ako imaš)
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -357,7 +374,7 @@ POST /api/app/experiences/:id/like
       "cycleId": "uuid-cycle-id",
       "createdAt": "2025-11-04T18:00:00Z"
     },
-    "pointsAwarded": 0.05,  // Bodovi dodani autoru
+    "pointsAwarded": 0.05, // Bodovi dodani autoru
     "newLikesCount": 43
   },
   "message": "Experience liked successfully"
@@ -365,6 +382,7 @@ POST /api/app/experiences/:id/like
 ```
 
 **VAŽNO:**
+
 - User može lajkati SAMO JEDNOM po leaderboard cycle (npr. mjesec)
 - Ako već lajkao u ovom cycleu → vraća se 400 error
 - Autor dobiva **+0.05 bodova** za svaki like
@@ -379,6 +397,7 @@ DELETE /api/app/experiences/:id/like
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -399,6 +418,7 @@ POST /api/app/experiences/:id/save
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -409,7 +429,7 @@ POST /api/app/experiences/:id/save
       "experienceId": "uuid-experience-id",
       "createdAt": "2025-11-04T18:00:00Z"
     },
-    "pointsAwarded": 0.10,  // Bodovi dodani autoru
+    "pointsAwarded": 0.1, // Bodovi dodani autoru
     "newSavesCount": 16
   },
   "message": "Experience saved to My Map"
@@ -417,6 +437,7 @@ POST /api/app/experiences/:id/save
 ```
 
 **VAŽNO:**
+
 - User može spremiti restoran SAMO JEDNOM (bez obzira na cycle)
 - Autor dobiva **+0.10 bodova** PRVI PUT kada netko spremi
 - Ako već spremljeno → vraća se 400 error
@@ -430,6 +451,7 @@ DELETE /api/app/experiences/:id/save
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -448,15 +470,17 @@ POST /api/app/experiences/:id/view
 ```
 
 **Body:**
+
 ```json
 {
-  "durationMs": 8500,      // Koliko dugo je gledao (milisekunde)
-  "completionRate": 0.75,  // Koliko je videa pogledao (0.0 - 1.0)
+  "durationMs": 8500, // Koliko dugo je gledao (milisekunde)
+  "completionRate": 0.75, // Koliko je videa pogledao (0.0 - 1.0)
   "source": "EXPLORE_FEED" // Otkud je došao
 }
 ```
 
 **Source opcije:**
+
 - `EXPLORE_FEED` - iz glavnog feeda
 - `TRENDING_FEED` - iz trending feeda
 - `USER_PROFILE` - iz profila autora
@@ -466,6 +490,7 @@ POST /api/app/experiences/:id/view
 - `MY_MAP` - iz My Map liste
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -481,6 +506,7 @@ POST /api/app/experiences/:id/view
 ```
 
 **KADA POZVATI:**
+
 - Pozovi kada user NAPUSTI experience (swipe away, back button, app minimize)
 - Ne zovi više puta za isti view
 - Prati koliko dugo je gledao i completion rate za analitiku
@@ -494,6 +520,7 @@ GET /api/app/experiences/saved?page=1&limit=20
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -538,6 +565,7 @@ GET /api/app/experiences/liked?page=1&limit=20
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -564,9 +592,11 @@ GET /api/app/experiences/me?status=APPROVED&page=1&limit=20
 ```
 
 **Query Parametri:**
+
 - `status`: `DRAFT`, `PENDING`, `APPROVED`, `REJECTED` (opcionalno, bez toga vraća sve)
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -597,6 +627,7 @@ GET /api/app/experiences/restaurant/:restaurantId?page=1&limit=20
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -624,6 +655,7 @@ GET /api/app/experiences/check-eligibility/:restaurantId
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -640,6 +672,7 @@ GET /api/app/experiences/check-eligibility/:restaurantId
 ```
 
 **Ako NIJE eligible:**
+
 ```json
 {
   "data": {
@@ -651,6 +684,7 @@ GET /api/app/experiences/check-eligibility/:restaurantId
 ```
 
 **POZOVI OVU RUTU:**
+
 - Kad user klikne na restoran i želi objaviti iskustvo
 - Prikaži error poruku ako nije eligible
 - Ponudi mu da skenira račun prvo
@@ -664,6 +698,7 @@ GET /api/app/experiences/check-eligibility/:restaurantId
 Pronađi gdje je definiran glavni Tab Navigator (npr. `src/navigation/TabNavigator.tsx`).
 
 **Dodaj novi tab:**
+
 ```tsx
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ExperienceNavigator from './ExperienceNavigator';
@@ -678,14 +713,14 @@ function TabNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tab.Screen
         name="Explore"
         component={ExploreScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
         }}
       />
 
@@ -694,8 +729,10 @@ function TabNavigator() {
         name="Experience"
         component={ExperienceNavigator}
         options={{
-          tabBarIcon: ({ color, size }) => <Sparkles color={color} size={size} />,
-          headerShown: false
+          tabBarIcon: ({ color, size }) => (
+            <Sparkles color={color} size={size} />
+          ),
+          headerShown: false,
         }}
       />
 
@@ -703,7 +740,7 @@ function TabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
     </Tab.Navigator>
@@ -741,7 +778,7 @@ export default function ExperienceNavigator() {
         component={CreateExperienceScreen}
         options={{
           title: 'Share Your Experience',
-          presentation: 'modal'
+          presentation: 'modal',
         }}
       />
       <Stack.Screen
@@ -776,6 +813,7 @@ export default function ExperienceNavigator() {
 **File**: `src/screens/Experience/ExperienceFeedScreen.tsx`
 
 **Značajke:**
+
 - Vertikalni scroll/swipe između videa (kao TikTok)
 - Auto-play videa kada je na ekranu
 - Pause kad user swipa dalje
@@ -784,6 +822,7 @@ export default function ExperienceNavigator() {
 - Pull-to-refresh za novi content
 
 **Biblioteke koje trebaš:**
+
 ```bash
 npm install react-native-video
 npm install react-native-gesture-handler
@@ -795,7 +834,13 @@ npm install @react-native-community/viewpager
 
 ```tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, FlatList, Dimensions, TouchableOpacity, Text } from 'react-native';
+import {
+  View,
+  FlatList,
+  Dimensions,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import Video from 'react-native-video';
 import { Heart, Bookmark, Share2, MessageCircle } from 'lucide-react-native';
 import { useExperience } from '../../hooks/useExperience';
@@ -814,7 +859,7 @@ export default function ExperienceFeedScreen({ navigation }) {
     refresh,
     likeExperience,
     saveExperience,
-    trackView
+    trackView,
   } = useExperience({ sortBy });
 
   // Track view kada user napusti experience
@@ -824,7 +869,7 @@ export default function ExperienceFeedScreen({ navigation }) {
         trackView(experiences[activeIndex].id, {
           durationMs: viewDuration,
           completionRate: watchedPercentage,
-          source: 'EXPLORE_FEED'
+          source: 'EXPLORE_FEED',
         });
       }
     };
@@ -843,8 +888,14 @@ export default function ExperienceFeedScreen({ navigation }) {
       onLike={() => likeExperience(item.id)}
       onSave={() => saveExperience(item.id)}
       onShare={() => shareExperience(item)}
-      onAuthorPress={() => navigation.navigate('UserExperiences', { userId: item.userId })}
-      onRestaurantPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.restaurantId })}
+      onAuthorPress={() =>
+        navigation.navigate('UserExperiences', { userId: item.userId })
+      }
+      onRestaurantPress={() =>
+        navigation.navigate('RestaurantDetails', {
+          restaurantId: item.restaurantId,
+        })
+      }
     />
   );
 
@@ -853,12 +904,22 @@ export default function ExperienceFeedScreen({ navigation }) {
       {/* Top Bar - Sorting Toggle */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => setSortBy('NEW')}>
-          <Text style={[styles.sortButton, sortBy === 'NEW' && styles.sortButtonActive]}>
+          <Text
+            style={[
+              styles.sortButton,
+              sortBy === 'NEW' && styles.sortButtonActive,
+            ]}
+          >
             NEW
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setSortBy('TRENDING')}>
-          <Text style={[styles.sortButton, sortBy === 'TRENDING' && styles.sortButtonActive]}>
+          <Text
+            style={[
+              styles.sortButton,
+              sortBy === 'TRENDING' && styles.sortButtonActive,
+            ]}
+          >
             TRENDING
           </Text>
         </TouchableOpacity>
@@ -880,7 +941,7 @@ export default function ExperienceFeedScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={handleViewableItemsChanged}
         viewabilityConfig={{
-          itemVisiblePercentThreshold: 50
+          itemVisiblePercentThreshold: 50,
         }}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
@@ -954,11 +1015,20 @@ const styles = {
 
 ```tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+  ActivityIndicator,
+} from 'react-native';
 import Video from 'react-native-video';
 import FastImage from 'react-native-fast-image';
 import { Heart, Bookmark, Share2, MapPin } from 'lucide-react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -969,13 +1039,17 @@ export default function ExperienceCard({
   onSave,
   onShare,
   onAuthorPress,
-  onRestaurantPress
+  onRestaurantPress,
 }) {
   const [paused, setPaused] = useState(!isActive);
   const [isLiked, setIsLiked] = useState(experience.userInteraction.hasLiked);
   const [isSaved, setIsSaved] = useState(experience.userInteraction.hasSaved);
-  const [likesCount, setLikesCount] = useState(experience.engagement.likesCount);
-  const [savesCount, setSavesCount] = useState(experience.engagement.savesCount);
+  const [likesCount, setLikesCount] = useState(
+    experience.engagement.likesCount,
+  );
+  const [savesCount, setSavesCount] = useState(
+    experience.engagement.savesCount,
+  );
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const videoRef = useRef(null);
@@ -995,28 +1069,28 @@ export default function ExperienceCard({
     if (isLiked) return; // Ne možeš unlajkati iz feeda (samo iz details)
 
     setIsLiked(true);
-    setLikesCount(prev => prev + 1);
+    setLikesCount((prev) => prev + 1);
 
     try {
       await onLike();
     } catch (error) {
       // Revert ako fail
       setIsLiked(false);
-      setLikesCount(prev => prev - 1);
+      setLikesCount((prev) => prev - 1);
     }
   };
 
   const handleSave = async () => {
     const newSavedState = !isSaved;
     setIsSaved(newSavedState);
-    setSavesCount(prev => newSavedState ? prev + 1 : prev - 1);
+    setSavesCount((prev) => (newSavedState ? prev + 1 : prev - 1));
 
     try {
       await onSave();
     } catch (error) {
       // Revert ako fail
       setIsSaved(!newSavedState);
-      setSavesCount(prev => newSavedState ? prev - 1 : prev + 1);
+      setSavesCount((prev) => (newSavedState ? prev - 1 : prev + 1));
     }
   };
 
@@ -1052,17 +1126,12 @@ export default function ExperienceCard({
       {/* Bottom Info */}
       <View style={styles.bottomInfo}>
         {/* Author */}
-        <TouchableOpacity
-          style={styles.authorRow}
-          onPress={onAuthorPress}
-        >
+        <TouchableOpacity style={styles.authorRow} onPress={onAuthorPress}>
           <FastImage
             source={{ uri: experience.author.profileImage }}
             style={styles.authorImage}
           />
-          <Text style={styles.authorName}>
-            {experience.author.firstName} {experience.author.lastName}
-          </Text>
+          <Text style={styles.authorName}>{experience.author.name}</Text>
         </TouchableOpacity>
 
         {/* Title & Description */}
@@ -1079,8 +1148,13 @@ export default function ExperienceCard({
           onPress={onRestaurantPress}
         >
           <MapPin color="#fff" size={16} />
-          <Text style={styles.restaurantName}>{experience.restaurant.name}</Text>
-          <Text style={styles.restaurantCity}> • {experience.restaurant.city}</Text>
+          <Text style={styles.restaurantName}>
+            {experience.restaurant.name}
+          </Text>
+          <Text style={styles.restaurantCity}>
+            {' '}
+            • {experience.restaurant.city}
+          </Text>
         </TouchableOpacity>
 
         {/* Ratings */}
@@ -1094,13 +1168,17 @@ export default function ExperienceCard({
           {experience.serviceRating && (
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingEmoji}>🙋</Text>
-              <Text style={styles.ratingText}>{experience.serviceRating}/5</Text>
+              <Text style={styles.ratingText}>
+                {experience.serviceRating}/5
+              </Text>
             </View>
           )}
           {experience.atmosphereRating && (
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingEmoji}>✨</Text>
-              <Text style={styles.ratingText}>{experience.atmosphereRating}/5</Text>
+              <Text style={styles.ratingText}>
+                {experience.atmosphereRating}/5
+              </Text>
             </View>
           )}
         </View>
@@ -1123,10 +1201,7 @@ export default function ExperienceCard({
         </TouchableOpacity>
 
         {/* Save */}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
           <Bookmark
             color={isSaved ? '#FFD93D' : '#fff'}
             fill={isSaved ? '#FFD93D' : 'transparent'}
@@ -1136,12 +1211,11 @@ export default function ExperienceCard({
         </TouchableOpacity>
 
         {/* Share */}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={onShare}
-        >
+        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
           <Share2 color="#fff" size={32} />
-          <Text style={styles.actionCount}>{experience.engagement.viewsCount}</Text>
+          <Text style={styles.actionCount}>
+            {experience.engagement.viewsCount}
+          </Text>
         </TouchableOpacity>
 
         {/* Restaurant Image */}
@@ -1161,7 +1235,7 @@ export default function ExperienceCard({
               key={index}
               style={[
                 styles.dot,
-                index === currentImageIndex && styles.dotActive
+                index === currentImageIndex && styles.dotActive,
               ]}
             />
           ))}
@@ -1321,6 +1395,7 @@ const styles = {
 **File**: `src/screens/Experience/CreateExperienceScreen.tsx`
 
 **Flow:**
+
 1. Odaberi restoran
 2. Provjeri eligibility (ima li approved račun iz zadnjih 14 dana)
 3. Odaberi medij (video ili slike)
@@ -1330,9 +1405,23 @@ const styles = {
 
 ```tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Alert,
+} from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { X, Upload, Video as VideoIcon, Image as ImageIcon, Star } from 'lucide-react-native';
+import {
+  X,
+  Upload,
+  Video as VideoIcon,
+  Image as ImageIcon,
+  Star,
+} from 'lucide-react-native';
 import RestaurantPicker from '../../components/Experience/RestaurantPicker';
 import { useExperience } from '../../hooks/useExperience';
 
@@ -1351,11 +1440,7 @@ export default function CreateExperienceScreen({ navigation }) {
   const [priceRating, setPriceRating] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
 
-  const {
-    checkEligibility,
-    uploadMedia,
-    createExperience
-  } = useExperience();
+  const { checkEligibility, uploadMedia, createExperience } = useExperience();
 
   // Step 1: Check eligibility kada odabere restoran
   const handleRestaurantSelect = async (restaurant) => {
@@ -1370,14 +1455,18 @@ export default function CreateExperienceScreen({ navigation }) {
       } else {
         Alert.alert(
           'Nije moguće objaviti',
-          result.message || 'Nemate odobren račun u ovom restoranu iz zadnjih 14 dana.',
+          result.message ||
+            'Nemate odobren račun u ovom restoranu iz zadnjih 14 dana.',
           [
             { text: 'Odustani', style: 'cancel' },
             {
               text: 'Skeniraj račun',
-              onPress: () => navigation.navigate('ScanReceipt', { restaurantId: restaurant.id })
-            }
-          ]
+              onPress: () =>
+                navigation.navigate('ScanReceipt', {
+                  restaurantId: restaurant.id,
+                }),
+            },
+          ],
         );
       }
     } catch (error) {
@@ -1416,7 +1505,7 @@ export default function CreateExperienceScreen({ navigation }) {
       const file = mediaFiles[i];
 
       try {
-        setUploadProgress(prev => ({ ...prev, [i]: 0 }));
+        setUploadProgress((prev) => ({ ...prev, [i]: 0 }));
 
         // Step 1: Get pre-signed URL
         const presignedData = await uploadMedia.requestPresignedUrl({
@@ -1452,7 +1541,7 @@ export default function CreateExperienceScreen({ navigation }) {
           orderIndex: i,
         });
 
-        setUploadProgress(prev => ({ ...prev, [i]: 100 }));
+        setUploadProgress((prev) => ({ ...prev, [i]: 100 }));
       } catch (error) {
         Alert.alert('Upload greška', `Neuspješan upload filea ${i + 1}`);
         throw error;
@@ -1492,9 +1581,7 @@ export default function CreateExperienceScreen({ navigation }) {
       Alert.alert(
         'Objavljeno!',
         'Tvoj experience je poslan na moderaciju. Biti će prikazan u feedu kada bude odobren.',
-        [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (error) {
       Alert.alert('Greška', error.message || 'Neuspješno kreiranje objave');
@@ -1515,11 +1602,7 @@ export default function CreateExperienceScreen({ navigation }) {
       </View>
 
       {/* Step 1: Restaurant Picker */}
-      {step === 1 && (
-        <RestaurantPicker
-          onSelect={handleRestaurantSelect}
-        />
-      )}
+      {step === 1 && <RestaurantPicker onSelect={handleRestaurantSelect} />}
 
       {/* Step 2: Media Kind & Upload */}
       {step === 2 && (
@@ -1528,21 +1611,43 @@ export default function CreateExperienceScreen({ navigation }) {
 
           <View style={styles.mediaKindButtons}>
             <TouchableOpacity
-              style={[styles.mediaKindButton, mediaKind === 'VIDEO' && styles.mediaKindButtonActive]}
+              style={[
+                styles.mediaKindButton,
+                mediaKind === 'VIDEO' && styles.mediaKindButtonActive,
+              ]}
               onPress={() => handleMediaKindSelect('VIDEO')}
             >
-              <VideoIcon color={mediaKind === 'VIDEO' ? '#fff' : '#000'} size={32} />
-              <Text style={[styles.mediaKindText, mediaKind === 'VIDEO' && styles.mediaKindTextActive]}>
+              <VideoIcon
+                color={mediaKind === 'VIDEO' ? '#fff' : '#000'}
+                size={32}
+              />
+              <Text
+                style={[
+                  styles.mediaKindText,
+                  mediaKind === 'VIDEO' && styles.mediaKindTextActive,
+                ]}
+              >
                 Video
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.mediaKindButton, mediaKind === 'CAROUSEL' && styles.mediaKindButtonActive]}
+              style={[
+                styles.mediaKindButton,
+                mediaKind === 'CAROUSEL' && styles.mediaKindButtonActive,
+              ]}
               onPress={() => handleMediaKindSelect('CAROUSEL')}
             >
-              <ImageIcon color={mediaKind === 'CAROUSEL' ? '#fff' : '#000'} size={32} />
-              <Text style={[styles.mediaKindText, mediaKind === 'CAROUSEL' && styles.mediaKindTextActive]}>
+              <ImageIcon
+                color={mediaKind === 'CAROUSEL' ? '#fff' : '#000'}
+                size={32}
+              />
+              <Text
+                style={[
+                  styles.mediaKindText,
+                  mediaKind === 'CAROUSEL' && styles.mediaKindTextActive,
+                ]}
+              >
                 Slike (2-10)
               </Text>
             </TouchableOpacity>
@@ -1567,7 +1672,12 @@ export default function CreateExperienceScreen({ navigation }) {
                 <View key={index} style={styles.progressBar}>
                   <Text>File {parseInt(index) + 1}</Text>
                   <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${progress}%` },
+                      ]}
+                    />
                   </View>
                 </View>
               ))}
@@ -1647,7 +1757,10 @@ export default function CreateExperienceScreen({ navigation }) {
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.submitButton, isCreating && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton,
+              isCreating && styles.submitButtonDisabled,
+            ]}
             onPress={handleCreate}
             disabled={isCreating}
           >
@@ -1670,10 +1783,7 @@ function RatingInput({ label, emoji, value, onChange }) {
       </Text>
       <View style={styles.stars}>
         {[1, 2, 3, 4, 5].map((star) => (
-          <TouchableOpacity
-            key={star}
-            onPress={() => onChange(star)}
-          >
+          <TouchableOpacity key={star} onPress={() => onChange(star)}>
             <Star
               color="#FFD700"
               fill={star <= value ? '#FFD700' : 'transparent'}
@@ -1850,34 +1960,37 @@ export function useExperience({ sortBy = 'NEW', city = null } = {}) {
   const [hasMore, setHasMore] = useState(true);
 
   // Load feed
-  const loadFeed = useCallback(async (reset = false) => {
-    if (loading || (!reset && !hasMore)) return;
+  const loadFeed = useCallback(
+    async (reset = false) => {
+      if (loading || (!reset && !hasMore)) return;
 
-    setLoading(true);
-    const currentPage = reset ? 1 : page;
+      setLoading(true);
+      const currentPage = reset ? 1 : page;
 
-    try {
-      const response = await experienceService.getFeed({
-        sortBy,
-        city,
-        page: currentPage,
-        limit: 20,
-      });
+      try {
+        const response = await experienceService.getFeed({
+          sortBy,
+          city,
+          page: currentPage,
+          limit: 20,
+        });
 
-      if (reset) {
-        setExperiences(response.data.experiences);
-      } else {
-        setExperiences(prev => [...prev, ...response.data.experiences]);
+        if (reset) {
+          setExperiences(response.data.experiences);
+        } else {
+          setExperiences((prev) => [...prev, ...response.data.experiences]);
+        }
+
+        setHasMore(response.pagination.page < response.pagination.totalPages);
+        setPage(currentPage + 1);
+      } catch (error) {
+        console.error('Error loading feed:', error);
+      } finally {
+        setLoading(false);
       }
-
-      setHasMore(response.pagination.page < response.pagination.totalPages);
-      setPage(currentPage + 1);
-    } catch (error) {
-      console.error('Error loading feed:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [sortBy, city, page, loading, hasMore]);
+    },
+    [sortBy, city, page, loading, hasMore],
+  );
 
   // Refresh feed
   const refresh = useCallback(() => {
@@ -1898,8 +2011,8 @@ export function useExperience({ sortBy = 'NEW', city = null } = {}) {
     try {
       await experienceService.likeExperience(experienceId);
       // Update local state
-      setExperiences(prev =>
-        prev.map(exp =>
+      setExperiences((prev) =>
+        prev.map((exp) =>
           exp.id === experienceId
             ? {
                 ...exp,
@@ -1912,8 +2025,8 @@ export function useExperience({ sortBy = 'NEW', city = null } = {}) {
                   hasLiked: true,
                 },
               }
-            : exp
-        )
+            : exp,
+        ),
       );
     } catch (error) {
       throw error;
@@ -1921,56 +2034,59 @@ export function useExperience({ sortBy = 'NEW', city = null } = {}) {
   }, []);
 
   // Save experience
-  const saveExperience = useCallback(async (experienceId) => {
-    try {
-      const exp = experiences.find(e => e.id === experienceId);
-      if (!exp) return;
+  const saveExperience = useCallback(
+    async (experienceId) => {
+      try {
+        const exp = experiences.find((e) => e.id === experienceId);
+        if (!exp) return;
 
-      if (exp.userInteraction.hasSaved) {
-        // Unsave
-        await experienceService.unsaveExperience(experienceId);
-        setExperiences(prev =>
-          prev.map(e =>
-            e.id === experienceId
-              ? {
-                  ...e,
-                  engagement: {
-                    ...e.engagement,
-                    savesCount: e.engagement.savesCount - 1,
-                  },
-                  userInteraction: {
-                    ...e.userInteraction,
-                    hasSaved: false,
-                  },
-                }
-              : e
-          )
-        );
-      } else {
-        // Save
-        await experienceService.saveExperience(experienceId);
-        setExperiences(prev =>
-          prev.map(e =>
-            e.id === experienceId
-              ? {
-                  ...e,
-                  engagement: {
-                    ...e.engagement,
-                    savesCount: e.engagement.savesCount + 1,
-                  },
-                  userInteraction: {
-                    ...e.userInteraction,
-                    hasSaved: true,
-                  },
-                }
-              : e
-          )
-        );
+        if (exp.userInteraction.hasSaved) {
+          // Unsave
+          await experienceService.unsaveExperience(experienceId);
+          setExperiences((prev) =>
+            prev.map((e) =>
+              e.id === experienceId
+                ? {
+                    ...e,
+                    engagement: {
+                      ...e.engagement,
+                      savesCount: e.engagement.savesCount - 1,
+                    },
+                    userInteraction: {
+                      ...e.userInteraction,
+                      hasSaved: false,
+                    },
+                  }
+                : e,
+            ),
+          );
+        } else {
+          // Save
+          await experienceService.saveExperience(experienceId);
+          setExperiences((prev) =>
+            prev.map((e) =>
+              e.id === experienceId
+                ? {
+                    ...e,
+                    engagement: {
+                      ...e.engagement,
+                      savesCount: e.engagement.savesCount + 1,
+                    },
+                    userInteraction: {
+                      ...e.userInteraction,
+                      hasSaved: true,
+                    },
+                  }
+                : e,
+            ),
+          );
+        }
+      } catch (error) {
+        throw error;
       }
-    } catch (error) {
-      throw error;
-    }
-  }, [experiences]);
+    },
+    [experiences],
+  );
 
   // Track view
   const trackView = useCallback(async (experienceId, viewData) => {
@@ -2052,7 +2168,11 @@ export default function MyMapScreen({ navigation }) {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('RestaurantDetails', { restaurantId: item.restaurantId })}
+      onPress={() =>
+        navigation.navigate('RestaurantDetails', {
+          restaurantId: item.restaurantId,
+        })
+      }
     >
       <Image source={{ uri: item.restaurant.mainImage }} style={styles.image} />
       <View style={styles.info}>
@@ -2098,7 +2218,11 @@ export default function MyLikesScreen({ navigation }) {
       renderItem={({ item }) => (
         <ExperienceGridItem
           experience={item.experience}
-          onPress={() => navigation.navigate('ExperienceDetails', { experienceId: item.experienceId })}
+          onPress={() =>
+            navigation.navigate('ExperienceDetails', {
+              experienceId: item.experienceId,
+            })
+          }
         />
       )}
       keyExtractor={(item) => item.id}
@@ -2128,9 +2252,7 @@ export default function UserExperiencesScreen({ route, navigation }) {
       {/* User Header */}
       <View style={styles.userHeader}>
         <Image source={{ uri: user?.profileImage }} style={styles.avatar} />
-        <Text style={styles.userName}>
-          {user?.firstName} {user?.lastName}
-        </Text>
+        <Text style={styles.userName}>{user?.name}</Text>
         <Text style={styles.experiencesCount}>
           {experiences.length} experiences
         </Text>
@@ -2142,7 +2264,11 @@ export default function UserExperiencesScreen({ route, navigation }) {
         renderItem={({ item }) => (
           <ExperienceGridItem
             experience={item}
-            onPress={() => navigation.navigate('ExperienceDetails', { experienceId: item.id })}
+            onPress={() =>
+              navigation.navigate('ExperienceDetails', {
+                experienceId: item.id,
+              })
+            }
           />
         )}
         keyExtractor={(item) => item.id}
@@ -2239,9 +2365,10 @@ class ViewTracker {
     this.pause();
 
     const durationMs = this.watchedDuration;
-    const completionRate = this.videoDuration > 0
-      ? Math.min(1, this.watchedDuration / (this.videoDuration * 1000))
-      : 1;
+    const completionRate =
+      this.videoDuration > 0
+        ? Math.min(1, this.watchedDuration / (this.videoDuration * 1000))
+        : 1;
 
     await experienceService.trackView(experienceId, {
       durationMs,
@@ -2259,6 +2386,7 @@ class ViewTracker {
 ### Problem: Video ne loaduje
 
 **Rješenje:**
+
 - Provjeri da je `transcodingStatus: "COMPLETED"`
 - Koristi thumbnail dok se video procesira
 - Implementiraj retry logiku
@@ -2266,6 +2394,7 @@ class ViewTracker {
 ### Problem: Upload faila
 
 **Rješenje:**
+
 - Provjeri veličinu filea (max 50MB za video/slike)
 - Provjeri mime type (dozvoljeni: jpeg, png, mp4, mov)
 - Implementiraj resumable upload za velike fileove
@@ -2273,6 +2402,7 @@ class ViewTracker {
 ### Problem: 403 error pri kreiranju
 
 **Rješenje:**
+
 - Provjeri ima li user approved račun u zadnjih 14 dana
 - Prikaži poruku da mora skenirati račun prvo
 - Preusmjeri na "Scan Receipt" screen
@@ -2282,12 +2412,14 @@ class ViewTracker {
 ## ✅ Checklist - Što Moraš Implementirati
 
 ### Phase 1: Setup & Navigation
+
 - [ ] Dodaj Experience tab u glavni Tab Navigator
 - [ ] Kreiraj Experience Stack Navigator
 - [ ] Setup experienceService.ts sa svim API pozivima
 - [ ] Kreiraj useExperience hook
 
 ### Phase 2: Feed Screen
+
 - [ ] ExperienceFeedScreen - vertikalni swipe feed
 - [ ] ExperienceCard component - video/carousel prikaz
 - [ ] Like, Save, Share buttoni
@@ -2297,6 +2429,7 @@ class ViewTracker {
 - [ ] View tracking logika
 
 ### Phase 3: Create Screen
+
 - [ ] CreateExperienceScreen - multi-step form
 - [ ] RestaurantPicker component
 - [ ] Eligibility check prije upload-a
@@ -2306,12 +2439,14 @@ class ViewTracker {
 - [ ] Title, description, ratings inputs
 
 ### Phase 4: Other Screens
+
 - [ ] MyMapScreen - spremljeni restorani
 - [ ] MyLikesScreen - lajkane objave
 - [ ] UserExperiencesScreen - objave korisnika
 - [ ] ExperienceDetailsScreen (opcionalno - za detaljniji prikaz)
 
 ### Phase 5: Polish
+
 - [ ] Animacije (like animation, swipe transitions)
 - [ ] Error handling
 - [ ] Loading states

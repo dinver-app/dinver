@@ -504,8 +504,7 @@ const LeaderboardCycleDetails: React.FC = () => {
                             {index + 1}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {participant.userName ||
-                              `${participant.user?.firstName} ${participant.user?.lastName}`}
+                            {participant.userName || participant.user?.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {participant.user?.email || "-"}
@@ -576,8 +575,7 @@ const LeaderboardCycleDetails: React.FC = () => {
                             {getRankOrdinal(winner.rank)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {winner.userName ||
-                              `${winner.user?.firstName} ${winner.user?.lastName}`}
+                            {winner.userName || winner.user?.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {winner.user?.email || "-"}

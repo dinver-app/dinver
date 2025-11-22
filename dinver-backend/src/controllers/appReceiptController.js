@@ -10,6 +10,9 @@ const {
   MODEL_VERSION,
 } = require('../services/claudeOcrService');
 const {
+  extractMerchantInfoQuick,
+} = require('../services/quickOcrService');
+const {
   searchPlacesByText,
   getPlaceDetails,
   transformToRestaurantData,
@@ -68,6 +71,10 @@ const uploadReceipt = async (req, res) => {
     );
 
     // === STEP 1: Validate image is actually a receipt (BEFORE processing/uploading) ===
+    // OPTIMIZATION: Validation disabled for app uploads to save $0.01 + 3.4s per receipt
+    // Users upload from "receipt upload" screen, so they already expect to upload receipts
+    // Re-enable by uncommenting the code below if needed for fraud prevention
+    /*
     try {
       console.log('[Receipt Upload] Validating image is a receipt...');
       const validation = await validateReceiptWithClaude(
@@ -97,6 +104,8 @@ const uploadReceipt = async (req, res) => {
       console.error('[Receipt Upload] Validation failed:', validationError);
       // Continue processing even if validation fails (fail open)
     }
+    */
+    console.log('[Receipt Upload] Skipping validation (optimization enabled)');
 
     // === STEP 2: Calculate image hash for duplicate detection ===
     const imageHash = crypto
@@ -152,48 +161,52 @@ const uploadReceipt = async (req, res) => {
       });
     }
 
-    // === STEP 4: Claude OCR Processing ===
-    let ocrMethod = 'claude';
+    // === STEP 4: Quick OCR (PASS 1 - Merchant info only) ===
+    // Two-pass strategy: Extract only merchantName + merchantAddress quickly (2-3s)
+    // for immediate restaurant matching, then process full OCR in background
+    let ocrMethod = 'claude'; // Use 'claude' (valid enum value)
     let extractedFields = {};
     let fieldConfidences = {};
     let predictedData = null;
     let modelVersion = MODEL_VERSION;
+    let quickOcrSucceeded = false;
 
     try {
-      console.log('[Receipt Upload] Starting Claude OCR...');
-      const claudeResult = await extractReceiptWithClaude(
+      console.log('[Receipt Upload] Starting Quick OCR (Pass 1)...');
+      const quickResult = await extractMerchantInfoQuick(
         req.file.buffer,
         file.mimetype,
       );
 
-      if (claudeResult) {
+      if (quickResult && quickResult.merchantName) {
         extractedFields = {
-          oib: claudeResult.oib,
-          jir: claudeResult.jir,
-          zki: claudeResult.zki,
-          totalAmount: claudeResult.totalAmount,
-          issueDate: claudeResult.issueDate,
-          issueTime: claudeResult.issueTime,
-          merchantName: claudeResult.merchantName,
-          merchantAddress: claudeResult.merchantAddress,
+          oib: null, // Will be filled in background
+          jir: null,
+          zki: null,
+          totalAmount: null,
+          issueDate: null,
+          issueTime: null,
+          merchantName: quickResult.merchantName,
+          merchantAddress: quickResult.merchantAddress,
         };
-        fieldConfidences = claudeResult.confidence || {};
-        modelVersion = claudeResult.modelVersion;
+        quickOcrSucceeded = true;
 
-        // Store predicted data for training
+        // Store quick OCR info in predictedData
         predictedData = {
+          ocrPass: 'quick', // Track that this was quick pass
+          quickExtractionTime: quickResult.extractionTime,
           fields: extractedFields,
-          confidences: fieldConfidences,
-          extractionTime: claudeResult.extractionTime,
-          notes: claudeResult.notes,
         };
 
-        console.log('[Receipt Upload] Claude OCR completed successfully');
+        console.log(
+          `[Receipt Upload] Quick OCR completed in ${quickResult.extractionTime}ms`,
+        );
+        console.log(`[Receipt Upload] Merchant: ${quickResult.merchantName}`);
       } else {
-        throw new Error('Claude OCR failed');
+        throw new Error('Quick OCR returned no merchant name');
       }
     } catch (ocrError) {
-      console.error('[Receipt Upload] OCR failed:', ocrError);
+      console.error('[Receipt Upload] Quick OCR failed:', ocrError);
       // Continue without OCR data - receipt can still be processed manually
       ocrMethod = 'manual';
     }
@@ -588,11 +601,128 @@ const uploadReceipt = async (req, res) => {
     }
 
     res.status(201).json(response);
+
+    // === STEP 8: Trigger Full OCR in Background (PASS 2) ===
+    // Process complete OCR data in background - user doesn't wait for this
+    if (quickOcrSucceeded) {
+      // Copy buffer to ensure it persists after request ends
+      const imageBufferCopy = Buffer.from(req.file.buffer);
+
+      console.log(
+        `[Receipt Upload] Triggering background full OCR for receipt ${receipt.id}...`,
+      );
+
+      // Don't await - let this run in background
+      processFullOcrInBackground(receipt.id, imageBufferCopy, file.mimetype)
+        .then(() => {
+          console.log(
+            `[Background OCR] Successfully completed for receipt ${receipt.id}`,
+          );
+        })
+        .catch((error) => {
+          console.error(
+            `[Background OCR] Failed for receipt ${receipt.id}:`,
+            error.message,
+          );
+        });
+    }
   } catch (error) {
     console.error('[Receipt Upload] Failed:', error);
     res.status(500).json({ error: 'Failed to upload receipt' });
   }
 };
+
+/**
+ * Background processing: Full OCR extraction (PASS 2)
+ * Extracts ALL receipt fields (OIB, JIR, ZKI, items, amounts, dates)
+ * Updates the receipt record when complete
+ *
+ * @param {string} receiptId - Receipt ID to update
+ * @param {Buffer} imageBuffer - Receipt image buffer
+ * @param {string} mimeType - Image MIME type
+ */
+async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
+  try {
+    console.log(`[Background OCR] Starting full OCR for receipt ${receiptId}...`);
+    const startTime = Date.now();
+
+    // Extract all fields with Claude
+    const claudeResult = await extractReceiptWithClaude(imageBuffer, mimeType);
+
+    if (!claudeResult) {
+      throw new Error('Claude full OCR returned no results');
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[Background OCR] Claude extraction completed in ${duration}ms`);
+
+    // Update receipt with complete OCR data
+    await Receipt.update(
+      {
+        oib: claudeResult.oib || null,
+        jir: claudeResult.jir || null,
+        zki: claudeResult.zki || null,
+        totalAmount: claudeResult.totalAmount || null,
+        issueDate: claudeResult.issueDate || null,
+        issueTime: claudeResult.issueTime || null,
+        // merchantName and merchantAddress already set from quick OCR (don't overwrite)
+        // ocrMethod stays 'claude' - we track pass type in predictedData
+        fieldConfidences: claudeResult.confidence || {},
+        predictedData: {
+          ocrPass: 'full', // Track that full processing completed
+          fullExtractionTime: claudeResult.extractionTime,
+          fields: {
+            oib: claudeResult.oib,
+            jir: claudeResult.jir,
+            zki: claudeResult.zki,
+            totalAmount: claudeResult.totalAmount,
+            issueDate: claudeResult.issueDate,
+            issueTime: claudeResult.issueTime,
+            merchantName: claudeResult.merchantName,
+            merchantAddress: claudeResult.merchantAddress,
+          },
+          confidences: claudeResult.confidence,
+          extractionTime: claudeResult.extractionTime,
+          notes: claudeResult.notes,
+        },
+        modelVersion: claudeResult.modelVersion || MODEL_VERSION,
+      },
+      {
+        where: { id: receiptId },
+      },
+    );
+
+    console.log(
+      `[Background OCR] Receipt ${receiptId} updated successfully with full OCR data`,
+    );
+  } catch (error) {
+    console.error(
+      `[Background OCR] Failed for receipt ${receiptId}:`,
+      error.message,
+    );
+
+    // Mark receipt for manual review on failure
+    try {
+      await Receipt.update(
+        {
+          ocrMethod: 'manual', // Fallback to manual if full OCR fails
+          predictedData: {
+            error: error.message,
+            failedAt: new Date().toISOString(),
+          },
+        },
+        {
+          where: { id: receiptId },
+        },
+      );
+    } catch (updateError) {
+      console.error(
+        `[Background OCR] Failed to update receipt ${receiptId} with error status:`,
+        updateError.message,
+      );
+    }
+  }
+}
 
 /**
  * Search restaurants for manual selection

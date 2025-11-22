@@ -86,8 +86,7 @@ Možeš napraviti infinite load.
     "followers": [
       {
         "id": "uuid",
-        "firstName": "John",
-        "lastName": "Doe",
+        "name": "John Doe",
         "profileImage": "https://...",
         "city": "Zagreb",
         "isBuddy": true,
@@ -134,8 +133,7 @@ GET /api/app/users/:userId/buddies?page=1&limit=20
     "buddies": [
       {
         "id": "uuid",
-        "firstName": "Mike",
-        "lastName": "Johnson",
+        "name": "Mike Johnson",
         "profileImage": "https://...",
         "city": "Zagreb",
         "buddiesSince": "2024-11-10T14:22:00.000Z"
@@ -191,8 +189,7 @@ GET /api/app/users/search?q=ime&page=1&limit=20
     "users": [
       {
         "id": "uuid",
-        "firstName": "John",
-        "lastName": "Smith",
+        "name": "John Smith",
         "profileImage": "https://...",
         "city": "Zagreb",
         "followStatus": {
@@ -225,8 +222,7 @@ GET /api/app/users/:userId/profile
   "success": true,
   "data": {
     "id": "uuid",
-    "firstName": "John",
-    "lastName": "Doe",
+    "name": "John Doe",
     "profileImage": "https://...",
     "bio": "Food lover",
     "city": "Zagreb",
