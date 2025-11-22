@@ -10,6 +10,8 @@ const {
   searchRestaurants,
   searchRestaurantsSimple,
   getRestaurantDetails,
+  getUserReceipts,
+  getReceiptById,
 } = require('../../controllers/appReceiptController');
 
 const router = express.Router();
@@ -79,6 +81,24 @@ router.post(
   upload.single('image'),
   handleMulterError,
   uploadReceipt,
+);
+
+// Get user's receipts (with optional filtering)
+// GET /api/app/receipts?status=pending&withoutVisit=true
+router.get(
+  '/receipts',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  getUserReceipts,
+);
+
+// Get single receipt by ID
+// GET /api/app/receipts/:id
+router.get(
+  '/receipts/:id',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  getReceiptById,
 );
 
 // NEW: Simple restaurant search (diacritic-insensitive, all restaurants)
