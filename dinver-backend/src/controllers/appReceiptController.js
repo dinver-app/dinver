@@ -974,9 +974,162 @@ const searchRestaurantsSimple = async (req, res) => {
   }
 };
 
+/**
+ * Get user's receipts with optional filtering
+ * GET /api/app/receipts?status=pending&withoutVisit=true
+ */
+const getUserReceipts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, withoutVisit, limit = 50, offset = 0 } = req.query;
+
+    const whereConditions = { userId };
+
+    // Filter by status (pending, approved, rejected)
+    if (status) {
+      whereConditions.status = status;
+    }
+
+    // Filter receipts without Visit (abandoned/incomplete flow)
+    if (withoutVisit === 'true') {
+      whereConditions.visitId = null;
+    }
+
+    const receipts = await Receipt.findAll({
+      where: whereConditions,
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating'],
+        },
+      ],
+      attributes: [
+        'id',
+        'imageUrl',
+        'thumbnailUrl',
+        'mediumUrl',
+        'status',
+        'merchantName',
+        'merchantAddress',
+        'totalAmount',
+        'issueDate',
+        'issueTime',
+        'oib',
+        'jir',
+        'zki',
+        'restaurantId',
+        'visitId',
+        'submittedAt',
+        'ocrMethod',
+      ],
+      order: [['submittedAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    console.log(
+      `[Get Receipts] Found ${receipts.length} receipts for user ${userId}${
+        withoutVisit === 'true' ? ' (without visit)' : ''
+      }`,
+    );
+
+    res.status(200).json({
+      receipts: receipts.map((r) => ({
+        id: r.id,
+        imageUrl: r.mediumUrl || r.imageUrl,
+        thumbnailUrl: r.thumbnailUrl,
+        status: r.status,
+        merchantName: r.merchantName,
+        merchantAddress: r.merchantAddress,
+        totalAmount: r.totalAmount,
+        issueDate: r.issueDate,
+        issueTime: r.issueTime,
+        oib: r.oib,
+        jir: r.jir,
+        zki: r.zki,
+        restaurantId: r.restaurantId,
+        restaurant: r.restaurant,
+        visitId: r.visitId,
+        hasVisit: !!r.visitId,
+        submittedAt: r.submittedAt,
+        ocrMethod: r.ocrMethod,
+        needsCompletion: !r.visitId && r.restaurantId, // Has restaurant but no visit
+      })),
+      total: receipts.length,
+    });
+  } catch (error) {
+    console.error('[Get Receipts] Failed:', error);
+    res.status(500).json({ error: 'Failed to get receipts' });
+  }
+};
+
+/**
+ * Get single receipt by ID
+ * GET /api/app/receipts/:id
+ */
+const getReceiptById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const receipt = await Receipt.findOne({
+      where: { id, userId }, // Ensure user owns this receipt
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating'],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'submittedAt', 'reviewedAt'],
+        },
+      ],
+    });
+
+    if (!receipt) {
+      return res.status(404).json({ error: 'Receipt not found' });
+    }
+
+    res.status(200).json({
+      receipt: {
+        id: receipt.id,
+        imageUrl: receipt.mediumUrl || receipt.imageUrl,
+        thumbnailUrl: receipt.thumbnailUrl,
+        fullscreenUrl: receipt.fullscreenUrl,
+        originalUrl: receipt.originalUrl,
+        status: receipt.status,
+        merchantName: receipt.merchantName,
+        merchantAddress: receipt.merchantAddress,
+        totalAmount: receipt.totalAmount,
+        issueDate: receipt.issueDate,
+        issueTime: receipt.issueTime,
+        oib: receipt.oib,
+        jir: receipt.jir,
+        zki: receipt.zki,
+        restaurantId: receipt.restaurantId,
+        restaurant: receipt.restaurant,
+        visitId: receipt.visitId,
+        visit: receipt.visit,
+        hasVisit: !!receipt.visitId,
+        submittedAt: receipt.submittedAt,
+        ocrMethod: receipt.ocrMethod,
+        needsCompletion: !receipt.visitId && receipt.restaurantId,
+      },
+    });
+  } catch (error) {
+    console.error('[Get Receipt] Failed:', error);
+    res.status(500).json({ error: 'Failed to get receipt' });
+  }
+};
+
 module.exports = {
   uploadReceipt,
   searchRestaurants, // Old complex search (keep for backward compatibility)
   searchRestaurantsSimple, // NEW: Simple search for all restaurants
   getRestaurantDetails,
+  getUserReceipts, // NEW: Get user's receipts with filtering
+  getReceiptById, // NEW: Get single receipt details
 };
