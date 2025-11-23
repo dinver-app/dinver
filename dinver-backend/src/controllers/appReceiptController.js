@@ -133,6 +133,7 @@ const uploadReceipt = async (req, res) => {
       const { variants } = await processImage(req.file.buffer, {
         originalName: req.file.originalname,
         skipOriginal: false, // Enable ORIGINAL variant for OCR
+        mimeType: req.file.mimetype || file.mimetype,
       });
 
       // Upload all variants to S3
