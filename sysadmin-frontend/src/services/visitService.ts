@@ -3,8 +3,6 @@ import {
   VisitsResponse,
   VisitStats,
   UpdateReceiptPayload,
-  ApproveVisitResponse,
-  RejectVisitPayload,
 } from '../interfaces/Visit';
 import { apiClient } from './authService';
 
@@ -52,27 +50,8 @@ export const visitService = {
     return response.data;
   },
 
-  /**
-   * Approve visit
-   */
-  async approveVisit(visitId: string): Promise<ApproveVisitResponse> {
-    const response = await apiClient.post<ApproveVisitResponse>(
-      `/api/sysadmin/visits/${visitId}/approve`,
-      {},
-    );
-    return response.data;
-  },
-
-  /**
-   * Reject visit
-   */
-  async rejectVisit(visitId: string, payload: RejectVisitPayload): Promise<{ message: string }> {
-    const response = await apiClient.post<{ message: string }>(
-      `/api/sysadmin/visits/${visitId}/reject`,
-      payload,
-    );
-    return response.data;
-  },
+  // NOTE: Visit approval/rejection removed - handled through Receipts
+  // Use receiptService.approveReceipt() and receiptService.rejectReceipt() instead
 
   /**
    * Delete visit

@@ -140,13 +140,14 @@ async function uploadImageSync(file, folder, options = {}) {
  * @returns {Promise<Object>} Upload result
  */
 async function uploadImageQuick(file, folder, options = {}) {
-  const { maxWidth = 1600, quality = 80 } = options;
+  const { maxWidth = 1600, quality = 80, mimeType } = options;
 
   try {
     // Quick optimize
     const optimizedBuffer = await quickOptimize(file.buffer, {
       maxWidth,
       quality,
+      mimeType: mimeType || file.mimetype, // Pass mimeType for HEIC conversion
     });
 
     // Generate filename
