@@ -358,10 +358,100 @@ async function quickOptimize(imageBuffer, options = {}) {
   }
 }
 
+/**
+ * Process receipt image (OPTIMIZED - single variant only!)
+ * Creates ONE high-quality variant optimized for OCR + admin review
+ *
+ * @param {Buffer} imageBuffer - Original receipt image buffer
+ * @param {string} mimeType - MIME type of the image
+ * @returns {Promise<Object>} Processed receipt with buffer and metadata
+ */
+async function processReceiptImage(imageBuffer, mimeType = '') {
+  const startTime = Date.now();
+
+  try {
+    // Convert HEIC to JPEG if needed
+    const { buffer: processedBuffer, converted } = await convertHeicIfNeeded(imageBuffer, mimeType);
+    if (converted) {
+      imageBuffer = processedBuffer;
+      console.log('[Receipt Processor] Using converted JPEG buffer');
+    }
+
+    // Get original metadata
+    const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
+
+    if (!metadata || !metadata.format) {
+      throw new Error('Invalid image format');
+    }
+
+    console.log('[Receipt Processor] Original image:', {
+      width: metadata.width,
+      height: metadata.height,
+      format: metadata.format,
+      sizeKB: Math.round(metadata.size / 1024),
+    });
+
+    // Receipt size config (optimized for OCR + admin review)
+    const RECEIPT_SIZE = {
+      width: 2000,      // Large enough for OCR accuracy
+      quality: 88,      // High quality for text recognition
+      fit: 'inside',    // Maintain aspect ratio
+    };
+
+    // Build pipeline
+    let pipeline = sharp(imageBuffer, { failOn: 'none' });
+
+    // Auto-rotate based on EXIF
+    pipeline = pipeline.rotate();
+
+    // Resize only if image is larger than target
+    if (metadata.width > RECEIPT_SIZE.width) {
+      pipeline = pipeline.resize({
+        width: RECEIPT_SIZE.width,
+        height: null, // Maintain aspect ratio
+        fit: RECEIPT_SIZE.fit,
+        withoutEnlargement: true,
+      });
+    }
+
+    // Convert to JPEG with optimization
+    pipeline = pipeline.jpeg({
+      quality: RECEIPT_SIZE.quality,
+      mozjpeg: true,        // Better compression
+      progressive: true,    // Progressive loading
+    });
+
+    // Process
+    const buffer = await pipeline.toBuffer();
+    const processedMetadata = await sharp(buffer).metadata();
+
+    const duration = Date.now() - startTime;
+    console.log('[Receipt Processor] Processing complete:', {
+      width: processedMetadata.width,
+      height: processedMetadata.height,
+      sizeKB: Math.round(buffer.length / 1024),
+      durationMs: duration,
+    });
+
+    return {
+      buffer,
+      width: processedMetadata.width,
+      height: processedMetadata.height,
+      size: buffer.length,
+      format: 'jpeg',
+      duration,
+    };
+  } catch (error) {
+    console.error('[Receipt Processor] Failed:', error);
+    throw new Error(`Receipt image processing failed: ${error.message}`);
+  }
+}
+
 module.exports = {
   processImage,
   validateImage,
   quickOptimize,
+  processReceiptImage,
   convertHeicIfNeeded,
   IMAGE_SIZES,
   MAX_ORIGINAL_SIZE,

@@ -1439,22 +1439,61 @@ const approveReceipt = async (req, res) => {
       accuracy: accuracy,
     });
 
-    // Award points
+    // Get Visit to check for tagged buddies
+    let visit = null;
+    let taggedBuddiesCount = 0;
+
+    if (receipt.visitId) {
+      visit = await Visit.findByPk(receipt.visitId);
+      if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        taggedBuddiesCount = visit.taggedBuddies.length;
+      }
+    }
+
+    // Calculate points per person (split among user + buddies)
+    const totalPeople = 1 + taggedBuddiesCount; // User + buddies
+    const pointsPerPerson = Math.round((pointsAwarded / totalPeople) * 100) / 100;
+
+    console.log(`[Receipt Approval] Points distribution: ${pointsAwarded} points / ${totalPeople} people = ${pointsPerPerson} points each`);
+
+    // Award points to main user
     await UserPointsHistory.logPoints({
       userId: receipt.userId,
       actionType: 'receipt_approved',
-      points: pointsAwarded,
+      points: pointsPerPerson,
       referenceId: receipt.id,
       restaurantId: receipt.restaurantId,
-      description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
+      description: taggedBuddiesCount > 0
+        ? `Račun odobren - ${restaurant.name} (${totalAmount}€) - podijeljeno sa ${taggedBuddiesCount} buddies`
+        : `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
 
+    // Award points to tagged buddies
+    if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      console.log(`[Receipt Approval] Awarding ${pointsPerPerson} points to each of ${visit.taggedBuddies.length} buddies`);
+
+      for (const buddyId of visit.taggedBuddies) {
+        await UserPointsHistory.logPoints({
+          userId: buddyId,
+          actionType: 'receipt_approved_buddy',
+          points: pointsPerPerson,
+          referenceId: receipt.id,
+          restaurantId: receipt.restaurantId,
+          description: `Račun odobren - ${restaurant.name} (${totalAmount}€) - tagovan od ${receipt.userId}`,
+        });
+      }
+    }
+
     // Update existing Visit or create new one when receipt is approved
-    let visit = null;
+    // (visit variable already declared above for buddy points)
     try {
-      if (receipt.visitId) {
-        // Visit already exists (user created it before approval)
+      if (receipt.visitId && !visit) {
+        // Re-fetch if not already loaded
         visit = await Visit.findByPk(receipt.visitId);
+      }
+
+      if (receipt.visitId && visit) {
+        // Visit already exists (user created it before approval)
 
         if (visit) {
           // Update existing Visit to APPROVED

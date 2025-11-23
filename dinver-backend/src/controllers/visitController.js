@@ -1,7 +1,17 @@
-const { Visit, Restaurant, UserFavorite, User, Receipt } = require('../../models');
+const {
+  Visit,
+  Restaurant,
+  UserFavorite,
+  User,
+  Receipt,
+} = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const { uploadVariantsToS3 } = require('../../utils/s3Upload');
 const { processImage } = require('../../utils/imageProcessor');
+const {
+  uploadImage,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
@@ -10,7 +20,12 @@ const {
   getPlaceDetails,
   transformToRestaurantData,
 } = require('../services/googlePlacesService');
-const { findRestaurantWithClaude } = require('../services/claudeOcrService');
+const {
+  findRestaurantWithClaude,
+  extractReceiptWithClaude,
+  MODEL_VERSION,
+} = require('../services/claudeOcrService');
+const { extractMerchantInfoQuick } = require('../services/quickOcrService');
 
 /**
  * Generate unique slug for restaurant
@@ -50,7 +65,14 @@ const generateSlug = async (name) => {
  */
 const createVisitFromReceipt = async (req, res) => {
   try {
-    const { receiptId, restaurantId, taggedBuddies, restaurantData, manualRestaurantName, manualRestaurantCity } = req.body;
+    const {
+      receiptId,
+      restaurantId,
+      taggedBuddies,
+      restaurantData,
+      manualRestaurantName,
+      manualRestaurantCity,
+    } = req.body;
     const userId = req.user.id;
 
     // Validate required fields
@@ -58,7 +80,9 @@ const createVisitFromReceipt = async (req, res) => {
       return res.status(400).json({ error: 'Receipt ID is required' });
     }
 
-    console.log(`[Visit Create] Creating visit from receipt ${receiptId} for user ${userId}`);
+    console.log(
+      `[Visit Create] Creating visit from receipt ${receiptId} for user ${userId}`,
+    );
 
     // Fetch the receipt
     const receipt = await Receipt.findByPk(receiptId);
@@ -89,9 +113,10 @@ const createVisitFromReceipt = async (req, res) => {
       try {
         console.log('[Visit Create] Processing restaurant data...');
 
-        const parsedRestaurantData = typeof restaurantData === 'string'
-          ? JSON.parse(restaurantData)
-          : restaurantData;
+        const parsedRestaurantData =
+          typeof restaurantData === 'string'
+            ? JSON.parse(restaurantData)
+            : restaurantData;
 
         // Check if restaurant already exists by placeId
         const existingRestaurant = await Restaurant.findByPlaceId(
@@ -117,7 +142,8 @@ const createVisitFromReceipt = async (req, res) => {
             latitude: parsedRestaurantData.latitude,
             longitude: parsedRestaurantData.longitude,
             phone: parsedRestaurantData.phone,
-            websiteUrl: parsedRestaurantData.websiteUrl || parsedRestaurantData.website,
+            websiteUrl:
+              parsedRestaurantData.websiteUrl || parsedRestaurantData.website,
             placeId: parsedRestaurantData.placeId,
             rating: parsedRestaurantData.rating,
             priceLevel: parsedRestaurantData.priceLevel,
@@ -190,7 +216,8 @@ const createVisitFromReceipt = async (req, res) => {
             const matchedPlaceId = claudeMatch.restaurantId;
 
             // Check if restaurant already exists
-            const existingRestaurant = await Restaurant.findByPlaceId(matchedPlaceId);
+            const existingRestaurant =
+              await Restaurant.findByPlaceId(matchedPlaceId);
 
             if (existingRestaurant) {
               console.log(
@@ -252,7 +279,9 @@ const createVisitFromReceipt = async (req, res) => {
             );
           }
         } else {
-          console.log('[Visit Create] No Google Places results for manual search');
+          console.log(
+            '[Visit Create] No Google Places results for manual search',
+          );
         }
       } catch (manualSearchError) {
         console.error(
@@ -264,7 +293,10 @@ const createVisitFromReceipt = async (req, res) => {
     }
 
     // Validate we have either restaurantId OR manual restaurant data
-    if (!finalRestaurantId && (!manualRestaurantName || !manualRestaurantCity)) {
+    if (
+      !finalRestaurantId &&
+      (!manualRestaurantName || !manualRestaurantCity)
+    ) {
       return res.status(400).json({
         error: 'Restaurant ID or manual restaurant name and city are required',
       });
@@ -313,7 +345,9 @@ const createVisitFromReceipt = async (req, res) => {
       manualRestaurantCity: !finalRestaurantId ? manualRestaurantCity : null,
     });
 
-    console.log(`[Visit Create] Visit created: ${visit.id}${!finalRestaurantId ? ' (with manual restaurant data)' : ''}`);
+    console.log(
+      `[Visit Create] Visit created: ${visit.id}${!finalRestaurantId ? ' (with manual restaurant data)' : ''}`,
+    );
 
     // Update Receipt with visitId and restaurantId
     await receipt.update({
@@ -321,7 +355,9 @@ const createVisitFromReceipt = async (req, res) => {
       restaurantId: finalRestaurantId,
     });
 
-    console.log(`[Visit Create] Receipt ${receipt.id} linked to visit ${visit.id}`);
+    console.log(
+      `[Visit Create] Receipt ${receipt.id} linked to visit ${visit.id}`,
+    );
 
     // Update Must Visit entry if it was removed earlier
     if (finalRestaurantId) {
@@ -380,31 +416,44 @@ const createVisitFromReceipt = async (req, res) => {
     const response = {
       ...visitWithDetails.get(),
       receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visitWithDetails.receipt ? {
-        id: visitWithDetails.receipt.id,
-        thumbnailUrl: visitWithDetails.receipt.thumbnailUrl ? getMediaUrl(visitWithDetails.receipt.thumbnailUrl, 'image') : null,
-        mediumUrl: visitWithDetails.receipt.mediumUrl ? getMediaUrl(visitWithDetails.receipt.mediumUrl, 'image') : null,
-        fullscreenUrl: visitWithDetails.receipt.fullscreenUrl ? getMediaUrl(visitWithDetails.receipt.fullscreenUrl, 'image') : null,
-        originalUrl: visitWithDetails.receipt.originalUrl ? getMediaUrl(visitWithDetails.receipt.originalUrl, 'image') : null,
-        status: visitWithDetails.receipt.status,
-        oib: visitWithDetails.receipt.oib,
-        totalAmount: visitWithDetails.receipt.totalAmount,
-        issueDate: visitWithDetails.receipt.issueDate,
-      } : null,
-      restaurant: visitWithDetails.restaurant ? {
-        ...visitWithDetails.restaurant.get(),
-        thumbnailUrl: visitWithDetails.restaurant.thumbnailUrl
-          ? getMediaUrl(visitWithDetails.restaurant.thumbnailUrl, 'image')
-          : null,
-        isNew: !!autoCreatedRestaurant,
-      } : null,
+      receipt: visitWithDetails.receipt
+        ? {
+            id: visitWithDetails.receipt.id,
+            thumbnailUrl: visitWithDetails.receipt.thumbnailUrl
+              ? getMediaUrl(visitWithDetails.receipt.thumbnailUrl, 'image')
+              : null,
+            mediumUrl: visitWithDetails.receipt.mediumUrl
+              ? getMediaUrl(visitWithDetails.receipt.mediumUrl, 'image')
+              : null,
+            fullscreenUrl: visitWithDetails.receipt.fullscreenUrl
+              ? getMediaUrl(visitWithDetails.receipt.fullscreenUrl, 'image')
+              : null,
+            originalUrl: visitWithDetails.receipt.originalUrl
+              ? getMediaUrl(visitWithDetails.receipt.originalUrl, 'image')
+              : null,
+            status: visitWithDetails.receipt.status,
+            oib: visitWithDetails.receipt.oib,
+            totalAmount: visitWithDetails.receipt.totalAmount,
+            issueDate: visitWithDetails.receipt.issueDate,
+          }
+        : null,
+      restaurant: visitWithDetails.restaurant
+        ? {
+            ...visitWithDetails.restaurant.get(),
+            thumbnailUrl: visitWithDetails.restaurant.thumbnailUrl
+              ? getMediaUrl(visitWithDetails.restaurant.thumbnailUrl, 'image')
+              : null,
+            isNew: !!autoCreatedRestaurant,
+          }
+        : null,
     };
 
     let message;
     if (autoCreatedRestaurant) {
       message = `Visit created! Novi restoran "${autoCreatedRestaurant.name}" dodan u sustav.`;
     } else if (!finalRestaurantId) {
-      message = 'Visit created! Restoran će biti spojen od strane administratora.';
+      message =
+        'Visit created! Restoran će biti spojen od strane administratora.';
     } else {
       message = 'Visit created successfully. Waiting for admin approval.';
     }
@@ -455,12 +504,19 @@ const createVisit = async (req, res) => {
       const folder = `receipts/${userId}`;
 
       console.log('Uploading receipt variants to S3...');
-      const uploadResult = await uploadVariantsToS3(variants, folder, baseFileName);
+      const uploadResult = await uploadVariantsToS3(
+        variants,
+        folder,
+        baseFileName,
+      );
 
       imageVariants = uploadResult.variants;
 
       // Use medium variant as the main URL (for backward compatibility)
-      receiptImageUrl = imageVariants.medium || imageVariants.fullscreen || imageVariants.thumbnail;
+      receiptImageUrl =
+        imageVariants.medium ||
+        imageVariants.fullscreen ||
+        imageVariants.thumbnail;
 
       // Step 3: Calculate image hash for duplicate detection
       const imageHash = crypto
@@ -484,12 +540,11 @@ const createVisit = async (req, res) => {
       });
 
       console.log(`Receipt created: ${receiptRecord.id}`);
-
     } catch (error) {
       console.error('Error processing/uploading receipt:', error);
       return res.status(500).json({
         error: 'Failed to process receipt image',
-        details: error.message
+        details: error.message,
       });
     }
 
@@ -562,14 +617,24 @@ const createVisit = async (req, res) => {
     const response = {
       ...visitWithRestaurant.get(),
       receiptImageUrl: getMediaUrl(receiptImageUrl, 'image'),
-      receipt: visitWithRestaurant.receipt ? {
-        id: visitWithRestaurant.receipt.id,
-        thumbnailUrl: visitWithRestaurant.receipt.thumbnailUrl ? getMediaUrl(visitWithRestaurant.receipt.thumbnailUrl, 'image') : null,
-        mediumUrl: visitWithRestaurant.receipt.mediumUrl ? getMediaUrl(visitWithRestaurant.receipt.mediumUrl, 'image') : null,
-        fullscreenUrl: visitWithRestaurant.receipt.fullscreenUrl ? getMediaUrl(visitWithRestaurant.receipt.fullscreenUrl, 'image') : null,
-        originalUrl: visitWithRestaurant.receipt.originalUrl ? getMediaUrl(visitWithRestaurant.receipt.originalUrl, 'image') : null,
-        status: visitWithRestaurant.receipt.status,
-      } : null,
+      receipt: visitWithRestaurant.receipt
+        ? {
+            id: visitWithRestaurant.receipt.id,
+            thumbnailUrl: visitWithRestaurant.receipt.thumbnailUrl
+              ? getMediaUrl(visitWithRestaurant.receipt.thumbnailUrl, 'image')
+              : null,
+            mediumUrl: visitWithRestaurant.receipt.mediumUrl
+              ? getMediaUrl(visitWithRestaurant.receipt.mediumUrl, 'image')
+              : null,
+            fullscreenUrl: visitWithRestaurant.receipt.fullscreenUrl
+              ? getMediaUrl(visitWithRestaurant.receipt.fullscreenUrl, 'image')
+              : null,
+            originalUrl: visitWithRestaurant.receipt.originalUrl
+              ? getMediaUrl(visitWithRestaurant.receipt.originalUrl, 'image')
+              : null,
+            status: visitWithRestaurant.receipt.status,
+          }
+        : null,
       restaurant: {
         ...visitWithRestaurant.restaurant.get(),
         thumbnailUrl: visitWithRestaurant.restaurant.thumbnailUrl
@@ -632,23 +697,43 @@ const getUserVisits = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
-    const visitsWithUrls = visits.map((visit) => ({
+    // Filter out PENDING visits without restaurant (user should see these in receipts list)
+    const filteredVisits = visits.filter((visit) => {
+      // Show APPROVED/REJECTED visits always
+      if (visit.status !== 'PENDING') return true;
+      // Show PENDING visits only if they have a restaurant
+      return visit.restaurantId !== null;
+    });
+
+    const visitsWithUrls = filteredVisits.map((visit) => ({
       ...visit.get(),
       receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visit.receipt ? {
-        id: visit.receipt.id,
-        thumbnailUrl: visit.receipt.thumbnailUrl ? getMediaUrl(visit.receipt.thumbnailUrl, 'image') : null,
-        mediumUrl: visit.receipt.mediumUrl ? getMediaUrl(visit.receipt.mediumUrl, 'image') : null,
-        fullscreenUrl: visit.receipt.fullscreenUrl ? getMediaUrl(visit.receipt.fullscreenUrl, 'image') : null,
-        originalUrl: visit.receipt.originalUrl ? getMediaUrl(visit.receipt.originalUrl, 'image') : null,
-        status: visit.receipt.status,
-      } : null,
-      restaurant: {
-        ...visit.restaurant.get(),
-        thumbnailUrl: visit.restaurant.thumbnailUrl
-          ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-          : null,
-      },
+      receipt: visit.receipt
+        ? {
+            id: visit.receipt.id,
+            thumbnailUrl: visit.receipt.thumbnailUrl
+              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
+              : null,
+            mediumUrl: visit.receipt.mediumUrl
+              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
+              : null,
+            fullscreenUrl: visit.receipt.fullscreenUrl
+              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
+              : null,
+            originalUrl: visit.receipt.originalUrl
+              ? getMediaUrl(visit.receipt.originalUrl, 'image')
+              : null,
+            status: visit.receipt.status,
+          }
+        : null,
+      restaurant: visit.restaurant
+        ? {
+            ...visit.restaurant.get(),
+            thumbnailUrl: visit.restaurant.thumbnailUrl
+              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+              : null,
+          }
+        : null,
     }));
 
     res.status(200).json(visitsWithUrls);
@@ -702,20 +787,32 @@ const getVisitById = async (req, res) => {
     const response = {
       ...visit.get(),
       receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visit.receipt ? {
-        id: visit.receipt.id,
-        thumbnailUrl: visit.receipt.thumbnailUrl ? getMediaUrl(visit.receipt.thumbnailUrl, 'image') : null,
-        mediumUrl: visit.receipt.mediumUrl ? getMediaUrl(visit.receipt.mediumUrl, 'image') : null,
-        fullscreenUrl: visit.receipt.fullscreenUrl ? getMediaUrl(visit.receipt.fullscreenUrl, 'image') : null,
-        originalUrl: visit.receipt.originalUrl ? getMediaUrl(visit.receipt.originalUrl, 'image') : null,
-        status: visit.receipt.status,
-      } : null,
-      restaurant: {
-        ...visit.restaurant.get(),
-        thumbnailUrl: visit.restaurant.thumbnailUrl
-          ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-          : null,
-      },
+      receipt: visit.receipt
+        ? {
+            id: visit.receipt.id,
+            thumbnailUrl: visit.receipt.thumbnailUrl
+              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
+              : null,
+            mediumUrl: visit.receipt.mediumUrl
+              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
+              : null,
+            fullscreenUrl: visit.receipt.fullscreenUrl
+              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
+              : null,
+            originalUrl: visit.receipt.originalUrl
+              ? getMediaUrl(visit.receipt.originalUrl, 'image')
+              : null,
+            status: visit.receipt.status,
+          }
+        : null,
+      restaurant: visit.restaurant
+        ? {
+            ...visit.restaurant.get(),
+            thumbnailUrl: visit.restaurant.thumbnailUrl
+              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+              : null,
+          }
+        : null,
     };
 
     res.status(200).json(response);
@@ -776,10 +873,17 @@ const retakeReceipt = async (req, res) => {
       const folder = `receipts/${userId}`;
 
       console.log('Uploading receipt variants to S3...');
-      const uploadResult = await uploadVariantsToS3(variants, folder, baseFileName);
+      const uploadResult = await uploadVariantsToS3(
+        variants,
+        folder,
+        baseFileName,
+      );
 
       const imageVariants = uploadResult.variants;
-      receiptImageUrl = imageVariants.medium || imageVariants.fullscreen || imageVariants.thumbnail;
+      receiptImageUrl =
+        imageVariants.medium ||
+        imageVariants.fullscreen ||
+        imageVariants.thumbnail;
 
       // Step 3: Calculate image hash
       const imageHash = crypto
@@ -821,12 +925,11 @@ const retakeReceipt = async (req, res) => {
           submittedAt: new Date(),
         });
       }
-
     } catch (error) {
       console.error('Error processing/uploading receipt:', error);
       return res.status(500).json({
         error: 'Failed to process receipt image',
-        details: error.message
+        details: error.message,
       });
     }
 
@@ -862,14 +965,24 @@ const retakeReceipt = async (req, res) => {
     const response = {
       ...updatedVisit.get(),
       receiptImageUrl: getMediaUrl(receiptImageUrl, 'image'),
-      receipt: updatedVisit.receipt ? {
-        id: updatedVisit.receipt.id,
-        thumbnailUrl: updatedVisit.receipt.thumbnailUrl ? getMediaUrl(updatedVisit.receipt.thumbnailUrl, 'image') : null,
-        mediumUrl: updatedVisit.receipt.mediumUrl ? getMediaUrl(updatedVisit.receipt.mediumUrl, 'image') : null,
-        fullscreenUrl: updatedVisit.receipt.fullscreenUrl ? getMediaUrl(updatedVisit.receipt.fullscreenUrl, 'image') : null,
-        originalUrl: updatedVisit.receipt.originalUrl ? getMediaUrl(updatedVisit.receipt.originalUrl, 'image') : null,
-        status: updatedVisit.receipt.status,
-      } : null,
+      receipt: updatedVisit.receipt
+        ? {
+            id: updatedVisit.receipt.id,
+            thumbnailUrl: updatedVisit.receipt.thumbnailUrl
+              ? getMediaUrl(updatedVisit.receipt.thumbnailUrl, 'image')
+              : null,
+            mediumUrl: updatedVisit.receipt.mediumUrl
+              ? getMediaUrl(updatedVisit.receipt.mediumUrl, 'image')
+              : null,
+            fullscreenUrl: updatedVisit.receipt.fullscreenUrl
+              ? getMediaUrl(updatedVisit.receipt.fullscreenUrl, 'image')
+              : null,
+            originalUrl: updatedVisit.receipt.originalUrl
+              ? getMediaUrl(updatedVisit.receipt.originalUrl, 'image')
+              : null,
+            status: updatedVisit.receipt.status,
+          }
+        : null,
     };
 
     res.status(200).json({
@@ -937,7 +1050,12 @@ const deleteVisit = async (req, res) => {
     if (receipt) {
       // Delete all 4 receipt image variants from S3
       const { deleteImageVariants } = require('../../utils/s3Upload');
-      if (receipt.thumbnailUrl || receipt.mediumUrl || receipt.fullscreenUrl || receipt.originalUrl) {
+      if (
+        receipt.thumbnailUrl ||
+        receipt.mediumUrl ||
+        receipt.fullscreenUrl ||
+        receipt.originalUrl
+      ) {
         try {
           const deleteResult = await deleteImageVariants(
             receipt.thumbnailUrl,
@@ -945,9 +1063,14 @@ const deleteVisit = async (req, res) => {
             receipt.fullscreenUrl,
             receipt.originalUrl,
           );
-          console.log(`Deleted ${deleteResult.deletedCount} receipt image variant(s) from S3`);
+          console.log(
+            `Deleted ${deleteResult.deletedCount} receipt image variant(s) from S3`,
+          );
         } catch (s3Error) {
-          console.error('Error deleting receipt images from S3:', s3Error.message);
+          console.error(
+            'Error deleting receipt images from S3:',
+            s3Error.message,
+          );
         }
       }
 
@@ -997,7 +1120,10 @@ const deleteVisit = async (req, res) => {
             }
           }
         } catch (s3Error) {
-          console.error(`Error deleting experience media from S3:`, s3Error.message);
+          console.error(
+            `Error deleting experience media from S3:`,
+            s3Error.message,
+          );
         }
       }
 
@@ -1019,12 +1145,589 @@ const deleteVisit = async (req, res) => {
   }
 };
 
+/**
+ * Upload receipt + Create Visit in ONE atomic operation (OPTIMIZED!)
+ * POST /api/app/visits/upload-receipt
+ *
+ * Body (multipart/form-data):
+ * - receiptImage: File (required)
+ * - taggedBuddies: JSON string array (optional) ["uuid1", "uuid2"]
+ * - locationLat: string (optional)
+ * - locationLng: string (optional)
+ * - gpsAccuracy: string (optional)
+ *
+ * Flow:
+ * 1. Process image (1 variant only - FAST!)
+ * 2. Upload to S3 (single file)
+ * 3. Create Visit + Receipt atomically
+ * 4. Return success immediately (2-3s!)
+ * 5. Background OCR + restaurant matching
+ */
+const uploadReceiptAndCreateVisit = async (req, res) => {
+  const { sequelize } = require('../../models');
+  const transaction = await sequelize.transaction();
+
+  try {
+    const userId = req.user.id;
+    const { taggedBuddies, locationLat, locationLng, gpsAccuracy } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Receipt image is required' });
+    }
+
+    // === STEP 1: Calculate hash (duplicate detection) ===
+    const imageHash = crypto
+      .createHash('md5')
+      .update(file.buffer)
+      .digest('hex');
+
+    const exactDuplicate = await Receipt.findOne({
+      where: { imageHash, userId },
+    });
+
+    if (exactDuplicate) {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: 'Ovaj račun je već poslan na provjeru',
+      });
+    }
+
+    // === STEP 2 & 3: Upload image (using existing proven method!) ===
+    const folder = `receipts/${userId}`;
+    let imageUploadResult;
+
+    try {
+      imageUploadResult = await uploadImage(file, folder, {
+        strategy: UPLOAD_STRATEGY.QUICK,
+        entityType: 'receipt',
+        entityId: null,
+        priority: 15,
+        maxWidth: 2000, // Larger for OCR accuracy
+        quality: 88, // Higher quality for text recognition
+        mimeType: file.mimetype, // For HEIC conversion
+      });
+    } catch (uploadError) {
+      await transaction.rollback();
+      console.error(
+        '[Upload & Create Visit] Image upload failed:',
+        uploadError,
+      );
+      return res.status(500).json({
+        error: 'Failed to upload receipt image',
+        details: uploadError.message,
+      });
+    }
+
+    const imageUrl = imageUploadResult.imageUrl;
+
+    // === STEP 4: Create Visit (WITHOUT restaurant yet) ===
+    const visit = await Visit.create(
+      {
+        userId,
+        restaurantId: null, // Will be set by AI/Admin later
+        receiptImageUrl: imageUrl,
+        status: 'PENDING',
+        submittedAt: new Date(),
+        taggedBuddies: taggedBuddies ? JSON.parse(taggedBuddies) : [],
+        wasInMustVisit: false,
+      },
+      { transaction },
+    );
+
+    // === STEP 5: Create Receipt (linked to Visit) ===
+    const receipt = await Receipt.create(
+      {
+        userId,
+        visitId: visit.id, // Linked immediately!
+        restaurantId: null, // Will be set by AI/Admin
+        imageUrl: imageUrl,
+        imageHash,
+        locationLat: locationLat ? parseFloat(locationLat) : null,
+        locationLng: locationLng ? parseFloat(locationLng) : null,
+        gpsAccuracy: gpsAccuracy ? parseFloat(gpsAccuracy) : null,
+        status: 'pending',
+        ocrMethod: 'claude',
+        submittedAt: new Date(),
+        modelVersion: MODEL_VERSION,
+      },
+      { transaction },
+    );
+
+    // === COMMIT TRANSACTION ===
+    await transaction.commit();
+
+    // === STEP 6: Return SUCCESS immediately! ===
+    res.status(201).json({
+      visitId: visit.id,
+      receiptId: receipt.id,
+      message: 'Račun uspješno poslan na provjeru!',
+    });
+
+    // === STEP 7: Background OCR (korisnik ne čeka!) ===
+    // Copy buffer to ensure it persists after request ends
+    const imageBufferCopy = Buffer.from(file.buffer);
+
+    processFullOcrInBackground(receipt.id, imageBufferCopy, file.mimetype)
+      .then(() => {
+        console.log(
+          `[Background OCR] Successfully completed for receipt ${receipt.id}`,
+        );
+      })
+      .catch((error) => {
+        console.error(
+          `[Background OCR] Failed for receipt ${receipt.id}:`,
+          error.message,
+        );
+      });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('[Upload & Create Visit] Failed:', error);
+    res.status(500).json({
+      error: 'Failed to process receipt',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Background processing: Full OCR extraction + Restaurant matching
+ * Updates Receipt with OCR data and Visit with matched restaurant
+ *
+ * @param {string} receiptId - Receipt ID to update
+ * @param {Buffer} imageBuffer - Receipt image buffer
+ * @param {string} mimeType - Image MIME type
+ */
+async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
+  let matchMethod = null;
+
+  try {
+    const startTime = Date.now();
+
+    // ========================================================================
+    // STEP 1: OCR EXTRACTION
+    // ========================================================================
+    console.log('┌─ STEP 1: OCR Extraction ─────────────────────────────┐');
+    console.log('│ Running Claude AI OCR on receipt image...');
+    const claudeResult = await extractReceiptWithClaude(imageBuffer, mimeType);
+
+    if (!claudeResult) {
+      throw new Error('Claude OCR returned no results');
+    }
+
+    const ocrDuration = Date.now() - startTime;
+    console.log(`│ ✅ OCR completed in ${ocrDuration}ms`);
+    console.log('│');
+    console.log('│ Extracted Data:');
+    console.log(
+      `│   • Merchant Name:    ${claudeResult.merchantName || '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • Merchant Address: ${claudeResult.merchantAddress || '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • OIB:              ${claudeResult.oib || '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • JIR:              ${claudeResult.jir ? '✅ ' + claudeResult.jir.substring(0, 20) + '...' : '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • ZKI:              ${claudeResult.zki ? '✅ ' + claudeResult.zki.substring(0, 20) + '...' : '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • Total Amount:     ${claudeResult.totalAmount ? claudeResult.totalAmount + ' EUR' : '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • Issue Date:       ${claudeResult.issueDate || '❌ NOT FOUND'}`,
+    );
+    console.log(
+      `│   • Issue Time:       ${claudeResult.issueTime || '❌ NOT FOUND'}`,
+    );
+    console.log('└───────────────────────────────────────────────────────┘\n');
+
+    // Get receipt
+    const receipt = await Receipt.findByPk(receiptId);
+    if (!receipt) {
+      throw new Error('Receipt not found');
+    }
+
+    // ========================================================================
+    // STEP 2: RESTAURANT MATCHING
+    // ========================================================================
+    console.log('┌─ STEP 2: Restaurant Matching ────────────────────────┐');
+    let matchedRestaurant = null;
+    let matchConfidence = null;
+
+    // STRATEGY 1: OIB Match
+    console.log('│');
+    console.log('│ 🔍 Strategy 1: OIB Database Match');
+    if (claudeResult.oib) {
+      console.log(`│    Searching for OIB: ${claudeResult.oib}...`);
+      matchedRestaurant = await Restaurant.findOne({
+        where: { oib: claudeResult.oib },
+      });
+
+      if (matchedRestaurant) {
+        matchConfidence = 1.0;
+        matchMethod = 'OIB_MATCH';
+        console.log(`│    ✅ SUCCESS!`);
+        console.log(`│       Restaurant: ${matchedRestaurant.name}`);
+        console.log(`│       ID: ${matchedRestaurant.id}`);
+        console.log(`│       Confidence: 100% (Perfect OIB match)`);
+      } else {
+        console.log(`│    ❌ FAILED: No restaurant with this OIB in database`);
+      }
+    } else {
+      console.log(`│    ⏭️  SKIPPED: No OIB was extracted from receipt`);
+    }
+
+    // STRATEGY 2: Name-based search + Claude matching
+    if (!matchedRestaurant && claudeResult.merchantName) {
+      console.log('│');
+      console.log('│ 🔍 Strategy 2: Name-based Database Search');
+      console.log(`│    Searching for name: "${claudeResult.merchantName}"...`);
+
+      const { Op } = require('sequelize');
+
+      // Normalize merchant name (remove diacritics for fuzzy matching)
+      const normalizeName = (name) => {
+        return name
+          .toLowerCase()
+          .normalize('NFD') // Decompose combined characters
+          .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+          .trim();
+      };
+
+      const normalizedMerchantName = normalizeName(claudeResult.merchantName);
+      console.log(`│    Normalized search: "${normalizedMerchantName}"`);
+
+      // Try exact ILIKE match first
+      let nameSearchResults = await Restaurant.findAll({
+        where: {
+          name: { [Op.iLike]: `%${claudeResult.merchantName}%` },
+        },
+        attributes: [
+          'id',
+          'name',
+          'address',
+          'place',
+          'placeId',
+          'rating',
+          'latitude',
+          'longitude',
+        ],
+        limit: 20,
+      });
+
+      // If no exact match, try fuzzy matching with normalized names
+      if (nameSearchResults.length === 0) {
+        console.log(`│    No exact match, trying fuzzy match...`);
+        console.log(
+          `│    Searching for normalized: "${normalizedMerchantName}"`,
+        );
+        const allRestaurants = await Restaurant.findAll({
+          attributes: [
+            'id',
+            'name',
+            'address',
+            'place',
+            'placeId',
+            'rating',
+            'latitude',
+            'longitude',
+          ],
+          limit: 500, // Increased limit to include more restaurants
+        });
+
+        console.log(
+          `│    Fetched ${allRestaurants.length} restaurants to compare`,
+        );
+
+        // Filter in JavaScript using normalized names with bidirectional matching
+        nameSearchResults = allRestaurants
+          .filter((r) => {
+            const normalizedRestaurantName = normalizeName(r.name);
+
+            // Check both directions: does A contain B OR does B contain A
+            const matches =
+              normalizedRestaurantName.includes(normalizedMerchantName) ||
+              normalizedMerchantName.includes(normalizedRestaurantName);
+
+            // Debug log for first 5 comparisons
+            if (allRestaurants.indexOf(r) < 5) {
+              console.log(
+                `│       "${r.name}" → "${normalizedRestaurantName}" ${matches ? '✅' : '❌'}`,
+              );
+            }
+
+            return matches;
+          })
+          .slice(0, 20);
+      }
+
+      console.log(
+        `│    Found ${nameSearchResults.length} restaurant(s) with similar name`,
+      );
+
+      if (nameSearchResults.length > 0) {
+        // Use Claude AI to find best match (no GPS filtering)
+        console.log(`│    🤖 Using Claude AI to find best match...`);
+        const claudeMatch = await findRestaurantWithClaude(
+          claudeResult,
+          nameSearchResults,
+        );
+
+        if (claudeMatch.restaurantId && claudeMatch.confidence >= 0.8) {
+          matchedRestaurant = await Restaurant.findByPk(
+            claudeMatch.restaurantId,
+          );
+          matchConfidence = claudeMatch.confidence;
+          matchMethod = 'NAME_SEARCH_+_AI';
+          console.log(`│    ✅ SUCCESS!`);
+          console.log(`│       Restaurant: ${matchedRestaurant.name}`);
+          console.log(`│       ID: ${matchedRestaurant.id}`);
+          console.log(
+            `│       Confidence: ${Math.round(matchConfidence * 100)}%`,
+          );
+        } else {
+          console.log(
+            `│    ❌ FAILED: AI confidence too low (${claudeMatch.confidence ? Math.round(claudeMatch.confidence * 100) : 0}% < 80%)`,
+          );
+        }
+      } else {
+        console.log(`│    ❌ FAILED: No restaurants found with similar name`);
+      }
+    } else if (!matchedRestaurant) {
+      console.log('│');
+      console.log('│ 🔍 Strategy 2: SKIPPED (No merchant name extracted)');
+    }
+
+    // STRATEGY 3: Google Places fallback
+    if (!matchedRestaurant && claudeResult.merchantName) {
+      console.log('│');
+      console.log('│ 🔍 Strategy 3: Google Places Search (Fallback)');
+
+      try {
+        const searchQuery = claudeResult.merchantAddress
+          ? `${claudeResult.merchantName}, ${claudeResult.merchantAddress}`
+          : claudeResult.merchantName;
+
+        console.log(`│    Query: "${searchQuery}"`);
+        console.log(`│    Searching Google Places API...`);
+
+        const placesResults = await searchPlacesByText(searchQuery);
+
+        console.log(`│    Google found ${placesResults.length} place(s)`);
+
+        if (placesResults.length > 0) {
+          // Check if any already exist in DB
+          console.log(`│    Checking if any exist in our database...`);
+          for (const place of placesResults) {
+            console.log(
+              `│       Checking place: ${place.name} (placeId: ${place.placeId})`,
+            );
+            const existingRestaurant = await Restaurant.findOne({
+              where: { placeId: place.placeId },
+            });
+
+            if (existingRestaurant) {
+              matchedRestaurant = existingRestaurant;
+              matchConfidence = 0.9;
+              matchMethod = 'GOOGLE_EXISTING';
+              console.log(
+                `│    ✅ SUCCESS! Found existing restaurant from Google`,
+              );
+              console.log(`│       Restaurant: ${matchedRestaurant.name}`);
+              console.log(`│       ID: ${matchedRestaurant.id}`);
+              console.log(`│       Confidence: 90% (Google + existing in DB)`);
+              break;
+            }
+          }
+
+          // Create new restaurant from Google
+          if (!matchedRestaurant && placesResults[0]) {
+            console.log(`│    Creating new restaurant from Google Places...`);
+
+            const placeDetails = await getPlaceDetails(
+              placesResults[0].placeId,
+            );
+            const restaurantData = transformToRestaurantData(placeDetails);
+
+            if (claudeResult.oib) {
+              restaurantData.oib = claudeResult.oib;
+            }
+
+            restaurantData.slug = await generateSlug(restaurantData.name);
+            matchedRestaurant = await Restaurant.create(restaurantData);
+            matchConfidence = 0.85;
+            matchMethod = 'GOOGLE_NEW';
+
+            console.log(`│    ✅ SUCCESS! Created new restaurant from Google`);
+            console.log(`│       Restaurant: ${matchedRestaurant.name}`);
+            console.log(`│       ID: ${matchedRestaurant.id}`);
+            console.log(`│       Place ID: ${restaurantData.placeId}`);
+            console.log(`│       Confidence: 85% (Google Places)`);
+          }
+        } else {
+          console.log(`│    ❌ FAILED: Google found no matching places`);
+        }
+      } catch (googleError) {
+        console.log(`│    ❌ ERROR: ${googleError.message}`);
+      }
+    } else if (!matchedRestaurant) {
+      console.log('│');
+      console.log('│ 🔍 Strategy 3: SKIPPED (No merchant name extracted)');
+    }
+
+    console.log('│');
+    console.log('└───────────────────────────────────────────────────────┘\n');
+
+    // ========================================================================
+    // STEP 3: UPDATE RECEIPT
+    // ========================================================================
+    console.log('┌─ STEP 3: Update Receipt ─────────────────────────────┐');
+    await Receipt.update(
+      {
+        merchantName: claudeResult.merchantName,
+        merchantAddress: claudeResult.merchantAddress,
+        oib: claudeResult.oib,
+        jir: claudeResult.jir,
+        zki: claudeResult.zki,
+        totalAmount: claudeResult.totalAmount,
+        issueDate: claudeResult.issueDate,
+        issueTime: claudeResult.issueTime,
+        restaurantId: matchedRestaurant?.id || null,
+        fieldConfidences: claudeResult.confidence || {},
+        predictedData: {
+          ocrPass: 'full',
+          matchMethod: matchMethod,
+          fullExtractionTime: claudeResult.extractionTime,
+          fields: {
+            oib: claudeResult.oib,
+            jir: claudeResult.jir,
+            zki: claudeResult.zki,
+            totalAmount: claudeResult.totalAmount,
+            issueDate: claudeResult.issueDate,
+            issueTime: claudeResult.issueTime,
+            merchantName: claudeResult.merchantName,
+            merchantAddress: claudeResult.merchantAddress,
+          },
+          confidences: claudeResult.confidence,
+          aiMatchConfidence: matchConfidence,
+          extractionTime: claudeResult.extractionTime,
+          notes: claudeResult.notes,
+        },
+        modelVersion: claudeResult.modelVersion || MODEL_VERSION,
+      },
+      {
+        where: { id: receiptId },
+      },
+    );
+    console.log('│ ✅ Receipt updated with OCR data');
+    console.log('└───────────────────────────────────────────────────────┘\n');
+
+    // ========================================================================
+    // STEP 4: UPDATE VISIT
+    // ========================================================================
+    console.log('┌─ STEP 4: Update Visit ───────────────────────────────┐');
+    if (matchedRestaurant) {
+      await Visit.update(
+        {
+          restaurantId: matchedRestaurant.id,
+        },
+        {
+          where: { id: receipt.visitId },
+        },
+      );
+      console.log(`│ ✅ Visit linked to restaurant: ${matchedRestaurant.name}`);
+    } else {
+      console.log('│ ⚠️  No restaurant matched - Visit remains unlinked');
+      console.log('│    → Admin will manually link restaurant');
+    }
+    console.log('└───────────────────────────────────────────────────────┘\n');
+
+    const totalDuration = Date.now() - startTime;
+    console.log('╔════════════════════════════════════════════════════════╗');
+    console.log('║                    ✅ SUCCESS                          ║');
+    console.log(`║    Total Duration: ${totalDuration}ms                  ║`);
+    console.log(`║    Match Method: ${matchMethod || 'NONE'}              ║`);
+    console.log(
+      `║    Confidence: ${matchConfidence ? Math.round(matchConfidence * 100) + '%' : 'N/A'}    ║`,
+    );
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+  } catch (error) {
+    console.log('\n╔════════════════════════════════════════════════════════╗');
+    console.log('║                    ❌ ERROR                            ║');
+    console.log(`║    ${error.message.padEnd(50)}    ║`);
+    console.log('╚════════════════════════════════════════════════════════╝\n');
+
+    // Mark receipt for manual review
+    try {
+      await Receipt.update(
+        {
+          ocrMethod: 'manual',
+          predictedData: {
+            error: error.message,
+            failedAt: new Date().toISOString(),
+          },
+        },
+        {
+          where: { id: receiptId },
+        },
+      );
+    } catch (updateError) {
+      console.error(
+        `[Background OCR] Failed to update receipt ${receiptId} with error status:`,
+        updateError.message,
+      );
+    }
+  }
+}
+
+/**
+ * Get user's buddies (users they've tagged in visits)
+ * GET /api/app/users/buddies
+ */
+const getUserBuddies = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find all unique buddies from user's visits
+    const visits = await Visit.findAll({
+      where: { userId },
+      attributes: ['taggedBuddies'],
+    });
+
+    // Extract unique user IDs from taggedBuddies
+    const buddyIds = new Set();
+    visits.forEach((visit) => {
+      if (visit.taggedBuddies && Array.isArray(visit.taggedBuddies)) {
+        visit.taggedBuddies.forEach((id) => buddyIds.add(id));
+      }
+    });
+
+    // Fetch user details for all buddies
+    const buddies = await User.findAll({
+      where: { id: Array.from(buddyIds) },
+      attributes: ['id', 'name', 'username', 'profileImage'],
+    });
+
+    res.json({ buddies });
+  } catch (error) {
+    console.error('Error fetching user buddies:', error);
+    res.status(500).json({ error: 'Failed to fetch buddies' });
+  }
+};
+
 module.exports = {
-  createVisitFromReceipt, // NEW: Create visit from existing receipt
-  createVisit, // LEGACY: Old flow (kept for backward compatibility)
+  uploadReceiptAndCreateVisit,
+  createVisitFromReceipt,
+  createVisit,
   getUserVisits,
   getVisitById,
   retakeReceipt,
   checkHasVisited,
   deleteVisit,
+  getUserBuddies,
 };

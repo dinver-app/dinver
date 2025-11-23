@@ -32,23 +32,14 @@ router.get(
   visitController.getUserVisits,
 );
 
-// Create a new visit from existing receipt (NEW FLOW)
-// Body: { receiptId, restaurantId?, taggedBuddies?, restaurantData? }
+// Upload receipt + Create Visit in ONE call
+// Body (multipart/form-data): receiptImage, taggedBuddies?, locationLat?, locationLng?, gpsAccuracy?
 router.post(
-  '/visits',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  visitController.createVisitFromReceipt,
-);
-
-// LEGACY: Create a new visit (old flow - scan receipt directly)
-// Kept for backward compatibility, but frontend should use new flow
-router.post(
-  '/visits/legacy',
+  '/visits/upload-receipt',
   appApiKeyAuth,
   appAuthenticateToken,
   upload.single('receiptImage'),
-  visitController.createVisit,
+  visitController.uploadReceiptAndCreateVisit,
 );
 
 // Get single visit details
@@ -82,6 +73,14 @@ router.delete(
   appApiKeyAuth,
   appAuthenticateToken,
   visitController.deleteVisit,
+);
+
+// Get user's buddies (for tagging in visits)
+router.get(
+  '/users/buddies',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.getUserBuddies,
 );
 
 module.exports = router;
