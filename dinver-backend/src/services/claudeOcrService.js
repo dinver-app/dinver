@@ -57,27 +57,40 @@ const extractReceiptWithClaude = async (
       console.log('[Claude OCR] HEIC converted to JPEG');
     }
 
-    // Check image size and compress if needed (Claude has 5MB limit)
+    // Check image size and normalize format
+    // Claude API requires media_type to match actual image format
+    // To avoid mismatches (e.g., PNG sent with wrong mime type), always convert to JPEG
     const imageSizeMB = imageBuffer.length / (1024 * 1024);
     let processedBuffer = imageBuffer;
+    const sharp = require('sharp');
 
-    if (imageSizeMB > 4.5) {
-      // Compress to under 4.5MB to be safe
+    // Always convert to JPEG to ensure format consistency
+    // This handles: PNG, WebP, GIF, and any other formats
+    // Also resize if needed (Claude has 5MB limit)
+    const needsResize = imageSizeMB > 4.5;
+    const needsConversion = mimeType !== 'image/jpeg';
+
+    if (needsResize || needsConversion) {
       console.log(
-        `[Claude OCR] Image too large (${imageSizeMB.toFixed(2)}MB), compressing...`,
+        `[Claude OCR] Processing image: size=${imageSizeMB.toFixed(2)}MB, format=${mimeType}, needsResize=${needsResize}, needsConversion=${needsConversion}`,
       );
-      const sharp = require('sharp');
 
-      processedBuffer = await sharp(imageBuffer)
-        .resize(2400, 2400, {
+      let sharpInstance = sharp(imageBuffer);
+
+      if (needsResize) {
+        sharpInstance = sharpInstance.resize(2400, 2400, {
           fit: 'inside',
           withoutEnlargement: true,
-        })
-        .jpeg({ quality: 90 })
-        .toBuffer();
+        });
+      }
+
+      processedBuffer = await sharpInstance.jpeg({ quality: 90 }).toBuffer();
+
+      // IMPORTANT: Update mimeType since we converted to JPEG
+      mimeType = 'image/jpeg';
 
       const newSizeMB = processedBuffer.length / (1024 * 1024);
-      console.log(`[Claude OCR] Compressed to ${newSizeMB.toFixed(2)}MB`);
+      console.log(`[Claude OCR] Converted to JPEG: ${newSizeMB.toFixed(2)}MB`);
     }
 
     // Convert buffer to base64
@@ -386,28 +399,35 @@ const validateReceiptWithClaude = async (
     console.log('[Claude Validation] Validating image is a receipt...');
     const startTime = Date.now();
 
-    // Check image size and compress if needed (Claude has 5MB limit)
+    // Check image size and normalize format
+    // Claude API requires media_type to match actual image format
     const imageSizeMB = imageBuffer.length / (1024 * 1024);
     let processedBuffer = imageBuffer;
+    const sharp = require('sharp');
 
-    if (imageSizeMB > 4.5) {
-      // Compress to under 4.5MB to be safe
+    const needsResize = imageSizeMB > 4.5;
+    const needsConversion = mimeType !== 'image/jpeg';
+
+    if (needsResize || needsConversion) {
       console.log(
-        `[Claude Validation] Image too large (${imageSizeMB.toFixed(2)}MB), compressing...`,
+        `[Claude Validation] Processing image: size=${imageSizeMB.toFixed(2)}MB, format=${mimeType}`,
       );
-      const sharp = require('sharp');
 
-      processedBuffer = await sharp(imageBuffer)
-        .resize(1600, 1600, {
+      let sharpInstance = sharp(imageBuffer);
+
+      if (needsResize) {
+        sharpInstance = sharpInstance.resize(1600, 1600, {
           fit: 'inside',
           withoutEnlargement: true,
-        })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+        });
+      }
+
+      processedBuffer = await sharpInstance.jpeg({ quality: 85 }).toBuffer();
+      mimeType = 'image/jpeg';
 
       const newSizeMB = processedBuffer.length / (1024 * 1024);
       console.log(
-        `[Claude Validation] Compressed to ${newSizeMB.toFixed(2)}MB`,
+        `[Claude Validation] Converted to JPEG: ${newSizeMB.toFixed(2)}MB`,
       );
     }
 
