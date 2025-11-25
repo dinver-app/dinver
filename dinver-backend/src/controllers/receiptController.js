@@ -1527,21 +1527,16 @@ const approveReceipt = async (req, res) => {
 
       if (receipt.visitId && visit) {
         // Visit already exists (user created it before approval)
+        // Update existing Visit to APPROVED with restaurant
+        await visit.update({
+          status: 'APPROVED',
+          restaurantId: restaurantId, // Set the restaurant from approved receipt
+          visitDate: visit.visitDate || new Date(issueDate),
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id,
+        });
 
-        if (visit) {
-          // Update existing Visit to APPROVED
-          await visit.update({
-            status: 'APPROVED',
-            visitDate: visit.visitDate || new Date(issueDate), // Use existing or receipt date
-            reviewedAt: new Date(),
-            reviewedBy: req.user.id,
-          });
-
-          console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status`);
-        } else {
-          console.error(`[Receipt Approval] Visit ${receipt.visitId} not found, will create new one`);
-          visit = null; // Fall through to create new one
-        }
+        console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
       }
 
       // If no existing Visit, create one (backward compatibility for old receipts)
