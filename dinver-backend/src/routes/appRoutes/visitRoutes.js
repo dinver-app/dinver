@@ -37,9 +37,26 @@ router.get(
 // Body (multipart/form-data): receiptImage, taggedBuddies?, locationLat?, locationLng?, gpsAccuracy?
 router.post(
   '/visits/upload-receipt',
+  (req, res, next) => {
+    req._uploadStartTime = Date.now();
+    console.log(`[UPLOAD TIMING] >>> Request received at router`);
+    next();
+  },
   appApiKeyAuth,
+  (req, res, next) => {
+    console.log(`[UPLOAD TIMING] >>> After appApiKeyAuth: ${Date.now() - req._uploadStartTime}ms`);
+    next();
+  },
   appAuthenticateToken,
+  (req, res, next) => {
+    console.log(`[UPLOAD TIMING] >>> After appAuthenticateToken: ${Date.now() - req._uploadStartTime}ms`);
+    next();
+  },
   upload.single('receiptImage'),
+  (req, res, next) => {
+    console.log(`[UPLOAD TIMING] >>> After multer upload: ${Date.now() - req._uploadStartTime}ms (file: ${req.file?.size ? Math.round(req.file.size / 1024) + 'KB' : 'none'})`);
+    next();
+  },
   visitController.uploadReceiptAndCreateVisit,
 );
 
