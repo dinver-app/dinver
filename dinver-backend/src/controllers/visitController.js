@@ -1729,12 +1729,13 @@ const getUserBuddies = async (req, res) => {
     });
 
     // Add profile image URLs
+    // Profile images use QUICK strategy (no variants), so use 'original' size
     const buddiesWithUrls = buddies.map((buddy) => ({
       id: buddy.id,
       name: buddy.name,
       username: buddy.username,
       profileImage: buddy.profileImage
-        ? getMediaUrl(buddy.profileImage, 'image')
+        ? getMediaUrl(buddy.profileImage, 'image', 'original')
         : null,
     }));
 

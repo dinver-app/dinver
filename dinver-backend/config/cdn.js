@@ -105,8 +105,20 @@ function getS3Url(mediaKey) {
 function getMediaUrl(mediaKey, mediaType = 'image', size = 'medium') {
   if (!mediaKey) return null;
 
-  // Remove any full URLs if they were accidentally stored
+  // If it's an external URL (Google, Facebook, etc.), return it directly
+  // These are profile images from OAuth providers and don't need CloudFront signing
   if (mediaKey.startsWith('http')) {
+    const isExternalProvider =
+      mediaKey.includes('googleusercontent.com') ||
+      mediaKey.includes('facebook.com') ||
+      mediaKey.includes('fbcdn.net') ||
+      mediaKey.includes('graph.facebook.com');
+
+    if (isExternalProvider) {
+      return mediaKey;
+    }
+
+    // For S3 URLs that were accidentally stored as full URLs, extract the key
     mediaKey = mediaKey.split('.com/').pop();
   }
 

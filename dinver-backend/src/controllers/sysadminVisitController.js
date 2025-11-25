@@ -85,7 +85,7 @@ exports.getAllVisits = async (req, res) => {
           buddies = buddies.map((buddy) => ({
             ...buddy.get(),
             profileImage: buddy.profileImage
-              ? getMediaUrl(buddy.profileImage, 'image')
+              ? getMediaUrl(buddy.profileImage, 'image', 'original')
               : null,
           }));
         }
@@ -94,7 +94,7 @@ exports.getAllVisits = async (req, res) => {
           ...visit.get(),
           taggedBuddies: buddies, // Replace UUIDs with User objects
           receiptImageUrl: visit.receiptImageUrl
-            ? getMediaUrl(visit.receiptImageUrl, 'image')
+            ? getMediaUrl(visit.receiptImageUrl, 'image', 'original')
             : null,
           receipt: visit.receipt
             ? {
@@ -206,7 +206,7 @@ exports.getVisitById = async (req, res) => {
       buddies = buddies.map((buddy) => ({
         ...buddy.get(),
         profileImage: buddy.profileImage
-          ? getMediaUrl(buddy.profileImage, 'image')
+          ? getMediaUrl(buddy.profileImage, 'image', 'original')
           : null,
       }));
     }
@@ -215,13 +215,13 @@ exports.getVisitById = async (req, res) => {
       ...visit.get(),
       taggedBuddies: buddies, // Replace UUIDs with User objects
       receiptImageUrl: visit.receiptImageUrl
-        ? getMediaUrl(visit.receiptImageUrl, 'image')
+        ? getMediaUrl(visit.receiptImageUrl, 'image', 'original')
         : null,
       user: visit.user
         ? {
             ...visit.user.get(),
             profileImage: visit.user.profileImage
-              ? getMediaUrl(visit.user.profileImage, 'image')
+              ? getMediaUrl(visit.user.profileImage, 'image', 'original')
               : null,
           }
         : null,
