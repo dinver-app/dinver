@@ -1,63 +1,174 @@
+/**
+ * Experience Routes
+ *
+ * Routes for Experience creation, management, and feed.
+ * Experiences are linked to Visits (verified restaurant visits).
+ */
+
 const express = require('express');
 const router = express.Router();
-const experienceController = require('../../controllers/experienceController');
+const multer = require('multer');
+const experienceController = require('../../controllers/appExperienceController');
 const {
   appAuthenticateToken,
   appOptionalAuth,
+  appApiKeyAuth,
 } = require('../../middleware/roleMiddleware');
 
-// Media upload endpoints
-router.post(
-  '/media/presign',
-  appAuthenticateToken,
-  experienceController.requestMediaPresignedUrl,
-);
+// Configure multer for image uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WEBP, and HEIC are allowed.'));
+    }
+  },
+});
 
-router.post(
-  '/media/confirm',
-  appAuthenticateToken,
-  experienceController.confirmMediaUpload,
-);
+// ============================================================
+// FEED
+// ============================================================
 
-// NEW: Video processing status check
+// Get Experience Feed (public, chronological)
+// GET /api/app/experiences/feed?city=Zagreb&mealType=dinner&limit=20&offset=0
 router.get(
-  '/media/video-status/:jobId',
-  appAuthenticateToken,
-  experienceController.checkVideoStatus,
-);
-
-// Experience CRUD
-router.post('/', appAuthenticateToken, experienceController.createExperience);
-
-router.get(
-  '/explore',
+  '/feed',
+  appApiKeyAuth,
   appOptionalAuth,
-  experienceController.getExploreFeed,
+  experienceController.getExperienceFeed
 );
 
-router.get('/:id', appOptionalAuth, experienceController.getExperience);
+// ============================================================
+// USER EXPERIENCES
+// ============================================================
 
-router.delete('/:id', appAuthenticateToken, experienceController.deleteExperience);
+// Get User's Experiences
+// GET /api/app/experiences/user/:userId
+router.get(
+  '/user/:userId',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.getUserExperiences
+);
 
-// Interactions
-router.post('/:id/like', appAuthenticateToken, experienceController.likeExperience);
-router.delete('/:id/like', appAuthenticateToken, experienceController.unlikeExperience);
+// ============================================================
+// RESTAURANT EXPERIENCES
+// ============================================================
 
-router.post('/:id/save', appAuthenticateToken, experienceController.saveExperience);
-router.delete('/:id/save', appAuthenticateToken, experienceController.unsaveExperience);
+// Get Restaurant's Experiences (reviews)
+// GET /api/app/experiences/restaurant/:restaurantId
+router.get(
+  '/restaurant/:restaurantId',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.getRestaurantExperiences
+);
 
-router.post('/:id/view', appOptionalAuth, experienceController.trackView);
+// ============================================================
+// EXPERIENCE CRUD
+// ============================================================
 
-// Report
-const experienceModerationController = require('../../controllers/experienceModerationController');
+// Create Experience (linked to Visit)
+// POST /api/app/experiences
 router.post(
-  '/:id/report',
+  '/',
+  appApiKeyAuth,
   appAuthenticateToken,
-  experienceModerationController.reportExperience,
+  experienceController.createExperience
 );
 
-// User-specific endpoints
-router.get('/my-likes', appAuthenticateToken, experienceController.getMyLikes);
-router.get('/my-map', appAuthenticateToken, experienceController.getMyMap);
+// Update Experience (while in DRAFT)
+// PUT /api/app/experiences/:experienceId
+router.put(
+  '/:experienceId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.updateExperience
+);
+
+// Publish Experience (DRAFT -> PENDING/APPROVED)
+// POST /api/app/experiences/:experienceId/publish
+router.post(
+  '/:experienceId/publish',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.publishExperience
+);
+
+// Get Experience by ID
+// GET /api/app/experiences/:experienceId
+router.get(
+  '/:experienceId',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.getExperience
+);
+
+// ============================================================
+// MEDIA UPLOAD
+// ============================================================
+
+// Upload image to Experience
+// POST /api/app/experiences/:experienceId/media
+router.post(
+  '/:experienceId/media',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  upload.single('image'),
+  experienceController.uploadExperienceMedia
+);
+
+// Delete image from Experience
+// DELETE /api/app/experiences/:experienceId/media/:mediaId
+router.delete(
+  '/:experienceId/media/:mediaId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.deleteExperienceMedia
+);
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+
+// Like Experience
+// POST /api/app/experiences/:experienceId/like
+router.post(
+  '/:experienceId/like',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.likeExperience
+);
+
+// Unlike Experience
+// DELETE /api/app/experiences/:experienceId/like
+router.delete(
+  '/:experienceId/like',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.unlikeExperience
+);
+
+// Share Experience (track share for stats)
+// POST /api/app/experiences/:experienceId/share
+router.post(
+  '/:experienceId/share',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.shareExperience
+);
 
 module.exports = router;
