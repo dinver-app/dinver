@@ -277,33 +277,24 @@ async function validateImage(imageBuffer) {
  */
 async function quickOptimize(imageBuffer, options = {}) {
   const { maxWidth = 1600, quality = 80 } = options;
-  const timingStart = Date.now();
 
   try {
-    let stepStart = Date.now();
     const metadata = await sharp(imageBuffer).metadata();
-    console.log(`[UPLOAD TIMING]     - sharp.metadata(): ${Date.now() - stepStart}ms (format: ${metadata.format}, ${metadata.width}x${metadata.height})`);
 
     // Skip processing if already JPEG and small enough (fast path)
     if (metadata.format === 'jpeg' && metadata.width <= maxWidth) {
-      console.log(`[UPLOAD TIMING]     - FAST PATH: skipping processing (already JPEG ${metadata.width}px <= ${maxWidth}px)`);
       return imageBuffer;
     }
 
     // Only process if needed
-    stepStart = Date.now();
     let pipeline = sharp(imageBuffer).rotate();
 
     if (metadata.width > maxWidth) {
       pipeline = pipeline.resize({ width: maxWidth });
-      console.log(`[UPLOAD TIMING]     - Resizing from ${metadata.width}px to ${maxWidth}px`);
     }
 
     // Use default libjpeg (faster) instead of mozjpeg (slower but better compression)
-    const result = await pipeline.jpeg({ quality }).toBuffer();
-    console.log(`[UPLOAD TIMING]     - sharp.resize+jpeg: ${Date.now() - stepStart}ms`);
-    console.log(`[UPLOAD TIMING]     - quickOptimize TOTAL: ${Date.now() - timingStart}ms`);
-    return result;
+    return await pipeline.jpeg({ quality }).toBuffer();
   } catch (error) {
     console.error('Quick optimize failed:', error);
     return imageBuffer; // Return original on failure
