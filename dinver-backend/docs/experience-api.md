@@ -86,6 +86,7 @@ Sve rute zahtijevaju:
 Kreira Experience sa svim podacima i slikama u jednom multipart/form-data requestu.
 
 **Headers:**
+
 ```
 Content-Type: multipart/form-data
 X-Api-Key: {api_key}
@@ -107,6 +108,7 @@ Authorization: Bearer {token}
 | captions | string | No | JSON array ili comma-separated captions za slike |
 
 **Response (201):**
+
 ```json
 {
   "experienceId": "uuid",
@@ -127,6 +129,7 @@ Authorization: Bearer {token}
 ```
 
 **Status Logic:**
+
 - Ako je Visit APPROVED -> Experience je odmah APPROVED
 - Ako je Visit PENDING -> Experience je PENDING dok se Visit ne approvea
 
@@ -151,6 +154,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **Primjer:** `GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner`
 
 **Response (200):**
+
 ```json
 {
   "experiences": [
@@ -175,7 +179,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
         {
           "id": "uuid",
           "cdnUrl": "url",
-          "thumbnails": [{"cdnUrl": "url"}]
+          "thumbnails": [{ "cdnUrl": "url" }]
         }
       ],
       "foodRating": 8.5,
@@ -210,6 +214,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **GET** `/api/app/experiences/:experienceId`
 
 **Response (200):**
+
 ```json
 {
   "experience": {
@@ -245,6 +250,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **GET** `/api/app/experiences/user/:userId`
 
 **Query Parameters:**
+
 - `limit` (default: 20)
 - `offset` (default: 0)
 
@@ -255,6 +261,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **GET** `/api/app/experiences/restaurant/:restaurantId`
 
 **Response uključuje:**
+
 - Lista Experiencea
 - Statistike (prosjek ocjena)
 
@@ -281,6 +288,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **POST** `/api/app/experiences/:experienceId/like`
 
 **Response (201):**
+
 ```json
 {
   "message": "Liked",
@@ -295,6 +303,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 **DELETE** `/api/app/experiences/:experienceId/like`
 
 **Response (200):**
+
 ```json
 {
   "message": "Unliked",
@@ -311,6 +320,7 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
 Evidentira share za statistiku.
 
 **Response (200):**
+
 ```json
 {
   "message": "Share tracked",
@@ -327,6 +337,7 @@ Evidentira share za statistiku.
 Korisnik može obrisati vlastiti Experience.
 
 **Response (200):**
+
 ```json
 {
   "message": "Experience deleted"
@@ -344,6 +355,7 @@ GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20
 ```
 
 **Opcije:**
+
 - `distance=20` - Restorani unutar 20km
 - `distance=60` - Restorani unutar 60km
 - `distance=all` ili bez parametra - Svi restorani
@@ -441,90 +453,175 @@ CREATE TABLE "ExperienceMedia" (
 
 ---
 
-## iOS Implementation Example
+## React Native Implementation Example
 
-```swift
-func createExperience(
-    visitId: String,
-    ratings: ExperienceRatings,
-    description: String?,
-    partySize: Int,
-    mealType: String?,
-    visibility: String,
-    images: [UIImage],
-    captions: [String]
-) async throws -> ExperienceResponse {
+### UX Preporuka za Progress
 
-    var formData = MultipartFormData()
+Upload ima dvije faze:
 
-    // Add text fields
-    formData.append(visitId.data(using: .utf8)!, withName: "visitId")
-    formData.append("\(ratings.food)".data(using: .utf8)!, withName: "foodRating")
-    formData.append("\(ratings.ambience)".data(using: .utf8)!, withName: "ambienceRating")
-    formData.append("\(ratings.service)".data(using: .utf8)!, withName: "serviceRating")
-    formData.append("\(partySize)".data(using: .utf8)!, withName: "partySize")
+1. **Uploading (0-100%)** - Podaci se šalju na server, korisnik vidi postotak
+2. **Processing** - Server obrađuje slike, kratko traje (~1-2 sekunde)
 
-    if let description = description {
-        formData.append(description.data(using: .utf8)!, withName: "description")
-    }
-    if let mealType = mealType {
-        formData.append(mealType.data(using: .utf8)!, withName: "mealType")
-    }
-    formData.append(visibility.data(using: .utf8)!, withName: "visibility")
+```
+[Uploading... 45%]  →  [Uploading... 100%]  →  [Processing...]  →  [Done!]
+     ████░░░░░░            ██████████            spinner           ✓
+```
 
-    // Add captions as JSON
-    if let captionsData = try? JSONEncoder().encode(captions) {
-        formData.append(captionsData, withName: "captions")
-    }
+Kad `onUploadProgress` dođe do 100%, prebaci UI na "Processing..." s spinnerom dok ne dobiješ response.
 
-    // Add images
-    for (index, image) in images.enumerated() {
-        if let data = image.jpegData(compressionQuality: 0.8) {
-            formData.append(
-                data,
-                withName: "images",
-                fileName: "image\(index).jpg",
-                mimeType: "image/jpeg"
-            )
+### Kod
+
+```javascript
+import axios from 'axios';
+
+const createExperience = async ({
+  visitId,
+  ratings,
+  description,
+  partySize,
+  mealType,
+  visibility,
+  images, // array of { uri, type, name }
+  captions,
+  onProgress, // callback za progress (0-100)
+}) => {
+  const formData = new FormData();
+
+  // Dodaj text polja
+  formData.append('visitId', visitId);
+  formData.append('foodRating', ratings.food.toString());
+  formData.append('ambienceRating', ratings.ambience.toString());
+  formData.append('serviceRating', ratings.service.toString());
+  formData.append('partySize', partySize.toString());
+  formData.append('visibility', visibility);
+
+  if (description) {
+    formData.append('description', description);
+  }
+  if (mealType) {
+    formData.append('mealType', mealType);
+  }
+
+  // Dodaj captions kao JSON
+  if (captions && captions.length > 0) {
+    formData.append('captions', JSON.stringify(captions));
+  }
+
+  // Dodaj slike
+  images.forEach((image, index) => {
+    formData.append('images', {
+      uri: image.uri,
+      type: image.type || 'image/jpeg',
+      name: image.name || `image${index}.jpg`,
+    });
+  });
+
+  // Upload s progress trackingom
+  const response = await axios.post(
+    `${API_URL}/api/app/experiences`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-Api-Key': API_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total,
+        );
+        // Callback za UI update
+        if (onProgress) {
+          onProgress(percentCompleted);
         }
-    }
+      },
+    },
+  );
 
-    // Upload with progress tracking
-    return try await apiClient.upload(
-        "experiences",
-        formData: formData,
-        progress: { progress in
-            // Update UI with upload progress (0.0 - 1.0)
-            DispatchQueue.main.async {
-                self.uploadProgress = progress
-            }
-        }
-    )
-}
+  return response.data;
+};
+
+// Primjer korištenja u komponenti
+const ExperienceForm = () => {
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [status, setStatus] = useState('idle'); // idle | uploading | processing | done | error
+
+  const handleSubmit = async () => {
+    setStatus('uploading');
+    setUploadProgress(0);
+
+    try {
+      const result = await createExperience({
+        visitId: '...',
+        ratings: { food: 8.5, ambience: 7.0, service: 9.0 },
+        description: 'Odlična pizza!',
+        partySize: 2,
+        mealType: 'dinner',
+        visibility: 'ALL',
+        images: selectedImages,
+        captions: imageCaptions,
+        onProgress: (progress) => {
+          setUploadProgress(progress);
+          // Kad dođe do 100%, prebaci na processing
+          if (progress >= 100) {
+            setStatus('processing');
+          }
+        },
+      });
+
+      setStatus('done');
+      // Navigate ili show success
+    } catch (error) {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <View>
+      {status === 'uploading' && (
+        <View>
+          <Text>Uploading... {uploadProgress}%</Text>
+          <ProgressBar progress={uploadProgress / 100} />
+        </View>
+      )}
+      {status === 'processing' && (
+        <View>
+          <ActivityIndicator />
+          <Text>Processing...</Text>
+        </View>
+      )}
+      <Button
+        onPress={handleSubmit}
+        title="Objavi"
+        disabled={status !== 'idle'}
+      />
+    </View>
+  );
+};
 ```
 
 ---
 
 ## Visibility Opcije
 
-| Visibility | Opis |
-|------------|------|
-| `ALL` | Vidljiv svima |
-| `FOLLOWERS` | Vidljiv samo korisnicima koji prate autora |
-| `BUDDIES` | Vidljiv samo korisnicima koji su tagirani u autorovim Visitima |
+| Visibility  | Opis                                                           |
+| ----------- | -------------------------------------------------------------- |
+| `ALL`       | Vidljiv svima                                                  |
+| `FOLLOWERS` | Vidljiv samo korisnicima koji prate autora                     |
+| `BUDDIES`   | Vidljiv samo korisnicima koji su tagirani u autorovim Visitima |
 
 ---
 
 ## Meal Type Opcije
 
-| Meal Type | Opis |
-|-----------|------|
-| `breakfast` | Doručak |
-| `brunch` | Brunch |
-| `lunch` | Ručak |
-| `dinner` | Večera |
-| `coffee` | Kava/Piće |
-| `snack` | Snack |
+| Meal Type   | Opis      |
+| ----------- | --------- |
+| `breakfast` | Doručak   |
+| `brunch`    | Brunch    |
+| `lunch`     | Ručak     |
+| `dinner`    | Večera    |
+| `coffee`    | Kava/Piće |
+| `snack`     | Snack     |
 
 ---
 
@@ -542,9 +639,3 @@ func createExperience(
 - Like/Share tracking
 - Jedan API poziv za kreiranje sa slikama
 - Progress tracking za upload
-
----
-
-## Support
-
-Za pitanja ili probleme, kontaktirajte backend tim.
