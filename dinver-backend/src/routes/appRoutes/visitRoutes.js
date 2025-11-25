@@ -4,6 +4,7 @@ const visitController = require('../../controllers/visitController');
 const {
   appApiKeyAuth,
   appAuthenticateToken,
+  appOptionalAuth,
 } = require('../../middleware/roleMiddleware');
 
 const router = express.Router();
@@ -81,6 +82,14 @@ router.get(
   appApiKeyAuth,
   appAuthenticateToken,
   visitController.getUserBuddies,
+);
+
+// Get other user's visits (public viewing with optional auth for privacy check)
+router.get(
+  '/users/:userId/visits',
+  appApiKeyAuth,
+  appOptionalAuth,
+  visitController.getOtherUserVisits,
 );
 
 module.exports = router;
