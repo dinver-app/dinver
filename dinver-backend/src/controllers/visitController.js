@@ -1258,29 +1258,35 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     // === COMMIT TRANSACTION ===
     await transaction.commit();
 
-    // === STEP 6: Return SUCCESS immediately! ===
-    res.status(201).json({
+    // === STEP 6: Background OCR (korisnik ne čeka!) ===
+    // Copy buffer BEFORE sending response to ensure it persists
+    const imageBufferCopy = Buffer.from(file.buffer);
+    const receiptIdForOcr = receipt.id;
+    const mimeTypeForOcr = file.mimetype;
+
+    // Use setImmediate to defer OCR to next event loop tick
+    // This ensures HTTP response is sent BEFORE OCR starts
+    setImmediate(() => {
+      processFullOcrInBackground(receiptIdForOcr, imageBufferCopy, mimeTypeForOcr)
+        .then(() => {
+          console.log(
+            `[Background OCR] Successfully completed for receipt ${receiptIdForOcr}`,
+          );
+        })
+        .catch((error) => {
+          console.error(
+            `[Background OCR] Failed for receipt ${receiptIdForOcr}:`,
+            error.message,
+          );
+        });
+    });
+
+    // === STEP 7: Return SUCCESS immediately! ===
+    return res.status(201).json({
       visitId: visit.id,
       receiptId: receipt.id,
       message: 'Račun uspješno poslan na provjeru!',
     });
-
-    // === STEP 7: Background OCR (korisnik ne čeka!) ===
-    // Copy buffer to ensure it persists after request ends
-    const imageBufferCopy = Buffer.from(file.buffer);
-
-    processFullOcrInBackground(receipt.id, imageBufferCopy, file.mimetype)
-      .then(() => {
-        console.log(
-          `[Background OCR] Successfully completed for receipt ${receipt.id}`,
-        );
-      })
-      .catch((error) => {
-        console.error(
-          `[Background OCR] Failed for receipt ${receipt.id}:`,
-          error.message,
-        );
-      });
   } catch (error) {
     await transaction.rollback();
     console.error('[Upload & Create Visit] Failed:', error);
