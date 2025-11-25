@@ -1,25 +1,34 @@
-# Visits API Upgrade - V2
+# Visits API Upgrade - Grupiranje po restoranu
 
-## Pregled promjena
+## Što je promijenjeno?
 
-Visits API sada grupira visite po restoranu umjesto da vraća flat listu. Ovo omogućuje prikaz "Visited 15 restaurants" umjesto "28 visits" na profilu.
+Visits API sada **grupira visite po restoranu**. Ako korisnik posjeti isti restoran 3 puta, to se prikazuje kao 1 restoran s 3 visita, a ne kao 3 zasebna itema u listi.
 
 ---
 
-## Breaking Changes
+## Endpoints
 
-### `GET /api/app/visits`
+### `GET /api/app/visits` (vlastiti profil)
 
-**Prije:**
+### `GET /api/app/users/:userId/visits` (tuđi profil)
+
+Oba endpointa imaju istu strukturu response-a.
+
+---
+
+## Response struktura
+
+**PRIJE (flat lista):**
 
 ```json
 [
-  { "id": "...", "restaurant": {...}, "receiptImageUrl": "..." },
-  { "id": "...", "restaurant": {...}, "receiptImageUrl": "..." }
+  { "id": "visit-1", "restaurant": { "name": "Restaurant A" } },
+  { "id": "visit-2", "restaurant": { "name": "Restaurant A" } },
+  { "id": "visit-3", "restaurant": { "name": "Restaurant B" } }
 ]
 ```
 
-**Sada:**
+**SADA (grupirano po restoranu):**
 
 ```json
 {
@@ -27,139 +36,125 @@ Visits API sada grupira visite po restoranu umjesto da vraća flat listu. Ovo om
     {
       "restaurant": {
         "id": "uuid",
-        "name": "Restaurant Name",
+        "name": "Restaurant A",
         "rating": 4.5,
         "priceLevel": 2,
-        "address": "Street 123",
+        "address": "Ulica 123",
         "place": "Zagreb",
         "isClaimed": true,
         "thumbnailUrl": "https://...",
         "userRatingsTotal": 150
       },
-      "visitCount": 3,
+      "visitCount": 2,
       "lastVisitDate": "2025-11-20T12:00:00Z",
       "firstVisitDate": "2025-06-15T14:30:00Z",
       "visits": [
         {
-          "id": "uuid",
+          "id": "visit-1",
           "submittedAt": "2025-11-20T12:00:00Z",
           "reviewedAt": "2025-11-20T14:00:00Z",
           "visitDate": "2025-11-20",
           "wasInMustVisit": false,
-          "totalAmount": 45.5,
+          "totalAmount": 45.50,
           "pointsAwarded": 4.55
+        },
+        {
+          "id": "visit-2",
+          "submittedAt": "2025-06-15T14:30:00Z",
+          "reviewedAt": "2025-06-15T16:00:00Z",
+          "visitDate": "2025-06-15",
+          "wasInMustVisit": true,
+          "totalAmount": 32.00,
+          "pointsAwarded": 3.20
         }
+      ]
+    },
+    {
+      "restaurant": {
+        "id": "uuid",
+        "name": "Restaurant B",
+        ...
+      },
+      "visitCount": 1,
+      "lastVisitDate": "2025-10-05T18:00:00Z",
+      "firstVisitDate": "2025-10-05T18:00:00Z",
+      "visits": [
+        { ... }
       ]
     }
   ],
-  "totalRestaurantsVisited": 15,
-  "totalVisits": 28
-}
-```
-
-### `GET /api/app/users/:userId/visits`
-
-Ista struktura kao `/visits`, ali bez `totalAmount` i `pointsAwarded` (privacy).
-
----
-
-## Novi Endpointi
-
-### `GET /api/app/visits/restaurant/:restaurantId`
-
-Dohvati sve visite za specifični restoran.
-
-**Response:**
-
-```json
-{
-  "restaurant": {
-    "id": "uuid",
-    "name": "Restaurant Name",
-    "thumbnailUrl": "https://..."
-  },
-  "visitCount": 3,
-  "visits": [
-    {
-      "id": "uuid",
-      "submittedAt": "2025-11-20T12:00:00Z",
-      "visitDate": "2025-11-20",
-      "totalAmount": 45.5,
-      "pointsAwarded": 4.55
-    }
-  ]
-}
-```
-
-### `GET /api/app/receipts`
-
-Dohvati sve račune korisnika (pending, approved, rejected).
-
-**Query params:**
-
-- `status` - filter po statusu (optional): `pending`, `approved`, `rejected`
-- `page` - stranica (default: 1)
-- `limit` - broj po stranici (default: 20)
-
-**Response:**
-
-```json
-{
-  "receipts": [
-    {
-      "id": "uuid",
-      "status": "pending",
-      "submittedAt": "2025-11-20T12:00:00Z",
-      "verifiedAt": null,
-      "rejectionReason": null,
-      "totalAmount": 45.5,
-      "merchantName": "Restaurant ABC",
-      "issueDate": "2025-11-20",
-      "pointsAwarded": null,
-      "imageUrl": "https://...",
-      "restaurant": null,
-      "visitId": "uuid",
-      "visitStatus": "PENDING"
-    }
-  ],
-  "totalCount": 28,
-  "totalPages": 2,
-  "currentPage": 1
-}
-```
-
-### `GET /api/app/users/buddies`
-
-Dohvati buddies (mutual follows) za tagging u visitima.
-
-**Response:**
-
-```json
-{
-  "buddies": [
-    {
-      "id": "uuid",
-      "name": "John Doe",
-      "username": "johndoe",
-      "profileImage": "https://..."
-    }
-  ]
+  "totalRestaurantsVisited": 2,
+  "totalVisits": 3
 }
 ```
 
 ---
 
-## Maknuto iz response-a
+## Polja
 
-Slike računa su maknute iz visits response-a radi performansi:
+### Root level
 
-- `receiptImageUrl`
-- `receipt.thumbnailUrl`
-- `receipt.mediumUrl`
-- `receipt.fullscreenUrl`
-- `receipt.originalUrl`
+| Polje                     | Tip    | Opis                       |
+| ------------------------- | ------ | -------------------------- |
+| `visitedRestaurants`      | array  | Lista restorana s visitima |
+| `totalRestaurantsVisited` | number | Broj različitih restorana  |
+| `totalVisits`             | number | Ukupan broj visita         |
 
-Umjesto toga dodano:
+### visitedRestaurants[]
 
-- `totalAmount` - iznos računa u EUR
-- `pointsAwarded` - broj dodijeljenih bodova
+| Polje            | Tip      | Opis                               |
+| ---------------- | -------- | ---------------------------------- |
+| `restaurant`     | object   | Podaci o restoranu                 |
+| `visitCount`     | number   | Broj visita u taj restoran         |
+| `lastVisitDate`  | datetime | Datum zadnjeg visita               |
+| `firstVisitDate` | datetime | Datum prvog visita                 |
+| `visits`         | array    | Lista svih visita (najnoviji prvi) |
+
+### visits[]
+
+| Polje            | Tip      | Opis                         |
+| ---------------- | -------- | ---------------------------- |
+| `id`             | uuid     | ID visita                    |
+| `submittedAt`    | datetime | Kad je poslan račun          |
+| `reviewedAt`     | datetime | Kad je odobren               |
+| `visitDate`      | date     | Datum posjeta                |
+| `wasInMustVisit` | boolean  | Je li bio u must-visit listi |
+| `totalAmount`    | number   | Iznos računa (EUR)           |
+| `pointsAwarded`  | number   | Dodijeljeni bodovi           |
+
+---
+
+## Razlike između endpointa
+
+|                 | `/visits` (vlastiti) | `/users/:userId/visits` (tuđi) |
+| --------------- | -------------------- | ------------------------------ |
+| `totalAmount`   | ✅                   | ❌ (privacy)                   |
+| `pointsAwarded` | ✅                   | ❌ (privacy)                   |
+
+---
+
+## Frontend primjer
+
+```typescript
+// Prikaz liste restorana
+{response.visitedRestaurants.map(item => (
+  <RestaurantCard
+    restaurant={item.restaurant}
+    visitCount={item.visitCount}
+    lastVisit={item.lastVisitDate}
+  />
+))}
+
+// Statistika
+<Text>Visited {response.totalRestaurantsVisited} restaurants</Text>
+<Text>{response.totalVisits} total visits</Text>
+
+// Detalji kad se klikne na restoran
+{selectedRestaurant.visits.map(visit => (
+  <VisitItem
+    date={visit.visitDate}
+    amount={visit.totalAmount}
+    points={visit.pointsAwarded}
+  />
+))}
+```
