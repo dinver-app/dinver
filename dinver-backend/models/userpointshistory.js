@@ -139,6 +139,7 @@ module.exports = (sequelize, DataTypes) => {
           // Receipt validation
           'receipt_upload',
           'receipt_approved',
+          'receipt_approved_buddy', // Points awarded to tagged buddies when receipt is approved
         ),
         allowNull: false,
       },
