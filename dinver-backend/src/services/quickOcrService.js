@@ -1,5 +1,4 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { convertHeicIfNeeded } = require('../../utils/imageProcessor');
 
 let anthropic = null;
 // Using Haiku 4.5 for speed and cost efficiency
@@ -40,14 +39,6 @@ const extractMerchantInfoQuick = async (imageBuffer, mimeType = 'image/jpeg') =>
   try {
     console.log('[Quick OCR] Starting quick merchant extraction...');
     const startTime = Date.now();
-
-    // Convert HEIC to JPEG if needed (before any processing)
-    const { buffer: convertedBuffer, converted } = await convertHeicIfNeeded(imageBuffer, mimeType);
-    if (converted) {
-      imageBuffer = convertedBuffer;
-      mimeType = 'image/jpeg'; // Update mime type after conversion
-      console.log('[Quick OCR] HEIC converted to JPEG');
-    }
 
     // Compress image if needed (Claude has 5MB limit)
     const imageSizeMB = imageBuffer.length / (1024 * 1024);
