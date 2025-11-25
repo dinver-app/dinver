@@ -655,19 +655,18 @@ const createVisit = async (req, res) => {
   }
 };
 
-// Get user's visited list
+// Get user's visited list (only APPROVED visits)
+// PENDING and REJECTED are shown in receipts list, not visits list
 const getUserVisits = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { status } = req.query; // Optional filter by status
 
-    const whereClause = { userId: userId };
-    if (status) {
-      whereClause.status = status;
-    }
-
+    // Only return APPROVED visits - these are confirmed visits with restaurant
     const visits = await Visit.findAll({
-      where: whereClause,
+      where: {
+        userId: userId,
+        status: 'APPROVED',
+      },
       include: [
         {
           model: Restaurant,
@@ -700,13 +699,7 @@ const getUserVisits = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
-    // Filter out PENDING visits without restaurant (user should see these in receipts list)
-    const filteredVisits = visits.filter((visit) => {
-      // Show APPROVED/REJECTED visits always
-      if (visit.status !== 'PENDING') return true;
-      // Show PENDING visits only if they have a restaurant
-      return visit.restaurantId !== null;
-    });
+    const filteredVisits = visits;
 
     const visitsWithUrls = filteredVisits.map((visit) => ({
       ...visit.get(),
