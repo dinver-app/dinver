@@ -106,10 +106,12 @@ const ReceiptDetailModal: React.FC<ReceiptDetailModalProps> = ({
       );
       onUpdate();
       onClose();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to approve receipt"
-      );
+    } catch (error: any) {
+      // Extract error message from API response or fallback to generic message
+      const message =
+        error?.response?.data?.error ||
+        (error instanceof Error ? error.message : "Failed to approve receipt");
+      toast.error(message);
     } finally {
       setLoading(false);
     }

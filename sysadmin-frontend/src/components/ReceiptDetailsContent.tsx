@@ -187,9 +187,11 @@ const ReceiptDetailsContent: React.FC<Props> = ({
       toast.success(t("receipts.approve_success", { points: pointsPreview }));
       onUpdate();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      // Extract error message from API response or fallback to generic message
       const message =
-        error instanceof Error ? error.message : t("receipts.approve_failed");
+        error?.response?.data?.error ||
+        (error instanceof Error ? error.message : t("receipts.approve_failed"));
       setApproveError(message);
       toast.error(message);
     } finally {
