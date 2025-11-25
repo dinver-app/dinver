@@ -15,11 +15,12 @@ const {
   appApiKeyAuth,
 } = require('../../middleware/roleMiddleware');
 
-// Configure multer for image uploads
+// Configure multer for multiple image uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max
+    fileSize: 10 * 1024 * 1024, // 10MB max per file
+    files: 6, // Max 6 files
   },
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
@@ -42,14 +43,9 @@ const upload = multer({
 // FEED
 // ============================================================
 
-// Get Experience Feed (public, chronological)
-// GET /api/app/experiences/feed?city=Zagreb&mealType=dinner&limit=20&offset=0
-router.get(
-  '/feed',
-  appApiKeyAuth,
-  appOptionalAuth,
-  experienceController.getExperienceFeed
-);
+// Get Experience Feed (public, chronological, with distance filter)
+// GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner&limit=20&offset=0
+router.get('/feed', appApiKeyAuth, appOptionalAuth, experienceController.getExperienceFeed);
 
 // ============================================================
 // USER EXPERIENCES
@@ -57,12 +53,7 @@ router.get(
 
 // Get User's Experiences
 // GET /api/app/experiences/user/:userId
-router.get(
-  '/user/:userId',
-  appApiKeyAuth,
-  appOptionalAuth,
-  experienceController.getUserExperiences
-);
+router.get('/user/:userId', appApiKeyAuth, appOptionalAuth, experienceController.getUserExperiences);
 
 // ============================================================
 // RESTAURANT EXPERIENCES
@@ -81,63 +72,28 @@ router.get(
 // EXPERIENCE CRUD
 // ============================================================
 
-// Create Experience (linked to Visit)
+// Create Experience with images (all in one request)
 // POST /api/app/experiences
+// Multipart form data: visitId, foodRating, ambienceRating, serviceRating, description?, partySize?, mealType?, visibility?, images[], captions[]
 router.post(
   '/',
   appApiKeyAuth,
   appAuthenticateToken,
+  upload.array('images', 6),
   experienceController.createExperience
-);
-
-// Update Experience (while in DRAFT)
-// PUT /api/app/experiences/:experienceId
-router.put(
-  '/:experienceId',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  experienceController.updateExperience
-);
-
-// Publish Experience (DRAFT -> PENDING/APPROVED)
-// POST /api/app/experiences/:experienceId/publish
-router.post(
-  '/:experienceId/publish',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  experienceController.publishExperience
 );
 
 // Get Experience by ID
 // GET /api/app/experiences/:experienceId
-router.get(
+router.get('/:experienceId', appApiKeyAuth, appOptionalAuth, experienceController.getExperience);
+
+// Delete Experience
+// DELETE /api/app/experiences/:experienceId
+router.delete(
   '/:experienceId',
   appApiKeyAuth,
-  appOptionalAuth,
-  experienceController.getExperience
-);
-
-// ============================================================
-// MEDIA UPLOAD
-// ============================================================
-
-// Upload image to Experience
-// POST /api/app/experiences/:experienceId/media
-router.post(
-  '/:experienceId/media',
-  appApiKeyAuth,
   appAuthenticateToken,
-  upload.single('image'),
-  experienceController.uploadExperienceMedia
-);
-
-// Delete image from Experience
-// DELETE /api/app/experiences/:experienceId/media/:mediaId
-router.delete(
-  '/:experienceId/media/:mediaId',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  experienceController.deleteExperienceMedia
+  experienceController.deleteExperience
 );
 
 // ============================================================
