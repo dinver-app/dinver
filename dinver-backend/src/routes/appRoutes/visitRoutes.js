@@ -68,6 +68,14 @@ router.get(
   visitController.checkHasVisited,
 );
 
+// Get all user's visits for a specific restaurant
+router.get(
+  '/visits/restaurant/:restaurantId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.getVisitsByRestaurant,
+);
+
 // Delete visit (user can delete within 14 days)
 router.delete(
   '/visits/:visitId',

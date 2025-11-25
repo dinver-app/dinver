@@ -686,53 +686,69 @@ const getUserVisits = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: [
-            'id',
-            'thumbnailUrl',
-            'mediumUrl',
-            'fullscreenUrl',
-            'originalUrl',
-            'status',
-          ],
+          attributes: ['id', 'totalAmount', 'pointsAwarded'],
         },
       ],
       order: [['submittedAt', 'DESC']],
     });
 
-    const filteredVisits = visits;
+    // Group visits by restaurant
+    const restaurantMap = new Map();
 
-    const visitsWithUrls = filteredVisits.map((visit) => ({
-      ...visit.get(),
-      receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visit.receipt
-        ? {
-            id: visit.receipt.id,
-            thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
-              : null,
-            mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
-              : null,
-            fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
-              : null,
-            originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image')
-              : null,
-            status: visit.receipt.status,
-          }
-        : null,
-      restaurant: visit.restaurant
-        ? {
+    for (const visit of visits) {
+      if (!visit.restaurant) continue;
+
+      const restaurantId = visit.restaurant.id;
+
+      // Transform visit data (no receipt images - not needed on FE, keeps response fast)
+      const visitData = {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        wasInMustVisit: visit.wasInMustVisit,
+        totalAmount: visit.receipt?.totalAmount || null,
+        pointsAwarded: visit.receipt?.pointsAwarded || null,
+      };
+
+      if (restaurantMap.has(restaurantId)) {
+        // Add to existing restaurant group
+        const group = restaurantMap.get(restaurantId);
+        group.visits.push(visitData);
+        group.visitCount++;
+        // Update first visit date if this is older
+        const visitDateStr = visit.visitDate || visit.submittedAt;
+        if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
+          group.firstVisitDate = visitDateStr;
+        }
+      } else {
+        // Create new restaurant group
+        const visitDateStr = visit.visitDate || visit.submittedAt;
+        restaurantMap.set(restaurantId, {
+          restaurant: {
             ...visit.restaurant.get(),
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
-          }
-        : null,
-    }));
+          },
+          visitCount: 1,
+          lastVisitDate: visitDateStr,
+          firstVisitDate: visitDateStr,
+          visits: [visitData],
+        });
+      }
+    }
 
-    res.status(200).json(visitsWithUrls);
+    // Convert map to array, sorted by last visit date (most recent first)
+    const visitedRestaurants = Array.from(restaurantMap.values()).sort(
+      (a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate),
+    );
+
+    res.status(200).json({
+      visitedRestaurants,
+      totalRestaurantsVisited: visitedRestaurants.length,
+      totalVisits: visits.length,
+    });
   } catch (error) {
     console.error('Error fetching visits:', error);
     res.status(500).json({ error: 'Failed to fetch visits' });
@@ -1867,24 +1883,135 @@ const getOtherUserVisits = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
-    const visitsWithUrls = visits.map((visit) => ({
-      id: visit.id,
-      submittedAt: visit.submittedAt,
-      reviewedAt: visit.reviewedAt,
-      wasInMustVisit: visit.wasInMustVisit,
-      restaurant: visit.restaurant
-        ? {
+    // Group visits by restaurant
+    const restaurantMap = new Map();
+
+    for (const visit of visits) {
+      if (!visit.restaurant) continue;
+
+      const restaurantId = visit.restaurant.id;
+
+      // Transform visit data (no receipt info for other users - privacy)
+      const visitData = {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        wasInMustVisit: visit.wasInMustVisit,
+      };
+
+      if (restaurantMap.has(restaurantId)) {
+        // Add to existing restaurant group
+        const group = restaurantMap.get(restaurantId);
+        group.visits.push(visitData);
+        group.visitCount++;
+        // Update first visit date if this is older
+        const visitDateStr = visit.visitDate || visit.submittedAt;
+        if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
+          group.firstVisitDate = visitDateStr;
+        }
+      } else {
+        // Create new restaurant group
+        const visitDateStr = visit.visitDate || visit.submittedAt;
+        restaurantMap.set(restaurantId, {
+          restaurant: {
             ...visit.restaurant.get(),
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
-          }
-        : null,
-    }));
+          },
+          visitCount: 1,
+          lastVisitDate: visitDateStr,
+          firstVisitDate: visitDateStr,
+          visits: [visitData],
+        });
+      }
+    }
 
-    res.status(200).json(visitsWithUrls);
+    // Convert map to array, sorted by last visit date (most recent first)
+    const visitedRestaurants = Array.from(restaurantMap.values()).sort(
+      (a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate),
+    );
+
+    res.status(200).json({
+      visitedRestaurants,
+      totalRestaurantsVisited: visitedRestaurants.length,
+      totalVisits: visits.length,
+    });
   } catch (error) {
     console.error('Error fetching user visits:', error);
+    res.status(500).json({ error: 'Failed to fetch visits' });
+  }
+};
+
+/**
+ * Get user's visits for a specific restaurant
+ * GET /api/app/visits/restaurant/:restaurantId
+ * Returns all visits to a specific restaurant for the current user
+ */
+const getVisitsByRestaurant = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { restaurantId } = req.params;
+
+    // Get restaurant details
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: [
+        'id',
+        'name',
+        'rating',
+        'priceLevel',
+        'address',
+        'place',
+        'isClaimed',
+        'thumbnailUrl',
+        'userRatingsTotal',
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Fetch all APPROVED visits for this restaurant
+    const visits = await Visit.findAll({
+      where: {
+        userId: userId,
+        restaurantId: restaurantId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: Receipt,
+          as: 'receipt',
+          attributes: ['id', 'totalAmount', 'pointsAwarded'],
+        },
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    const visitsData = visits.map((visit) => ({
+      id: visit.id,
+      submittedAt: visit.submittedAt,
+      reviewedAt: visit.reviewedAt,
+      visitDate: visit.visitDate,
+      wasInMustVisit: visit.wasInMustVisit,
+      totalAmount: visit.receipt?.totalAmount || null,
+      pointsAwarded: visit.receipt?.pointsAwarded || null,
+    }));
+
+    res.status(200).json({
+      restaurant: {
+        ...restaurant.get(),
+        thumbnailUrl: restaurant.thumbnailUrl
+          ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+          : null,
+      },
+      visitCount: visits.length,
+      visits: visitsData,
+    });
+  } catch (error) {
+    console.error('Error fetching visits by restaurant:', error);
     res.status(500).json({ error: 'Failed to fetch visits' });
   }
 };
@@ -1900,4 +2027,5 @@ module.exports = {
   deleteVisit,
   getUserBuddies,
   getOtherUserVisits,
+  getVisitsByRestaurant,
 };
