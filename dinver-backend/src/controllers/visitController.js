@@ -1206,19 +1206,16 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
       });
     }
 
-    // === STEP 2 & 3: Upload image (using existing proven method!) ===
+    // STEP 2 & 3: Upload image 
     const folder = `receipts/${userId}`;
-    let imageUploadResult;
+    const { uploadBufferToS3 } = require('../../utils/s3Upload');
 
+    let imageUrl;
     try {
-      imageUploadResult = await uploadImage(file, folder, {
-        strategy: UPLOAD_STRATEGY.QUICK,
-        entityType: 'receipt',
-        entityId: null,
-        priority: 15,
-        maxWidth: 2000, // Larger for OCR accuracy
-        quality: 88, // Higher quality for text recognition
-      });
+      const fileName = `${folder}/${uuidv4()}.jpg`;
+      console.log(`[Upload & Create Visit] Direct upload (pre-compressed), size: ${Math.round(file.size / 1024)}KB`);
+      imageUrl = await uploadBufferToS3(file.buffer, fileName, 'image/jpeg');
+      console.log(`[Upload & Create Visit] Upload complete: ${imageUrl}`);
     } catch (uploadError) {
       await transaction.rollback();
       console.error(
@@ -1230,8 +1227,6 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
         details: uploadError.message,
       });
     }
-
-    const imageUrl = imageUploadResult.imageUrl;
 
     // === STEP 4: Create Visit (WITHOUT restaurant yet) ===
     const visit = await Visit.create(
