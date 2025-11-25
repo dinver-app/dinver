@@ -7,8 +7,8 @@ const {
 
 const router = express.Router();
 
-// NOTE: Receipt upload has been moved to Visit routes
-// The new V2 flow creates Visit + Receipt together in one atomic operation
+// NOTE: All receipt-related routes have been moved to Visit routes
+// Visit + Receipt are created together in one atomic operation
 // See: /api/app/visits/upload-receipt
 
 // Get user's receipts (all statuses - pending, approved, rejected)

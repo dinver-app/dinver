@@ -30,49 +30,18 @@ module.exports = (sequelize, DataTypes) => {
         as: 'likes',
         onDelete: 'CASCADE',
       });
-
-      Experience.hasMany(models.ExperienceSave, {
-        foreignKey: 'experienceId',
-        as: 'saves',
-        onDelete: 'CASCADE',
-      });
-
-      Experience.hasMany(models.ExperienceView, {
-        foreignKey: 'experienceId',
-        as: 'views',
-        onDelete: 'CASCADE',
-      });
-
-      Experience.hasOne(models.ExperienceEngagement, {
-        foreignKey: 'experienceId',
-        as: 'engagement',
-        onDelete: 'CASCADE',
-      });
     }
 
     // Helper method to check if user has liked this experience
-    async hasUserLiked(userId, cycleId) {
+    async hasUserLiked(userId) {
       const ExperienceLike = sequelize.models.ExperienceLike;
       const like = await ExperienceLike.findOne({
         where: {
           experienceId: this.id,
           userId: userId,
-          cycleId: cycleId,
         },
       });
       return !!like;
-    }
-
-    // Helper method to check if user has saved this experience
-    async hasUserSaved(userId) {
-      const ExperienceSave = sequelize.models.ExperienceSave;
-      const save = await ExperienceSave.findOne({
-        where: {
-          experienceId: this.id,
-          userId: userId,
-        },
-      });
-      return !!save;
     }
   }
 
@@ -94,7 +63,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       restaurantId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'Restaurants',
           key: 'id',
@@ -103,115 +72,75 @@ module.exports = (sequelize, DataTypes) => {
       },
       visitId: {
         type: DataTypes.UUID,
-        allowNull: true,
+        allowNull: false,
         references: {
           model: 'Visits',
           key: 'id',
         },
-        onDelete: 'SET NULL',
+        onDelete: 'CASCADE',
       },
       status: {
         type: DataTypes.ENUM('DRAFT', 'PENDING', 'APPROVED', 'REJECTED'),
         allowNull: false,
-        defaultValue: 'PENDING',
-      },
-      title: {
-        type: DataTypes.STRING(200),
-        allowNull: false,
+        defaultValue: 'DRAFT',
       },
       description: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      ratingAmbience: {
-        type: DataTypes.INTEGER,
+      // Ratings (1.0-10.0 with one decimal)
+      foodRating: {
+        type: DataTypes.DECIMAL(3, 1),
         allowNull: true,
         validate: {
-          min: 1,
-          max: 5,
+          min: 1.0,
+          max: 10.0,
         },
       },
-      ratingService: {
-        type: DataTypes.INTEGER,
+      ambienceRating: {
+        type: DataTypes.DECIMAL(3, 1),
         allowNull: true,
         validate: {
-          min: 1,
-          max: 5,
+          min: 1.0,
+          max: 10.0,
         },
       },
-      ratingPrice: {
-        type: DataTypes.INTEGER,
+      serviceRating: {
+        type: DataTypes.DECIMAL(3, 1),
         allowNull: true,
         validate: {
-          min: 1,
-          max: 5,
+          min: 1.0,
+          max: 10.0,
         },
       },
-      mediaKind: {
-        type: DataTypes.ENUM('VIDEO', 'CAROUSEL'),
-        allowNull: false,
+      overallRating: {
+        type: DataTypes.DECIMAL(3, 1),
+        allowNull: true,
+        comment: 'Average of food, ambience, service ratings',
       },
-      durationSec: {
+      // Metadata
+      partySize: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        validate: {
-          min: 1,
-          max: 30,
-        },
+        defaultValue: 2,
+        comment: 'Number of people in the group',
       },
-      coverMediaId: {
-        type: DataTypes.UUID,
+      mealType: {
+        type: DataTypes.ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'),
         allowNull: true,
-        references: {
-          model: 'ExperienceMedia',
-          key: 'id',
-        },
-      },
-      cityCached: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-      },
-      approvedAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
-      rejectedReason: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      version: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 1,
       },
       visibility: {
         type: DataTypes.ENUM('ALL', 'FOLLOWERS', 'BUDDIES'),
         allowNull: false,
         defaultValue: 'ALL',
       },
-      // AI/ML scores for moderation
-      nsfwScore: {
-        type: DataTypes.FLOAT,
+      // Cached data for filtering
+      cityCached: {
+        type: DataTypes.STRING(100),
         allowNull: true,
-        comment: 'NSFW detection score from 0-1, higher = more NSFW',
       },
-      brandSafetyScore: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-        comment: 'Brand safety score from 0-1, higher = safer',
-      },
-      // Engagement metrics (cached from ExperienceEngagement)
+      // Engagement counters
       likesCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      savesCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      viewsCount: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,
@@ -221,12 +150,10 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
       },
-      // Engagement score for trending algorithm
-      engagementScore: {
-        type: DataTypes.FLOAT,
-        allowNull: false,
-        defaultValue: 0,
-        comment: 'Weighted score for ranking: likes, saves, views, recency',
+      // Timestamps
+      publishedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
     },
     {
@@ -241,22 +168,22 @@ module.exports = (sequelize, DataTypes) => {
           fields: ['restaurantId'],
         },
         {
+          fields: ['visitId'],
+        },
+        {
           fields: ['status'],
         },
         {
           fields: ['cityCached'],
         },
         {
-          fields: ['status', 'cityCached'],
+          fields: ['mealType'],
+        },
+        {
+          fields: ['status', 'publishedAt'],
         },
         {
           fields: ['createdAt'],
-        },
-        {
-          fields: ['status', 'engagementScore'],
-        },
-        {
-          fields: ['status', 'createdAt'],
         },
       ],
     },
