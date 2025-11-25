@@ -1663,7 +1663,7 @@ const approveReceipt = async (req, res) => {
     res.json({
       message: 'Receipt approved successfully',
       pointsAwarded,
-      visitId: createdVisit?.id || null, // Include created visit ID
+      visitId: visit?.id || null, // Include created/updated visit ID
     });
   } catch (error) {
     console.error('Error approving receipt:', error);
