@@ -18,6 +18,7 @@ const {
 } = require('../../models');
 const { Op, literal } = require('sequelize');
 const { uploadImage, UPLOAD_STRATEGY } = require('../../services/imageUploadService');
+const { updateRestaurantDinverRating } = require('../services/dinverRatingService');
 
 /**
  * Create Experience with images in one request
@@ -243,6 +244,13 @@ const createExperience = async (req, res) => {
     }
 
     await transaction.commit();
+
+    // Update restaurant's Dinver rating (async, don't block response)
+    if (visit.restaurantId && status === 'APPROVED') {
+      updateRestaurantDinverRating(visit.restaurantId).catch((err) => {
+        console.error('[Create Experience] Failed to update Dinver rating:', err.message);
+      });
+    }
 
     res.status(201).json({
       experienceId: experience.id,
@@ -828,6 +836,9 @@ const deleteExperience = async (req, res) => {
       });
     }
 
+    // Store restaurantId before deletion for rating update
+    const restaurantId = experience.restaurantId;
+
     // Delete media from S3
     const { deleteFromS3 } = require('../../utils/s3Upload');
     for (const media of experience.media) {
@@ -842,6 +853,13 @@ const deleteExperience = async (req, res) => {
 
     // Delete experience (CASCADE will delete media records)
     await experience.destroy();
+
+    // Update restaurant's Dinver rating (async, don't block response)
+    if (restaurantId) {
+      updateRestaurantDinverRating(restaurantId).catch((err) => {
+        console.error('[Delete Experience] Failed to update Dinver rating:', err.message);
+      });
+    }
 
     res.status(200).json({
       message: 'Experience deleted',

@@ -47,6 +47,7 @@ const {
 } = require('../utils/antifraudUtils');
 const {
   sendPushNotificationToUsers,
+  createAndSendNotification,
 } = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { Op } = require('sequelize');
@@ -1621,20 +1622,60 @@ const approveReceipt = async (req, res) => {
       );
     }
 
-    // Send push notification
+    // Send push notification to main user (using i18n)
     try {
-      await sendPushNotificationToUsers([receipt.userId], {
-        title: 'Račun odobren! 🎉',
-        body: `Dodano ${pointsAwarded} bodova za račun iz ${restaurant.name}`,
+      // Determine which notification type to use based on buddies count
+      let notificationType = 'receipt_approved';
+      if (taggedBuddiesCount === 1) {
+        notificationType = 'receipt_approved_shared';
+      } else if (taggedBuddiesCount > 1) {
+        notificationType = 'receipt_approved_shared_plural';
+      }
+
+      await createAndSendNotification(receipt.userId, {
+        type: notificationType,
         data: {
-          type: 'receipt_approved',
+          points: pointsPerPerson,
+          restaurantName: restaurant.name,
+          buddyCount: taggedBuddiesCount,
           receiptId: receipt.id,
-          points: pointsAwarded,
-          restaurantId: receipt.restaurantId,
+          totalPoints: pointsAwarded,
+          sharedWith: taggedBuddiesCount,
         },
+        restaurantId: receipt.restaurantId,
       });
     } catch (notificationError) {
       console.error('Error sending push notification:', notificationError);
+    }
+
+    // Send push notifications to tagged buddies (using i18n)
+    if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      try {
+        // Get main user's name for the notification
+        const mainUser = await User.findByPk(receipt.userId, {
+          attributes: ['name', 'username'],
+        });
+        const mainUserName = mainUser?.name || mainUser?.username || 'Prijatelj';
+
+        // Send notification to each buddy individually (for i18n support)
+        for (const buddyId of visit.taggedBuddies) {
+          await createAndSendNotification(buddyId, {
+            type: 'receipt_approved_buddy',
+            data: {
+              actorName: mainUserName,
+              restaurantName: restaurant.name,
+              points: pointsPerPerson,
+              receiptId: receipt.id,
+            },
+            actorUserId: receipt.userId,
+            restaurantId: receipt.restaurantId,
+          });
+        }
+
+        console.log(`[Receipt Approval] Sent notifications to ${visit.taggedBuddies.length} buddies`);
+      } catch (buddyNotificationError) {
+        console.error('Error sending buddy push notifications:', buddyNotificationError);
+      }
     }
 
     // Log audit

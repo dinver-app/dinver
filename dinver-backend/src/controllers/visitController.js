@@ -6,6 +6,7 @@ const {
   Receipt,
   UserSettings,
   UserFollow,
+  Experience,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const { uploadVariantsToS3 } = require('../../utils/s3Upload');
@@ -391,6 +392,8 @@ const createVisitFromReceipt = async (req, res) => {
             'id',
             'name',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
             'address',
             'place',
@@ -595,6 +598,8 @@ const createVisit = async (req, res) => {
             'id',
             'name',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
             'address',
             'place',
@@ -675,6 +680,8 @@ const getUserVisits = async (req, res) => {
             'id',
             'name',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
             'address',
             'place',
@@ -688,6 +695,11 @@ const getUserVisits = async (req, res) => {
           as: 'receipt',
           attributes: ['id', 'totalAmount', 'pointsAwarded'],
         },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+        },
       ],
       order: [['submittedAt', 'DESC']],
     });
@@ -700,7 +712,7 @@ const getUserVisits = async (req, res) => {
 
       const restaurantId = visit.restaurant.id;
 
-      // Transform visit data (no receipt images - not needed on FE, keeps response fast)
+      // Transform visit data with experience rating
       const visitData = {
         id: visit.id,
         submittedAt: visit.submittedAt,
@@ -709,6 +721,16 @@ const getUserVisits = async (req, res) => {
         wasInMustVisit: visit.wasInMustVisit,
         totalAmount: visit.receipt?.totalAmount || null,
         pointsAwarded: visit.receipt?.pointsAwarded || null,
+        // Experience rating for this visit
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              foodRating: parseFloat(visit.experience.foodRating) || null,
+              ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+              serviceRating: parseFloat(visit.experience.serviceRating) || null,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+            }
+          : null,
       };
 
       if (restaurantMap.has(restaurantId)) {
@@ -716,6 +738,10 @@ const getUserVisits = async (req, res) => {
         const group = restaurantMap.get(restaurantId);
         group.visits.push(visitData);
         group.visitCount++;
+        // Track experience ratings for average calculation
+        if (visit.experience?.overallRating) {
+          group._ratings.push(parseFloat(visit.experience.overallRating));
+        }
         // Update first visit date if this is older
         const visitDateStr = visit.visitDate || visit.submittedAt;
         if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
@@ -735,14 +761,33 @@ const getUserVisits = async (req, res) => {
           lastVisitDate: visitDateStr,
           firstVisitDate: visitDateStr,
           visits: [visitData],
+          // Track ratings for average calculation (internal, will be removed)
+          _ratings: visit.experience?.overallRating
+            ? [parseFloat(visit.experience.overallRating)]
+            : [],
         });
       }
     }
 
-    // Convert map to array, sorted by last visit date (most recent first)
-    const visitedRestaurants = Array.from(restaurantMap.values()).sort(
-      (a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate),
-    );
+    // Convert map to array, calculate average ratings, sorted by last visit date
+    const visitedRestaurants = Array.from(restaurantMap.values())
+      .map((group) => {
+        // Calculate user's average rating for this restaurant
+        const averageRating =
+          group._ratings.length > 0
+            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            : null;
+
+        // Remove internal _ratings array
+        const { _ratings, ...rest } = group;
+
+        return {
+          ...rest,
+          userAverageRating: averageRating, // User's average rating for this restaurant
+          hasExperience: group._ratings.length > 0,
+        };
+      })
+      .sort((a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate));
 
     res.status(200).json({
       visitedRestaurants,
@@ -771,6 +816,8 @@ const getVisitById = async (req, res) => {
             'id',
             'name',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
             'address',
             'place',
@@ -1865,6 +1912,8 @@ const getOtherUserVisits = async (req, res) => {
             'id',
             'name',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
             'address',
             'place',
@@ -1872,6 +1921,11 @@ const getOtherUserVisits = async (req, res) => {
             'thumbnailUrl',
             'userRatingsTotal',
           ],
+        },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -1885,13 +1939,20 @@ const getOtherUserVisits = async (req, res) => {
 
       const restaurantId = visit.restaurant.id;
 
-      // Transform visit data (no receipt info for other users - privacy)
+      // Transform visit data with experience rating (no receipt info - privacy)
       const visitData = {
         id: visit.id,
         submittedAt: visit.submittedAt,
         reviewedAt: visit.reviewedAt,
         visitDate: visit.visitDate,
         wasInMustVisit: visit.wasInMustVisit,
+        // Experience rating for this visit
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+            }
+          : null,
       };
 
       if (restaurantMap.has(restaurantId)) {
@@ -1899,6 +1960,10 @@ const getOtherUserVisits = async (req, res) => {
         const group = restaurantMap.get(restaurantId);
         group.visits.push(visitData);
         group.visitCount++;
+        // Track experience ratings for average calculation
+        if (visit.experience?.overallRating) {
+          group._ratings.push(parseFloat(visit.experience.overallRating));
+        }
         // Update first visit date if this is older
         const visitDateStr = visit.visitDate || visit.submittedAt;
         if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
@@ -1918,14 +1983,33 @@ const getOtherUserVisits = async (req, res) => {
           lastVisitDate: visitDateStr,
           firstVisitDate: visitDateStr,
           visits: [visitData],
+          // Track ratings for average calculation (internal)
+          _ratings: visit.experience?.overallRating
+            ? [parseFloat(visit.experience.overallRating)]
+            : [],
         });
       }
     }
 
-    // Convert map to array, sorted by last visit date (most recent first)
-    const visitedRestaurants = Array.from(restaurantMap.values()).sort(
-      (a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate),
-    );
+    // Convert map to array, calculate average ratings, sorted by last visit date
+    const visitedRestaurants = Array.from(restaurantMap.values())
+      .map((group) => {
+        // Calculate user's average rating for this restaurant
+        const averageRating =
+          group._ratings.length > 0
+            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            : null;
+
+        // Remove internal _ratings array
+        const { _ratings, ...rest } = group;
+
+        return {
+          ...rest,
+          userAverageRating: averageRating,
+          hasExperience: group._ratings.length > 0,
+        };
+      })
+      .sort((a, b) => new Date(b.lastVisitDate) - new Date(a.lastVisitDate));
 
     res.status(200).json({
       visitedRestaurants,
@@ -1954,6 +2038,8 @@ const getVisitsByRestaurant = async (req, res) => {
         'id',
         'name',
         'rating',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'address',
         'place',
@@ -2010,6 +2096,166 @@ const getVisitsByRestaurant = async (req, res) => {
   }
 };
 
+/**
+ * Get restaurant visitors (users who visited this restaurant)
+ * GET /api/app/restaurants/:restaurantId/visitors
+ *
+ * Returns list of users who visited the restaurant, grouped by user,
+ * with their average rating and visit count.
+ *
+ * Example response:
+ * {
+ *   visitors: [
+ *     {
+ *       user: { id, name, username, profileImage },
+ *       visitCount: 3,
+ *       userAverageRating: 8.5,
+ *       lastVisitDate: "2025-11-25",
+ *       visits: [
+ *         { id, visitDate, experience: { overallRating: 8.0 } },
+ *         { id, visitDate, experience: { overallRating: 9.0 } }
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
+const getRestaurantVisitors = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    // Check restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: ['id', 'name', 'place', 'isClaimed'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get all APPROVED visits for this restaurant
+    const visits = await Visit.findAll({
+      where: {
+        restaurantId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+        },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: ['id', 'overallRating', 'status'],
+          where: { status: 'APPROVED' },
+          required: false,
+        },
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    // Group by user
+    const userMap = new Map();
+
+    for (const visit of visits) {
+      if (!visit.user) continue;
+
+      const visitorId = visit.user.id;
+      const visitDateStr = visit.visitDate || visit.submittedAt;
+
+      const visitData = {
+        id: visit.id,
+        visitDate: visitDateStr,
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+            }
+          : null,
+      };
+
+      if (userMap.has(visitorId)) {
+        const group = userMap.get(visitorId);
+        group.visits.push(visitData);
+        group.visitCount++;
+        if (visit.experience?.overallRating) {
+          group._ratings.push(parseFloat(visit.experience.overallRating));
+        }
+        // Update last visit date if this is more recent
+        if (visitDateStr && new Date(visitDateStr) > new Date(group.lastVisitDate)) {
+          group.lastVisitDate = visitDateStr;
+        }
+      } else {
+        userMap.set(visitorId, {
+          user: {
+            id: visit.user.id,
+            name: visit.user.name,
+            username: visit.user.username,
+            profileImage: visit.user.profileImage
+              ? getMediaUrl(visit.user.profileImage, 'image', 'original')
+              : null,
+          },
+          visitCount: 1,
+          lastVisitDate: visitDateStr,
+          visits: [visitData],
+          _ratings: visit.experience?.overallRating
+            ? [parseFloat(visit.experience.overallRating)]
+            : [],
+        });
+      }
+    }
+
+    // Convert map to array with calculated averages
+    const visitors = Array.from(userMap.values())
+      .map((group) => {
+        const averageRating =
+          group._ratings.length > 0
+            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            : null;
+
+        const { _ratings, ...rest } = group;
+
+        return {
+          ...rest,
+          userAverageRating: averageRating,
+          hasExperience: group._ratings.length > 0,
+        };
+      })
+      // Sort by visit count (most visits first), then by last visit date
+      .sort((a, b) => {
+        if (b.visitCount !== a.visitCount) {
+          return b.visitCount - a.visitCount;
+        }
+        return new Date(b.lastVisitDate) - new Date(a.lastVisitDate);
+      });
+
+    // Apply pagination
+    const paginatedVisitors = visitors.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+
+    res.status(200).json({
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        place: restaurant.place,
+        isClaimed: restaurant.isClaimed,
+      },
+      visitors: paginatedVisitors,
+      totalVisitors: visitors.length,
+      totalVisits: visits.length,
+      pagination: {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + parseInt(limit) < visitors.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant visitors:', error);
+    res.status(500).json({ error: 'Failed to fetch visitors' });
+  }
+};
+
 module.exports = {
   uploadReceiptAndCreateVisit,
   createVisitFromReceipt,
@@ -2022,4 +2268,5 @@ module.exports = {
   getUserBuddies,
   getOtherUserVisits,
   getVisitsByRestaurant,
+  getRestaurantVisitors,
 };

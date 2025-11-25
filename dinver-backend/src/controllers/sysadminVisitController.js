@@ -172,6 +172,8 @@ exports.getVisitById = async (req, res) => {
             'address',
             'thumbnailUrl',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
           ],
         },

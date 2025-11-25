@@ -85,6 +85,8 @@ const getUserFavorites = async (req, res) => {
             'isClaimed',
             'thumbnailUrl',
             'userRatingsTotal',
+            'dinverRating',
+            'dinverReviewsCount',
           ],
         },
       ],

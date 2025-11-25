@@ -100,4 +100,12 @@ router.get(
   visitController.getOtherUserVisits,
 );
 
+// Get restaurant visitors (who visited this restaurant, with their ratings)
+router.get(
+  '/restaurants/:restaurantId/visitors',
+  appApiKeyAuth,
+  appOptionalAuth,
+  visitController.getRestaurantVisitors,
+);
+
 module.exports = router;

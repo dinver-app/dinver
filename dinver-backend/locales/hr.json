@@ -39,6 +39,22 @@
     "alternative_time_accepted": {
       "title": "Alternativni termin prihvaćen! ✅",
       "body": "{{userName}} je prihvatio/la alternativni termin za rezervaciju u restoranu {{restaurantName}} ({{date}}, {{time}})"
+    },
+    "receipt_approved": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}}"
+    },
+    "receipt_approved_shared": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}} (podijeljeno s {{buddyCount}} prijateljem)"
+    },
+    "receipt_approved_shared_plural": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}} (podijeljeno s {{buddyCount}} prijatelja)"
+    },
+    "receipt_approved_buddy": {
+      "title": "Dobio/la si bodove! 🎉",
+      "body": "{{actorName}} te je označio/la na računu iz {{restaurantName}} - dobio/la si {{points}} bodova!"
     }
   }
 }

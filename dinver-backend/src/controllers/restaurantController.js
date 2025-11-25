@@ -110,6 +110,8 @@ const getAllRestaurants = async (req, res) => {
         'longitude',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'openingHours',
         'iconUrl',
@@ -230,6 +232,8 @@ const getRestaurants = async (req, res) => {
         'longitude',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'openingHours',
         'iconUrl',
@@ -340,6 +344,8 @@ const getRestaurantDetails = async (req, res) => {
         'workingHoursInfo',
         'thumbnailUrl',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'isOpenNow',
         'iconUrl',
         'slug',
@@ -1808,6 +1814,8 @@ const getRestaurantById = async (req, res) => {
         'workingHoursInfo',
         'thumbnailUrl',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'isOpenNow',
         'iconUrl',
         'slug',
@@ -2101,6 +2109,8 @@ const getAllRestaurantsWithDetails = async (req, res) => {
         'longitude',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'openingHours',
         'iconUrl',
@@ -2165,6 +2175,8 @@ const getSampleRestaurants = async (req, res) => {
         'longitude',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'openingHours',
         'iconUrl',
@@ -2662,6 +2674,8 @@ const getPartners = async (req, res) => {
         'thumbnailUrl',
         'slug',
         'rating',
+        'dinverRating',
+        'dinverReviewsCount',
         'virtualTourUrl',
       ],
       order: [Sequelize.fn('RANDOM')],
@@ -2717,6 +2731,8 @@ const getFullRestaurantDetails = async (req, res) => {
         'phone',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'priceLevel',
         'thumbnailUrl',
         'slug',
@@ -2917,6 +2933,8 @@ const getFullRestaurantDetails = async (req, res) => {
     // Always include rating and userRatingsTotal from the Restaurant model
     finalRestaurantData.rating = restaurant.rating;
     finalRestaurantData.userRatingsTotal = restaurant.userRatingsTotal;
+    finalRestaurantData.dinverRating = restaurant.dinverRating;
+    finalRestaurantData.dinverReviewsCount = restaurant.dinverReviewsCount;
 
     // Transform thumbnail URL if exists
     if (finalRestaurantData.thumbnailUrl) {
@@ -3527,6 +3545,8 @@ const getRestaurantsMap = async (req, res) => {
         'longitude',
         'rating',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'isClaimed',
         'createdAt',
       ],
@@ -3739,6 +3759,8 @@ const getRestaurantsByIdsPost = async (req, res) => {
         'thumbnailUrl',
         'isClaimed',
         'userRatingsTotal',
+        'dinverRating',
+        'dinverReviewsCount',
         'createdAt',
       ],
     });
