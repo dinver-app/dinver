@@ -1,5 +1,4 @@
 const sharp = require('sharp');
-const heicConvert = require('heic-convert');
 
 /**
  * Image size configurations for different use cases
@@ -46,53 +45,6 @@ const IMAGE_SIZES = {
 const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
 
 /**
- * Detects if buffer is HEIC/HEIF format and converts to JPEG
- *
- * @param {Buffer} imageBuffer - Original image buffer
- * @param {string} mimeType - MIME type (optional)
- * @returns {Promise<{buffer: Buffer, converted: boolean}>}
- */
-async function convertHeicIfNeeded(imageBuffer, mimeType = '') {
-  try {
-    // Check if it's HEIC/HEIF format
-    const isHeic =
-      mimeType.toLowerCase().includes('heic') ||
-      mimeType.toLowerCase().includes('heif') ||
-      // Check file signature (HEIC files start with 'ftyp' at offset 4)
-      (imageBuffer.length > 12 &&
-       imageBuffer.toString('ascii', 4, 8).includes('ftyp') &&
-       (imageBuffer.toString('ascii', 8, 12) === 'heic' ||
-        imageBuffer.toString('ascii', 8, 12) === 'mif1'));
-
-    if (!isHeic) {
-      return { buffer: imageBuffer, converted: false };
-    }
-
-    console.log('[HEIC Converter] Detected HEIC format, converting to JPEG...');
-    const startTime = Date.now();
-
-    // Convert HEIC to JPEG
-    const jpegBuffer = await heicConvert({
-      buffer: imageBuffer,
-      format: 'JPEG',
-      quality: 0.95, // High quality for receipts
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`[HEIC Converter] Converted to JPEG in ${duration}ms (${Math.round(jpegBuffer.length / 1024)}KB)`);
-
-    return {
-      buffer: Buffer.from(jpegBuffer),
-      converted: true
-    };
-  } catch (error) {
-    console.error('[HEIC Converter] Conversion failed:', error.message);
-    // If conversion fails, try to process original anyway
-    return { buffer: imageBuffer, converted: false };
-  }
-}
-
-/**
  * Processes an image buffer into multiple size variants
  *
  * @param {Buffer} imageBuffer - Original image buffer
@@ -111,17 +63,9 @@ async function processImage(imageBuffer, options = {}) {
     skipMedium = false,
     skipFullscreen = false,
     skipOriginal = true, // Default TRUE - only create original for receipts
-    mimeType = '',
   } = options;
 
   try {
-    // Convert HEIC to JPEG if needed (before Sharp processing)
-    const { buffer: processedBuffer, converted } = await convertHeicIfNeeded(imageBuffer, mimeType);
-    if (converted) {
-      imageBuffer = processedBuffer;
-      console.log('[Image Processor] Using converted JPEG buffer');
-    }
-
     // Get original image metadata
     const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
 
@@ -243,12 +187,11 @@ async function generateVariant(imageBuffer, config, outputFormat = 'jpeg') {
     });
   }
 
-  // Apply format-specific optimizations
+  // Apply format-specific optimizations (no mozjpeg for speed)
   switch (outputFormat) {
     case 'jpeg':
       pipeline = pipeline.jpeg({
         quality: quality || 80,
-        mozjpeg: true, // Use mozjpeg for better compression
         progressive: true, // Progressive JPEG for better perceived loading
       });
       break;
@@ -261,20 +204,20 @@ async function generateVariant(imageBuffer, config, outputFormat = 'jpeg') {
     case 'png':
       pipeline = pipeline.png({
         quality: quality || 80,
-        compressionLevel: 9,
+        compressionLevel: 6, // Faster than 9, still good compression
       });
       break;
     default:
-      pipeline = pipeline.jpeg({ quality: quality || 80, mozjpeg: true });
+      pipeline = pipeline.jpeg({ quality: quality || 80 });
   }
 
-  const buffer = await pipeline.toBuffer();
-  const metadata = await sharp(buffer).metadata();
+  // Get buffer and metadata in single operation
+  const { data: buffer, info } = await pipeline.toBuffer({ resolveWithObject: true });
 
   return {
     buffer,
-    width: metadata.width,
-    height: metadata.height,
+    width: info.width,
+    height: info.height,
     size: buffer.length,
     format: outputFormat,
     suffix: suffix || '',
@@ -304,8 +247,6 @@ async function validateImage(imageBuffer) {
       'webp',
       'gif',
       'tiff',
-      'heic',
-      'heif',
     ];
     if (!supportedFormats.includes(metadata.format)) {
       return {
@@ -335,23 +276,25 @@ async function validateImage(imageBuffer) {
  * @returns {Promise<Buffer>} Optimized image buffer
  */
 async function quickOptimize(imageBuffer, options = {}) {
-  const { maxWidth = 1600, quality = 80, mimeType = '' } = options;
+  const { maxWidth = 1600, quality = 80 } = options;
 
   try {
-    // Convert HEIC to JPEG if needed
-    const { buffer: processedBuffer, converted } = await convertHeicIfNeeded(imageBuffer, mimeType);
-    if (converted) {
-      imageBuffer = processedBuffer;
+    const metadata = await sharp(imageBuffer).metadata();
+
+    // Skip processing if already JPEG and small enough (fast path)
+    if (metadata.format === 'jpeg' && metadata.width <= maxWidth) {
+      return imageBuffer;
     }
 
-    const metadata = await sharp(imageBuffer).metadata();
+    // Only process if needed
     let pipeline = sharp(imageBuffer).rotate();
 
     if (metadata.width > maxWidth) {
       pipeline = pipeline.resize({ width: maxWidth });
     }
 
-    return await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
+    // Use default libjpeg (faster) instead of mozjpeg (slower but better compression)
+    return await pipeline.jpeg({ quality }).toBuffer();
   } catch (error) {
     console.error('Quick optimize failed:', error);
     return imageBuffer; // Return original on failure
@@ -363,20 +306,12 @@ async function quickOptimize(imageBuffer, options = {}) {
  * Creates ONE high-quality variant optimized for OCR + admin review
  *
  * @param {Buffer} imageBuffer - Original receipt image buffer
- * @param {string} mimeType - MIME type of the image
  * @returns {Promise<Object>} Processed receipt with buffer and metadata
  */
-async function processReceiptImage(imageBuffer, mimeType = '') {
+async function processReceiptImage(imageBuffer) {
   const startTime = Date.now();
 
   try {
-    // Convert HEIC to JPEG if needed
-    const { buffer: processedBuffer, converted } = await convertHeicIfNeeded(imageBuffer, mimeType);
-    if (converted) {
-      imageBuffer = processedBuffer;
-      console.log('[Receipt Processor] Using converted JPEG buffer');
-    }
-
     // Get original metadata
     const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
 
@@ -384,19 +319,24 @@ async function processReceiptImage(imageBuffer, mimeType = '') {
       throw new Error('Invalid image format');
     }
 
-    console.log('[Receipt Processor] Original image:', {
-      width: metadata.width,
-      height: metadata.height,
-      format: metadata.format,
-      sizeKB: Math.round(metadata.size / 1024),
-    });
-
     // Receipt size config (optimized for OCR + admin review)
     const RECEIPT_SIZE = {
       width: 2000,      // Large enough for OCR accuracy
       quality: 88,      // High quality for text recognition
-      fit: 'inside',    // Maintain aspect ratio
     };
+
+    // Fast path: if already JPEG and small enough, skip processing
+    if (metadata.format === 'jpeg' && metadata.width <= RECEIPT_SIZE.width) {
+      const duration = Date.now() - startTime;
+      return {
+        buffer: imageBuffer,
+        width: metadata.width,
+        height: metadata.height,
+        size: imageBuffer.length,
+        format: 'jpeg',
+        duration,
+      };
+    }
 
     // Build pipeline
     let pipeline = sharp(imageBuffer, { failOn: 'none' });
@@ -408,35 +348,27 @@ async function processReceiptImage(imageBuffer, mimeType = '') {
     if (metadata.width > RECEIPT_SIZE.width) {
       pipeline = pipeline.resize({
         width: RECEIPT_SIZE.width,
-        height: null, // Maintain aspect ratio
-        fit: RECEIPT_SIZE.fit,
+        height: null,
+        fit: 'inside',
         withoutEnlargement: true,
       });
     }
 
-    // Convert to JPEG with optimization
+    // Convert to JPEG (no mozjpeg for speed)
     pipeline = pipeline.jpeg({
       quality: RECEIPT_SIZE.quality,
-      mozjpeg: true,        // Better compression
-      progressive: true,    // Progressive loading
+      progressive: true,
     });
 
-    // Process
-    const buffer = await pipeline.toBuffer();
-    const processedMetadata = await sharp(buffer).metadata();
+    // Get buffer and metadata in single operation
+    const { data: buffer, info } = await pipeline.toBuffer({ resolveWithObject: true });
 
     const duration = Date.now() - startTime;
-    console.log('[Receipt Processor] Processing complete:', {
-      width: processedMetadata.width,
-      height: processedMetadata.height,
-      sizeKB: Math.round(buffer.length / 1024),
-      durationMs: duration,
-    });
 
     return {
       buffer,
-      width: processedMetadata.width,
-      height: processedMetadata.height,
+      width: info.width,
+      height: info.height,
       size: buffer.length,
       format: 'jpeg',
       duration,
@@ -452,7 +384,6 @@ module.exports = {
   validateImage,
   quickOptimize,
   processReceiptImage,
-  convertHeicIfNeeded,
   IMAGE_SIZES,
   MAX_ORIGINAL_SIZE,
 };

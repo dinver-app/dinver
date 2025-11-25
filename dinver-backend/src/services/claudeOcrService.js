@@ -1,5 +1,4 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const { convertHeicIfNeeded } = require('../../utils/imageProcessor');
 
 let anthropic = null;
 // Using Haiku 4.5 for best price/performance ratio for OCR tasks
@@ -45,17 +44,6 @@ const extractReceiptWithClaude = async (
   try {
     console.log('[Claude OCR] Starting receipt extraction...');
     const startTime = Date.now();
-
-    // Convert HEIC to JPEG if needed (before any processing)
-    const { buffer: convertedBuffer, converted } = await convertHeicIfNeeded(
-      imageBuffer,
-      mimeType,
-    );
-    if (converted) {
-      imageBuffer = convertedBuffer;
-      mimeType = 'image/jpeg'; // Update mime type after conversion
-      console.log('[Claude OCR] HEIC converted to JPEG');
-    }
 
     // Check image size and normalize format
     // Claude API requires media_type to match actual image format
