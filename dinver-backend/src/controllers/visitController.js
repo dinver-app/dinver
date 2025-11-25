@@ -1688,34 +1688,57 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
 }
 
 /**
- * Get user's buddies (users they've tagged in visits)
+ * Get user's buddies (mutual follows - users who follow each other)
  * GET /api/app/users/buddies
  */
 const getUserBuddies = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Find all unique buddies from user's visits
-    const visits = await Visit.findAll({
-      where: { userId },
-      attributes: ['taggedBuddies'],
+    // Find all users that this user follows
+    const following = await UserFollow.findAll({
+      where: { followerId: userId },
+      attributes: ['followingId'],
     });
 
-    // Extract unique user IDs from taggedBuddies
-    const buddyIds = new Set();
-    visits.forEach((visit) => {
-      if (visit.taggedBuddies && Array.isArray(visit.taggedBuddies)) {
-        visit.taggedBuddies.forEach((id) => buddyIds.add(id));
-      }
+    const followingIds = following.map((f) => f.followingId);
+
+    if (followingIds.length === 0) {
+      return res.json({ buddies: [] });
+    }
+
+    // Find which of those users follow back (mutual follow = buddy)
+    const mutualFollows = await UserFollow.findAll({
+      where: {
+        followerId: followingIds,
+        followingId: userId,
+      },
+      attributes: ['followerId'],
     });
+
+    const buddyIds = mutualFollows.map((f) => f.followerId);
+
+    if (buddyIds.length === 0) {
+      return res.json({ buddies: [] });
+    }
 
     // Fetch user details for all buddies
     const buddies = await User.findAll({
-      where: { id: Array.from(buddyIds) },
+      where: { id: buddyIds },
       attributes: ['id', 'name', 'username', 'profileImage'],
     });
 
-    res.json({ buddies });
+    // Add profile image URLs
+    const buddiesWithUrls = buddies.map((buddy) => ({
+      id: buddy.id,
+      name: buddy.name,
+      username: buddy.username,
+      profileImage: buddy.profileImage
+        ? getMediaUrl(buddy.profileImage, 'image')
+        : null,
+    }));
+
+    res.json({ buddies: buddiesWithUrls });
   } catch (error) {
     console.error('Error fetching user buddies:', error);
     res.status(500).json({ error: 'Failed to fetch buddies' });
