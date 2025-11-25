@@ -4,6 +4,8 @@ const {
   UserFavorite,
   User,
   Receipt,
+  UserSettings,
+  UserFollow,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const { uploadVariantsToS3 } = require('../../utils/s3Upload');
@@ -677,6 +679,7 @@ const getUserVisits = async (req, res) => {
             'priceLevel',
             'address',
             'place',
+            'isClaimed',
             'thumbnailUrl',
             'userRatingsTotal',
           ],
@@ -1726,6 +1729,149 @@ const getUserBuddies = async (req, res) => {
   }
 };
 
+/**
+ * Helper function to check if viewer can see target user's profile
+ * @param {string} targetUserId - User whose profile is being viewed
+ * @param {string|null} viewerUserId - User viewing the profile (null if unauthenticated)
+ * @returns {Promise<{canView: boolean, reason?: string}>}
+ */
+const canViewUserProfile = async (targetUserId, viewerUserId) => {
+  // Owner can always view their own profile
+  if (viewerUserId && targetUserId === viewerUserId) {
+    return { canView: true };
+  }
+
+  // Get target user's privacy settings
+  const userSettings = await UserSettings.findOne({
+    where: { userId: targetUserId },
+  });
+
+  if (!userSettings) {
+    return { canView: false, reason: 'User settings not found' };
+  }
+
+  const profileVisibility = userSettings.profileVisibility;
+
+  // Public profile - everyone can see (including unauthenticated)
+  if (profileVisibility === 'public') {
+    return { canView: true };
+  }
+
+  // Private profiles require authentication
+  if (!viewerUserId) {
+    return { canView: false, reason: 'Authentication required for non-public profile' };
+  }
+
+  // Followers only - check if viewer follows target user
+  if (profileVisibility === 'followers') {
+    const isFollowing = await UserFollow.findOne({
+      where: {
+        followerId: viewerUserId,
+        followingId: targetUserId,
+      },
+    });
+
+    if (!isFollowing) {
+      return { canView: false, reason: 'You must follow this user to view their profile' };
+    }
+    return { canView: true };
+  }
+
+  // Buddies only - check if users follow each other (mutual follow)
+  if (profileVisibility === 'buddies') {
+    const [viewerFollowsTarget, targetFollowsViewer] = await Promise.all([
+      UserFollow.findOne({
+        where: {
+          followerId: viewerUserId,
+          followingId: targetUserId,
+        },
+      }),
+      UserFollow.findOne({
+        where: {
+          followerId: targetUserId,
+          followingId: viewerUserId,
+        },
+      }),
+    ]);
+
+    if (!viewerFollowsTarget || !targetFollowsViewer) {
+      return { canView: false, reason: 'You must be buddies (mutual follow) to view this profile' };
+    }
+    return { canView: true };
+  }
+
+  return { canView: false, reason: 'Invalid privacy setting' };
+};
+
+/**
+ * Get other user's visits (with privacy check)
+ * GET /api/app/users/:userId/visits
+ */
+const getOtherUserVisits = async (req, res) => {
+  try {
+    const { userId: targetUserId } = req.params;
+    const viewerUserId = req.user?.id || null;
+
+    // Check if target user exists
+    const targetUser = await User.findByPk(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check privacy settings
+    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    if (!canView) {
+      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+    }
+
+    // Fetch APPROVED visits only (public shouldn't see pending/rejected)
+    const visits = await Visit.findAll({
+      where: {
+        userId: targetUserId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'rating',
+            'priceLevel',
+            'address',
+            'place',
+            'isClaimed',
+            'thumbnailUrl',
+            'userRatingsTotal',
+          ],
+        },
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    const visitsWithUrls = visits.map((visit) => ({
+      id: visit.id,
+      submittedAt: visit.submittedAt,
+      reviewedAt: visit.reviewedAt,
+      wasInMustVisit: visit.wasInMustVisit,
+      restaurant: visit.restaurant
+        ? {
+            ...visit.restaurant.get(),
+            thumbnailUrl: visit.restaurant.thumbnailUrl
+              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+              : null,
+          }
+        : null,
+    }));
+
+    res.status(200).json(visitsWithUrls);
+  } catch (error) {
+    console.error('Error fetching user visits:', error);
+    res.status(500).json({ error: 'Failed to fetch visits' });
+  }
+};
+
 module.exports = {
   uploadReceiptAndCreateVisit,
   createVisitFromReceipt,
@@ -1736,4 +1882,5 @@ module.exports = {
   checkHasVisited,
   deleteVisit,
   getUserBuddies,
+  getOtherUserVisits,
 };
