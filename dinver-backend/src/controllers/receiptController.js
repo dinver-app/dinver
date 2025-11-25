@@ -822,20 +822,31 @@ const uploadReceipt = async (req, res) => {
 };
 
 /**
- * Get user's receipts
+ * Get user's receipts (all statuses - pending, approved, rejected)
+ * This is for the "My Receipts" list where user sees all their uploaded receipts
  */
 const getUserReceipts = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
+
+    const whereClause = { userId };
+    if (status) {
+      whereClause.status = status;
+    }
 
     const receipts = await Receipt.findAndCountAll({
-      where: { userId },
+      where: whereClause,
       include: [
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'address', 'place', 'thumbnailUrl', 'isClaimed'],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -843,12 +854,34 @@ const getUserReceipts = async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
-    // Transform image URLs to signed URLs
-    const transformedReceipts = receipts.rows.map((receipt) => {
-      const receiptData = receipt.toJSON();
-      receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
-      return receiptData;
-    });
+    // Transform receipts with image URLs
+    const transformedReceipts = receipts.rows.map((receipt) => ({
+      id: receipt.id,
+      status: receipt.status,
+      submittedAt: receipt.submittedAt,
+      verifiedAt: receipt.verifiedAt,
+      rejectionReason: receipt.rejectionReason,
+      totalAmount: receipt.totalAmount,
+      merchantName: receipt.merchantName,
+      issueDate: receipt.issueDate,
+      pointsAwarded: receipt.pointsAwarded,
+      imageUrl: receipt.imageUrl ? getMediaUrl(receipt.imageUrl, 'image') : null,
+      thumbnailUrl: receipt.thumbnailUrl ? getMediaUrl(receipt.thumbnailUrl, 'image') : null,
+      restaurant: receipt.restaurant
+        ? {
+            id: receipt.restaurant.id,
+            name: receipt.restaurant.name,
+            address: receipt.restaurant.address,
+            place: receipt.restaurant.place,
+            thumbnailUrl: receipt.restaurant.thumbnailUrl
+              ? getMediaUrl(receipt.restaurant.thumbnailUrl, 'image')
+              : null,
+            isClaimed: receipt.restaurant.isClaimed,
+          }
+        : null,
+      visitId: receipt.visit?.id || null,
+      visitStatus: receipt.visit?.status || null,
+    }));
 
     res.json({
       receipts: transformedReceipts,
