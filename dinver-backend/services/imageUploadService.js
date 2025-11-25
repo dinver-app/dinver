@@ -141,25 +141,19 @@ async function uploadImageSync(file, folder, options = {}) {
  */
 async function uploadImageQuick(file, folder, options = {}) {
   const { maxWidth = 1600, quality = 80 } = options;
-  const timingStart = Date.now();
 
   try {
     // Quick optimize
-    let stepStart = Date.now();
     const optimizedBuffer = await quickOptimize(file.buffer, {
       maxWidth,
       quality,
     });
-    console.log(`[UPLOAD TIMING]   - quickOptimize: ${Date.now() - stepStart}ms (input: ${Math.round(file.buffer.length / 1024)}KB, output: ${Math.round(optimizedBuffer.length / 1024)}KB)`);
 
     // Generate filename
     const fileName = `${folder}/${uuidv4()}.jpg`;
 
     // Upload to S3
-    stepStart = Date.now();
     const key = await uploadBufferToS3(optimizedBuffer, fileName, 'image/jpeg');
-    console.log(`[UPLOAD TIMING]   - S3 upload: ${Date.now() - stepStart}ms`);
-    console.log(`[UPLOAD TIMING]   - uploadImageQuick TOTAL: ${Date.now() - timingStart}ms`);
 
     return {
       status: 'completed',

@@ -1177,10 +1177,6 @@ const deleteVisit = async (req, res) => {
  */
 const uploadReceiptAndCreateVisit = async (req, res) => {
   const { sequelize } = require('../../models');
-  const totalStart = Date.now();
-  console.log(`\n[UPLOAD TIMING] ========== START ==========`);
-  console.log(`[UPLOAD TIMING] File: ${req.file?.originalname}, Size: ${req.file?.size ? Math.round(req.file.size / 1024) + 'KB' : 'N/A'}, MimeType: ${req.file?.mimetype}`);
-
   const transaction = await sequelize.transaction();
 
   try {
@@ -1194,18 +1190,14 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     }
 
     // === STEP 1: Calculate hash (duplicate detection) ===
-    let stepStart = Date.now();
     const imageHash = crypto
       .createHash('md5')
       .update(file.buffer)
       .digest('hex');
-    console.log(`[UPLOAD TIMING] Step 1 - MD5 hash: ${Date.now() - stepStart}ms`);
 
-    stepStart = Date.now();
     const exactDuplicate = await Receipt.findOne({
       where: { imageHash, userId },
     });
-    console.log(`[UPLOAD TIMING] Step 1 - Duplicate check DB: ${Date.now() - stepStart}ms`);
 
     if (exactDuplicate) {
       await transaction.rollback();
@@ -1219,7 +1211,6 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     let imageUploadResult;
 
     try {
-      stepStart = Date.now();
       imageUploadResult = await uploadImage(file, folder, {
         strategy: UPLOAD_STRATEGY.QUICK,
         entityType: 'receipt',
@@ -1227,9 +1218,7 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
         priority: 15,
         maxWidth: 2000, // Larger for OCR accuracy
         quality: 88, // Higher quality for text recognition
-        mimeType: file.mimetype,
       });
-      console.log(`[UPLOAD TIMING] Step 2+3 - uploadImage TOTAL: ${Date.now() - stepStart}ms`);
     } catch (uploadError) {
       await transaction.rollback();
       console.error(
@@ -1245,7 +1234,6 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     const imageUrl = imageUploadResult.imageUrl;
 
     // === STEP 4: Create Visit (WITHOUT restaurant yet) ===
-    stepStart = Date.now();
     const visit = await Visit.create(
       {
         userId,
@@ -1258,10 +1246,8 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
       },
       { transaction },
     );
-    console.log(`[UPLOAD TIMING] Step 4 - Create Visit DB: ${Date.now() - stepStart}ms`);
 
     // === STEP 5: Create Receipt (linked to Visit) ===
-    stepStart = Date.now();
     const receipt = await Receipt.create(
       {
         userId,
@@ -1279,12 +1265,9 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
       },
       { transaction },
     );
-    console.log(`[UPLOAD TIMING] Step 5 - Create Receipt DB: ${Date.now() - stepStart}ms`);
 
     // === COMMIT TRANSACTION ===
-    stepStart = Date.now();
     await transaction.commit();
-    console.log(`[UPLOAD TIMING] Step 6 - Transaction commit: ${Date.now() - stepStart}ms`);
 
     // === STEP 6: Background OCR (korisnik ne čeka!) ===
     // Copy buffer BEFORE sending response to ensure it persists
@@ -1310,7 +1293,6 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     });
 
     // === STEP 7: Return SUCCESS immediately! ===
-    console.log(`[UPLOAD TIMING] ========== TOTAL: ${Date.now() - totalStart}ms ==========\n`);
     return res.status(201).json({
       visitId: visit.id,
       receiptId: receipt.id,
@@ -1319,7 +1301,6 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error('[Upload & Create Visit] Failed:', error);
-    console.log(`[UPLOAD TIMING] ========== FAILED after ${Date.now() - totalStart}ms ==========\n`);
     res.status(500).json({
       error: 'Failed to process receipt',
       details: error.message,
