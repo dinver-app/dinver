@@ -104,8 +104,12 @@ Authorization: Bearer {token}
 | partySize | number | No | Broj osoba (default: 2) |
 | mealType | string | No | Vrsta obroka: breakfast, brunch, lunch, dinner, coffee, snack |
 | visibility | string | No | Tko može vidjeti: ALL, FOLLOWERS, BUDDIES (default: ALL) |
-| images | file[] | No | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
+| images | file[] | Conditional | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
 | captions | string | No | JSON array ili comma-separated captions za slike |
+
+**Content Validation:**
+- Mora imati **barem 1 sliku** ILI **opis s minimalno 50 znakova** (ili oboje)
+- Nije dozvoljeno kreirati Experience bez sadržaja
 
 **Response (201):**
 
@@ -173,7 +177,8 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
         "place": "Zagreb",
         "thumbnailUrl": "url",
         "latitude": 45.815,
-        "longitude": 15.982
+        "longitude": 15.982,
+        "isClaimed": true
       },
       "media": [
         {

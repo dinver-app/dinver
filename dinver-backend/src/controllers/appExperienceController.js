@@ -97,6 +97,23 @@ const createExperience = async (req, res) => {
       });
     }
 
+    // Content validation: must have at least 1 image OR description with min 50 characters
+    const hasImages = files.length > 0;
+    const descriptionLength = description ? description.trim().length : 0;
+    const hasValidDescription = descriptionLength >= 50;
+
+    if (!hasImages && !hasValidDescription) {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: 'Experience must have at least 1 image or a description with minimum 50 characters',
+        details: {
+          hasImages: false,
+          descriptionLength,
+          minDescriptionLength: 50,
+        },
+      });
+    }
+
     // Find the Visit
     const visit = await Visit.findOne({
       where: {
@@ -267,7 +284,7 @@ const getExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
         },
         {
           model: ExperienceMedia,
@@ -387,7 +404,7 @@ const getExperienceFeed = async (req, res) => {
     const restaurantInclude = {
       model: Restaurant,
       as: 'restaurant',
-      attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl', 'latitude', 'longitude'],
+      attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
       required: true,
     };
 
@@ -607,7 +624,7 @@ const getUserExperiences = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place'],
+          attributes: ['id', 'name', 'slug', 'place', 'isClaimed'],
         },
         {
           model: ExperienceMedia,
