@@ -14,15 +14,30 @@ const {
   Visit,
   MenuItem,
   UserFollow,
+  sequelize,
 } = require('../../models');
-const { Op } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const { uploadImage, UPLOAD_STRATEGY } = require('../../services/imageUploadService');
 
 /**
- * Create Experience for a Visit
+ * Create Experience with images in one request
  * POST /api/app/experiences
+ *
+ * Multipart form data:
+ * - visitId: UUID
+ * - foodRating: 1.0-10.0
+ * - ambienceRating: 1.0-10.0
+ * - serviceRating: 1.0-10.0
+ * - description: string (optional)
+ * - partySize: number (optional, default 2)
+ * - mealType: string (optional)
+ * - visibility: ALL|FOLLOWERS|BUDDIES (optional, default ALL)
+ * - images: file[] (up to 6 images)
+ * - captions: string[] (optional, caption for each image)
  */
 const createExperience = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
   try {
     const userId = req.user.id;
     const {
@@ -36,8 +51,21 @@ const createExperience = async (req, res) => {
       visibility,
     } = req.body;
 
+    // Parse captions - can be JSON array or comma-separated
+    let captions = [];
+    if (req.body.captions) {
+      try {
+        captions = JSON.parse(req.body.captions);
+      } catch {
+        captions = req.body.captions.split(',').map((c) => c.trim());
+      }
+    }
+
+    const files = req.files || [];
+
     // Validation
     if (!visitId) {
+      await transaction.rollback();
       return res.status(400).json({
         error: 'Visit ID is required',
       });
@@ -45,6 +73,7 @@ const createExperience = async (req, res) => {
 
     // Ratings validation (1.0-10.0)
     if (!foodRating || !ambienceRating || !serviceRating) {
+      await transaction.rollback();
       return res.status(400).json({
         error: 'All ratings are required (foodRating, ambienceRating, serviceRating)',
       });
@@ -52,33 +81,44 @@ const createExperience = async (req, res) => {
 
     const ratings = [foodRating, ambienceRating, serviceRating];
     for (const rating of ratings) {
-      if (rating < 1.0 || rating > 10.0) {
+      if (parseFloat(rating) < 1.0 || parseFloat(rating) > 10.0) {
+        await transaction.rollback();
         return res.status(400).json({
           error: 'Ratings must be between 1.0 and 10.0',
         });
       }
     }
 
+    // Max 6 images
+    if (files.length > 6) {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: 'Maximum 6 images allowed',
+      });
+    }
+
     // Find the Visit
     const visit = await Visit.findOne({
       where: {
         id: visitId,
-        userId, // Must be owned by this user
+        userId,
       },
       include: [
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'place'],
+          attributes: ['id', 'name', 'place', 'latitude', 'longitude'],
         },
         {
           model: Experience,
           as: 'experience',
         },
       ],
+      transaction,
     });
 
     if (!visit) {
+      await transaction.rollback();
       return res.status(404).json({
         error: 'Visit not found',
       });
@@ -86,6 +126,7 @@ const createExperience = async (req, res) => {
 
     // Check if Visit already has an Experience
     if (visit.experience) {
+      await transaction.rollback();
       return res.status(400).json({
         error: 'This visit already has an experience',
         experienceId: visit.experience.id,
@@ -100,6 +141,7 @@ const createExperience = async (req, res) => {
     // Validate mealType
     const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'];
     if (mealType && !validMealTypes.includes(mealType)) {
+      await transaction.rollback();
       return res.status(400).json({
         error: `Invalid meal type. Must be one of: ${validMealTypes.join(', ')}`,
       });
@@ -107,328 +149,100 @@ const createExperience = async (req, res) => {
 
     // Validate visibility
     const validVisibilities = ['ALL', 'FOLLOWERS', 'BUDDIES'];
-    const finalVisibility = visibility && validVisibilities.includes(visibility.toUpperCase())
-      ? visibility.toUpperCase()
-      : 'ALL';
+    const finalVisibility =
+      visibility && validVisibilities.includes(visibility.toUpperCase())
+        ? visibility.toUpperCase()
+        : 'ALL';
+
+    // Determine status based on Visit approval
+    // If Visit is APPROVED, Experience is immediately APPROVED
+    // Otherwise, Experience is PENDING until Visit is approved
+    const status = visit.status === 'APPROVED' ? 'APPROVED' : 'PENDING';
+    const publishedAt = status === 'APPROVED' ? new Date() : null;
 
     // Create Experience
-    const experience = await Experience.create({
-      userId,
-      visitId,
-      restaurantId: visit.restaurantId,
-      status: 'DRAFT', // Start as DRAFT, will be PENDING/APPROVED after publish
-      description: description || null,
-      foodRating: parseFloat(foodRating),
-      ambienceRating: parseFloat(ambienceRating),
-      serviceRating: parseFloat(serviceRating),
-      overallRating,
-      partySize: partySize || 2,
-      mealType: mealType || null,
-      visibility: finalVisibility,
-      cityCached: visit.restaurant?.place || null,
-    });
+    const experience = await Experience.create(
+      {
+        userId,
+        visitId,
+        restaurantId: visit.restaurantId,
+        status,
+        description: description || null,
+        foodRating: parseFloat(foodRating),
+        ambienceRating: parseFloat(ambienceRating),
+        serviceRating: parseFloat(serviceRating),
+        overallRating,
+        partySize: partySize ? parseInt(partySize) : 2,
+        mealType: mealType || null,
+        visibility: finalVisibility,
+        cityCached: visit.restaurant?.place || null,
+        publishedAt,
+      },
+      { transaction }
+    );
+
+    // Upload images and create ExperienceMedia records
+    const mediaRecords = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const caption = captions[i] || null;
+
+      // Upload image
+      const folder = `experiences/${userId}`;
+      const imageResult = await uploadImage(file, folder, {
+        strategy: UPLOAD_STRATEGY.FULL,
+        entityType: 'experience',
+        entityId: experience.id,
+        maxWidth: 1600,
+        quality: 85,
+        mimeType: file.mimetype,
+      });
+
+      // Create ExperienceMedia record
+      const media = await ExperienceMedia.create(
+        {
+          experienceId: experience.id,
+          kind: 'IMAGE',
+          storageKey: imageResult.imageUrl,
+          cdnUrl: imageResult.imageUrl,
+          width: imageResult.width || null,
+          height: imageResult.height || null,
+          orderIndex: i,
+          transcodingStatus: 'DONE',
+          caption,
+          thumbnails: imageResult.thumbnailUrl ? [{ cdnUrl: imageResult.thumbnailUrl }] : null,
+        },
+        { transaction }
+      );
+
+      mediaRecords.push({
+        id: media.id,
+        imageUrl: imageResult.imageUrl,
+        thumbnailUrl: imageResult.thumbnailUrl,
+        orderIndex: i,
+        caption,
+      });
+    }
+
+    await transaction.commit();
 
     res.status(201).json({
       experienceId: experience.id,
-      message: 'Experience created. Add images to complete.',
+      status,
       overallRating,
+      imagesUploaded: mediaRecords.length,
+      media: mediaRecords,
+      message:
+        status === 'APPROVED'
+          ? 'Experience published successfully!'
+          : 'Experience saved! Will be visible once receipt is approved.',
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('[Create Experience] Error:', error);
     res.status(500).json({
       error: 'Failed to create experience',
-      details: error.message,
-    });
-  }
-};
-
-/**
- * Upload media for Experience
- * POST /api/app/experiences/:experienceId/media
- *
- * Handles image uploads with caption ("Što je na slici?")
- */
-const uploadExperienceMedia = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { experienceId } = req.params;
-    const { caption, menuItemId } = req.body;
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({
-        error: 'Image file is required',
-      });
-    }
-
-    // Find the Experience
-    const experience = await Experience.findOne({
-      where: {
-        id: experienceId,
-        userId,
-      },
-      include: [
-        {
-          model: ExperienceMedia,
-          as: 'media',
-        },
-      ],
-    });
-
-    if (!experience) {
-      return res.status(404).json({
-        error: 'Experience not found',
-      });
-    }
-
-    // Check max 6 images
-    if (experience.media && experience.media.length >= 6) {
-      return res.status(400).json({
-        error: 'Maximum 6 images allowed per experience',
-      });
-    }
-
-    // Upload image using existing service
-    const folder = `experiences/${userId}`;
-    const imageResult = await uploadImage(file, folder, {
-      strategy: UPLOAD_STRATEGY.FULL, // Use FULL for all variants
-      entityType: 'experience',
-      entityId: experienceId,
-      maxWidth: 1600,
-      quality: 85,
-      mimeType: file.mimetype,
-    });
-
-    // Determine order index
-    const orderIndex = experience.media ? experience.media.length : 0;
-
-    // Validate menuItemId if provided
-    let validMenuItemId = null;
-    if (menuItemId) {
-      const menuItem = await MenuItem.findByPk(menuItemId);
-      if (menuItem) {
-        validMenuItemId = menuItemId;
-      }
-    }
-
-    // Create ExperienceMedia record
-    const media = await ExperienceMedia.create({
-      experienceId,
-      kind: 'IMAGE',
-      storageKey: imageResult.imageUrl,
-      cdnUrl: imageResult.imageUrl,
-      width: imageResult.width || null,
-      height: imageResult.height || null,
-      orderIndex,
-      transcodingStatus: 'DONE',
-      caption: caption || null,
-      menuItemId: validMenuItemId,
-      thumbnails: imageResult.thumbnailUrl
-        ? [{ cdnUrl: imageResult.thumbnailUrl }]
-        : null,
-    });
-
-    res.status(201).json({
-      mediaId: media.id,
-      imageUrl: imageResult.imageUrl,
-      thumbnailUrl: imageResult.thumbnailUrl,
-      orderIndex,
-      message: 'Image uploaded successfully',
-    });
-  } catch (error) {
-    console.error('[Upload Experience Media] Error:', error);
-    res.status(500).json({
-      error: 'Failed to upload image',
-      details: error.message,
-    });
-  }
-};
-
-/**
- * Publish Experience (finalize and submit)
- * POST /api/app/experiences/:experienceId/publish
- *
- * Moves experience from DRAFT to PENDING status
- */
-const publishExperience = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { experienceId } = req.params;
-
-    // Find the Experience
-    const experience = await Experience.findOne({
-      where: {
-        id: experienceId,
-        userId,
-      },
-      include: [
-        {
-          model: ExperienceMedia,
-          as: 'media',
-        },
-        {
-          model: Visit,
-          as: 'visit',
-        },
-      ],
-    });
-
-    if (!experience) {
-      return res.status(404).json({
-        error: 'Experience not found',
-      });
-    }
-
-    if (experience.status !== 'DRAFT') {
-      return res.status(400).json({
-        error: 'Experience is already published or pending',
-        status: experience.status,
-      });
-    }
-
-    // Experience can be published without images (images are optional)
-    // But it needs ratings (which are set during creation)
-
-    // Determine status based on Visit approval
-    // If Visit is APPROVED, Experience can be published immediately
-    // If Visit is still PENDING, Experience stays PENDING until Visit is approved
-    const newStatus = experience.visit?.status === 'APPROVED' ? 'APPROVED' : 'PENDING';
-    const publishedAt = newStatus === 'APPROVED' ? new Date() : null;
-
-    await experience.update({
-      status: newStatus,
-      publishedAt,
-    });
-
-    res.status(200).json({
-      message:
-        newStatus === 'APPROVED'
-          ? 'Experience published successfully!'
-          : 'Experience saved! Will be visible once receipt is approved.',
-      status: newStatus,
-      experienceId: experience.id,
-    });
-  } catch (error) {
-    console.error('[Publish Experience] Error:', error);
-    res.status(500).json({
-      error: 'Failed to publish experience',
-      details: error.message,
-    });
-  }
-};
-
-/**
- * Update Experience (while still in DRAFT)
- * PUT /api/app/experiences/:experienceId
- */
-const updateExperience = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { experienceId } = req.params;
-    const {
-      foodRating,
-      ambienceRating,
-      serviceRating,
-      description,
-      partySize,
-      mealType,
-      visibility,
-    } = req.body;
-
-    // Find the Experience
-    const experience = await Experience.findOne({
-      where: {
-        id: experienceId,
-        userId,
-      },
-    });
-
-    if (!experience) {
-      return res.status(404).json({
-        error: 'Experience not found',
-      });
-    }
-
-    // Only allow updates while in DRAFT status
-    if (experience.status !== 'DRAFT') {
-      return res.status(400).json({
-        error: 'Cannot update experience after publishing',
-        status: experience.status,
-      });
-    }
-
-    // Build update object
-    const updates = {};
-
-    if (foodRating !== undefined) {
-      if (foodRating < 1.0 || foodRating > 10.0) {
-        return res.status(400).json({ error: 'Food rating must be between 1.0 and 10.0' });
-      }
-      updates.foodRating = parseFloat(foodRating);
-    }
-
-    if (ambienceRating !== undefined) {
-      if (ambienceRating < 1.0 || ambienceRating > 10.0) {
-        return res.status(400).json({ error: 'Ambience rating must be between 1.0 and 10.0' });
-      }
-      updates.ambienceRating = parseFloat(ambienceRating);
-    }
-
-    if (serviceRating !== undefined) {
-      if (serviceRating < 1.0 || serviceRating > 10.0) {
-        return res.status(400).json({ error: 'Service rating must be between 1.0 and 10.0' });
-      }
-      updates.serviceRating = parseFloat(serviceRating);
-    }
-
-    // Recalculate overall if any rating changed
-    if (updates.foodRating || updates.ambienceRating || updates.serviceRating) {
-      const newFood = updates.foodRating || experience.foodRating;
-      const newAmbience = updates.ambienceRating || experience.ambienceRating;
-      const newService = updates.serviceRating || experience.serviceRating;
-      updates.overallRating = parseFloat(
-        ((parseFloat(newFood) + parseFloat(newAmbience) + parseFloat(newService)) / 3).toFixed(1)
-      );
-    }
-
-    if (description !== undefined) {
-      updates.description = description;
-    }
-
-    if (partySize !== undefined) {
-      updates.partySize = parseInt(partySize);
-    }
-
-    if (mealType !== undefined) {
-      const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'];
-      if (mealType && !validMealTypes.includes(mealType)) {
-        return res.status(400).json({
-          error: `Invalid meal type. Must be one of: ${validMealTypes.join(', ')}`,
-        });
-      }
-      updates.mealType = mealType;
-    }
-
-    if (visibility !== undefined) {
-      const validVisibilities = ['ALL', 'FOLLOWERS', 'BUDDIES'];
-      if (!validVisibilities.includes(visibility.toUpperCase())) {
-        return res.status(400).json({
-          error: `Invalid visibility. Must be one of: ${validVisibilities.join(', ')}`,
-        });
-      }
-      updates.visibility = visibility.toUpperCase();
-    }
-
-    await experience.update(updates);
-
-    res.status(200).json({
-      message: 'Experience updated',
-      experienceId: experience.id,
-    });
-  } catch (error) {
-    console.error('[Update Experience] Error:', error);
-    res.status(500).json({
-      error: 'Failed to update experience',
       details: error.message,
     });
   }
@@ -453,7 +267,7 @@ const getExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl'],
+          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl', 'latitude', 'longitude'],
         },
         {
           model: ExperienceMedia,
@@ -482,7 +296,7 @@ const getExperience = async (req, res) => {
       });
     }
 
-    // Check visibility
+    // Check visibility - only show approved experiences to non-owners
     if (experience.status !== 'APPROVED' && experience.userId !== userId) {
       return res.status(404).json({
         error: 'Experience not found',
@@ -492,7 +306,6 @@ const getExperience = async (req, res) => {
     // Check visibility settings
     if (experience.visibility !== 'ALL' && experience.userId !== userId) {
       if (experience.visibility === 'FOLLOWERS') {
-        // Check if user follows the author
         const follows = await UserFollow.findOne({
           where: {
             followerId: userId,
@@ -505,9 +318,7 @@ const getExperience = async (req, res) => {
           });
         }
       } else if (experience.visibility === 'BUDDIES') {
-        // Check if user is in author's buddies (tagged in visits)
-        const { Visit: VisitModel } = require('../../models');
-        const isBuddy = await VisitModel.findOne({
+        const isBuddy = await Visit.findOne({
           where: {
             userId: experience.userId,
             taggedBuddies: { [Op.contains]: [userId] },
@@ -523,7 +334,6 @@ const getExperience = async (req, res) => {
 
     // Check if user has liked
     let hasLiked = false;
-
     if (userId) {
       const like = await ExperienceLike.findOne({
         where: { experienceId, userId },
@@ -547,29 +357,56 @@ const getExperience = async (req, res) => {
 };
 
 /**
- * Get Experience Feed
+ * Get Experience Feed with distance-based filtering
  * GET /api/app/experiences/feed
  *
- * Chronological feed of approved experiences
+ * Query params:
+ * - lat: user latitude
+ * - lng: user longitude
+ * - distance: 20, 60, or "all" (km)
+ * - mealType: filter by meal type
+ * - limit: number of results (default 20)
+ * - offset: pagination offset
  */
 const getExperienceFeed = async (req, res) => {
   try {
     const userId = req.user?.id || null;
-    const { limit = 20, offset = 0, city, mealType } = req.query;
+    const { limit = 20, offset = 0, lat, lng, distance, mealType } = req.query;
 
     // Build where clause
     const where = {
       status: 'APPROVED',
     };
 
-    // Filter by city if provided
-    if (city) {
-      where.cityCached = city;
-    }
-
     // Filter by meal type if provided
     if (mealType) {
       where.mealType = mealType;
+    }
+
+    // Build restaurant include with distance filter
+    const restaurantInclude = {
+      model: Restaurant,
+      as: 'restaurant',
+      attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl', 'latitude', 'longitude'],
+      required: true,
+    };
+
+    // If lat/lng provided and distance is not "all", filter by distance
+    if (lat && lng && distance && distance !== 'all') {
+      const distanceKm = parseInt(distance);
+      const userLat = parseFloat(lat);
+      const userLng = parseFloat(lng);
+
+      // Haversine formula for distance calculation
+      restaurantInclude.where = literal(`
+        (6371 * acos(
+          cos(radians(${userLat})) *
+          cos(radians("Restaurant"."latitude")) *
+          cos(radians("Restaurant"."longitude") - radians(${userLng})) +
+          sin(radians(${userLat})) *
+          sin(radians("Restaurant"."latitude"))
+        )) <= ${distanceKm}
+      `);
     }
 
     // Get experiences
@@ -581,11 +418,7 @@ const getExperienceFeed = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'username', 'profileImage'],
         },
-        {
-          model: Restaurant,
-          as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl'],
-        },
+        restaurantInclude,
         {
           model: ExperienceMedia,
           as: 'media',
@@ -600,8 +433,7 @@ const getExperienceFeed = async (req, res) => {
 
     // Get liked status if user is logged in
     let likedIds = [];
-
-    if (userId) {
+    if (userId && experiences.length > 0) {
       const experienceIds = experiences.map((e) => e.id);
 
       const likes = await ExperienceLike.findAll({
@@ -614,11 +446,30 @@ const getExperienceFeed = async (req, res) => {
       likedIds = likes.map((l) => l.experienceId);
     }
 
-    // Add hasLiked to each experience
-    const experiencesWithStatus = experiences.map((exp) => ({
-      ...exp.toJSON(),
-      hasLiked: likedIds.includes(exp.id),
-    }));
+    // Calculate distance for each experience if coordinates provided
+    const experiencesWithStatus = experiences.map((exp) => {
+      const result = {
+        ...exp.toJSON(),
+        hasLiked: likedIds.includes(exp.id),
+      };
+
+      // Add distance if coordinates provided
+      if (lat && lng && exp.restaurant?.latitude && exp.restaurant?.longitude) {
+        const R = 6371; // Earth's radius in km
+        const dLat = ((exp.restaurant.latitude - parseFloat(lat)) * Math.PI) / 180;
+        const dLon = ((exp.restaurant.longitude - parseFloat(lng)) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((parseFloat(lat) * Math.PI) / 180) *
+            Math.cos((exp.restaurant.latitude * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        result.distanceKm = Math.round(R * c * 10) / 10; // Round to 1 decimal
+      }
+
+      return result;
+    });
 
     res.status(200).json({
       experiences: experiencesWithStatus,
@@ -626,6 +477,10 @@ const getExperienceFeed = async (req, res) => {
         limit: parseInt(limit),
         offset: parseInt(offset),
         hasMore: experiences.length === parseInt(limit),
+      },
+      filters: {
+        distance: distance || 'all',
+        mealType: mealType || null,
       },
     });
   } catch (error) {
@@ -766,8 +621,27 @@ const getUserExperiences = async (req, res) => {
       offset: parseInt(offset),
     });
 
+    // Get liked status
+    let likedIds = [];
+    if (currentUserId && experiences.length > 0) {
+      const experienceIds = experiences.map((e) => e.id);
+      const likes = await ExperienceLike.findAll({
+        where: {
+          experienceId: { [Op.in]: experienceIds },
+          userId: currentUserId,
+        },
+        attributes: ['experienceId'],
+      });
+      likedIds = likes.map((l) => l.experienceId);
+    }
+
+    const experiencesWithStatus = experiences.map((exp) => ({
+      ...exp.toJSON(),
+      hasLiked: likedIds.includes(exp.id),
+    }));
+
     res.status(200).json({
-      experiences,
+      experiences: experiencesWithStatus,
       pagination: {
         limit: parseInt(limit),
         offset: parseInt(offset),
@@ -817,7 +691,7 @@ const getRestaurantExperiences = async (req, res) => {
 
     // Get liked status if user is logged in
     let likedIds = [];
-    if (userId) {
+    if (userId && experiences.length > 0) {
       const experienceIds = experiences.map((e) => e.id);
       const likes = await ExperienceLike.findAll({
         where: {
@@ -841,17 +715,13 @@ const getRestaurantExperiences = async (req, res) => {
       avgOverall = 0;
     if (experiences.length > 0) {
       avgFood =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.foodRating) || 0), 0) /
-        experiences.length;
+        experiences.reduce((sum, e) => sum + (parseFloat(e.foodRating) || 0), 0) / experiences.length;
       avgAmbience =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.ambienceRating) || 0), 0) /
-        experiences.length;
+        experiences.reduce((sum, e) => sum + (parseFloat(e.ambienceRating) || 0), 0) / experiences.length;
       avgService =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.serviceRating) || 0), 0) /
-        experiences.length;
+        experiences.reduce((sum, e) => sum + (parseFloat(e.serviceRating) || 0), 0) / experiences.length;
       avgOverall =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.overallRating) || 0), 0) /
-        experiences.length;
+        experiences.reduce((sum, e) => sum + (parseFloat(e.overallRating) || 0), 0) / experiences.length;
     }
 
     res.status(200).json({
@@ -875,85 +745,6 @@ const getRestaurantExperiences = async (req, res) => {
     console.error('[Get Restaurant Experiences] Error:', error);
     res.status(500).json({
       error: 'Failed to get experiences',
-      details: error.message,
-    });
-  }
-};
-
-/**
- * Delete Experience Media
- * DELETE /api/app/experiences/:experienceId/media/:mediaId
- */
-const deleteExperienceMedia = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { experienceId, mediaId } = req.params;
-
-    // Find experience
-    const experience = await Experience.findOne({
-      where: {
-        id: experienceId,
-        userId,
-      },
-    });
-
-    if (!experience) {
-      return res.status(404).json({
-        error: 'Experience not found',
-      });
-    }
-
-    // Only allow deletion in DRAFT status
-    if (experience.status !== 'DRAFT') {
-      return res.status(400).json({
-        error: 'Cannot delete media after publishing',
-      });
-    }
-
-    // Find and delete media
-    const media = await ExperienceMedia.findOne({
-      where: {
-        id: mediaId,
-        experienceId,
-      },
-    });
-
-    if (!media) {
-      return res.status(404).json({
-        error: 'Media not found',
-      });
-    }
-
-    // Delete from S3
-    const { deleteFromS3 } = require('../../utils/s3Upload');
-    if (media.storageKey) {
-      try {
-        await deleteFromS3(media.storageKey);
-      } catch (s3Error) {
-        console.error('[Delete Experience Media] S3 error:', s3Error.message);
-      }
-    }
-
-    // Delete record
-    await media.destroy();
-
-    // Reorder remaining media
-    const remainingMedia = await ExperienceMedia.findAll({
-      where: { experienceId },
-      order: [['orderIndex', 'ASC']],
-    });
-
-    for (let i = 0; i < remainingMedia.length; i++) {
-      await remainingMedia[i].update({ orderIndex: i });
-    }
-
-    res.status(200).json({
-      message: 'Media deleted',
-    });
-  } catch (error) {
-    console.error('[Delete Experience Media] Error:', error);
-    res.status(500).json({
-      error: 'Failed to delete media',
       details: error.message,
     });
   }
@@ -990,17 +781,71 @@ const shareExperience = async (req, res) => {
   }
 };
 
+/**
+ * Delete Experience
+ * DELETE /api/app/experiences/:experienceId
+ *
+ * User can delete their own experience
+ */
+const deleteExperience = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { experienceId } = req.params;
+
+    const experience = await Experience.findOne({
+      where: {
+        id: experienceId,
+        userId,
+      },
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+        },
+      ],
+    });
+
+    if (!experience) {
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
+
+    // Delete media from S3
+    const { deleteFromS3 } = require('../../utils/s3Upload');
+    for (const media of experience.media) {
+      if (media.storageKey) {
+        try {
+          await deleteFromS3(media.storageKey);
+        } catch (s3Error) {
+          console.error('[Delete Experience] S3 error:', s3Error.message);
+        }
+      }
+    }
+
+    // Delete experience (CASCADE will delete media records)
+    await experience.destroy();
+
+    res.status(200).json({
+      message: 'Experience deleted',
+    });
+  } catch (error) {
+    console.error('[Delete Experience] Error:', error);
+    res.status(500).json({
+      error: 'Failed to delete experience',
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createExperience,
-  uploadExperienceMedia,
-  publishExperience,
-  updateExperience,
   getExperience,
   getExperienceFeed,
   likeExperience,
   unlikeExperience,
   getUserExperiences,
   getRestaurantExperiences,
-  deleteExperienceMedia,
   shareExperience,
+  deleteExperience,
 };
