@@ -47,7 +47,7 @@ Experience je recenzija restorana koja se kreira nakon što korisnik uploada ra�
 │                                                     │
 │ Vrsta obroka:                                       │
 │ [Doručak] [Brunch] [Ručak]                          │
-│ [Večera] [Piće]                                     │
+│ [Večera] [Nešto slatko] [Piće]                      │
 │                                                     │
 │ Slike (optional, max 6):                            │
 │ ┌─────┐ ┌─────┐ ┌─────┐                            │
@@ -100,7 +100,7 @@ Authorization: Bearer {token}
 | serviceRating | number | Yes | Ocjena usluge (1.0-10.0) |
 | description | string | **Yes** | Tekstualni opis doživljaja (min. 20 znakova) |
 | partySize | number | No | Broj osoba (default: 2) |
-| mealType | string | No | Vrsta obroka: breakfast, brunch, lunch, dinner, drinks |
+| mealType | string | No | Vrsta obroka: breakfast, brunch, lunch, dinner, sweet, drinks |
 | images | file[] | No | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
 | captions | string | No | JSON array captions za slike (po indexu) |
 | menuItemIds | string | No | JSON array UUID-ova menu itema za slike (po indexu) |
@@ -420,7 +420,7 @@ CREATE TABLE "Experiences" (
 
   -- Metadata
   partySize INTEGER DEFAULT 2,
-  mealType ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'drinks'),
+  mealType ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'sweet', 'drinks'),
 
   -- Engagement
   likesCount INTEGER DEFAULT 0,
@@ -603,13 +603,14 @@ const ExperienceForm = () => {
 
 ## Meal Type Opcije
 
-| Meal Type   | Opis      |
-| ----------- | --------- |
-| `breakfast` | Doručak   |
-| `brunch`    | Brunch    |
-| `lunch`     | Ručak     |
-| `dinner`    | Večera    |
-| `drinks`    | Piće      |
+| Meal Type   | Opis         |
+| ----------- | ------------ |
+| `breakfast` | Doručak      |
+| `brunch`    | Brunch       |
+| `lunch`     | Ručak        |
+| `dinner`    | Večera       |
+| `sweet`     | Nešto slatko |
+| `drinks`    | Piće         |
 
 ---
 

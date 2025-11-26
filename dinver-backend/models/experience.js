@@ -126,7 +126,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: 'Number of people in the group',
       },
       mealType: {
-        type: DataTypes.ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'drinks'),
+        type: DataTypes.ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'sweet', 'drinks'),
         allowNull: true,
       },
       // Cached data for filtering
