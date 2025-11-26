@@ -13,10 +13,10 @@ const {
   Restaurant,
   Visit,
   MenuItem,
-  UserFollow,
   sequelize,
 } = require('../../models');
-const { Op, literal } = require('sequelize');
+const { literal } = require('sequelize');
+const { Op } = require('sequelize');
 const { uploadImage, UPLOAD_STRATEGY } = require('../../services/imageUploadService');
 const { updateRestaurantDinverRating } = require('../services/dinverRatingService');
 
@@ -32,7 +32,6 @@ const { updateRestaurantDinverRating } = require('../services/dinverRatingServic
  * - description: string (optional)
  * - partySize: number (optional, default 2)
  * - mealType: string (optional)
- * - visibility: ALL|FOLLOWERS|BUDDIES (optional, default ALL)
  * - images: file[] (up to 6 images)
  * - captions: string[] (optional, caption for each image)
  */
@@ -49,7 +48,6 @@ const createExperience = async (req, res) => {
       description,
       partySize,
       mealType,
-      visibility,
     } = req.body;
 
     // Parse captions - can be JSON array or comma-separated
@@ -165,13 +163,6 @@ const createExperience = async (req, res) => {
       });
     }
 
-    // Validate visibility
-    const validVisibilities = ['ALL', 'FOLLOWERS', 'BUDDIES'];
-    const finalVisibility =
-      visibility && validVisibilities.includes(visibility.toUpperCase())
-        ? visibility.toUpperCase()
-        : 'ALL';
-
     // Determine status based on Visit approval
     // If Visit is APPROVED, Experience is immediately APPROVED
     // Otherwise, Experience is PENDING until Visit is approved
@@ -192,7 +183,6 @@ const createExperience = async (req, res) => {
         overallRating,
         partySize: partySize ? parseInt(partySize) : 2,
         mealType: mealType || null,
-        visibility: finalVisibility,
         cityCached: visit.restaurant?.place || null,
         publishedAt,
       },
@@ -321,40 +311,11 @@ const getExperience = async (req, res) => {
       });
     }
 
-    // Check visibility - only show approved experiences to non-owners
+    // Only show approved experiences to non-owners
     if (experience.status !== 'APPROVED' && experience.userId !== userId) {
       return res.status(404).json({
         error: 'Experience not found',
       });
-    }
-
-    // Check visibility settings
-    if (experience.visibility !== 'ALL' && experience.userId !== userId) {
-      if (experience.visibility === 'FOLLOWERS') {
-        const follows = await UserFollow.findOne({
-          where: {
-            followerId: userId,
-            followingId: experience.userId,
-          },
-        });
-        if (!follows) {
-          return res.status(403).json({
-            error: 'This experience is only visible to followers',
-          });
-        }
-      } else if (experience.visibility === 'BUDDIES') {
-        const isBuddy = await Visit.findOne({
-          where: {
-            userId: experience.userId,
-            taggedBuddies: { [Op.contains]: [userId] },
-          },
-        });
-        if (!isBuddy) {
-          return res.status(403).json({
-            error: 'This experience is only visible to buddies',
-          });
-        }
-      }
     }
 
     // Check if user has liked

@@ -129,11 +129,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'),
         allowNull: true,
       },
-      visibility: {
-        type: DataTypes.ENUM('ALL', 'FOLLOWERS', 'BUDDIES'),
-        allowNull: false,
-        defaultValue: 'ALL',
-      },
       // Cached data for filtering
       cityCached: {
         type: DataTypes.STRING(100),

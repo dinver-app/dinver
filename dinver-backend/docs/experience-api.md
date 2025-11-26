@@ -14,7 +14,7 @@ Experience je recenzija restorana koja se kreira nakon što korisnik uploada ra�
 - **Overall ocjena**: Automatski izračunat prosjek
 - **Opis**: Tekst opis doživljaja (optional)
 - **Slike**: Do 6 slika s opisima (optional)
-- **Metadata**: Broj osoba, vrsta obroka, visibility
+- **Metadata**: Broj osoba, vrsta obroka
 
 ---
 
@@ -47,9 +47,6 @@ Experience je recenzija restorana koja se kreira nakon što korisnik uploada ra�
 │ Vrsta obroka:                                       │
 │ [Doručak] [Brunch] [Ručak]                          │
 │ [Večera] [Kava] [Snack]                            │
-│                                                     │
-│ Tko može vidjeti?                                   │
-│ [Svi] [Followeri] [Buddies]                        │
 │                                                     │
 │ Slike (max 6):                                      │
 │ ┌─────┐ ┌─────┐ ┌─────┐                            │
@@ -103,7 +100,6 @@ Authorization: Bearer {token}
 | description | string | No | Tekstualni opis doživljaja |
 | partySize | number | No | Broj osoba (default: 2) |
 | mealType | string | No | Vrsta obroka: breakfast, brunch, lunch, dinner, coffee, snack |
-| visibility | string | No | Tko može vidjeti: ALL, FOLLOWERS, BUDDIES (default: ALL) |
 | images | file[] | Conditional | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
 | captions | string | No | JSON array ili comma-separated captions za slike |
 
@@ -239,7 +235,6 @@ Dohvaća kronološki feed odobrenih Experiencea s distance-based filterom.
     "description": "...",
     "partySize": 2,
     "mealType": "dinner",
-    "visibility": "ALL",
     "likesCount": 15,
     "sharesCount": 3,
     "hasLiked": false,
@@ -422,7 +417,6 @@ CREATE TABLE "Experiences" (
   -- Metadata
   partySize INTEGER DEFAULT 2,
   mealType ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'),
-  visibility ENUM('ALL', 'FOLLOWERS', 'BUDDIES') DEFAULT 'ALL',
 
   -- Engagement
   likesCount INTEGER DEFAULT 0,
@@ -485,7 +479,6 @@ const createExperience = async ({
   description,
   partySize,
   mealType,
-  visibility,
   images, // array of { uri, type, name }
   captions,
   onProgress, // callback za progress (0-100)
@@ -498,8 +491,6 @@ const createExperience = async ({
   formData.append('ambienceRating', ratings.ambience.toString());
   formData.append('serviceRating', ratings.service.toString());
   formData.append('partySize', partySize.toString());
-  formData.append('visibility', visibility);
-
   if (description) {
     formData.append('description', description);
   }
@@ -562,7 +553,6 @@ const ExperienceForm = () => {
         description: 'Odlična pizza!',
         partySize: 2,
         mealType: 'dinner',
-        visibility: 'ALL',
         images: selectedImages,
         captions: imageCaptions,
         onProgress: (progress) => {
@@ -607,16 +597,6 @@ const ExperienceForm = () => {
 
 ---
 
-## Visibility Opcije
-
-| Visibility  | Opis                                                           |
-| ----------- | -------------------------------------------------------------- |
-| `ALL`       | Vidljiv svima                                                  |
-| `FOLLOWERS` | Vidljiv samo korisnicima koji prate autora                     |
-| `BUDDIES`   | Vidljiv samo korisnicima koji su tagirani u autorovim Visitima |
-
----
-
 ## Meal Type Opcije
 
 | Meal Type   | Opis      |
@@ -637,7 +617,6 @@ const ExperienceForm = () => {
 - Automatski izračun overall ocjene
 - Party size (broj osoba)
 - Meal type filter
-- Visibility opcije (ALL/FOLLOWERS/BUDDIES)
 - Caption za slike ("Što je na slici?")
 - Distance-based feed filtering (20km, 60km, all)
 - Kronološki feed
