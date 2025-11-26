@@ -279,6 +279,8 @@ module.exports = {
           'longitude',
           'phone',
           'rating',
+          'dinverRating',
+          'dinverReviewsCount',
           'priceLevel',
           'thumbnailUrl',
           'slug',
