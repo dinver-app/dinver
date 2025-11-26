@@ -270,6 +270,8 @@ async function validateImage(imageBuffer) {
 
 /**
  * Quick optimize without creating variants (for receipts, etc.)
+ * Smart skip: if image is already JPEG and <= maxWidth, returns original buffer
+ * This avoids double compression when frontend already compressed the image
  *
  * @param {Buffer} imageBuffer - Original image buffer
  * @param {Object} options - Optimization options
@@ -279,22 +281,28 @@ async function quickOptimize(imageBuffer, options = {}) {
   const { maxWidth = 1600, quality = 80 } = options;
 
   try {
-    const metadata = await sharp(imageBuffer).metadata();
+    const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
 
-    // Skip processing if already JPEG and small enough (fast path)
+    // Smart skip: if already JPEG and width <= maxWidth, return original
+    // This prevents double compression when frontend already compressed
     if (metadata.format === 'jpeg' && metadata.width <= maxWidth) {
+      console.log(`[quickOptimize] Smart skip: already JPEG ${metadata.width}px <= ${maxWidth}px`);
       return imageBuffer;
     }
 
     // Only process if needed
-    let pipeline = sharp(imageBuffer).rotate();
+    let pipeline = sharp(imageBuffer, { failOn: 'none' }).rotate();
 
     if (metadata.width > maxWidth) {
-      pipeline = pipeline.resize({ width: maxWidth });
+      pipeline = pipeline.resize({ width: maxWidth, withoutEnlargement: true });
     }
 
     // Use default libjpeg (faster) instead of mozjpeg (slower but better compression)
-    return await pipeline.jpeg({ quality }).toBuffer();
+    const result = await pipeline.jpeg({ quality, progressive: true }).toBuffer();
+
+    console.log(`[quickOptimize] Processed: ${metadata.format} ${metadata.width}px -> JPEG, ${Math.round(imageBuffer.length/1024)}KB -> ${Math.round(result.length/1024)}KB`);
+
+    return result;
   } catch (error) {
     console.error('Quick optimize failed:', error);
     return imageBuffer; // Return original on failure
