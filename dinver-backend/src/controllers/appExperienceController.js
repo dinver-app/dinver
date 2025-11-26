@@ -170,7 +170,7 @@ const createExperience = async (req, res) => {
     );
 
     // Validate mealType
-    const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'coffee', 'snack'];
+    const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'drinks'];
     if (mealType && !validMealTypes.includes(mealType)) {
       await transaction.rollback();
       return res.status(400).json({
