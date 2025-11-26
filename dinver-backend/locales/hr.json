@@ -35,6 +35,10 @@
     "new_restaurant": {
       "title": "Novi restoran na Dinveru | {{place}}! 🍽️",
       "body": "Restoran \"{{restaurantName}}\" se pridružio Dinveru! Pogledaj što sve nudi!"
+    },
+    "alternative_time_accepted": {
+      "title": "Alternativni termin prihvaćen! ✅",
+      "body": "{{userName}} je prihvatio/la alternativni termin za rezervaciju u restoranu {{restaurantName}} ({{date}}, {{time}})"
     }
   }
 }

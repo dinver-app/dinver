@@ -1335,6 +1335,61 @@ const acceptSuggestedTime = async (req, res) => {
     }
 
     res.json(updatedReservation);
+
+    // Dohvati sve admine restorana
+    const admins = await UserAdmin.findAll({
+      where: { restaurantId: updatedReservation.restaurantId },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['email', 'name', 'pushToken'],
+        },
+      ],
+    });
+
+    // Pošalji email i push notifikaciju svakom adminu
+    const adminUserIds = [];
+    for (const admin of admins) {
+      let adminEmail = admin.user?.email;
+      if (!adminEmail) {
+        const adminUser = await User.findByPk(admin.userId);
+        adminEmail = adminUser?.email;
+      }
+      if (adminEmail) {
+        await sendReservationEmail({
+          to: adminEmail,
+          type: 'alternative_accepted_admin',
+          reservation: updatedReservation,
+        });
+      }
+      adminUserIds.push(admin.userId);
+    }
+
+    // Pošalji push notifikaciju adminima o prihvaćenom alternativnom terminu
+    if (adminUserIds.length > 0) {
+      try {
+        await createAndSendNotificationToUsers(adminUserIds, {
+          type: 'alternative_time_accepted',
+          actorUserId: userId,
+          restaurantId: updatedReservation.restaurantId,
+          data: {
+            type: 'alternative_time_accepted',
+            reservationId: updatedReservation.id,
+            restaurantId: updatedReservation.restaurantId,
+            restaurantName: updatedReservation.restaurant.name,
+            userName: updatedReservation.user.name,
+            date: formatDateDisplay(updatedReservation.date),
+            time: formatTimeDisplay(updatedReservation.time),
+          },
+        });
+      } catch (error) {
+        console.error(
+          'Error sending push notification for accepted alternative time:',
+          error,
+        );
+      }
+    }
   } catch (error) {
     console.error('Full error:', error);
     console.error('Error accepting alternative time:', error.message);

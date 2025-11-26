@@ -35,6 +35,10 @@
     "new_restaurant": {
       "title": "New restaurant on Dinver | {{place}}! 🍽️",
       "body": "Restaurant \"{{restaurantName}}\" joined Dinver! Check it out!"
+    },
+    "alternative_time_accepted": {
+      "title": "Alternative time accepted! ✅",
+      "body": "{{userName}} has accepted the alternative time for reservation at {{restaurantName}} ({{date}}, {{time}})"
     }
   }
 }
