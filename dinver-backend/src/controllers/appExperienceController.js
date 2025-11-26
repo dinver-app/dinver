@@ -33,7 +33,9 @@ const { updateRestaurantDinverRating } = require('../services/dinverRatingServic
  * - partySize: number (optional, default 2)
  * - mealType: string (optional)
  * - images: file[] (up to 6 images)
- * - captions: string[] (optional, caption for each image)
+ * - captions: string[] (optional, JSON array - caption for each image)
+ * - menuItemIds: string[] (optional, JSON array - UUID of menu item for each image)
+ * - recommendedImageIndex: number (optional, 0-based index of image marked as "recommended")
  */
 const createExperience = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -59,6 +61,21 @@ const createExperience = async (req, res) => {
         captions = req.body.captions.split(',').map((c) => c.trim());
       }
     }
+
+    // Parse menuItemIds - JSON array of UUIDs matching image order
+    let menuItemIds = [];
+    if (req.body.menuItemIds) {
+      try {
+        menuItemIds = JSON.parse(req.body.menuItemIds);
+      } catch {
+        // Ignore invalid JSON
+      }
+    }
+
+    // Parse recommendedImageIndex - which image has the "recommended" badge
+    const recommendedImageIndex = req.body.recommendedImageIndex !== undefined
+      ? parseInt(req.body.recommendedImageIndex)
+      : null;
 
     const files = req.files || [];
 
@@ -96,19 +113,17 @@ const createExperience = async (req, res) => {
       });
     }
 
-    // Content validation: must have at least 1 image OR description with min 50 characters
-    const hasImages = files.length > 0;
+    // Content validation: description is always required (min 20 characters)
     const descriptionLength = description ? description.trim().length : 0;
-    const hasValidDescription = descriptionLength >= 50;
+    const MIN_DESCRIPTION_LENGTH = 20;
 
-    if (!hasImages && !hasValidDescription) {
+    if (descriptionLength < MIN_DESCRIPTION_LENGTH) {
       await transaction.rollback();
       return res.status(400).json({
-        error: 'Experience must have at least 1 image or a description with minimum 50 characters',
+        error: `Description is required (minimum ${MIN_DESCRIPTION_LENGTH} characters)`,
         details: {
-          hasImages: false,
           descriptionLength,
-          minDescriptionLength: 50,
+          minDescriptionLength: MIN_DESCRIPTION_LENGTH,
         },
       });
     }
@@ -189,25 +204,34 @@ const createExperience = async (req, res) => {
       { transaction }
     );
 
-    // Upload images and create ExperienceMedia records
-    const mediaRecords = [];
+    // Upload images in PARALLEL (much faster than sequential!)
+    // Frontend sends pre-compressed images (1800px, 0.85 quality)
+    // EXPERIENCE strategy: smart skip if already JPEG <= 2000px
+    const folder = `experiences/${userId}`;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const caption = captions[i] || null;
-
-      // Upload image
-      const folder = `experiences/${userId}`;
-      const imageResult = await uploadImage(file, folder, {
-        strategy: UPLOAD_STRATEGY.FULL,
-        entityType: 'experience',
-        entityId: experience.id,
-        maxWidth: 1600,
+    const uploadPromises = files.map((file, i) =>
+      uploadImage(file, folder, {
+        strategy: UPLOAD_STRATEGY.EXPERIENCE,
+        maxWidth: 2000, // Safety limit - frontend sends 1800px, only resize if somehow larger
         quality: 85,
-        mimeType: file.mimetype,
-      });
+      }).then((imageResult) => ({
+        imageResult,
+        index: i,
+        caption: captions[i] || null,
+      }))
+    );
 
-      // Create ExperienceMedia record
+    // Wait for all uploads to complete in parallel
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Create ExperienceMedia records (must be sequential for transaction)
+    const mediaRecords = [];
+    for (const { imageResult, index, caption } of uploadResults) {
+      // Get menuItemId for this image (if provided)
+      const menuItemId = menuItemIds[index] || null;
+      // Check if this image is marked as recommended
+      const isRecommended = recommendedImageIndex === index;
+
       const media = await ExperienceMedia.create(
         {
           experienceId: experience.id,
@@ -216,10 +240,11 @@ const createExperience = async (req, res) => {
           cdnUrl: imageResult.imageUrl,
           width: imageResult.width || null,
           height: imageResult.height || null,
-          orderIndex: i,
+          orderIndex: index,
           transcodingStatus: 'DONE',
           caption,
-          thumbnails: imageResult.thumbnailUrl ? [{ cdnUrl: imageResult.thumbnailUrl }] : null,
+          menuItemId,
+          isRecommended,
         },
         { transaction }
       );
@@ -227,9 +252,10 @@ const createExperience = async (req, res) => {
       mediaRecords.push({
         id: media.id,
         imageUrl: imageResult.imageUrl,
-        thumbnailUrl: imageResult.thumbnailUrl,
-        orderIndex: i,
+        orderIndex: index,
         caption,
+        menuItemId,
+        isRecommended,
       });
     }
 

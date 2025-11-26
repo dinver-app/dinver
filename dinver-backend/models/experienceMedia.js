@@ -96,6 +96,12 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'SET NULL',
         comment: 'Link to menu item if user selected from menu',
       },
+      isRecommended: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'User marked this dish as recommended',
+      },
     },
     {
       sequelize,

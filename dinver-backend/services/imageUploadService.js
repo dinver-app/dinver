@@ -14,6 +14,7 @@ const UPLOAD_STRATEGY = {
   OPTIMISTIC: 'optimistic', // Return immediately with placeholder, process in background
   SYNC: 'sync', // Process and upload synchronously
   QUICK: 'quick', // Quick optimize only, no variants
+  EXPERIENCE: 'experience', // Optimized for experience images (smart skip if already compressed)
 };
 
 /**
@@ -167,6 +168,73 @@ async function uploadImageQuick(file, folder, options = {}) {
 }
 
 /**
+ * Experience image upload - optimized for pre-compressed images from mobile
+ * Smart skip: if image is already JPEG and <= maxWidth, upload directly without re-compression
+ * This avoids double compression when frontend already compressed the image
+ *
+ * @param {Object} file - Multer file object
+ * @param {string} folder - S3 folder path
+ * @param {Object} options - Upload options
+ * @returns {Promise<Object>} Upload result with width/height for DB
+ */
+async function uploadImageExperience(file, folder, options = {}) {
+  const { maxWidth = 2000, quality = 85 } = options;
+  const sharp = require('sharp');
+
+  try {
+    // Get metadata to check if processing is needed
+    const metadata = await sharp(file.buffer, { failOn: 'none' }).metadata();
+
+    let finalBuffer = file.buffer;
+    let finalWidth = metadata.width;
+    let finalHeight = metadata.height;
+    let wasProcessed = false;
+
+    // Smart skip: only process if needed
+    // - If not JPEG, convert to JPEG
+    // - If width > maxWidth, resize
+    // - Otherwise, upload as-is (frontend already compressed)
+    const needsProcessing = metadata.format !== 'jpeg' || metadata.width > maxWidth;
+
+    if (needsProcessing) {
+      let pipeline = sharp(file.buffer, { failOn: 'none' }).rotate();
+
+      if (metadata.width > maxWidth) {
+        pipeline = pipeline.resize({ width: maxWidth, withoutEnlargement: true });
+      }
+
+      pipeline = pipeline.jpeg({ quality, progressive: true });
+
+      const result = await pipeline.toBuffer({ resolveWithObject: true });
+      finalBuffer = result.data;
+      finalWidth = result.info.width;
+      finalHeight = result.info.height;
+      wasProcessed = true;
+    }
+
+    // Generate filename
+    const fileName = `${folder}/${uuidv4()}.jpg`;
+
+    // Upload to S3
+    const key = await uploadBufferToS3(finalBuffer, fileName, 'image/jpeg');
+
+    return {
+      status: 'completed',
+      imageUrl: key,
+      url: getMediaUrl(key, 'image', 'original'),
+      width: finalWidth,
+      height: finalHeight,
+      wasProcessed,
+      originalSize: file.buffer.length,
+      finalSize: finalBuffer.length,
+    };
+  } catch (error) {
+    console.error('Experience upload failed:', error);
+    throw error;
+  }
+}
+
+/**
  * Main upload function with strategy selection
  *
  * @param {Object} file - Multer file object
@@ -187,6 +255,9 @@ async function uploadImage(file, folder, options = {}) {
 
     case UPLOAD_STRATEGY.QUICK:
       return uploadImageQuick(file, folder, options);
+
+    case UPLOAD_STRATEGY.EXPERIENCE:
+      return uploadImageExperience(file, folder, options);
 
     default:
       throw new Error(`Unknown upload strategy: ${strategy}`);
@@ -292,6 +363,7 @@ module.exports = {
   uploadImageOptimistic,
   uploadImageSync,
   uploadImageQuick,
+  uploadImageExperience,
   getImageUrls,
   migrateImageToVariants,
   UPLOAD_STRATEGY,

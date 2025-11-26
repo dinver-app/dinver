@@ -37,10 +37,11 @@ Experience je recenzija restorana koja se kreira nakon što korisnik uploada ra�
 │                                                     │
 │ Overall: 8.2 (automatski izračunat)                │
 │                                                     │
-│ Opis (optional):                                    │
+│ Opis doživljaja: *                                  │
 │ ┌─────────────────────────────────────────────────┐ │
 │ │ Odlična pizza, brza usluga...                   │ │
 │ └─────────────────────────────────────────────────┘ │
+│ (min. 20 znakova)                                   │
 │                                                     │
 │ S koliko osoba? [- 2 +]                            │
 │                                                     │
@@ -48,7 +49,7 @@ Experience je recenzija restorana koja se kreira nakon što korisnik uploada ra�
 │ [Doručak] [Brunch] [Ručak]                          │
 │ [Večera] [Kava] [Snack]                            │
 │                                                     │
-│ Slike (max 6):                                      │
+│ Slike (optional, max 6):                            │
 │ ┌─────┐ ┌─────┐ ┌─────┐                            │
 │ │ +   │ │ img │ │ img │                            │
 │ └─────┘ └─────┘ └─────┘                            │
@@ -97,15 +98,17 @@ Authorization: Bearer {token}
 | foodRating | number | Yes | Ocjena hrane (1.0-10.0) |
 | ambienceRating | number | Yes | Ocjena ambijenta (1.0-10.0) |
 | serviceRating | number | Yes | Ocjena usluge (1.0-10.0) |
-| description | string | No | Tekstualni opis doživljaja |
+| description | string | **Yes** | Tekstualni opis doživljaja (min. 20 znakova) |
 | partySize | number | No | Broj osoba (default: 2) |
 | mealType | string | No | Vrsta obroka: breakfast, brunch, lunch, dinner, coffee, snack |
-| images | file[] | Conditional | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
-| captions | string | No | JSON array ili comma-separated captions za slike |
+| images | file[] | No | Do 6 slika (JPEG, PNG, WEBP, HEIC) |
+| captions | string | No | JSON array captions za slike (po indexu) |
+| menuItemIds | string | No | JSON array UUID-ova menu itema za slike (po indexu) |
+| recommendedImageIndex | number | No | Index slike (0-based) koju korisnik označava kao "Preporučam" |
 
 **Content Validation:**
-- Mora imati **barem 1 sliku** ILI **opis s minimalno 50 znakova** (ili oboje)
-- Nije dozvoljeno kreirati Experience bez sadržaja
+- **Opis je obavezan** - minimalno 20 znakova
+- Slike su opcionalne ali preporučene (do 6 slika)
 
 **Response (201):**
 
@@ -118,10 +121,11 @@ Authorization: Bearer {token}
   "media": [
     {
       "id": "uuid",
-      "imageUrl": "https://cdn.example.com/...",
-      "thumbnailUrl": "https://cdn.example.com/...",
+      "imageUrl": "https://cdn.example.com/experiences/user-id/image.jpg",
       "orderIndex": 0,
-      "caption": "Pizza Margherita"
+      "caption": "Pizza Margherita",
+      "menuItemId": "uuid-of-menu-item",
+      "isRecommended": true
     }
   ],
   "message": "Experience published successfully!"
@@ -618,8 +622,204 @@ const ExperienceForm = () => {
 - Party size (broj osoba)
 - Meal type filter
 - Caption za slike ("Što je na slici?")
+- **Menu item tagging** - povezivanje slike s jelom iz jelovnika
+- **"Preporučam" badge** - označavanje jedne slike kao preporučeno jelo
 - Distance-based feed filtering (20km, 60km, all)
 - Kronološki feed
 - Like/Share tracking
 - Jedan API poziv za kreiranje sa slikama
 - Progress tracking za upload
+
+---
+
+## Menu Item Tagging & "Preporučam" Feature
+
+### Koncept
+
+Korisnik može:
+1. **Tagirati jelo** iz jelovnika restorana na slici (umjesto free text captiona)
+2. **Označiti jednu sliku** kao "Preporučam" - to jelo će biti istaknuto kao korisnikova preporuka
+
+### UX Flow
+
+```
+┌─────────────────────────────────────────────────────┐
+│ DODAJ SLIKE                                         │
+│                                                     │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐                │
+│ │  slika  │ │  slika  │ │  slika  │                │
+│ │    1    │ │    2    │ │    3    │                │
+│ └─────────┘ └─────────┘ └─────────┘                │
+│                                                     │
+│ Za svaku sliku:                                     │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Što je na slici?                                │ │
+│ │ [Piz_________________] ← korisnik tipka         │ │
+│ │                                                 │ │
+│ │ Prijedlozi iz jelovnika:                        │ │
+│ │ ┌─────────────────────────────────────────────┐ │ │
+│ │ │ 🍕 Pizza Margherita         12€             │ │ │
+│ │ │ 🍕 Pizza Quattro Formaggi   14€             │ │ │
+│ │ │ 🍕 Pizza Diavola            13€             │ │ │
+│ │ └─────────────────────────────────────────────┘ │ │
+│ │                                                 │ │
+│ │ [✓] Preporučam ovo jelo                         │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Frontend Implementation
+
+**1. Dohvati Menu Items za Autocomplete**
+
+Kad korisnik odabere Visit za Experience, dohvati menu items:
+
+```
+GET /api/app/restaurantDetails/menu/menuItems/{restaurantId}
+```
+
+**Response:**
+```json
+{
+  "menuItems": [
+    {
+      "id": "uuid-pizza-margherita",
+      "name": "Pizza Margherita",
+      "category": "Pizza",
+      "price": 12.00
+    },
+    {
+      "id": "uuid-pizza-quattro",
+      "name": "Pizza Quattro Formaggi",
+      "category": "Pizza",
+      "price": 14.00
+    }
+  ]
+}
+```
+
+**2. Autocomplete Logic**
+
+```javascript
+// Filtriraj menu items dok korisnik tipka
+const filterMenuItems = (query, menuItems) => {
+  if (!query || query.length < 2) return [];
+
+  const lowerQuery = query.toLowerCase();
+  return menuItems.filter(item =>
+    item.name.toLowerCase().includes(lowerQuery)
+  );
+};
+
+// Kad korisnik odabere iz liste
+const onSelectMenuItem = (imageIndex, menuItem) => {
+  // Spremi i caption (za prikaz) i menuItemId (za strukturirane podatke)
+  setCaptions(prev => ({ ...prev, [imageIndex]: menuItem.name }));
+  setMenuItemIds(prev => ({ ...prev, [imageIndex]: menuItem.id }));
+};
+
+// Ako korisnik ne odabere iz liste, samo tekst caption
+const onCaptionChange = (imageIndex, text) => {
+  setCaptions(prev => ({ ...prev, [imageIndex]: text }));
+  setMenuItemIds(prev => ({ ...prev, [imageIndex]: null })); // Nema menu item
+};
+```
+
+**3. "Preporučam" Toggle**
+
+```javascript
+// Samo jedna slika može biti recommended
+const [recommendedIndex, setRecommendedIndex] = useState(null);
+
+const toggleRecommended = (imageIndex) => {
+  if (recommendedIndex === imageIndex) {
+    setRecommendedIndex(null); // Ukloni ako je ista
+  } else {
+    setRecommendedIndex(imageIndex); // Postavi novu
+  }
+};
+```
+
+**4. Slanje na Backend**
+
+```javascript
+const createExperience = async (data) => {
+  const formData = new FormData();
+
+  // ... ostala polja ...
+
+  // Captions - JSON array
+  formData.append('captions', JSON.stringify(
+    data.images.map((_, i) => data.captions[i] || null)
+  ));
+
+  // Menu Item IDs - JSON array (null ako nije odabrano iz menija)
+  formData.append('menuItemIds', JSON.stringify(
+    data.images.map((_, i) => data.menuItemIds[i] || null)
+  ));
+
+  // Recommended image index (ili ne slati ako nije odabrano)
+  if (data.recommendedIndex !== null) {
+    formData.append('recommendedImageIndex', data.recommendedIndex.toString());
+  }
+
+  // ... images ...
+};
+```
+
+### Prikaz u Feedu
+
+Kad se Experience prikazuje u feedu, slike s `isRecommended: true` trebaju imati badge:
+
+```
+┌─────────────────────────────────────────┐
+│  ┌─────────────────────────────────┐    │
+│  │                                 │    │
+│  │         [SLIKA JELA]           │    │
+│  │                                 │    │
+│  │  ⭐ PREPORUČAM                  │    │ ← Badge na slici
+│  └─────────────────────────────────┘    │
+│                                         │
+│  Pizza Margherita                       │ ← Caption (klikabilno ako ima menuItemId)
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+### Prednosti Menu Item Tagiranja
+
+| Aspekt | Free Text | Menu Item Tag |
+|--------|-----------|---------------|
+| Strukturirani podaci | ❌ | ✅ |
+| Klikabilno za viewer | ❌ | ✅ (otvara menu item detalje) |
+| Analitika popularnosti jela | ❌ | ✅ |
+| Pretraživanje po jelu | Teško | Lako |
+| Cijena vidljiva | ❌ | ✅ |
+
+---
+
+## Backend Optimizacije
+
+### Paralelni Upload Slika
+
+Slike se uploadaju **paralelno** umjesto sekvencijalno, što značajno ubrzava kreiranje Experiencea:
+
+```
+Sekvencijalno: 6 slika × 2s = 12s
+Paralelno:     6 slika odjednom = 2-3s
+```
+
+### Smart Skip (Izbjegavanje Duple Kompresije)
+
+Frontend šalje pre-komprimirane slike (1800px, 0.85 quality). Backend koristi **EXPERIENCE** upload strategiju koja:
+
+1. Provjerava je li slika već JPEG i ≤ 2000px
+2. Ako da → **direktno uploada** bez re-kompresije
+3. Ako ne → procesira i komprimira
+
+```
+Frontend: 1800px JPEG → Backend: Smart skip → S3: direktan upload
+Frontend: 4000px PNG  → Backend: Resize + JPEG → S3: komprimirana slika
+```
+
+Ovo sprječava degradaciju kvalitete slike kroz višestruku kompresiju.
