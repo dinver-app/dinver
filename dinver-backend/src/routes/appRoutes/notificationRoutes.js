@@ -220,26 +220,4 @@ router.delete('/:id', appAuthenticateToken, async (req, res) => {
   }
 });
 
-/**
- * DELETE /api/app/notifications
- * Obriši sve notifikacije za korisnika
- */
-router.delete('/', appAuthenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const deleted = await Notification.destroy({
-      where: { userId },
-    });
-
-    res.json({
-      success: true,
-      deletedCount: deleted,
-    });
-  } catch (error) {
-    console.error('Error deleting all notifications:', error);
-    res.status(500).json({ error: 'Failed to delete notifications' });
-  }
-});
-
 module.exports = router;
