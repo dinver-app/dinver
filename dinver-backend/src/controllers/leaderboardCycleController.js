@@ -312,7 +312,7 @@ const getCycleById = async (req, res) => {
               attributes: [
                 'id',
                 'name',
-                
+                'username',
                 'email',
                 'city',
                 'profileImage',
@@ -331,7 +331,7 @@ const getCycleById = async (req, res) => {
               attributes: [
                 'id',
                 'name',
-                
+                'username',
                 'email',
                 'city',
                 'profileImage',
@@ -651,7 +651,7 @@ const getCycleParticipants = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -670,6 +670,10 @@ const getCycleParticipants = async (req, res) => {
       participantData.userName = participant.user
         ? participant.user.name
         : 'Unknown';
+      participantData.userUsername = participant.user?.username || null;
+      participantData.userProfileImage = participant.user?.profileImage
+        ? getMediaUrl(participant.user.profileImage, 'image', 'medium')
+        : null;
       return participantData;
     });
 
@@ -704,7 +708,7 @@ const getCycleWinners = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -719,6 +723,10 @@ const getCycleWinners = async (req, res) => {
       winnerData.userName = winner.user
         ? winner.user.name
         : 'Unknown';
+      winnerData.userUsername = winner.user?.username || null;
+      winnerData.userProfileImage = winner.user?.profileImage
+        ? getMediaUrl(winner.user.profileImage, 'image', 'medium')
+        : null;
       winnerData.rankOrdinal = winner.getRankOrdinal();
       winnerData.formattedPoints = winner.getFormattedPoints();
       return winnerData;
@@ -738,25 +746,30 @@ const getCycleWinners = async (req, res) => {
  */
 const getActiveCycle = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+
+    const includeOptions = [];
+
+    // Only include user's participant data if they are logged in
+    if (userId) {
+      includeOptions.push({
+        model: LeaderboardCycleParticipant,
+        as: 'participants',
+        where: { userId },
+        required: false,
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'username', 'profileImage'],
+          },
+        ],
+      });
+    }
 
     const activeCycle = await LeaderboardCycle.findOne({
       where: { status: 'active' },
-      include: [
-        {
-          model: LeaderboardCycleParticipant,
-          as: 'participants',
-          where: { userId },
-          required: false,
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'name', 'profileImage'],
-            },
-          ],
-        },
-      ],
+      include: includeOptions,
     });
 
     if (!activeCycle) {
@@ -776,12 +789,12 @@ const getActiveCycle = async (req, res) => {
     cycleData.remainingDays = activeCycle.getRemainingDays();
     cycleData.durationInDays = activeCycle.getDurationInDays();
 
-    // Get user's position in leaderboard
-    const userParticipant = cycleData.participants[0];
+    // Get user's position in leaderboard (only if logged in)
+    const userParticipant = cycleData.participants?.[0];
     let userPosition = null;
     let userPoints = 0;
 
-    if (userParticipant) {
+    if (userId && userParticipant) {
       userPoints = userParticipant.totalPoints;
       // Get user's rank
       const userRank = await LeaderboardCycleParticipant.count({
@@ -835,7 +848,7 @@ const getCycleLeaderboard = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -854,6 +867,10 @@ const getCycleLeaderboard = async (req, res) => {
       participantData.userName = participant.user
         ? participant.user.name
         : 'Unknown';
+      participantData.userUsername = participant.user?.username || null;
+      participantData.userProfileImage = participant.user?.profileImage
+        ? getMediaUrl(participant.user.profileImage, 'image', 'medium')
+        : null;
       participantData.formattedPoints = participant.getFormattedPoints();
       return participantData;
     });
