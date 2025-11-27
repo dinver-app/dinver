@@ -673,7 +673,7 @@ const getCycleParticipants = async (req, res) => {
         : 'Unknown';
       participantData.userUsername = participant.user?.username || null;
       participantData.userProfileImage = participant.user?.profileImage
-        ? getMediaUrl(participant.user.profileImage, 'image', 'medium')
+        ? getMediaUrl(participant.user.profileImage, 'image', 'original')
         : null;
       return participantData;
     });
@@ -726,7 +726,7 @@ const getCycleWinners = async (req, res) => {
         : 'Unknown';
       winnerData.userUsername = winner.user?.username || null;
       winnerData.userProfileImage = winner.user?.profileImage
-        ? getMediaUrl(winner.user.profileImage, 'image', 'medium')
+        ? getMediaUrl(winner.user.profileImage, 'image', 'original')
         : null;
       winnerData.rankOrdinal = winner.getRankOrdinal();
       winnerData.formattedPoints = winner.getFormattedPoints();
@@ -870,7 +870,7 @@ const getCycleLeaderboard = async (req, res) => {
         : 'Unknown';
       participantData.userUsername = participant.user?.username || null;
       participantData.userProfileImage = participant.user?.profileImage
-        ? getMediaUrl(participant.user.profileImage, 'image', 'medium')
+        ? getMediaUrl(participant.user.profileImage, 'image', 'original')
         : null;
       participantData.formattedPoints = participant.getFormattedPoints();
       return participantData;
@@ -1218,6 +1218,7 @@ const getVisitsLeaderboard = async (req, res) => {
 
     // Main leaderboard query - uses LEFT JOIN so current user appears even with 0 visits
     // Current user is always included when logged in, others need at least 1 visit
+    // IMPORTANT: COUNT must check r.id IS NOT NULL to respect place filter
     const leaderboardQuery = await sequelize.query(
       `
       SELECT
@@ -1226,7 +1227,7 @@ const getVisitsLeaderboard = async (req, res) => {
         u.username as "userUsername",
         u."profileImage" as "profileImagePath",
         COUNT(DISTINCT CASE
-          WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL
+          WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
           THEN v."restaurantId"
         END) as "uniqueVisits"
       FROM "Users" u
@@ -1284,7 +1285,7 @@ const getVisitsLeaderboard = async (req, res) => {
       userName: row.userName,
       userUsername: row.userUsername,
       userProfileImage: row.profileImagePath
-        ? getMediaUrl(row.profileImagePath, 'image', 'medium')
+        ? getMediaUrl(row.profileImagePath, 'image', 'original')
         : null,
       uniqueVisits: parseInt(row.uniqueVisits),
     }));
