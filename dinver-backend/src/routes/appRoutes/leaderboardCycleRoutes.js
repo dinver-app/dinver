@@ -20,7 +20,7 @@ router.get(
 router.get(
   '/leaderboard/cycles/:id',
   appApiKeyAuth,
-  appAuthenticateToken,
+  appOptionalAuth,
   leaderboardCycleController.getCycleLeaderboard,
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.get(
   '/leaderboard/history',
   appApiKeyAuth,
-  appAuthenticateToken,
+  appOptionalAuth,
   leaderboardCycleController.getCycleHistory,
 );
 
