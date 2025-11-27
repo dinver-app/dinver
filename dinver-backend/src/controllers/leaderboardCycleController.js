@@ -1369,6 +1369,7 @@ const getAvailablePlaces = async (req, res) => {
       `
       SELECT
         r.place as name,
+        r.country as country,
         COUNT(DISTINCT v.id) as "totalVisits",
         COUNT(DISTINCT v."userId") as "totalUsers",
         COUNT(DISTINCT r.id) as "totalRestaurants"
@@ -1378,7 +1379,7 @@ const getAvailablePlaces = async (req, res) => {
         r.place IS NOT NULL
         AND r.place != ''
         AND v.status = 'APPROVED'
-      GROUP BY r.place
+      GROUP BY r.place, r.country
       HAVING COUNT(DISTINCT v.id) > 0
       ORDER BY "totalVisits" DESC
       `,
@@ -1389,6 +1390,7 @@ const getAvailablePlaces = async (req, res) => {
 
     const places = placesResult.map((row) => ({
       name: row.name,
+      country: row.country || null,
       totalVisits: parseInt(row.totalVisits),
       totalUsers: parseInt(row.totalUsers),
       totalRestaurants: parseInt(row.totalRestaurants),
