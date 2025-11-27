@@ -30,7 +30,7 @@
     },
     "user_followed_you": {
       "title": "Novi pratitelj! 👤",
-      "body": "{{actorName}} je počeo/la pratiti Vas"
+      "body": "{{actorName}} te je počeo/la pratiti"
     },
     "new_restaurant": {
       "title": "Novi restoran na Dinveru | {{place}}! 🍽️",
