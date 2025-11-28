@@ -21,4 +21,13 @@ router.get(
   receiptController.getUserReceipts,
 );
 
+// Delete user's own pending receipt
+// User can only delete receipts with status 'pending' (not yet reviewed)
+router.delete(
+  '/receipts/:id',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  receiptController.deleteUserReceipt,
+);
+
 module.exports = router;
