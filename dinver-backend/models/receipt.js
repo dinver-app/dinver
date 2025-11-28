@@ -199,7 +199,12 @@ module.exports = (sequelize, DataTypes) => {
       rejectionReason: {
         type: DataTypes.TEXT,
         allowNull: true,
-        comment: 'Reason for rejection if applicable',
+        comment: 'Reason for rejection in Croatian',
+      },
+      rejectionReasonEn: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Reason for rejection in English',
       },
       pointsAwarded: {
         type: DataTypes.DECIMAL(10, 2),

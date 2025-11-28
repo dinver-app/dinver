@@ -19,6 +19,7 @@ export interface Receipt {
   verifierId?: string;
   verifiedAt?: string;
   rejectionReason?: string;
+  rejectionReasonEn?: string;
   pointsAwarded?: number;
   hasReservationBonus?: boolean;
   reservationId?: string;
@@ -149,6 +150,7 @@ export interface ApproveReceiptData {
 
 export interface RejectReceiptData {
   rejectionReason: string;
+  rejectionReasonEn: string;
 }
 
 class ReceiptService {
