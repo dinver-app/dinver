@@ -259,6 +259,9 @@ const createExperience = async (req, res) => {
       });
     }
 
+    // Sort by orderIndex to ensure correct order in response
+    mediaRecords.sort((a, b) => a.orderIndex - b.orderIndex);
+
     await transaction.commit();
 
     // Update restaurant's Dinver rating (async, don't block response)
