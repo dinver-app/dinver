@@ -675,6 +675,14 @@ const getCycleParticipants = async (req, res) => {
       participantData.userProfileImage = participant.user?.profileImage
         ? getMediaUrl(participant.user.profileImage, 'image', 'original')
         : null;
+      // Also transform profileImage in nested user object
+      if (participantData.user && participantData.user.profileImage) {
+        participantData.user.profileImage = getMediaUrl(
+          participantData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       return participantData;
     });
 
@@ -728,6 +736,14 @@ const getCycleWinners = async (req, res) => {
       winnerData.userProfileImage = winner.user?.profileImage
         ? getMediaUrl(winner.user.profileImage, 'image', 'original')
         : null;
+      // Also transform profileImage in nested user object
+      if (winnerData.user && winnerData.user.profileImage) {
+        winnerData.user.profileImage = getMediaUrl(
+          winnerData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       winnerData.rankOrdinal = winner.getRankOrdinal();
       winnerData.formattedPoints = winner.getFormattedPoints();
       return winnerData;
@@ -872,6 +888,14 @@ const getCycleLeaderboard = async (req, res) => {
       participantData.userProfileImage = participant.user?.profileImage
         ? getMediaUrl(participant.user.profileImage, 'image', 'original')
         : null;
+      // Also transform profileImage in nested user object
+      if (participantData.user && participantData.user.profileImage) {
+        participantData.user.profileImage = getMediaUrl(
+          participantData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       participantData.formattedPoints = participant.getFormattedPoints();
       return participantData;
     });
@@ -947,7 +971,7 @@ const getCycleHistory = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'name', 'profileImage'],
+              attributes: ['id', 'name', 'username', 'profileImage'],
             },
           ],
           order: [['rank', 'ASC']],
@@ -970,6 +994,18 @@ const getCycleHistory = async (req, res) => {
         winnerData.userName = winner.user
           ? winner.user.name
           : 'Unknown';
+        winnerData.userUsername = winner.user?.username || null;
+        winnerData.userProfileImage = winner.user?.profileImage
+          ? getMediaUrl(winner.user.profileImage, 'image', 'original')
+          : null;
+        // Also transform profileImage in nested user object
+        if (winnerData.user && winnerData.user.profileImage) {
+          winnerData.user.profileImage = getMediaUrl(
+            winnerData.user.profileImage,
+            'image',
+            'original'
+          );
+        }
         winnerData.rankOrdinal = winner.getRankOrdinal();
         winnerData.formattedPoints = winner.getFormattedPoints();
         return winnerData;
