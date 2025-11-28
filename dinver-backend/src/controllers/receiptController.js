@@ -823,6 +823,92 @@ const uploadReceipt = async (req, res) => {
 };
 
 /**
+ * Delete user's own pending receipt
+ * User can only delete receipts that are still pending (not yet reviewed)
+ */
+const deleteUserReceipt = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const receipt = await Receipt.findByPk(id);
+
+    if (!receipt) {
+      return res.status(404).json({ error: 'Račun nije pronađen' });
+    }
+
+    // Check ownership
+    if (receipt.userId !== userId) {
+      return res.status(403).json({ error: 'Nemate pristup ovom računu' });
+    }
+
+    // Only allow deleting pending receipts
+    if (receipt.status !== 'pending') {
+      return res.status(400).json({
+        error: 'Možete obrisati samo račune koji čekaju provjeru. Već pregledani računi ne mogu se obrisati.',
+      });
+    }
+
+    // Delete associated Visit if exists
+    if (receipt.visitId) {
+      const Visit = require('../../models').Visit;
+      await Visit.destroy({ where: { id: receipt.visitId } });
+    }
+
+    // Delete receipt images from S3
+    if (
+      receipt.thumbnailUrl ||
+      receipt.mediumUrl ||
+      receipt.fullscreenUrl ||
+      receipt.originalUrl ||
+      receipt.imageUrl
+    ) {
+      try {
+        const { deleteImageVariants } = require('../utils/s3Upload');
+        await deleteImageVariants(
+          receipt.thumbnailUrl,
+          receipt.mediumUrl,
+          receipt.fullscreenUrl,
+          receipt.originalUrl,
+        );
+        // Also try to delete the main imageUrl if it's different
+        if (receipt.imageUrl && receipt.imageUrl !== receipt.originalUrl) {
+          const { deleteFile } = require('../utils/s3Upload');
+          await deleteFile(receipt.imageUrl);
+        }
+      } catch (s3Error) {
+        console.error('Error deleting receipt images from S3:', s3Error.message);
+        // Continue with deletion even if S3 cleanup fails
+      }
+    }
+
+    // Log audit before deletion
+    await logAudit({
+      userId,
+      action: ActionTypes.DELETE,
+      entity: Entities.RECEIPT,
+      entityId: receipt.id,
+      changes: {
+        old: {
+          status: receipt.status,
+          totalAmount: receipt.totalAmount,
+          merchantName: receipt.merchantName,
+        },
+        reason: 'User deleted pending receipt',
+      },
+    });
+
+    // Delete the receipt
+    await receipt.destroy();
+
+    res.json({ message: 'Račun uspješno obrisan' });
+  } catch (error) {
+    console.error('Error deleting user receipt:', error);
+    res.status(500).json({ error: 'Brisanje računa nije uspjelo' });
+  }
+};
+
+/**
  * Get user's receipts (all statuses - pending, approved, rejected)
  * This is for the "My Receipts" list where user sees all their uploaded receipts
  */
@@ -2606,6 +2692,7 @@ const deleteReceipt = async (req, res) => {
 module.exports = {
   uploadReceipt,
   getUserReceipts,
+  deleteUserReceipt,
   getAllReceipts,
   getReceiptById,
   updateReceiptData,
