@@ -107,6 +107,12 @@ export interface Receipt {
     guests: number;
     status: string;
   }>;
+  taggedBuddies?: Array<{
+    id: string;
+    username: string;
+    name: string;
+    profileImage?: string | null;
+  }>;
 }
 
 export interface ReceiptFilters {

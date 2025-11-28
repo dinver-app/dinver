@@ -933,7 +933,7 @@ const getUserReceipts = async (req, res) => {
         {
           model: Visit,
           as: 'visit',
-          attributes: ['id', 'status'],
+          attributes: ['id', 'status', 'taggedBuddies'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -941,35 +941,74 @@ const getUserReceipts = async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
+    // Collect all buddy IDs to fetch in one query
+    const allBuddyIds = new Set();
+    receipts.rows.forEach((receipt) => {
+      if (receipt.visit?.taggedBuddies) {
+        receipt.visit.taggedBuddies.forEach((id) => allBuddyIds.add(id));
+      }
+    });
+
+    // Fetch all buddy users at once
+    let buddyUsersMap = {};
+    if (allBuddyIds.size > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: Array.from(allBuddyIds) },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      buddyUsersMap = buddyUsers.reduce((acc, buddy) => {
+        acc[buddy.id] = {
+          id: buddy.id,
+          username: buddy.username,
+          name: buddy.name,
+          profileImage: buddy.profileImage
+            ? getMediaUrl(buddy.profileImage, 'image', 'original')
+            : null,
+        };
+        return acc;
+      }, {});
+    }
+
     // Transform receipts with image URLs
-    const transformedReceipts = receipts.rows.map((receipt) => ({
-      id: receipt.id,
-      status: receipt.status,
-      submittedAt: receipt.submittedAt,
-      verifiedAt: receipt.verifiedAt,
-      rejectionReason: receipt.rejectionReason,
-      rejectionReasonEn: receipt.rejectionReasonEn,
-      totalAmount: receipt.totalAmount,
-      merchantName: receipt.merchantName,
-      issueDate: receipt.issueDate,
-      pointsAwarded: receipt.pointsAwarded,
-      imageUrl: receipt.imageUrl ? getMediaUrl(receipt.imageUrl, 'image') : null,
-      thumbnailUrl: receipt.thumbnailUrl ? getMediaUrl(receipt.thumbnailUrl, 'image') : null,
-      restaurant: receipt.restaurant
-        ? {
-            id: receipt.restaurant.id,
-            name: receipt.restaurant.name,
-            address: receipt.restaurant.address,
-            place: receipt.restaurant.place,
-            thumbnailUrl: receipt.restaurant.thumbnailUrl
-              ? getMediaUrl(receipt.restaurant.thumbnailUrl, 'image')
-              : null,
-            isClaimed: receipt.restaurant.isClaimed,
-          }
-        : null,
-      visitId: receipt.visit?.id || null,
-      visitStatus: receipt.visit?.status || null,
-    }));
+    const transformedReceipts = receipts.rows.map((receipt) => {
+      // Map tagged buddy IDs to user objects
+      let taggedBuddies = [];
+      if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+        taggedBuddies = receipt.visit.taggedBuddies
+          .map((id) => buddyUsersMap[id])
+          .filter(Boolean);
+      }
+
+      return {
+        id: receipt.id,
+        status: receipt.status,
+        submittedAt: receipt.submittedAt,
+        verifiedAt: receipt.verifiedAt,
+        rejectionReason: receipt.rejectionReason,
+        rejectionReasonEn: receipt.rejectionReasonEn,
+        totalAmount: receipt.totalAmount,
+        merchantName: receipt.merchantName,
+        issueDate: receipt.issueDate,
+        pointsAwarded: receipt.pointsAwarded,
+        imageUrl: receipt.imageUrl ? getMediaUrl(receipt.imageUrl, 'image') : null,
+        thumbnailUrl: receipt.thumbnailUrl ? getMediaUrl(receipt.thumbnailUrl, 'image') : null,
+        restaurant: receipt.restaurant
+          ? {
+              id: receipt.restaurant.id,
+              name: receipt.restaurant.name,
+              address: receipt.restaurant.address,
+              place: receipt.restaurant.place,
+              thumbnailUrl: receipt.restaurant.thumbnailUrl
+                ? getMediaUrl(receipt.restaurant.thumbnailUrl, 'image')
+                : null,
+              isClaimed: receipt.restaurant.isClaimed,
+            }
+          : null,
+        visitId: receipt.visit?.id || null,
+        visitStatus: receipt.visit?.status || null,
+        taggedBuddies,
+      };
+    });
 
     res.json({
       receipts: transformedReceipts,
@@ -1047,16 +1086,59 @@ const getAllReceipts = async (req, res) => {
             },
           ],
         },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'taggedBuddies'],
+        },
       ],
       order: [['submittedAt', 'DESC']],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
-    // Transform image URLs to signed URLs
+    // Collect all buddy IDs to fetch in one query
+    const allBuddyIds = new Set();
+    receipts.rows.forEach((receipt) => {
+      if (receipt.visit?.taggedBuddies) {
+        receipt.visit.taggedBuddies.forEach((id) => allBuddyIds.add(id));
+      }
+    });
+
+    // Fetch all buddy users at once
+    let buddyUsersMap = {};
+    if (allBuddyIds.size > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: Array.from(allBuddyIds) },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      buddyUsersMap = buddyUsers.reduce((acc, buddy) => {
+        acc[buddy.id] = {
+          id: buddy.id,
+          username: buddy.username,
+          name: buddy.name,
+          profileImage: buddy.profileImage
+            ? getMediaUrl(buddy.profileImage, 'image', 'original')
+            : null,
+        };
+        return acc;
+      }, {});
+    }
+
+    // Transform image URLs to signed URLs and add tagged buddies
     const transformedReceipts = receipts.rows.map((receipt) => {
       const receiptData = receipt.toJSON();
       receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+
+      // Map tagged buddy IDs to user objects
+      if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+        receiptData.taggedBuddies = receipt.visit.taggedBuddies
+          .map((id) => buddyUsersMap[id])
+          .filter(Boolean);
+      } else {
+        receiptData.taggedBuddies = [];
+      }
+
       return receiptData;
     });
 
@@ -1103,6 +1185,11 @@ const getReceiptById = async (req, res) => {
             },
           ],
         },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'taggedBuddies'],
+        },
       ],
     });
 
@@ -1112,6 +1199,24 @@ const getReceiptById = async (req, res) => {
 
     const receiptData = receipt.toJSON();
     receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+
+    // Fetch tagged buddies user info if visit has taggedBuddies
+    let taggedBuddies = [];
+    if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: receipt.visit.taggedBuddies },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      taggedBuddies = buddyUsers.map((buddy) => ({
+        id: buddy.id,
+        username: buddy.username,
+        name: buddy.name,
+        profileImage: buddy.profileImage
+          ? getMediaUrl(buddy.profileImage, 'image', 'original')
+          : null,
+      }));
+    }
+    receiptData.taggedBuddies = taggedBuddies;
 
     // Add image meta and OCR confidence if available
     const meta = receipt.ocrData?.meta || null;
@@ -1539,28 +1644,7 @@ const approveReceipt = async (req, res) => {
       ? calculateAccuracy(correctionsMade)
       : null;
 
-    // Update receipt
-    await receipt.update({
-      restaurantId,
-      totalAmount: parseFloat(totalAmount),
-      jir,
-      zki,
-      oib,
-      issueDate,
-      issueTime,
-      status: 'approved',
-      verifierId: sysadmin.id,
-      verifiedAt: new Date(),
-      pointsAwarded,
-      hasReservationBonus: hasReservationBonus || false,
-      reservationId: reservationId || null,
-      // ML Training fields
-      correctedData: correctedFields,
-      correctionsMade: correctionsMade,
-      accuracy: accuracy,
-    });
-
-    // Get Visit to check for tagged buddies
+    // Get Visit to check for tagged buddies BEFORE updating receipt
     let visit = null;
     let taggedBuddiesCount = 0;
 
@@ -1575,7 +1659,28 @@ const approveReceipt = async (req, res) => {
     const totalPeople = 1 + taggedBuddiesCount; // User + buddies
     const pointsPerPerson = Math.round((pointsAwarded / totalPeople) * 100) / 100;
 
-    console.log(`[Receipt Approval] Points distribution: ${pointsAwarded} points / ${totalPeople} people = ${pointsPerPerson} points each`);
+    console.log(`[Receipt Approval] Points distribution: ${pointsAwarded} total points / ${totalPeople} people = ${pointsPerPerson} points each`);
+
+    // Update receipt - save pointsPerPerson (what user actually gets), not total
+    await receipt.update({
+      restaurantId,
+      totalAmount: parseFloat(totalAmount),
+      jir,
+      zki,
+      oib,
+      issueDate,
+      issueTime,
+      status: 'approved',
+      verifierId: sysadmin.id,
+      verifiedAt: new Date(),
+      pointsAwarded: pointsPerPerson, // Save per-person points, not total
+      hasReservationBonus: hasReservationBonus || false,
+      reservationId: reservationId || null,
+      // ML Training fields
+      correctedData: correctedFields,
+      correctionsMade: correctionsMade,
+      accuracy: accuracy,
+    });
 
     // Award points to main user
     await UserPointsHistory.logPoints({
@@ -1777,7 +1882,9 @@ const approveReceipt = async (req, res) => {
           status: 'approved',
           restaurantId,
           totalAmount,
-          pointsAwarded,
+          pointsAwarded: pointsPerPerson,
+          totalPointsBeforeSplit: pointsAwarded,
+          buddyCount: taggedBuddiesCount,
           verifierId: req.user.id,
         },
       },
@@ -1785,7 +1892,9 @@ const approveReceipt = async (req, res) => {
 
     res.json({
       message: 'Receipt approved successfully',
-      pointsAwarded,
+      pointsAwarded: pointsPerPerson, // Points user actually gets
+      totalPoints: pointsAwarded, // Total before split (for display)
+      buddyCount: taggedBuddiesCount,
       visitId: visit?.id || null, // Include created/updated visit ID
     });
   } catch (error) {
