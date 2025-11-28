@@ -40,6 +40,8 @@ const Entities = {
   RECEIPT: 'receipt',
   // Leaderboard cycle entities
   LEADERBOARD_CYCLE: 'leaderboard_cycle',
+  // Support ticket entities
+  SUPPORT_TICKET: 'support_ticket',
 };
 
 function deepCompare(oldObj, newObj) {

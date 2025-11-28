@@ -22,6 +22,7 @@ import {
   SparklesIcon,
   CpuChipIcon,
   ShoppingBagIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -133,6 +134,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           name: t("experiences"),
           path: "/experiences",
           icon: <SparklesIcon className="h-3.5 w-3.5 mr-2.5" />,
+        },
+      ],
+    },
+    {
+      title: "Support",
+      items: [
+        {
+          name: "Support Tickets",
+          path: "/support-tickets",
+          icon: <ChatBubbleLeftRightIcon className="h-3.5 w-3.5 mr-2.5" />,
         },
       ],
     },

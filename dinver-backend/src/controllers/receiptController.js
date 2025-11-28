@@ -948,6 +948,7 @@ const getUserReceipts = async (req, res) => {
       submittedAt: receipt.submittedAt,
       verifiedAt: receipt.verifiedAt,
       rejectionReason: receipt.rejectionReason,
+      rejectionReasonEn: receipt.rejectionReasonEn,
       totalAmount: receipt.totalAmount,
       merchantName: receipt.merchantName,
       issueDate: receipt.issueDate,
@@ -1799,11 +1800,17 @@ const approveReceipt = async (req, res) => {
 const rejectReceipt = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rejectionReason } = req.body;
+    const { rejectionReason, rejectionReasonEn } = req.body;
 
     if (!rejectionReason || rejectionReason.trim().length === 0) {
       return res.status(400).json({
-        error: 'Rejection reason is required',
+        error: 'Rejection reason (Croatian) is required',
+      });
+    }
+
+    if (!rejectionReasonEn || rejectionReasonEn.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Rejection reason (English) is required',
       });
     }
 
@@ -1844,6 +1851,7 @@ const rejectReceipt = async (req, res) => {
       verifierId: sysadmin.id,
       verifiedAt: new Date(),
       rejectionReason: rejectionReason.trim(),
+      rejectionReasonEn: rejectionReasonEn.trim(),
     });
 
     // Send push notification
@@ -1871,6 +1879,7 @@ const rejectReceipt = async (req, res) => {
         new: {
           status: 'rejected',
           rejectionReason,
+          rejectionReasonEn,
           verifierId: req.user.id,
         },
       },
