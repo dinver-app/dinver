@@ -13,6 +13,7 @@ const {
   Restaurant,
   Visit,
   MenuItem,
+  MenuItemTranslation,
   sequelize,
 } = require('../../models');
 const { literal } = require('sequelize');
@@ -321,8 +322,15 @@ const getExperience = async (req, res) => {
             {
               model: MenuItem,
               as: 'menuItem',
-              attributes: ['id', 'name'],
+              attributes: ['id'],
               required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
             },
           ],
         },
