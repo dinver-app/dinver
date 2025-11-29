@@ -88,43 +88,37 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      // Ratings (1.0-10.0 with one decimal)
+      // Ratings (1.0-5.0 with one decimal)
       foodRating: {
-        type: DataTypes.DECIMAL(3, 1),
+        type: DataTypes.DECIMAL(2, 1),
         allowNull: true,
         validate: {
           min: 1.0,
-          max: 10.0,
+          max: 5.0,
         },
       },
       ambienceRating: {
-        type: DataTypes.DECIMAL(3, 1),
+        type: DataTypes.DECIMAL(2, 1),
         allowNull: true,
         validate: {
           min: 1.0,
-          max: 10.0,
+          max: 5.0,
         },
       },
       serviceRating: {
-        type: DataTypes.DECIMAL(3, 1),
+        type: DataTypes.DECIMAL(2, 1),
         allowNull: true,
         validate: {
           min: 1.0,
-          max: 10.0,
+          max: 5.0,
         },
       },
       overallRating: {
-        type: DataTypes.DECIMAL(3, 1),
+        type: DataTypes.DECIMAL(2, 1),
         allowNull: true,
-        comment: 'Average of food, ambience, service ratings',
+        comment: 'Average of food, ambience, service ratings (1.0-5.0)',
       },
       // Metadata
-      partySize: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        defaultValue: 2,
-        comment: 'Number of people in the group',
-      },
       mealType: {
         type: DataTypes.ENUM('breakfast', 'brunch', 'lunch', 'dinner', 'sweet', 'drinks'),
         allowNull: true,
