@@ -219,6 +219,12 @@ module.exports = (sequelize, DataTypes) => {
         comment:
           'Whether this receipt qualifies for reservation bonus (20% extra points)',
       },
+      partySize: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 1,
+        comment: 'Number of people in the group',
+      },
       reservationId: {
         type: DataTypes.UUID,
         allowNull: true,
