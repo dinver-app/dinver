@@ -65,7 +65,7 @@ exports.getAllVisits = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'status', 'title'],
+          attributes: ['id', 'status', 'overallRating'],
         },
       ],
       order: [['submittedAt', 'DESC']],
