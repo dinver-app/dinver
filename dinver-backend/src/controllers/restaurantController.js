@@ -18,6 +18,7 @@ const {
   Allergen,
   PriceCategory,
   AnalyticsEvent,
+  Experience,
 } = require('../../models');
 const {
   updateFoodExplorerProgress,
@@ -2798,28 +2799,32 @@ const getFullRestaurantDetails = async (req, res) => {
     // Remove translations from the response since we've transformed them
     delete restaurantWithTranslations.translations;
 
-    // Get all reviews for rating calculations
-    const allReviews = await Review.findAll({
+    // Get all approved experiences for rating calculations
+    const allExperiences = await Experience.findAll({
       where: {
         restaurantId: id,
-        isHidden: false,
+        status: 'APPROVED',
       },
+      attributes: ['foodRating', 'ambienceRating', 'serviceRating', 'overallRating'],
     });
 
-    // Calculate average ratings
-    const calculateAverage = (reviews, field) => {
-      const sum = reviews.reduce(
-        (acc, review) => acc + (review[field] || 0),
-        0,
-      );
-      return reviews.length > 0 ? Number((sum / reviews.length).toFixed(2)) : 0;
+    // Calculate average ratings from experiences
+    const calculateAverage = (experiences, field) => {
+      const validValues = experiences
+        .map(exp => exp[field])
+        .filter(val => val !== null && val !== undefined);
+
+      if (validValues.length === 0) return 0;
+
+      const sum = validValues.reduce((acc, val) => acc + Number(val), 0);
+      return Number((sum / validValues.length).toFixed(2));
     };
 
     const ratings = {
-      overall: calculateAverage(allReviews, 'rating'),
-      foodQuality: calculateAverage(allReviews, 'foodQuality'),
-      service: calculateAverage(allReviews, 'service'),
-      atmosphere: calculateAverage(allReviews, 'atmosphere'),
+      overall: calculateAverage(allExperiences, 'overallRating'),
+      foodQuality: calculateAverage(allExperiences, 'foodRating'),
+      service: calculateAverage(allExperiences, 'serviceRating'),
+      atmosphere: calculateAverage(allExperiences, 'ambienceRating'),
     };
 
     // Get latest 5 reviews for display
