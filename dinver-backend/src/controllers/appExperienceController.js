@@ -628,6 +628,11 @@ const getUserExperiences = async (req, res) => {
       where,
       include: [
         {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+        },
+        {
           model: Restaurant,
           as: 'restaurant',
           attributes: ['id', 'name', 'slug', 'place', 'isClaimed'],
