@@ -317,7 +317,6 @@ const getExperience = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
           include: [
             {
               model: MenuItem,
@@ -340,6 +339,7 @@ const getExperience = async (req, res) => {
           attributes: ['id', 'status', 'visitDate'],
         },
       ],
+      order: [[{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC']],
     });
 
     if (!experience) {
@@ -445,10 +445,12 @@ const getExperienceFeed = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
         },
       ],
-      order: [['publishedAt', 'DESC']], // Chronological (newest first)
+      order: [
+        ['publishedAt', 'DESC'], // Chronological (newest first)
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -639,10 +641,12 @@ const getUserExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['createdAt', 'DESC'],
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -707,10 +711,12 @@ const getRestaurantExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
         },
       ],
-      order: [['publishedAt', 'DESC']],
+      order: [
+        ['publishedAt', 'DESC'],
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
