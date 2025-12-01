@@ -446,7 +446,6 @@ const getExperienceFeed = async (req, res) => {
           model: ExperienceMedia,
           as: 'media',
           order: [['orderIndex', 'ASC']],
-          limit: 1, // Only get first image for feed
         },
       ],
       order: [['publishedAt', 'DESC']], // Chronological (newest first)
@@ -641,7 +640,6 @@ const getUserExperiences = async (req, res) => {
           model: ExperienceMedia,
           as: 'media',
           order: [['orderIndex', 'ASC']],
-          limit: 1,
         },
       ],
       order: [['createdAt', 'DESC']],
