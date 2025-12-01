@@ -553,9 +553,12 @@ const likeExperience = async (req, res) => {
     // Increment likes count
     await experience.increment('likesCount');
 
+    // Reload to get updated count
+    await experience.reload();
+
     res.status(201).json({
       message: 'Liked',
-      likesCount: experience.likesCount + 1,
+      likesCount: experience.likesCount,
     });
   } catch (error) {
     console.error('[Like Experience] Error:', error);
@@ -590,11 +593,13 @@ const unlikeExperience = async (req, res) => {
     const experience = await Experience.findByPk(experienceId);
     if (experience && experience.likesCount > 0) {
       await experience.decrement('likesCount');
+      // Reload to get updated count
+      await experience.reload();
     }
 
     res.status(200).json({
       message: 'Unliked',
-      likesCount: experience ? Math.max(0, experience.likesCount - 1) : 0,
+      likesCount: experience ? experience.likesCount : 0,
     });
   } catch (error) {
     console.error('[Unlike Experience] Error:', error);
