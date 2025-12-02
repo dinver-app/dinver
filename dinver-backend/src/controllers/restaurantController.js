@@ -2635,50 +2635,56 @@ const nearYou = async (req, res) => {
         : null,
     }));
 
-    // Check existing unclaimed restaurants in DB within 60km
-    const existingUnclaimedWhere = addTestFilter({ isClaimed: false }, userEmail);
-    const existingUnclaimed = await Restaurant.findAll({
-      attributes: [
-        'id',
-        'name',
-        'description',
-        'address',
-        'place',
-        'latitude',
-        'longitude',
-        'phone',
-        'rating',
-        'priceLevel',
-        'slug',
-        'isClaimed',
-        'priceCategoryId',
-      ],
-      where: existingUnclaimedWhere,
-    });
+    // NEW LOGIC: Only process unclaimed if we have < 10 claimed restaurants
+    let unclaimedRestaurants = [];
 
-    // Calculate distance for unclaimed restaurants
-    const existingUnclaimedWithDistance = existingUnclaimed
-      .map((restaurant) => {
-        const distance = calculateDistance(
-          userLat,
-          userLon,
-          restaurant.latitude,
-          restaurant.longitude,
-        );
+    if (withUrls.length < 10) {
+      console.log(`[nearYou] Only ${withUrls.length} claimed restaurants. Checking unclaimed...`);
 
-        return {
-          ...restaurant.toJSON(),
-          distance,
-        };
-      })
-      .filter((restaurant) => restaurant.distance <= 60)
-      .sort((a, b) => a.distance - b.distance);
+      // Check existing unclaimed restaurants in DB within 60km
+      const existingUnclaimedWhere = addTestFilter({ isClaimed: false }, userEmail);
+      const existingUnclaimed = await Restaurant.findAll({
+        attributes: [
+          'id',
+          'name',
+          'description',
+          'address',
+          'place',
+          'latitude',
+          'longitude',
+          'phone',
+          'rating',
+          'priceLevel',
+          'slug',
+          'isClaimed',
+          'priceCategoryId',
+        ],
+        where: existingUnclaimedWhere,
+      });
 
-    // Check if we need to fetch from Google (if claimed + unclaimed < 10)
-    const totalNearby = withUrls.length + existingUnclaimedWithDistance.length;
-    let unclaimedRestaurants = existingUnclaimedWithDistance;
+      // Calculate distance for unclaimed restaurants
+      const existingUnclaimedWithDistance = existingUnclaimed
+        .map((restaurant) => {
+          const distance = calculateDistance(
+            userLat,
+            userLon,
+            restaurant.latitude,
+            restaurant.longitude,
+          );
 
-    if (totalNearby < 10) {
+          return {
+            ...restaurant.toJSON(),
+            distance,
+          };
+        })
+        .filter((restaurant) => restaurant.distance <= 60)
+        .sort((a, b) => a.distance - b.distance);
+
+      // Check if we need to fetch from Google (if claimed + unclaimed < 10)
+      const totalNearby = withUrls.length + existingUnclaimedWithDistance.length;
+      unclaimedRestaurants = existingUnclaimedWithDistance;
+
+      if (totalNearby < 10) {
       console.log(`[nearYou] Only ${totalNearby} total restaurants (${withUrls.length} claimed, ${existingUnclaimedWithDistance.length} unclaimed). Fetching from Google...`);
 
       try {
@@ -2768,7 +2774,7 @@ const nearYou = async (req, res) => {
         // Continue with existing unclaimed restaurants if Google API fails
       }
     } else {
-      // Sufficient restaurants found, but still apply hybrid score to existing unclaimed
+      // We have claimed + unclaimed >= 10, just return existing unclaimed sorted by hybrid score
       console.log(`[nearYou] Sufficient restaurants found (${totalNearby} total). Returning existing unclaimed.`);
 
       unclaimedRestaurants = existingUnclaimedWithDistance
@@ -2784,6 +2790,11 @@ const nearYou = async (req, res) => {
         })
         .sort((a, b) => b.hybridScore - a.hybridScore)
         .slice(0, 20);
+    }
+    } else {
+      // We have >= 10 claimed restaurants, don't return unclaimed
+      console.log(`[nearYou] Found ${withUrls.length} claimed restaurants (>= 10). Not returning unclaimed.`);
+      unclaimedRestaurants = [];
     }
 
     // Implement pagination for claimed restaurants
