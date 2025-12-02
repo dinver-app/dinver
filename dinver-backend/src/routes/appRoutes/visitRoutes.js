@@ -100,6 +100,14 @@ router.get(
   visitController.getOtherUserVisits,
 );
 
+// Get other user's visits for a specific restaurant (with privacy check)
+router.get(
+  '/users/:userId/visits/restaurant/:restaurantId',
+  appApiKeyAuth,
+  appOptionalAuth,
+  visitController.getOtherUserVisitsByRestaurant,
+);
+
 // Get restaurant visitors (who visited this restaurant, with their ratings)
 router.get(
   '/restaurants/:restaurantId/visitors',

@@ -2102,6 +2102,101 @@ const getVisitsByRestaurant = async (req, res) => {
 };
 
 /**
+ * Get other user's visits for a specific restaurant (with privacy check)
+ * GET /api/app/users/:userId/visits/restaurant/:restaurantId
+ * Returns all visits to a specific restaurant for another user
+ */
+const getOtherUserVisitsByRestaurant = async (req, res) => {
+  try {
+    const { userId: targetUserId, restaurantId } = req.params;
+    const viewerUserId = req.user?.id || null;
+
+    // Check if target user exists
+    const targetUser = await User.findByPk(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check privacy settings
+    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    if (!canView) {
+      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+    }
+
+    // Get restaurant details
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: [
+        'id',
+        'name',
+        'rating',
+        'dinverRating',
+        'dinverReviewsCount',
+        'priceLevel',
+        'address',
+        'place',
+        'isClaimed',
+        'thumbnailUrl',
+        'userRatingsTotal',
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Fetch all APPROVED visits for this restaurant and user
+    const visits = await Visit.findAll({
+      where: {
+        userId: targetUserId,
+        restaurantId: restaurantId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+        },
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    // Don't include receipt info (totalAmount, pointsAwarded) for privacy
+    const visitsData = visits.map((visit) => ({
+      id: visit.id,
+      submittedAt: visit.submittedAt,
+      reviewedAt: visit.reviewedAt,
+      visitDate: visit.visitDate,
+      wasInMustVisit: visit.wasInMustVisit,
+      taggedBuddies: visit.taggedBuddies,
+      experience: visit.experience
+        ? {
+            id: visit.experience.id,
+            foodRating: parseFloat(visit.experience.foodRating) || null,
+            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+            serviceRating: parseFloat(visit.experience.serviceRating) || null,
+            overallRating: parseFloat(visit.experience.overallRating) || null,
+          }
+        : null,
+    }));
+
+    res.status(200).json({
+      restaurant: {
+        ...restaurant.get(),
+        thumbnailUrl: restaurant.thumbnailUrl
+          ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+          : null,
+      },
+      visitCount: visits.length,
+      visits: visitsData,
+    });
+  } catch (error) {
+    console.error('Error fetching visits by restaurant:', error);
+    res.status(500).json({ error: 'Failed to fetch visits' });
+  }
+};
+
+/**
  * Get restaurant visitors (users who visited this restaurant)
  * GET /api/app/restaurants/:restaurantId/visitors
  *
@@ -2272,6 +2367,7 @@ module.exports = {
   deleteVisit,
   getUserBuddies,
   getOtherUserVisits,
+  getOtherUserVisitsByRestaurant,
   getVisitsByRestaurant,
   getRestaurantVisitors,
 };
