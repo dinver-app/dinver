@@ -800,87 +800,6 @@ const getUserVisits = async (req, res) => {
   }
 };
 
-// Get single visit details
-const getVisitById = async (req, res) => {
-  try {
-    const { visitId } = req.params;
-    const userId = req.user.id;
-
-    const visit = await Visit.findOne({
-      where: { id: visitId, userId: userId },
-      include: [
-        {
-          model: Restaurant,
-          as: 'restaurant',
-          attributes: [
-            'id',
-            'name',
-            'rating',
-            'dinverRating',
-            'dinverReviewsCount',
-            'priceLevel',
-            'address',
-            'place',
-            'thumbnailUrl',
-          ],
-        },
-        {
-          model: Receipt,
-          as: 'receipt',
-          attributes: [
-            'id',
-            'thumbnailUrl',
-            'mediumUrl',
-            'fullscreenUrl',
-            'originalUrl',
-            'status',
-          ],
-        },
-      ],
-    });
-
-    if (!visit) {
-      return res.status(404).json({ error: 'Visit not found' });
-    }
-
-    const response = {
-      ...visit.get(),
-      receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visit.receipt
-        ? {
-            id: visit.receipt.id,
-            thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
-              : null,
-            mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
-              : null,
-            fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
-              : null,
-            originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image')
-              : null,
-            status: visit.receipt.status,
-          }
-        : null,
-      restaurant: visit.restaurant
-        ? {
-            ...visit.restaurant.get(),
-            thumbnailUrl: visit.restaurant.thumbnailUrl
-              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-              : null,
-          }
-        : null,
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching visit:', error);
-    res.status(500).json({ error: 'Failed to fetch visit' });
-  }
-};
-
 // Retake receipt photo (for rejected visits)
 const retakeReceipt = async (req, res) => {
   try {
@@ -2071,6 +1990,41 @@ const getVisitsByRestaurant = async (req, res) => {
           as: 'receipt',
           attributes: ['id', 'totalAmount', 'pointsAwarded'],
         },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'status',
+            'publishedAt',
+          ],
+          include: [
+            {
+              model: require('../../models').ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'width',
+                'height',
+                'orderIndex',
+                'thumbnails',
+                'caption',
+                'isRecommended',
+                'menuItemId',
+              ],
+              order: [['orderIndex', 'ASC']],
+            },
+          ],
+        },
       ],
       order: [['submittedAt', 'DESC']],
     });
@@ -2081,8 +2035,36 @@ const getVisitsByRestaurant = async (req, res) => {
       reviewedAt: visit.reviewedAt,
       visitDate: visit.visitDate,
       wasInMustVisit: visit.wasInMustVisit,
+      taggedBuddies: visit.taggedBuddies,
       totalAmount: visit.receipt?.totalAmount || null,
       pointsAwarded: visit.receipt?.pointsAwarded || null,
+      experience: visit.experience
+        ? {
+            id: visit.experience.id,
+            foodRating: parseFloat(visit.experience.foodRating) || null,
+            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+            serviceRating: parseFloat(visit.experience.serviceRating) || null,
+            overallRating: parseFloat(visit.experience.overallRating) || null,
+            description: visit.experience.description || null,
+            mealType: visit.experience.mealType || null,
+            likesCount: visit.experience.likesCount || 0,
+            publishedAt: visit.experience.publishedAt || null,
+            media: visit.experience.media
+              ? visit.experience.media.map((m) => ({
+                  id: m.id,
+                  kind: m.kind,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  width: m.width,
+                  height: m.height,
+                  orderIndex: m.orderIndex,
+                  thumbnails: m.thumbnails,
+                  caption: m.caption,
+                  isRecommended: m.isRecommended,
+                  menuItemId: m.menuItemId,
+                }))
+              : [],
+          }
+        : null,
     }));
 
     res.status(200).json({
@@ -2155,7 +2137,37 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'status',
+            'publishedAt',
+          ],
+          include: [
+            {
+              model: require('../../models').ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'width',
+                'height',
+                'orderIndex',
+                'thumbnails',
+                'caption',
+                'isRecommended',
+                'menuItemId',
+              ],
+              order: [['orderIndex', 'ASC']],
+            },
+          ],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -2176,6 +2188,24 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
             ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
             serviceRating: parseFloat(visit.experience.serviceRating) || null,
             overallRating: parseFloat(visit.experience.overallRating) || null,
+            description: visit.experience.description || null,
+            mealType: visit.experience.mealType || null,
+            likesCount: visit.experience.likesCount || 0,
+            publishedAt: visit.experience.publishedAt || null,
+            media: visit.experience.media
+              ? visit.experience.media.map((m) => ({
+                  id: m.id,
+                  kind: m.kind,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  width: m.width,
+                  height: m.height,
+                  orderIndex: m.orderIndex,
+                  thumbnails: m.thumbnails,
+                  caption: m.caption,
+                  isRecommended: m.isRecommended,
+                  menuItemId: m.menuItemId,
+                }))
+              : [],
           }
         : null,
     }));
@@ -2361,7 +2391,6 @@ module.exports = {
   createVisitFromReceipt,
   createVisit,
   getUserVisits,
-  getVisitById,
   retakeReceipt,
   checkHasVisited,
   deleteVisit,

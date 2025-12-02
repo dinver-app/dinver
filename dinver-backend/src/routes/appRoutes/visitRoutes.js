@@ -43,14 +43,6 @@ router.post(
   visitController.uploadReceiptAndCreateVisit,
 );
 
-// Get single visit details
-router.get(
-  '/visits/:visitId',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  visitController.getVisitById,
-);
-
 // Retake receipt photo (for rejected visits)
 router.put(
   '/visits/:visitId/retake',
