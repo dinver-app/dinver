@@ -2053,7 +2053,7 @@ const getVisitsByRestaurant = async (req, res) => {
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
-                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  cdnUrl: m.cdnUrl,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
@@ -2196,7 +2196,7 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
-                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  cdnUrl: m.cdnUrl,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
