@@ -258,7 +258,8 @@ async function getPlaceDetails(placeId) {
       throw new Error(`Google Places API error: ${response.data.status}`);
     }
 
-    return response.data.result;
+    const result = response.data.result;
+    return result;
   } catch (error) {
     console.error('Error fetching place details:', error);
     throw error;
@@ -409,9 +410,31 @@ function transformToRestaurantData(placeDetails) {
 
   // Transform opening hours if available
   if (placeDetails.opening_hours) {
+    // Fix day shift: Google uses 0=Sunday, 1=Monday... 6=Saturday
+    // We need 1=Monday, 2=Tuesday... 7=Sunday
+    const periods = (placeDetails.opening_hours.periods || []).map(period => {
+      const fixDay = (day) => {
+        // Google: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+        // Ours:   7=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+        return day === 0 ? 7 : day;
+      };
+
+      return {
+        open: period.open ? {
+          day: fixDay(period.open.day),
+          time: period.open.time,
+        } : undefined,
+        close: period.close ? {
+          day: fixDay(period.close.day),
+          time: period.close.time,
+        } : undefined,
+      };
+    });
+
     data.openingHours = {
-      weekdayText: placeDetails.opening_hours.weekday_text,
-      periods: placeDetails.opening_hours.periods,
+      weekday_text: placeDetails.opening_hours.weekday_text || [],
+      periods: periods,
+      open_now: placeDetails.opening_hours.open_now || false,
     };
     data.isOpenNow = placeDetails.opening_hours.open_now;
   }
@@ -512,6 +535,297 @@ async function updateRestaurantFromGoogle(placeId, restaurantId) {
   }
 }
 
+/**
+ * Search for nearby restaurants using Google Places Nearby Search API
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Radius in meters (max 50000)
+ * @param {number} limit - Number of results to return (default 20)
+ * @returns {Promise<Array>} Array of restaurant objects
+ */
+async function searchNearbyRestaurants(lat, lng, radius = 10000, limit = 20) {
+  try {
+    // NO CACHE - restaurants are saved to DB and will be found on next search
+    console.log(`[Google Places] Fetching from Nearby Search API (target: ${limit} restaurants)`);
+
+    let allResults = [];
+    let nextPageToken = null;
+    let pageCount = 0;
+    let totalFiltered = 0;
+    const maxPages = 3; // Google allows max 3 pages (60 results total)
+
+    // Filter and transform function
+    const processPlace = (place) => {
+      // 1. Must have rating and reviews (real restaurants have these)
+      if (!place.rating || !place.user_ratings_total) {
+        console.log(`[Filter] Skipping ${place.name} - no rating/reviews`);
+        totalFiltered++;
+        return null;
+      }
+
+      // 2. Filter out lodging (hotels, camps, etc.)
+      const types = place.types || [];
+      const isLodging = types.some(t => ['lodging', 'campground', 'rv_park'].includes(t));
+
+      if (isLodging) {
+        console.log(`[Filter] Skipping ${place.name} - lodging (${types.join(', ')})`);
+        totalFiltered++;
+        return null;
+      }
+
+      // Transform to our format
+      const addressParts = place.vicinity ? place.vicinity.split(',') : [];
+      const place_name = addressParts.length > 0 ? addressParts[addressParts.length - 1].trim() : '';
+
+      return {
+        placeId: place.place_id,
+        name: place.name,
+        address: place.vicinity || '',
+        place: place_name,
+        rating: place.rating,
+        userRatingsTotal: place.user_ratings_total,
+        types: place.types,
+        photoReference: place.photos?.[0]?.photo_reference || null,
+        location: place.geometry.location,
+        businessStatus: place.business_status,
+        priceLevel: place.price_level,
+      };
+    };
+
+    // Fetch pages until we have enough restaurants or run out of pages
+    do {
+      pageCount++;
+      console.log(`[Google Places] Fetching page ${pageCount}...`);
+
+      const params = {
+        location: `${lat},${lng}`,
+        radius: radius,
+        type: 'restaurant',
+        rankby: 'prominence',
+        key: GOOGLE_PLACES_API_KEY,
+      };
+
+      // Add pagetoken if we have one (for page 2+)
+      if (nextPageToken) {
+        params.pagetoken = nextPageToken;
+      }
+
+      const response = await axios.get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', {
+        params,
+      });
+
+      if (response.data.status === 'ZERO_RESULTS') {
+        break;
+      }
+
+      if (response.data.status === 'INVALID_REQUEST' && nextPageToken) {
+        // Next page token not ready yet, wait 2 seconds
+        console.log('[Google Places] Waiting for next page token...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue; // Retry same request
+      }
+
+      if (response.data.status !== 'OK') {
+        console.error('Google Places Nearby API error:', response.data.status);
+        throw new Error(`Google Places API error: ${response.data.status}`);
+      }
+
+      // Process and filter this page's results
+      const pageResults = response.data.results
+        .map(processPlace)
+        .filter(r => r !== null); // Remove filtered out places
+
+      allResults = allResults.concat(pageResults);
+      console.log(`[Google Places] Page ${pageCount}: Found ${pageResults.length} restaurants (total: ${allResults.length})`);
+
+      // Check if we have enough
+      if (allResults.length >= limit) {
+        break;
+      }
+
+      // Get next page token
+      nextPageToken = response.data.next_page_token;
+
+      // If we have more pages, wait 2 seconds (Google requires delay)
+      if (nextPageToken && pageCount < maxPages) {
+        console.log('[Google Places] Waiting 2s before next page...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+    } while (nextPageToken && pageCount < maxPages && allResults.length < limit);
+
+    // Take only what we need
+    const results = allResults.slice(0, limit);
+
+    console.log(`[Google Places] Completed: ${results.length} restaurants from ${pageCount} page(s) (filtered out ${totalFiltered} hotels/invalid)`);
+    return results;
+  } catch (error) {
+    console.error('Error searching nearby restaurants:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate unique slug for restaurant name
+ * Handles special characters (Croatian, Slovenian, etc.) and ensures uniqueness
+ * @param {string} name - Restaurant name
+ * @returns {Promise<string>} - Unique slug
+ */
+async function generateSlug(name) {
+  const { Restaurant } = require('../../models');
+
+  const normalizedName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[čć]/g, 'c')
+    .replace(/[š]/g, 's')
+    .replace(/[ž]/g, 'z')
+    .replace(/[đ]/g, 'd')
+    .replace(/[^\w\s-]/g, '');
+
+  const baseSlug = normalizedName
+    .replace(/[\s]+/g, '-')
+    .replace(/[^\w\-]+/g, '');
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  // Check for uniqueness
+  while (await Restaurant.findOne({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+
+  return slug;
+}
+
+/**
+ * Import unclaimed restaurant from basic Google Places data (Nearby Search)
+ * Uses basic data only - NO Place Details call (saves $0.017 per restaurant)
+ * @param {Object} placeData - Place data from Nearby Search API
+ * @returns {Promise<Object>} Created restaurant object
+ */
+async function importUnclaimedRestaurantBasic(placeData) {
+  try {
+    const { Restaurant } = require('../../models');
+
+    // Check if already exists
+    const existing = await Restaurant.findOne({
+      where: { placeId: placeData.placeId },
+    });
+
+    if (existing) {
+      console.log(`[Import] Restaurant already exists: ${existing.name}`);
+      return existing;
+    }
+
+    // Parse address to extract street, city, country
+    // Google Nearby Search returns "vicinity" like: "Kersnikova ulica 1, Ljubljana"
+    // We need to extract: address (street), place (city), country
+    const addressParts = placeData.address ? placeData.address.split(',').map(p => p.trim()) : [];
+
+    let street = placeData.address || 'Address not available';
+    let city = placeData.place; // From our transformed data
+    let country = null;
+
+    // If we have multiple parts, try to extract country from last part
+    if (addressParts.length >= 2) {
+      // Format: "Street, City" or "Street, City, Country"
+      street = addressParts[0];
+
+      // Check if last part is a known country
+      const lastPart = addressParts[addressParts.length - 1];
+      if (COUNTRY_CALLING_CODES[lastPart]) {
+        country = lastPart;
+        // City is the second-to-last part
+        if (addressParts.length >= 3) {
+          city = addressParts[addressParts.length - 2];
+        }
+      } else {
+        // No country in address, last part is city
+        city = lastPart;
+      }
+    }
+
+    // Generate unique slug
+    const slug = await generateSlug(placeData.name);
+
+    // Create basic unclaimed restaurant from Nearby Search data
+    const restaurant = await Restaurant.create({
+      name: placeData.name,
+      slug: slug,
+      placeId: placeData.placeId,
+      address: street,
+      place: city,
+      country: country, // May be null, will be filled on lazy load
+      latitude: placeData.location.lat,
+      longitude: placeData.location.lng,
+      phone: null, // Not available in basic data
+      rating: placeData.rating || null,
+      userRatingsTotal: placeData.userRatingsTotal || null,
+      priceLevel: placeData.priceLevel || null,
+      types: placeData.types || [],
+      businessStatus: placeData.businessStatus || null,
+      isClaimed: false,
+    });
+
+    console.log(`[Import] Created basic unclaimed restaurant: ${restaurant.name} (${restaurant.id}) - slug: ${slug}`);
+    return restaurant;
+  } catch (error) {
+    console.error('Error importing unclaimed restaurant (basic):', error);
+    throw error;
+  }
+}
+
+/**
+ * Import unclaimed restaurant from Google Place ID (with full details)
+ * Fetches Place Details - costs $0.017 per call
+ * Use this only when you need full data (phone, hours, etc.)
+ * @param {string} placeId - Google Place ID
+ * @returns {Promise<Object>} Created restaurant object
+ */
+async function importUnclaimedRestaurant(placeId) {
+  try {
+    const { Restaurant } = require('../../models');
+
+    // Check if already exists
+    const existing = await Restaurant.findOne({
+      where: { placeId },
+    });
+
+    if (existing) {
+      console.log(`[Import] Restaurant already exists: ${existing.name}`);
+      return existing;
+    }
+
+    // Fetch details from Google
+    const placeDetails = await getPlaceDetails(placeId);
+
+    // Transform to restaurant data
+    const restaurantData = transformToRestaurantData(placeDetails);
+
+    // Generate unique slug
+    const slug = await generateSlug(placeDetails.name);
+
+    // Create as unclaimed
+    const restaurant = await Restaurant.create({
+      ...restaurantData,
+      slug: slug,
+      isClaimed: false,
+      rating: placeDetails.rating || null,
+      userRatingsTotal: placeDetails.user_ratings_total || null,
+      types: placeDetails.types || [],
+      businessStatus: placeDetails.business_status || null,
+    });
+
+    console.log(`[Import] Created unclaimed restaurant: ${restaurant.name} (${restaurant.id}) - slug: ${slug}`);
+    return restaurant;
+  } catch (error) {
+    console.error('Error importing unclaimed restaurant:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   extractPlaceIdFromUrl,
   searchPlacesByText,
@@ -522,4 +836,8 @@ module.exports = {
   getPlaceIdFromCoordinates,
   shouldUpdateFromGoogle,
   updateRestaurantFromGoogle,
+  searchNearbyRestaurants,
+  importUnclaimedRestaurant,
+  importUnclaimedRestaurantBasic,
+  generateSlug,
 };
