@@ -411,12 +411,13 @@ function transformToRestaurantData(placeDetails) {
   // Transform opening hours if available
   if (placeDetails.opening_hours) {
     // Fix day shift: Google uses 0=Sunday, 1=Monday... 6=Saturday
-    // We need 1=Monday, 2=Tuesday... 7=Sunday
+    // We need 0=Monday, 1=Tuesday... 6=Sunday
     const periods = (placeDetails.opening_hours.periods || []).map(period => {
       const fixDay = (day) => {
         // Google: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-        // Ours:   7=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-        return day === 0 ? 7 : day;
+        // Ours:   0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+        // Formula: Google 0 (Sun) → 6, Google 1 (Mon) → 0, etc.
+        return day === 0 ? 6 : day - 1;
       };
 
       return {
