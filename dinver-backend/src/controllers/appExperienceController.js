@@ -18,8 +18,13 @@ const {
 } = require('../../models');
 const { literal } = require('sequelize');
 const { Op } = require('sequelize');
-const { uploadImage, UPLOAD_STRATEGY } = require('../../services/imageUploadService');
-const { updateRestaurantDinverRating } = require('../services/dinverRatingService');
+const {
+  uploadImage,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
+const {
+  updateRestaurantDinverRating,
+} = require('../services/dinverRatingService');
 
 /**
  * Create Experience with images in one request
@@ -74,9 +79,10 @@ const createExperience = async (req, res) => {
     }
 
     // Parse recommendedImageIndex - which image has the "recommended" badge
-    const recommendedImageIndex = req.body.recommendedImageIndex !== undefined
-      ? parseInt(req.body.recommendedImageIndex)
-      : null;
+    const recommendedImageIndex =
+      req.body.recommendedImageIndex !== undefined
+        ? parseInt(req.body.recommendedImageIndex)
+        : null;
 
     const files = req.files || [];
 
@@ -92,7 +98,8 @@ const createExperience = async (req, res) => {
     if (!foodRating || !ambienceRating || !serviceRating) {
       await transaction.rollback();
       return res.status(400).json({
-        error: 'All ratings are required (foodRating, ambienceRating, serviceRating)',
+        error:
+          'All ratings are required (foodRating, ambienceRating, serviceRating)',
       });
     }
 
@@ -139,7 +146,14 @@ const createExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'place', 'latitude', 'longitude'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: Experience,
@@ -167,11 +181,23 @@ const createExperience = async (req, res) => {
 
     // Calculate overall rating (average of 3 ratings)
     const overallRating = parseFloat(
-      ((parseFloat(foodRating) + parseFloat(ambienceRating) + parseFloat(serviceRating)) / 3).toFixed(1)
+      (
+        (parseFloat(foodRating) +
+          parseFloat(ambienceRating) +
+          parseFloat(serviceRating)) /
+        3
+      ).toFixed(1),
     );
 
     // Validate mealType
-    const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'sweet', 'drinks'];
+    const validMealTypes = [
+      'breakfast',
+      'brunch',
+      'lunch',
+      'dinner',
+      'sweet',
+      'drinks',
+    ];
     if (mealType && !validMealTypes.includes(mealType)) {
       await transaction.rollback();
       return res.status(400).json({
@@ -202,7 +228,7 @@ const createExperience = async (req, res) => {
         cityCached: visit.restaurant?.place || null,
         publishedAt,
       },
-      { transaction }
+      { transaction },
     );
 
     // Upload images in PARALLEL (much faster than sequential!)
@@ -219,7 +245,7 @@ const createExperience = async (req, res) => {
         imageResult,
         index: i,
         caption: captions[i] || null,
-      }))
+      })),
     );
 
     // Wait for all uploads to complete in parallel
@@ -247,7 +273,7 @@ const createExperience = async (req, res) => {
           menuItemId,
           isRecommended,
         },
-        { transaction }
+        { transaction },
       );
 
       mediaRecords.push({
@@ -268,7 +294,10 @@ const createExperience = async (req, res) => {
     // Update restaurant's Dinver rating (async, don't block response)
     if (visit.restaurantId && status === 'APPROVED') {
       updateRestaurantDinverRating(visit.restaurantId).catch((err) => {
-        console.error('[Create Experience] Failed to update Dinver rating:', err.message);
+        console.error(
+          '[Create Experience] Failed to update Dinver rating:',
+          err.message,
+        );
       });
     }
 
@@ -312,7 +341,14 @@ const getExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: ExperienceMedia,
@@ -410,7 +446,16 @@ const getExperienceFeed = async (req, res) => {
     const restaurantInclude = {
       model: Restaurant,
       as: 'restaurant',
-      attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
+      attributes: [
+        'id',
+        'name',
+        'slug',
+        'place',
+        'thumbnailUrl',
+        'latitude',
+        'longitude',
+        'isClaimed',
+      ],
       required: true,
     };
 
@@ -480,8 +525,10 @@ const getExperienceFeed = async (req, res) => {
       // Add distance if coordinates provided
       if (lat && lng && exp.restaurant?.latitude && exp.restaurant?.longitude) {
         const R = 6371; // Earth's radius in km
-        const dLat = ((exp.restaurant.latitude - parseFloat(lat)) * Math.PI) / 180;
-        const dLon = ((exp.restaurant.longitude - parseFloat(lng)) * Math.PI) / 180;
+        const dLat =
+          ((exp.restaurant.latitude - parseFloat(lat)) * Math.PI) / 180;
+        const dLon =
+          ((exp.restaurant.longitude - parseFloat(lng)) * Math.PI) / 180;
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
           Math.cos((parseFloat(lat) * Math.PI) / 180) *
@@ -641,7 +688,14 @@ const getUserExperiences = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'isClaimed'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: ExperienceMedia,
@@ -714,6 +768,18 @@ const getRestaurantExperiences = async (req, res) => {
           attributes: ['id', 'name', 'username', 'profileImage'],
         },
         {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
+        },
+        {
           model: ExperienceMedia,
           as: 'media',
         },
@@ -752,13 +818,25 @@ const getRestaurantExperiences = async (req, res) => {
       avgOverall = 0;
     if (experiences.length > 0) {
       avgFood =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.foodRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.foodRating) || 0),
+          0,
+        ) / experiences.length;
       avgAmbience =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.ambienceRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.ambienceRating) || 0),
+          0,
+        ) / experiences.length;
       avgService =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.serviceRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.serviceRating) || 0),
+          0,
+        ) / experiences.length;
       avgOverall =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.overallRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.overallRating) || 0),
+          0,
+        ) / experiences.length;
     }
 
     res.status(200).json({
@@ -869,7 +947,10 @@ const deleteExperience = async (req, res) => {
     // Update restaurant's Dinver rating (async, don't block response)
     if (restaurantId) {
       updateRestaurantDinverRating(restaurantId).catch((err) => {
-        console.error('[Delete Experience] Failed to update Dinver rating:', err.message);
+        console.error(
+          '[Delete Experience] Failed to update Dinver rating:',
+          err.message,
+        );
       });
     }
 
