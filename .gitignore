@@ -9,7 +9,11 @@ npm-debug.log*
 secrets/
 
 # Environment variables
-.env
+!.env.example
+!.env.*.example
+!.env.staging
+!.env.production
+.env.keys
 
 # MacOS
 .DS_Store
@@ -55,4 +59,4 @@ coverage/
 .env.production.local
 
 # CloudFront keys
-config/keys/ 
+config/keys/
