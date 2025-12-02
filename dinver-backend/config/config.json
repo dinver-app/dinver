@@ -13,6 +13,22 @@
       "idle": 10000
     }
   },
+  "staging": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    },
+    "pool": {
+      "max": 30,
+      "min": 10,
+      "acquire": 60000,
+      "idle": 10000
+    }
+  },
   "production": {
     "use_env_variable": "DATABASE_URL",
     "dialect": "postgres",
