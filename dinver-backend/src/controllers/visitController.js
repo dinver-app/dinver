@@ -2053,11 +2053,18 @@ const getVisitsByRestaurant = async (req, res) => {
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
-                  cdnUrl: m.cdnUrl,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  storageKey: m.storageKey,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
-                  thumbnails: m.thumbnails,
+                  thumbnails: m.thumbnails
+                    ? {
+                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image') : null,
+                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image') : null,
+                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image') : null,
+                      }
+                    : null,
                   caption: m.caption,
                   isRecommended: m.isRecommended,
                   menuItemId: m.menuItemId,
@@ -2196,11 +2203,18 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
-                  cdnUrl: m.cdnUrl,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  storageKey: m.storageKey,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
-                  thumbnails: m.thumbnails,
+                  thumbnails: m.thumbnails
+                    ? {
+                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image') : null,
+                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image') : null,
+                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image') : null,
+                      }
+                    : null,
                   caption: m.caption,
                   isRecommended: m.isRecommended,
                   menuItemId: m.menuItemId,
