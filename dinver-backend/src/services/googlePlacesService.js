@@ -827,6 +827,98 @@ async function importUnclaimedRestaurant(placeId) {
   }
 }
 
+/**
+ * Search restaurants using Google Places Text Search API
+ * Used for global search fallback when no results in database
+ * @param {string} query - Search query (e.g., "Pizza Milano")
+ * @param {number} userLat - User latitude (for location bias)
+ * @param {number} userLng - User longitude (for location bias)
+ * @param {number} limit - Max results to return
+ * @returns {Promise<Array>} Array of restaurant data (not yet imported)
+ */
+async function searchGooglePlacesText(query, userLat, userLng, limit = 10) {
+  try {
+    console.log(`[Google Text Search] Query: "${query}", Location: ${userLat},${userLng}`);
+
+    const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
+      params: {
+        query: `${query} restaurant`,
+        location: `${userLat},${userLng}`, // Bias towards user location
+        radius: 50000, // 50km bias (not hard limit)
+        type: 'restaurant',
+        language: 'hr',
+        key: GOOGLE_PLACES_API_KEY,
+      },
+    });
+
+    if (response.data.status === 'ZERO_RESULTS') {
+      console.log('[Google Text Search] No results found');
+      return [];
+    }
+
+    if (response.data.status !== 'OK') {
+      console.error('[Google Text Search] API error:', response.data.status);
+      throw new Error(`Google Places API error: ${response.data.status}`);
+    }
+
+    // Filter and transform results
+    const results = response.data.results
+      .filter(place => {
+        // 1. Must have rating and reviews
+        if (!place.rating || !place.user_ratings_total) {
+          return false;
+        }
+
+        // 2. Filter out lodging
+        const types = place.types || [];
+        const isLodging = types.some(t => ['lodging', 'campground', 'rv_park'].includes(t));
+        if (isLodging) {
+          return false;
+        }
+
+        return true;
+      })
+      .slice(0, limit)
+      .map(place => {
+        // Parse address
+        const addressParts = (place.formatted_address || place.vicinity || '').split(',').map(p => p.trim());
+
+        let street = place.vicinity || addressParts[0] || 'Address not available';
+        let city = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '';
+        let country = null;
+
+        // Try to extract country (last part)
+        if (addressParts.length >= 2) {
+          const lastPart = addressParts[addressParts.length - 1];
+          if (COUNTRY_CALLING_CODES[lastPart]) {
+            country = lastPart;
+          }
+        }
+
+        return {
+          placeId: place.place_id,
+          name: place.name,
+          address: street,
+          place: city,
+          country: country,
+          rating: place.rating,
+          userRatingsTotal: place.user_ratings_total,
+          types: place.types,
+          location: place.geometry.location,
+          businessStatus: place.business_status,
+          priceLevel: place.price_level,
+          photoReference: place.photos?.[0]?.photo_reference || null,
+        };
+      });
+
+    console.log(`[Google Text Search] Found ${results.length} restaurants`);
+    return results;
+  } catch (error) {
+    console.error('[Google Text Search] Error:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   extractPlaceIdFromUrl,
   searchPlacesByText,
@@ -841,4 +933,5 @@ module.exports = {
   importUnclaimedRestaurant,
   importUnclaimedRestaurantBasic,
   generateSlug,
+  searchGooglePlacesText,
 };

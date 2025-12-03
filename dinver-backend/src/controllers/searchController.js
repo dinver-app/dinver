@@ -13,6 +13,15 @@ const {
 } = require('../../models');
 const { calculateDistance } = require('../../utils/distance');
 const { addTestFilter } = require('../../utils/restaurantFilter');
+const {
+  searchGooglePlacesText,
+  importUnclaimedRestaurantBasic,
+} = require('../services/googlePlacesService');
+const {
+  determineSearchMode,
+  enhanceSearchResults,
+  sortRestaurantsByPriority,
+} = require('../../utils/globalSearchEnhancer');
 
 // ----------------- Lightweight cache for viewCounts -----------------
 let viewCountsCache = {
@@ -855,46 +864,65 @@ module.exports = {
           };
         });
 
-        // Apply default radius filter for main (non-map) search
-        let listForDisplay = restaurantsWithMetrics;
+        // Determine search mode based on query and filters
+        const searchMode = determineSearchMode({
+          priceCategoryIds,
+          establishmentPerkIds,
+          foodTypeIds,
+          dietaryTypeIds,
+          minRating,
+          establishmentTypeIds,
+          mealTypeIds,
+          hasComma,
+          searchTerms,
+        });
+
+        // Filter local results first (within 60km)
+        let localResults = restaurantsWithMetrics;
         if (hasCoordinates) {
-          listForDisplay = listForDisplay.filter(
+          localResults = localResults.filter(
             (r) => isFinite(r.distance) && r.distance <= MAX_SEARCH_DISTANCE_KM,
           );
         }
 
-        // Sort results: smart by default when searching, support existing sortBy
+        // Enhance with Tier 2 & 3 if needed
+        const enhanced = await enhanceSearchResults(localResults, {
+          searchMode,
+          query,
+          userLat: parseFloat(latitude),
+          userLng: parseFloat(longitude),
+          MAX_SEARCH_DISTANCE_KM,
+          minResultsForTier2: 5,
+          minResultsForTier3: 3,
+          searchTerms,
+          userEmail,
+          restaurantQuery,
+        });
+
+        // Sort: CLAIMED FIRST, then unclaimed by sort criteria
+        let listForDisplay = sortRestaurantsByPriority(
+          enhanced.restaurants,
+          computedSortBy,
+        );
+
+        // For menu search with comma, apply special menu coverage sorting WITHIN each group
         if (hasComma && searchTerms.length > 1) {
-          // First by menu coverage group, then by smartScore desc
-          listForDisplay.sort((a, b) => {
+          const claimed = listForDisplay.filter((r) => r.isClaimed);
+          const unclaimed = listForDisplay.filter((r) => !r.isClaimed);
+
+          // Sort claimed by menu coverage
+          claimed.sort((a, b) => {
             const covA = a.menuCoverage?.matchedCount || 0;
             const covB = b.menuCoverage?.matchedCount || 0;
             if (covB !== covA) return covB - covA;
             return b.smartScore - a.smartScore;
           });
-        } else {
-          switch (computedSortBy) {
-            case 'rating':
-              listForDisplay.sort((a, b) => b.rating - a.rating);
-              break;
-            case 'distance':
-              listForDisplay.sort((a, b) => a.distance - b.distance);
-              break;
-            case 'distance_rating':
-              listForDisplay.sort((a, b) => {
-                const scoreA = (a.rating * 5) / (a.distance + 1); // +1 to avoid division by zero
-                const scoreB = (b.rating * 5) / (b.distance + 1);
-                return scoreB - scoreA;
-              });
-              break;
-            case 'core':
-              listForDisplay.sort((a, b) => (b.core || 0) - (a.core || 0));
-              break;
-            case 'match_score':
-            default:
-              listForDisplay.sort((a, b) => b.smartScore - a.smartScore);
-          }
+
+          listForDisplay = [...claimed, ...unclaimed];
         }
+
+        // Store search meta for response
+        const searchMeta = enhanced.meta;
 
         // If map mode, return GeoJSON format
         if (mode === 'map') {
@@ -968,6 +996,7 @@ module.exports = {
               : null,
             thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
           })),
+          meta: searchMeta,
           pagination: {
             currentPage: page,
             totalPages,
@@ -1009,32 +1038,58 @@ module.exports = {
         };
       });
 
-      // Apply default radius filter for main (non-map) search
-      let listForDisplay = restaurantsWithDistance;
+      // Determine search mode for no-query search (only filters matter)
+      const searchMode = determineSearchMode({
+        priceCategoryIds,
+        establishmentPerkIds,
+        foodTypeIds,
+        dietaryTypeIds,
+        minRating,
+        establishmentTypeIds,
+        mealTypeIds,
+        hasComma: false,
+        searchTerms: [],
+      });
+
+      // Filter local results
+      let localResults = restaurantsWithDistance;
       if (hasCoordinates) {
-        listForDisplay = listForDisplay.filter(
+        localResults = localResults.filter(
           (r) => isFinite(r.distance) && r.distance <= MAX_SEARCH_DISTANCE_KM,
         );
       }
 
-      // Sort results based on sortBy parameter
-      switch (sortBy) {
-        case 'rating':
-          listForDisplay.sort((a, b) => b.rating - a.rating);
-          break;
-        case 'distance':
-          listForDisplay.sort((a, b) => a.distance - b.distance);
-          break;
-        case 'distance_rating':
-          listForDisplay.sort((a, b) => {
-            const scoreA = (a.rating * 5) / (a.distance + 1);
-            const scoreB = (b.rating * 5) / (b.distance + 1);
-            return scoreB - scoreA;
+      // For no-query search, SKIP Tier 3 (Google Places)
+      // Only use Tier 2 if no filters
+      const enhanced = searchMode.isLocalDiscovery
+        ? {
+            restaurants: localResults,
+            meta: {
+              mode: 'local_discovery',
+              tier: 'local',
+              localCount: localResults.length,
+              extendedCount: 0,
+              googleCount: 0,
+            },
+          }
+        : await enhanceSearchResults(localResults, {
+            searchMode,
+            query: '', // Empty query
+            userLat: parseFloat(latitude),
+            userLng: parseFloat(longitude),
+            MAX_SEARCH_DISTANCE_KM,
+            minResultsForTier2: 5,
+            minResultsForTier3: 999999, // NEVER use Tier 3 for no-query search
+            searchTerms: [],
+            userEmail,
+            restaurantQuery,
           });
-          break;
-        default:
-          listForDisplay.sort((a, b) => a.distance - b.distance);
-      }
+
+      // Sort: CLAIMED FIRST, then unclaimed
+      let listForDisplay = sortRestaurantsByPriority(enhanced.restaurants, sortBy);
+
+      // Store search meta for response
+      const searchMeta2 = enhanced.meta;
 
       // If map mode, return GeoJSON format
       if (mode === 'map') {
@@ -1108,6 +1163,7 @@ module.exports = {
             : null,
           thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
         })),
+        meta: searchMeta2,
         pagination: {
           currentPage: page,
           totalPages,

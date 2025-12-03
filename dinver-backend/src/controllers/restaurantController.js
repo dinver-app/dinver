@@ -51,6 +51,8 @@ const {
   updateRestaurantFromGoogle,
   searchNearbyRestaurants,
   importUnclaimedRestaurantBasic,
+  getPlaceDetails,
+  importUnclaimedRestaurant,
 } = require('../services/googlePlacesService');
 const { addTestFilter } = require('../../utils/restaurantFilter');
 
@@ -2871,8 +2873,38 @@ const getPartners = async (req, res) => {
 
 const getFullRestaurantDetails = async (req, res) => {
   try {
-    const id = req.restaurantId || req.params.restaurantId;
+    let id = req.restaurantId || req.params.restaurantId;
     const { includeWifi } = req.query;
+
+    // Handle cached Google Places restaurants (lazy import on view)
+    if (id && id.startsWith && id.startsWith('google:')) {
+      const placeId = id.replace('google:', '');
+      console.log(`[getFullRestaurantDetails] Lazy import triggered for Google Place: ${placeId}`);
+
+      // Check if already imported (race condition or previous import)
+      let existingRestaurant = await Restaurant.findOne({ where: { placeId } });
+
+      if (!existingRestaurant) {
+        // Import now - user showed interest by viewing details
+        try {
+          console.log('[getFullRestaurantDetails] Importing restaurant from Google Places API');
+          const placeDetails = await getPlaceDetails(placeId);
+          existingRestaurant = await importUnclaimedRestaurant(placeDetails);
+          console.log(`[getFullRestaurantDetails] Successfully imported: ${existingRestaurant.name} (${existingRestaurant.id})`);
+        } catch (importError) {
+          console.error('[getFullRestaurantDetails] Failed to import restaurant:', importError);
+          return res.status(500).json({
+            error: 'Failed to load restaurant from Google Places',
+            details: importError.message
+          });
+        }
+      } else {
+        console.log(`[getFullRestaurantDetails] Restaurant already imported: ${existingRestaurant.name} (${existingRestaurant.id})`);
+      }
+
+      // Update ID to use the real UUID
+      id = existingRestaurant.id;
+    }
 
     // Get restaurant base data
     const restaurant = await Restaurant.findOne({
