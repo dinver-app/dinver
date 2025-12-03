@@ -7,6 +7,7 @@ const {
   Reservation,
   UserSettings,
   Visit,
+  Experience,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -1730,6 +1731,20 @@ const approveReceipt = async (req, res) => {
         });
 
         console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
+
+        // Update associated Experience with restaurantId if it exists
+        const experience = await Experience.findOne({
+          where: { visitId: visit.id },
+        });
+
+        if (experience) {
+          await experience.update({
+            restaurantId: restaurantId,
+            status: 'APPROVED',
+            publishedAt: experience.publishedAt || new Date(),
+          });
+          console.log(`[Receipt Approval] Updated Experience ${experience.id} with restaurant ${restaurantId} and set to APPROVED`);
+        }
       }
 
       // If no existing Visit, create one (backward compatibility for old receipts)
