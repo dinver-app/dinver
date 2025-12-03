@@ -2053,16 +2053,16 @@ const getVisitsByRestaurant = async (req, res) => {
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
-                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image', 'original') : null,
                   storageKey: m.storageKey,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
                   thumbnails: m.thumbnails
                     ? {
-                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image') : null,
-                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image') : null,
-                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image') : null,
+                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image', 'thumbnail') : null,
+                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image', 'medium') : null,
+                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image', 'original') : null,
                       }
                     : null,
                   caption: m.caption,
@@ -2078,7 +2078,7 @@ const getVisitsByRestaurant = async (req, res) => {
       restaurant: {
         ...restaurant.get(),
         thumbnailUrl: restaurant.thumbnailUrl
-          ? getMediaUrl(restaurant.thumbnailUrl, 'image')
+          ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'original')
           : null,
       },
       visitCount: visits.length,
