@@ -2058,13 +2058,6 @@ const getVisitsByRestaurant = async (req, res) => {
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
-                  thumbnails: m.thumbnails
-                    ? {
-                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image', 'thumbnail') : null,
-                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image', 'medium') : null,
-                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image', 'original') : null,
-                      }
-                    : null,
                   caption: m.caption,
                   isRecommended: m.isRecommended,
                   menuItemId: m.menuItemId,
@@ -2078,7 +2071,7 @@ const getVisitsByRestaurant = async (req, res) => {
       restaurant: {
         ...restaurant.get(),
         thumbnailUrl: restaurant.thumbnailUrl
-          ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'original')
+          ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
           : null,
       },
       visitCount: visits.length,
