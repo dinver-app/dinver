@@ -7,7 +7,9 @@ const {
   UserSettings,
   UserFollow,
   Experience,
+  ExperienceLike,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
 const { uploadVariantsToS3 } = require('../../utils/s3Upload');
 const { processImage } = require('../../utils/imageProcessor');
@@ -1371,8 +1373,6 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
       console.log('│ 🔍 Strategy 2: Name-based Database Search');
       console.log(`│    Searching for name: "${claudeResult.merchantName}"...`);
 
-      const { Op } = require('sequelize');
-
       // Normalize merchant name (remove diacritics for fuzzy matching)
       const normalizeName = (name) => {
         return name
@@ -2029,6 +2029,23 @@ const getVisitsByRestaurant = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
+    // Get hasLiked status for all experiences
+    const experienceIds = visits
+      .filter((v) => v.experience)
+      .map((v) => v.experience.id);
+
+    let likedIds = [];
+    if (experienceIds.length > 0) {
+      const likes = await ExperienceLike.findAll({
+        where: {
+          experienceId: { [Op.in]: experienceIds },
+          userId: userId,
+        },
+        attributes: ['experienceId'],
+      });
+      likedIds = likes.map((l) => l.experienceId);
+    }
+
     const visitsData = visits.map((visit) => ({
       id: visit.id,
       submittedAt: visit.submittedAt,
@@ -2049,12 +2066,12 @@ const getVisitsByRestaurant = async (req, res) => {
             mealType: visit.experience.mealType || null,
             likesCount: visit.experience.likesCount || 0,
             publishedAt: visit.experience.publishedAt || null,
+            hasLiked: likedIds.includes(visit.experience.id),
             media: visit.experience.media
               ? visit.experience.media.map((m) => ({
                   id: m.id,
                   kind: m.kind,
                   cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image', 'original') : null,
-                  storageKey: m.storageKey,
                   width: m.width,
                   height: m.height,
                   orderIndex: m.orderIndex,
