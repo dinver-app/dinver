@@ -23,6 +23,22 @@ const {
   sortRestaurantsByPriority,
 } = require('../../utils/globalSearchEnhancer');
 
+/**
+ * Simplify unclaimed restaurant for UX
+ * Returns only essential fields: id, slug, name, address, distance, rating
+ */
+function simplifyUnclaimedRestaurant(restaurant) {
+  return {
+    id: restaurant.id,
+    slug: restaurant.slug,
+    name: restaurant.name,
+    address: restaurant.address,
+    distance: restaurant.distance,
+    rating: restaurant.rating,
+    isClaimed: false,
+  };
+}
+
 // ----------------- Lightweight cache for viewCounts -----------------
 let viewCountsCache = {
   fetchedAt: 0,
@@ -989,13 +1005,19 @@ module.exports = {
         const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
         const responsePayload = {
-          restaurants: paginatedRestaurants.map((r) => ({
-            ...r,
-            thumbnailUrl: r.thumbnailUrl
-              ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
-              : null,
-            thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
-          })),
+          restaurants: paginatedRestaurants.map((r) => {
+            // Simplify unclaimed restaurants for UX (only essential fields)
+            if (!r.isClaimed) {
+              return simplifyUnclaimedRestaurant(r);
+            }
+            return {
+              ...r,
+              thumbnailUrl: r.thumbnailUrl
+                ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
+                : null,
+              thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
+            };
+          }),
           meta: searchMeta,
           pagination: {
             currentPage: page,
@@ -1156,13 +1178,19 @@ module.exports = {
       const totalPages = Math.ceil(listForDisplay.length / pageLimit);
 
       const responsePayload2 = {
-        restaurants: paginatedRestaurants.map((r) => ({
-          ...r,
-          thumbnailUrl: r.thumbnailUrl
-            ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
-            : null,
-          thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
-        })),
+        restaurants: paginatedRestaurants.map((r) => {
+          // Simplify unclaimed restaurants for UX (only essential fields)
+          if (!r.isClaimed) {
+            return simplifyUnclaimedRestaurant(r);
+          }
+          return {
+            ...r,
+            thumbnailUrl: r.thumbnailUrl
+              ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
+              : null,
+            thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
+          };
+        }),
         meta: searchMeta2,
         pagination: {
           currentPage: page,

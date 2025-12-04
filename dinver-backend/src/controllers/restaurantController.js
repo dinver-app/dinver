@@ -50,10 +50,25 @@ const {
   shouldUpdateFromGoogle,
   updateRestaurantFromGoogle,
   searchNearbyRestaurants,
-  getPlaceDetails,
-  importUnclaimedRestaurant,
+  importUnclaimedRestaurantBasic,
 } = require('../services/googlePlacesService');
 const { addTestFilter } = require('../../utils/restaurantFilter');
+
+/**
+ * Simplify unclaimed restaurant response for UX
+ * Returns only essential fields: id, slug, name, address, distance, rating
+ */
+function simplifyUnclaimedRestaurant(restaurant) {
+  return {
+    id: restaurant.id,
+    slug: restaurant.slug,
+    name: restaurant.name,
+    address: restaurant.address,
+    distance: restaurant.distance,
+    rating: restaurant.rating,
+    isClaimed: false,
+  };
+}
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -2737,83 +2752,71 @@ const nearYou = async (req, res) => {
 
           console.log(`[nearYou] After filtering: ${highQuality.length} high-quality, ${lowQuality.length} low-quality (filtered ${googleResults.length - highQuality.length - lowQuality.length} duplicates)`);
 
-          // Transform to cached format (lazy import)
-          const cachedHighQuality = highQuality.map(place => {
-            const distance = calculateDistance(
-              userLat,
-              userLon,
-              place.location.lat,
-              place.location.lng,
-            );
-
-            return {
-              id: `google:${place.placeId}`, // Special ID for lazy import
-              name: place.name,
-              description: null,
-              address: place.address,
-              place: place.place,
-              latitude: place.location.lat,
-              longitude: place.location.lng,
-              phone: null,
-              rating: place.rating,
-              userRatingsTotal: place.userRatingsTotal,
-              priceLevel: place.priceLevel,
-              thumbnailUrl: null,
-              slug: null, // No slug until imported
-              isClaimed: false,
-              priceCategoryId: null,
-              placeId: place.placeId,
-              distance,
-              isImported: false, // Not in DB yet
-              source: 'google_cache',
-            };
-          });
-
-          // Check if we still need low-quality to reach 20
-          const currentTotal = withUrls.length + existingUnclaimedWithDistance.length + cachedHighQuality.length;
-          const needed = Math.max(0, 20 - currentTotal);
-
-          let cachedLowQuality = [];
-          if (needed > 0) {
-            console.log(`[nearYou] Need ${needed} more restaurants to reach 20. Adding low-quality restaurants.`);
-
-            cachedLowQuality = lowQuality.slice(0, needed).map(place => {
+          // IMMEDIATE BASIC IMPORT - import to DB right away (no Place Details API call)
+          // This saves cost for future users (they get data from DB, not Google API)
+          const importedHighQuality = [];
+          for (const place of highQuality) {
+            try {
+              const restaurant = await importUnclaimedRestaurantBasic(place);
               const distance = calculateDistance(
                 userLat,
                 userLon,
-                place.location.lat,
-                place.location.lng,
+                restaurant.latitude,
+                restaurant.longitude,
               );
 
-              return {
-                id: `google:${place.placeId}`,
-                name: place.name,
-                description: null,
-                address: place.address,
-                place: place.place,
-                latitude: place.location.lat,
-                longitude: place.location.lng,
-                phone: null,
-                rating: place.rating,
-                userRatingsTotal: place.userRatingsTotal,
-                priceLevel: place.priceLevel,
-                thumbnailUrl: null,
-                slug: null,
-                isClaimed: false,
-                priceCategoryId: null,
-                placeId: place.placeId,
+              importedHighQuality.push({
+                ...restaurant.toJSON(),
                 distance,
-                isImported: false,
-                source: 'google_cache',
-              };
-            });
+                isImported: true, // In DB
+                hasFullDetails: false, // Basic import only (no openingHours, phone, etc.)
+                source: 'google_basic_import',
+              });
+            } catch (importError) {
+              console.error(`[nearYou] Failed to import ${place.name}:`, importError.message);
+              // Skip this restaurant if import fails
+            }
           }
 
-          // Merge all unclaimed: DB + cached high-quality + cached low-quality
+          console.log(`[nearYou] Imported ${importedHighQuality.length} high-quality restaurants to DB`);
+
+          // Check if we still need low-quality to reach 20
+          const currentTotal = withUrls.length + existingUnclaimedWithDistance.length + importedHighQuality.length;
+          const needed = Math.max(0, 20 - currentTotal);
+
+          let importedLowQuality = [];
+          if (needed > 0) {
+            console.log(`[nearYou] Need ${needed} more restaurants to reach 20. Importing low-quality restaurants.`);
+
+            const lowQualityToImport = lowQuality.slice(0, needed);
+            for (const place of lowQualityToImport) {
+              try {
+                const restaurant = await importUnclaimedRestaurantBasic(place);
+                const distance = calculateDistance(
+                  userLat,
+                  userLon,
+                  restaurant.latitude,
+                  restaurant.longitude,
+                );
+
+                importedLowQuality.push({
+                  ...restaurant.toJSON(),
+                  distance,
+                  isImported: true,
+                  hasFullDetails: false,
+                  source: 'google_basic_import',
+                });
+              } catch (importError) {
+                console.error(`[nearYou] Failed to import ${place.name}:`, importError.message);
+              }
+            }
+          }
+
+          // Merge all unclaimed: DB existing + newly imported high-quality + newly imported low-quality
           const allUnclaimed = [
             ...existingUnclaimedWithDistance,
-            ...cachedHighQuality,
-            ...cachedLowQuality,
+            ...importedHighQuality,
+            ...importedLowQuality,
           ];
 
           // Sort by hybrid score (rating × proximity)
@@ -2832,7 +2835,7 @@ const nearYou = async (req, res) => {
             .sort((a, b) => b.hybridScore - a.hybridScore)
             .slice(0, 20); // Max 20 unclaimed
 
-          console.log(`[nearYou] Final unclaimed: ${unclaimedRestaurants.length} total (${existingUnclaimedWithDistance.length} DB + ${cachedHighQuality.length} high-quality cached + ${cachedLowQuality.length} low-quality cached)`);
+          console.log(`[nearYou] Final unclaimed: ${unclaimedRestaurants.length} total (${existingUnclaimedWithDistance.length} existing DB + ${importedHighQuality.length} new high-quality + ${importedLowQuality.length} new low-quality)`);
         } catch (googleError) {
           console.error('[nearYou] Error fetching from Google Places:', googleError);
           // Continue with existing unclaimed restaurants if Google API fails
@@ -2870,14 +2873,17 @@ const nearYou = async (req, res) => {
     const paginatedRestaurants = withUrls.slice(startIndex, endIndex);
     const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
 
+    // Simplify unclaimed restaurants for UX (only essential fields)
+    const simplifiedUnclaimed = unclaimedRestaurants.map(simplifyUnclaimedRestaurant);
+
     return res.json({
       restaurants: paginatedRestaurants,
-      unclaimedRestaurants: unclaimedRestaurants, // Always return (empty array if none)
+      unclaimedRestaurants: simplifiedUnclaimed, // Simplified: id, slug, name, address, distance, rating
       pagination: {
         currentPage: page,
         totalPages,
         totalRestaurants: restaurantsWithDistance.length,
-        unclaimedTotal: unclaimedRestaurants.length,
+        unclaimedTotal: simplifiedUnclaimed.length,
       },
     });
   } catch (error) {
@@ -2935,38 +2941,12 @@ const getPartners = async (req, res) => {
 
 const getFullRestaurantDetails = async (req, res) => {
   try {
-    let id = req.restaurantId || req.params.restaurantId;
+    const id = req.restaurantId || req.params.restaurantId;
     const { includeWifi } = req.query;
 
-    // Handle cached Google Places restaurants (lazy import on view)
-    if (id && id.startsWith && id.startsWith('google:')) {
-      const placeId = id.replace('google:', '');
-      console.log(`[getFullRestaurantDetails] Lazy import triggered for Google Place: ${placeId}`);
-
-      // Check if already imported (race condition or previous import)
-      let existingRestaurant = await Restaurant.findOne({ where: { placeId } });
-
-      if (!existingRestaurant) {
-        // Import now - user showed interest by viewing details
-        try {
-          console.log('[getFullRestaurantDetails] Importing restaurant from Google Places API');
-          const placeDetails = await getPlaceDetails(placeId);
-          existingRestaurant = await importUnclaimedRestaurant(placeDetails);
-          console.log(`[getFullRestaurantDetails] Successfully imported: ${existingRestaurant.name} (${existingRestaurant.id})`);
-        } catch (importError) {
-          console.error('[getFullRestaurantDetails] Failed to import restaurant:', importError);
-          return res.status(500).json({
-            error: 'Failed to load restaurant from Google Places',
-            details: importError.message
-          });
-        }
-      } else {
-        console.log(`[getFullRestaurantDetails] Restaurant already imported: ${existingRestaurant.name} (${existingRestaurant.id})`);
-      }
-
-      // Update ID to use the real UUID
-      id = existingRestaurant.id;
-    }
+    // NOTE: All restaurants are now imported immediately (basic import)
+    // No need for google: prefix handling anymore
+    // Full details (phone, openingHours) are lazy loaded below if missing
 
     // Get restaurant base data
     const restaurant = await Restaurant.findOne({

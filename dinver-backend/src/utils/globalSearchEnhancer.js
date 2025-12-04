@@ -163,9 +163,9 @@ async function performGooglePlacesFallback(params) {
       return [];
     }
 
-    // Decide which to import immediately vs cache
-    const toImport = [];
-    const toCache = [];
+    // Separate high-quality and low-quality for logging purposes
+    const highQuality = [];
+    const lowQuality = [];
 
     for (const place of googleResults) {
       // Calculate match score (simple name similarity)
@@ -177,15 +177,20 @@ async function performGooglePlacesFallback(params) {
         matchScore >= 0.8;
 
       if (isHighQuality) {
-        toImport.push(place);
+        highQuality.push(place);
       } else {
-        toCache.push(place);
+        lowQuality.push(place);
       }
     }
 
-    // Import high-quality restaurants to database
-    const importedRestaurants = [];
-    for (const place of toImport) {
+    console.log(`[Tier 3] Found ${highQuality.length} high-quality, ${lowQuality.length} low-quality`);
+
+    // IMMEDIATE BASIC IMPORT - import ALL to DB right away (no Place Details API call)
+    // This saves cost for future users (they get data from DB, not Google API)
+    const allResults = [];
+
+    // Import high-quality restaurants
+    for (const place of highQuality) {
       try {
         const restaurant = await importUnclaimedRestaurantBasic(place);
         const distance = calcDist(
@@ -195,55 +200,45 @@ async function performGooglePlacesFallback(params) {
           restaurant.longitude,
         );
 
-        importedRestaurants.push({
+        allResults.push({
           ...restaurant.toJSON(),
           distance,
           isDistant: distance > MAX_SEARCH_DISTANCE_KM,
-          source: 'google',
+          source: 'google_basic_import',
           isImported: true,
+          hasFullDetails: false, // Basic import - no openingHours, phone, etc.
         });
       } catch (error) {
-        console.error(`[Tier 3] Failed to import ${place.name}:`, error.message);
+        console.error(`[Tier 3] Failed to import high-quality ${place.name}:`, error.message);
       }
     }
 
-    // Transform cached restaurants to response format
-    const cachedRestaurants = toCache.map((place) => {
-      const distance = calcDist(
-        userLat,
-        userLng,
-        place.location.lat,
-        place.location.lng,
-      );
+    // Import low-quality restaurants too (they all go to DB now, no cache)
+    for (const place of lowQuality) {
+      try {
+        const restaurant = await importUnclaimedRestaurantBasic(place);
+        const distance = calcDist(
+          userLat,
+          userLng,
+          restaurant.latitude,
+          restaurant.longitude,
+        );
 
-      return {
-        id: `google:${place.placeId}`, // Special ID format for lazy import
-        name: place.name,
-        address: place.address,
-        place: place.place,
-        country: place.country,
-        latitude: place.location.lat,
-        longitude: place.location.lng,
-        rating: place.rating,
-        userRatingsTotal: place.userRatingsTotal,
-        priceLevel: place.priceLevel,
-        types: place.types,
-        businessStatus: place.businessStatus,
-        slug: null, // No slug until imported
-        isClaimed: false,
-        thumbnailUrl: null,
-        distance,
-        isDistant: distance > MAX_SEARCH_DISTANCE_KM,
-        source: 'google_cache',
-        isImported: false, // Not yet in database
-        placeId: place.placeId, // For lazy import
-      };
-    });
-
-    const allResults = [...importedRestaurants, ...cachedRestaurants];
+        allResults.push({
+          ...restaurant.toJSON(),
+          distance,
+          isDistant: distance > MAX_SEARCH_DISTANCE_KM,
+          source: 'google_basic_import',
+          isImported: true,
+          hasFullDetails: false,
+        });
+      } catch (error) {
+        console.error(`[Tier 3] Failed to import low-quality ${place.name}:`, error.message);
+      }
+    }
 
     console.log(
-      `[Tier 3] Imported ${importedRestaurants.length}, Cached ${cachedRestaurants.length}, Total ${allResults.length}`
+      `[Tier 3] Imported ${allResults.length} restaurants to DB (${highQuality.length} high-quality + ${lowQuality.length} low-quality)`
     );
 
     return allResults;
