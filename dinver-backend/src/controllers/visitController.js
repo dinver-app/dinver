@@ -2085,6 +2085,7 @@ const getVisitsByRestaurant = async (req, res) => {
             description: visit.experience.description || null,
             mealType: visit.experience.mealType || null,
             likesCount: visit.experience.likesCount || 0,
+            sharesCount: visit.experience.sharesCount || 0,
             publishedAt: visit.experience.publishedAt || null,
             hasLiked: likedIds.includes(visit.experience.id),
             media: visit.experience.media
@@ -2231,6 +2232,23 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
+    // Get hasLiked status for all experiences if viewer is authenticated
+    const experienceIds = visits
+      .filter((v) => v.experience)
+      .map((v) => v.experience.id);
+
+    let likedIds = [];
+    if (viewerUserId && experienceIds.length > 0) {
+      const likes = await ExperienceLike.findAll({
+        where: {
+          experienceId: { [Op.in]: experienceIds },
+          userId: viewerUserId,
+        },
+        attributes: ['experienceId'],
+      });
+      likedIds = likes.map((l) => l.experienceId);
+    }
+
     // Don't include receipt info (totalAmount, pointsAwarded) for privacy
     const visitsData = visits.map((visit) => ({
       id: visit.id,
@@ -2249,7 +2267,9 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
             description: visit.experience.description || null,
             mealType: visit.experience.mealType || null,
             likesCount: visit.experience.likesCount || 0,
+            sharesCount: visit.experience.sharesCount || 0,
             publishedAt: visit.experience.publishedAt || null,
+            hasLiked: likedIds.includes(visit.experience.id),
             media: visit.experience.media
               ? visit.experience.media.map((m) => ({
                   id: m.id,
