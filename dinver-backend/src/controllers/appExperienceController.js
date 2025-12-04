@@ -353,11 +353,12 @@ const getExperience = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
+          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
           include: [
             {
               model: MenuItem,
               as: 'menuItem',
-              attributes: ['id'],
+              attributes: ['id', 'restaurantId'],
               required: false,
               include: [
                 {
@@ -490,6 +491,22 @@ const getExperienceFeed = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
+          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
         },
       ],
       order: [
@@ -700,6 +717,22 @@ const getUserExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
+          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
         },
       ],
       order: [
@@ -782,6 +815,22 @@ const getRestaurantExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
+          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
         },
       ],
       order: [

@@ -2021,6 +2021,21 @@ const getVisitsByRestaurant = async (req, res) => {
                 'isRecommended',
                 'menuItemId',
               ],
+              include: [
+                {
+                  model: require('../../models').MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id', 'restaurantId'],
+                  required: false,
+                  include: [
+                    {
+                      model: require('../../models').MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
               order: [['orderIndex', 'ASC']],
             },
           ],
@@ -2078,6 +2093,11 @@ const getVisitsByRestaurant = async (req, res) => {
                   caption: m.caption,
                   isRecommended: m.isRecommended,
                   menuItemId: m.menuItemId,
+                  menuItem: m.menuItem ? {
+                    id: m.menuItem.id,
+                    restaurantId: m.menuItem.restaurantId,
+                    translations: m.menuItem.translations || [],
+                  } : null,
                 }))
               : [],
           }
@@ -2182,6 +2202,21 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
                 'isRecommended',
                 'menuItemId',
               ],
+              include: [
+                {
+                  model: require('../../models').MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id', 'restaurantId'],
+                  required: false,
+                  include: [
+                    {
+                      model: require('../../models').MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
               order: [['orderIndex', 'ASC']],
             },
           ],
@@ -2228,6 +2263,11 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
                   caption: m.caption,
                   isRecommended: m.isRecommended,
                   menuItemId: m.menuItemId,
+                  menuItem: m.menuItem ? {
+                    id: m.menuItem.id,
+                    restaurantId: m.menuItem.restaurantId,
+                    translations: m.menuItem.translations || [],
+                  } : null,
                 }))
               : [],
           }
