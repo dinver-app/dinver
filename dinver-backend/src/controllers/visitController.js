@@ -731,6 +731,8 @@ const getUserVisits = async (req, res) => {
               ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
               serviceRating: parseFloat(visit.experience.serviceRating) || null,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
@@ -1849,7 +1851,7 @@ const getOtherUserVisits = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status', 'sharesCount', 'likesCount'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -1875,6 +1877,8 @@ const getOtherUserVisits = async (req, res) => {
           ? {
               id: visit.experience.id,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
@@ -2002,6 +2006,7 @@ const getVisitsByRestaurant = async (req, res) => {
             'description',
             'mealType',
             'likesCount',
+            'sharesCount',
             'status',
             'publishedAt',
           ],
@@ -2183,6 +2188,7 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
             'description',
             'mealType',
             'likesCount',
+            'sharesCount',
             'status',
             'publishedAt',
           ],
@@ -2342,7 +2348,7 @@ const getRestaurantVisitors = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'overallRating', 'status'],
+          attributes: ['id', 'overallRating', 'status', 'sharesCount', 'likesCount'],
           where: { status: 'APPROVED' },
           required: false,
         },
@@ -2366,6 +2372,8 @@ const getRestaurantVisitors = async (req, res) => {
           ? {
               id: visit.experience.id,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
