@@ -5,7 +5,7 @@ const session = require('express-session');
 const passport = require('passport');
 const { createClient } = require('redis');
 const RedisStore = require('connect-redis')(session);
-import { PostHog, setupExpressErrorHandler } from 'posthog-node'
+const { PostHog, setupExpressErrorHandler } = require('posthog-node');
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
@@ -166,14 +166,16 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-const posthog = new PostHog(
-  process.env.POSTHOG_API_KEY,
-  {
-    host: 'https://eu.i.posthog.com',
-    enableExceptionAutocapture: true
-  }
-)
-setupExpressErrorHandler(posthog, app)
+if (process.env.NODE_ENV !== 'development') {
+  const posthog = new PostHog(
+    process.env.POSTHOG_API_KEY,
+    {
+      host: 'https://eu.i.posthog.com',
+      enableExceptionAutocapture: true
+    }
+  )
+  setupExpressErrorHandler(posthog, app)
+}
 
 // Apple App Site Association for iOS Keychain integration
 app.get('/.well-known/apple-app-site-association', (req, res) => {
