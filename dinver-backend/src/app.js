@@ -175,6 +175,10 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   });
 });
 
+app.get('/up', (_, res) => {
+  res.status(200).send('OK');
+});
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/sysadmin', sysadminRoutes);
 app.use('/api/translate', translateRoutes);
