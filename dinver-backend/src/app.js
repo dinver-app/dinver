@@ -175,6 +175,16 @@ if (process.env.NODE_ENV !== 'development') {
     }
   )
   setupExpressErrorHandler(posthog, app)
+
+  posthog.capture({
+    distinctId: 'server-startup',
+    event: 'server started',
+    properties: {
+      node_env: process.env.NODE_ENV,
+      version: process.env.KAMAL_VERSION || 'unknown',
+      host: process.env.KAMAL_HOST || 'unknown',
+    },
+  });
 }
 
 // Apple App Site Association for iOS Keychain integration
