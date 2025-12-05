@@ -353,7 +353,24 @@ const getExperience = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
           include: [
             {
               model: MenuItem,
@@ -491,7 +508,24 @@ const getExperienceFeed = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
           include: [
             {
               model: MenuItem,
@@ -507,6 +541,11 @@ const getExperienceFeed = async (req, res) => {
               ],
             },
           ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
       order: [
@@ -717,7 +756,24 @@ const getUserExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
           include: [
             {
               model: MenuItem,
@@ -733,6 +789,11 @@ const getUserExperiences = async (req, res) => {
               ],
             },
           ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
       order: [
@@ -815,7 +876,24 @@ const getRestaurantExperiences = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          attributes: ['id', 'experienceId', 'kind', 'storageKey', 'cdnUrl', 'width', 'height', 'orderIndex', 'bytes', 'transcodingStatus', 'mimeType', 'caption', 'menuItemId', 'isRecommended', 'createdAt', 'updatedAt'],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
           include: [
             {
               model: MenuItem,
@@ -831,6 +909,11 @@ const getRestaurantExperiences = async (req, res) => {
               ],
             },
           ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
       order: [
