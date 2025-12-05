@@ -2491,36 +2491,38 @@ const getUserVisitsForMap = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const restaurants = await Restaurant.findAll({
-      attributes: ['id', 'latitude', 'longitude'],
+    const visits = await Visit.findAll({
+      where: {
+        userId: userId,
+        status: 'APPROVED',
+        restaurantId: { [Op.not]: null },
+      },
+      attributes: ['id'],
       include: [
         {
-          model: Visit,
-          as: 'visits',
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'latitude', 'longitude'],
           where: {
-            userId: userId,
-            status: 'APPROVED',
+            latitude: { [Op.not]: null },
+            longitude: { [Op.not]: null },
           },
           required: true,
-          attributes: [],
         },
       ],
-      where: {
-        latitude: { [Op.not]: null },
-        longitude: { [Op.not]: null },
-      },
+      raw: true,
     });
 
-    const mapVisits = restaurants.map((restaurant) => ({
-      visitId: restaurant.id,
-      restaurantId: restaurant.id,
-      latitude: parseFloat(restaurant.latitude),
-      longitude: parseFloat(restaurant.longitude),
+    const mapVisits = visits.map((visit) => ({
+      visitId: visit.id,
+      restaurantId: visit['restaurant.id'],
+      latitude: parseFloat(visit['restaurant.latitude']),
+      longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
     res.status(200).json({
       visits: mapVisits,
-      count: mapVisits.length,
+      total: mapVisits.length,
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -2545,36 +2547,38 @@ const getOtherUserVisitsForMap = async (req, res) => {
     if (!canView) 
       return res.status(403).json({ error: reason || 'Cannot view this profile' });
   
-    const restaurants = await Restaurant.findAll({
-      attributes: ['id', 'latitude', 'longitude'],
+    const visits = await Visit.findAll({
+      where: {
+        userId: targetUserId,
+        status: 'APPROVED',
+        restaurantId: { [Op.not]: null },
+      },
+      attributes: ['id'],
       include: [
         {
-          model: Visit,
-          as: 'visits',
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'latitude', 'longitude'],
           where: {
-            userId: targetUserId,
-            status: 'APPROVED',
+            latitude: { [Op.not]: null },
+            longitude: { [Op.not]: null },
           },
           required: true,
-          attributes: [],
         },
       ],
-      where: {
-        latitude: { [Op.not]: null },
-        longitude: { [Op.not]: null },
-      },
+      raw: true,
     });
 
-    const mapVisits = restaurants.map((restaurant) => ({
-      visitId: restaurant.id,
-      restaurantId: restaurant.id,
-      latitude: parseFloat(restaurant.latitude),
-      longitude: parseFloat(restaurant.longitude),
+    const mapVisits = visits.map((visit) => ({
+      visitId: visit.id,
+      restaurantId: visit['restaurant.id'],
+      latitude: parseFloat(visit['restaurant.latitude']),
+      longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
     res.status(200).json({
       visits: mapVisits,
-      count: mapVisits.length,
+      total: mapVisits.length,
     });
   } catch (error) {
     console.error('Error fetching user visits for map:', error);
@@ -2595,6 +2599,4 @@ module.exports = {
   getOtherUserVisitsByRestaurant,
   getVisitsByRestaurant,
   getRestaurantVisitors,
-  getUserVisitsForMap,
-  getOtherUserVisitsForMap,
 };
