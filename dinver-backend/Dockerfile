@@ -17,7 +17,8 @@ FROM node:22-bookworm-slim AS builder
 
 FROM node:22-bookworm-slim AS runner
   WORKDIR /app
-  ENV NODE_ENV=staging
+  ARG NODE_ENV=production
+  ENV NODE_ENV=${NODE_ENV}
 
   # Install runtime dependencies: ffmpeg, jemalloc
   RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,6 +39,8 @@ FROM node:22-bookworm-slim AS runner
 
   # Copy dotenvx binary from builder
   COPY --from=builder /usr/local/bin/dotenvx /usr/local/bin/dotenvx
+  COPY --from=builder /app/.env.staging ./
+  COPY --from=builder /app/.env.${NODE_ENV} ./
 
   COPY --from=builder /app/package.json ./
   COPY --from=builder /app/node_modules ./node_modules

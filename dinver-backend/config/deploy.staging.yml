@@ -1,3 +1,7 @@
+builder:
+  args:
+    NODE_ENV: staging
+
 servers:
   web:
     - api.staging.dinverapp.com
