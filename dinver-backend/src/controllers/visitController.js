@@ -2497,7 +2497,7 @@ const getUserVisitsForMap = async (req, res) => {
         status: 'APPROVED',
         restaurantId: { [Op.not]: null },
       },
-      attributes: ['id'],
+      attributes: ['restaurantId'],
       include: [
         {
           model: Restaurant,
@@ -2510,19 +2510,20 @@ const getUserVisitsForMap = async (req, res) => {
           required: true,
         },
       ],
+      group: ['restaurantId'],
       raw: true,
     });
 
     const mapVisits = visits.map((visit) => ({
-      visitId: visit.id,
-      restaurantId: visit['restaurant.id'],
+      visitId: visit.restaurantId,
+      restaurantId: visit.restaurantId,
       latitude: parseFloat(visit['restaurant.latitude']),
       longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
     res.status(200).json({
       visits: mapVisits,
-      total: mapVisits.length,
+      count: mapVisits.length,
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -2553,7 +2554,7 @@ const getOtherUserVisitsForMap = async (req, res) => {
         status: 'APPROVED',
         restaurantId: { [Op.not]: null },
       },
-      attributes: ['id'],
+      attributes: ['restaurantId'],
       include: [
         {
           model: Restaurant,
@@ -2566,19 +2567,20 @@ const getOtherUserVisitsForMap = async (req, res) => {
           required: true,
         },
       ],
+      group: ['restaurantId'],
       raw: true,
     });
 
     const mapVisits = visits.map((visit) => ({
-      visitId: visit.id,
-      restaurantId: visit['restaurant.id'],
+      visitId: visit.restaurantId,
+      restaurantId: visit.restaurantId,
       latitude: parseFloat(visit['restaurant.latitude']),
       longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
     res.status(200).json({
       visits: mapVisits,
-      total: mapVisits.length,
+      count: mapVisits.length,
     });
   } catch (error) {
     console.error('Error fetching user visits for map:', error);
