@@ -39,7 +39,6 @@ FROM node:22-bookworm-slim AS runner
 
   # Copy dotenvx binary from builder
   COPY --from=builder /usr/local/bin/dotenvx /usr/local/bin/dotenvx
-  COPY --from=builder /app/.env.staging ./
   COPY --from=builder /app/.env.${NODE_ENV} ./
 
   COPY --from=builder /app/package.json ./
