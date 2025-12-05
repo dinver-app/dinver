@@ -57,4 +57,4 @@ FROM node:22-bookworm-slim AS runner
 
   EXPOSE 3000
 
-  CMD ["dotenvx", "run", "--", "node", "src/server.js"]
+  CMD ["dotenvx", "run", "--", "node", "--require", "./src/instrumentation.js", "src/server.js"]
