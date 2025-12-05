@@ -64,7 +64,7 @@ cron.schedule('0 2 * * *', cleanupOldNotifications);
 const redisClient = createClient({
   url: process.env.REDIS_URL,
   socket: {
-    tls: true,
+    tls: false,
     rejectUnauthorized: false,
   },
 });
