@@ -1,0 +1,45 @@
+servers:
+  web:
+    - api.staging.dinverapp.com
+
+proxy:
+  ssl: true
+  host: api.staging.dinverapp.com
+  app_port: 3000
+
+accessories:
+  db:
+    image: supabase/postgres:17.6.1.061
+    host: api.staging.dinverapp.com
+    directories:
+      - data:/var/lib/postgresql/data
+    env:
+      secret:
+        - POSTGRES_PASSWORD
+    cmd: postgres -c config_file=/etc/postgresql/postgresql.conf
+  redis:
+    image: valkey/valkey:8
+    host: api.staging.dinverapp.com
+    directories:
+      - data:/data
+  postgresus:
+    image: rostislavdugin/postgresus:latest
+    host: api.staging.dinverapp.com
+    directories:
+      - data:/postgresus-data
+    proxy:
+      ssl: true
+      host: db-backup.staging.dinverapp.com
+      app_port: 4005
+  dozzle:
+    image: amir20/dozzle:latest
+    host: api.staging.dinverapp.com
+    proxy:
+      ssl: true
+      host: logs.staging.dinverapp.com
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /dozzle/data:/data
+    env:
+      clear:
+        DOZZLE_AUTH_PROVIDER: simple
