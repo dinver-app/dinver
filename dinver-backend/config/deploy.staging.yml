@@ -7,6 +7,10 @@ proxy:
   host: api.staging.dinverapp.com
   app_port: 3000
 
+env:
+  secret:
+    - DOTENV_PRIVATE_KEY_STAGING
+
 accessories:
   db:
     image: supabase/postgres:17.6.1.061
