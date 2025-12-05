@@ -2522,7 +2522,7 @@ const getUserVisitsForMap = async (req, res) => {
 
     res.status(200).json({
       visits: mapVisits,
-      total: mapVisits.length,
+      count: mapVisits.length,
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -2599,4 +2599,6 @@ module.exports = {
   getOtherUserVisitsByRestaurant,
   getVisitsByRestaurant,
   getRestaurantVisitors,
+  getUserVisitsForMap,
+  getOtherUserVisitsForMap,
 };

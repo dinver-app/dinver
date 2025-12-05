@@ -33,6 +33,14 @@ router.get(
   visitController.getUserVisits,
 );
 
+// Get user's visits for map (only ID, lat, lng)
+router.get(
+  '/visits/map',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.getUserVisitsForMap,
+);
+
 // Upload receipt + Create Visit in ONE call
 // Body (multipart/form-data): receiptImage, taggedBuddies?, locationLat?, locationLng?, gpsAccuracy?
 router.post(
@@ -90,6 +98,14 @@ router.get(
   appApiKeyAuth,
   appOptionalAuth,
   visitController.getOtherUserVisits,
+);
+
+// Get other user's visits for map (only ID, lat, lng)
+router.get(
+  '/users/:userId/visits/map',
+  appApiKeyAuth,
+  appOptionalAuth,
+  visitController.getOtherUserVisitsForMap,
 );
 
 // Get other user's visits for a specific restaurant (with privacy check)
