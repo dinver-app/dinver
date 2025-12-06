@@ -2520,9 +2520,11 @@ const getUserVisitsForMap = async (req, res) => {
       longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
+    const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+
     res.status(200).json({
       visits: mapVisits,
-      count: mapVisits.length,
+      total: uniqueRestaurants.size,
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -2576,9 +2578,11 @@ const getOtherUserVisitsForMap = async (req, res) => {
       longitude: parseFloat(visit['restaurant.longitude']),
     }));
 
+    const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+
     res.status(200).json({
       visits: mapVisits,
-      total: mapVisits.length,
+      total: uniqueRestaurants.size,
     });
   } catch (error) {
     console.error('Error fetching user visits for map:', error);
