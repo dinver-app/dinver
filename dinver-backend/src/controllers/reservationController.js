@@ -9,6 +9,7 @@ const {
   UserSettings,
 } = require('../../models');
 const { Op } = require('sequelize');
+const { getI18nForLanguage } = require('../../utils/i18n');
 const { sendReservationEmail } = require('../../utils/emailService');
 const { DateTime } = require('luxon');
 const {
@@ -137,9 +138,10 @@ const createReservation = async (req, res) => {
     });
 
     // Kreiraj inicijalnu sistemsku poruku
+    const t = getI18nForLanguage('hr');
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      'Nova rezervacija kreirana',
+      t('reservationThread.newReservationCreated'),
       {
         type: 'reservation_created',
         guests,
@@ -1474,9 +1476,10 @@ const createCustomReservation = async (req, res) => {
     });
 
     // Kreiraj inicijalnu sistemsku poruku
+    const t = getI18nForLanguage('hr');
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      `Custom rezervacija kreirana - ${guestName}`,
+      t('reservationThread.customReservationCreated', { guestName }),
       {
         type: 'custom_reservation_created',
         guests,

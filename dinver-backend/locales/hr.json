@@ -56,5 +56,17 @@
       "title": "Dobio/la si bodove! 🎉",
       "body": "{{actorName}} te je označio/la na računu iz {{restaurantName}} - dobio/la si {{points}} bodova!"
     }
+  },
+  "reservationThread": {
+    "newReservationCreated": "Nova rezervacija kreirana",
+    "customReservationCreated": "Custom rezervacija kreirana - {{guestName}}",
+    "timeChangeSuggested": "Predložena promjena termina rezervacije",
+    "reservationConfirmed": "Rezervacija je potvrđena",
+    "reservationDeclined": "Rezervacija je odbijena",
+    "reservationCancelledByUser": "Korisnik je otkazao rezervaciju",
+    "reservationCancelledByRestaurant": "Restoran je otkazao rezervaciju",
+    "alternativeTimeSuggested": "Predložen je alternativni termin",
+    "reservationCompleted": "Rezervacija je završena",
+    "noShow": "Gost se nije pojavio"
   }
 }
