@@ -3,9 +3,9 @@
  * Extends local search results with worldwide database search and Google Places fallback
  */
 
-const { Restaurant, PriceCategory } = require('../../models');
-const { calculateDistance } = require('./distance');
-const { addTestFilter } = require('./restaurantFilter');
+const { Restaurant } = require('../../models');
+const { calculateDistance } = require('../../utils/distance');
+const { addTestFilter } = require('../../utils/restaurantFilter');
 const {
   searchGooglePlacesText,
   importUnclaimedRestaurantBasic,
@@ -156,7 +156,8 @@ async function performGooglePlacesFallback(params) {
 
   try {
     // Fetch from Google Places Text Search
-    const googleResults = await searchGooglePlacesText(query, userLat, userLng, 10);
+    // Fetch more results to help reach target of 100 total restaurants
+    const googleResults = await searchGooglePlacesText(query, userLat, userLng, 60);
 
     if (googleResults.length === 0) {
       console.log('[Tier 3] No results from Google Places');

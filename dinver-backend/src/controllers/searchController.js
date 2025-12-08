@@ -14,14 +14,10 @@ const {
 const { calculateDistance } = require('../../utils/distance');
 const { addTestFilter } = require('../../utils/restaurantFilter');
 const {
-  searchGooglePlacesText,
-  importUnclaimedRestaurantBasic,
-} = require('../services/googlePlacesService');
-const {
   determineSearchMode,
   enhanceSearchResults,
   sortRestaurantsByPriority,
-} = require('../../utils/globalSearchEnhancer');
+} = require('../utils/globalSearchEnhancer');
 
 /**
  * Simplify unclaimed restaurant for UX
@@ -901,6 +897,23 @@ module.exports = {
           );
         }
 
+        // TARGET: Minimum 100 total restaurants (claimed + unclaimed)
+        // Dynamically calculate thresholds based on what we have
+        const TARGET_TOTAL = 100;
+        const claimedCount = localResults.filter(r => r.isClaimed).length;
+
+        // If we have 50 claimed → need 50 more for Tier 2/3
+        // If we have 10 claimed → need 90 more for Tier 2/3
+        const neededForTarget = Math.max(0, TARGET_TOTAL - localResults.length);
+
+        // Tier 2 threshold: trigger if we need more to reach 100
+        const minResultsForTier2 = TARGET_TOTAL;
+
+        // Tier 3 threshold: trigger if Tier 2 didn't fill us to 100
+        const minResultsForTier3 = TARGET_TOTAL;
+
+        console.log(`[Global Search] Have ${localResults.length} local (${claimedCount} claimed). Target: ${TARGET_TOTAL}. Need: ${neededForTarget}`);
+
         // Enhance with Tier 2 & 3 if needed
         const enhanced = await enhanceSearchResults(localResults, {
           searchMode,
@@ -908,8 +921,8 @@ module.exports = {
           userLat: parseFloat(latitude),
           userLng: parseFloat(longitude),
           MAX_SEARCH_DISTANCE_KM,
-          minResultsForTier2: 5,
-          minResultsForTier3: 3,
+          minResultsForTier2,
+          minResultsForTier3,
           searchTerms,
           userEmail,
           restaurantQuery,

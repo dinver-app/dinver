@@ -2651,11 +2651,16 @@ const nearYou = async (req, res) => {
         : null,
     }));
 
-    // NEW LOGIC: Only process unclaimed if we have < 20 claimed restaurants
+    // NEW LOGIC: Target minimum 100 total restaurants (claimed + unclaimed)
+    // If we have 25 claimed → need 75 unclaimed to reach 100
+    // If we have 5 claimed → need 95 unclaimed to reach 100
+    const TARGET_TOTAL_RESTAURANTS = 100;
+    const neededUnclaimed = Math.max(0, TARGET_TOTAL_RESTAURANTS - withUrls.length);
+
     let unclaimedRestaurants = [];
 
-    if (withUrls.length < 20) {
-      console.log(`[nearYou] Only ${withUrls.length} claimed restaurants. Checking unclaimed...`);
+    if (neededUnclaimed > 0) {
+      console.log(`[nearYou] Have ${withUrls.length} claimed restaurants. Need ${neededUnclaimed} unclaimed to reach ${TARGET_TOTAL_RESTAURANTS} total.`);
 
       // Check existing unclaimed restaurants in DB within 60km
       const existingUnclaimedWhere = addTestFilter({ isClaimed: false }, userEmail);
@@ -2676,6 +2681,8 @@ const nearYou = async (req, res) => {
           'priceCategoryId',
           'placeId',
           'userRatingsTotal',
+          'openingHours',
+          'hasFullDetails',
         ],
         where: existingUnclaimedWhere,
       });
@@ -2700,20 +2707,24 @@ const nearYou = async (req, res) => {
         .filter((restaurant) => restaurant.distance <= 60)
         .sort((a, b) => a.distance - b.distance);
 
-      // Check if we need to fetch from Google (if claimed + unclaimed < 20)
+      // Check if we need to fetch from Google (if claimed + unclaimed < TARGET)
       const totalNearby = withUrls.length + existingUnclaimedWithDistance.length;
       unclaimedRestaurants = existingUnclaimedWithDistance;
 
-      if (totalNearby < 20) {
-        console.log(`[nearYou] Only ${totalNearby} total restaurants (${withUrls.length} claimed, ${existingUnclaimedWithDistance.length} unclaimed). Fetching from Google...`);
+      if (totalNearby < TARGET_TOTAL_RESTAURANTS) {
+        console.log(`[nearYou] Only ${totalNearby} total restaurants (${withUrls.length} claimed, ${existingUnclaimedWithDistance.length} unclaimed). Fetching from Google to reach ${TARGET_TOTAL_RESTAURANTS}...`);
 
         try {
           // Fetch nearby restaurants from Google Places (within 60km = 60000m)
+          // Calculate how many we need: target 100 total - current total
+          const stillNeeded = TARGET_TOTAL_RESTAURANTS - totalNearby;
+          const fetchLimit = Math.min(Math.max(stillNeeded, 40), 60); // Fetch between 40-60
+
           const googleResults = await searchNearbyRestaurants(
             userLat,
             userLon,
             60000, // 60km radius
-            40 // Fetch 40 to have enough after filtering
+            fetchLimit
           );
 
           console.log(`[nearYou] Found ${googleResults.length} restaurants from Google Places`);
@@ -2780,13 +2791,13 @@ const nearYou = async (req, res) => {
 
           console.log(`[nearYou] Imported ${importedHighQuality.length} high-quality restaurants to DB`);
 
-          // Check if we still need low-quality to reach 20
+          // Check if we still need low-quality to reach TARGET
           const currentTotal = withUrls.length + existingUnclaimedWithDistance.length + importedHighQuality.length;
-          const needed = Math.max(0, 20 - currentTotal);
+          const needed = Math.max(0, TARGET_TOTAL_RESTAURANTS - currentTotal);
 
           let importedLowQuality = [];
           if (needed > 0) {
-            console.log(`[nearYou] Need ${needed} more restaurants to reach 20. Importing low-quality restaurants.`);
+            console.log(`[nearYou] Need ${needed} more restaurants to reach ${TARGET_TOTAL_RESTAURANTS}. Importing low-quality restaurants.`);
 
             const lowQualityToImport = lowQuality.slice(0, needed);
             for (const place of lowQualityToImport) {
@@ -2833,7 +2844,7 @@ const nearYou = async (req, res) => {
               };
             })
             .sort((a, b) => b.hybridScore - a.hybridScore)
-            .slice(0, 20); // Max 20 unclaimed
+            .slice(0, neededUnclaimed); // Dynamic limit based on claimed count
 
           console.log(`[nearYou] Final unclaimed: ${unclaimedRestaurants.length} total (${existingUnclaimedWithDistance.length} existing DB + ${importedHighQuality.length} new high-quality + ${importedLowQuality.length} new low-quality)`);
         } catch (googleError) {
@@ -2841,8 +2852,8 @@ const nearYou = async (req, res) => {
           // Continue with existing unclaimed restaurants if Google API fails
         }
       } else {
-        // We have claimed + unclaimed >= 20, just return existing unclaimed sorted by hybrid score
-        console.log(`[nearYou] Sufficient restaurants found (${totalNearby} total). Returning existing unclaimed.`);
+        // We have claimed + unclaimed >= TARGET, just return existing unclaimed sorted by hybrid score
+        console.log(`[nearYou] Sufficient restaurants found (${totalNearby} total). Returning existing unclaimed up to needed amount.`);
 
         unclaimedRestaurants = existingUnclaimedWithDistance
           .map(r => {
@@ -2856,34 +2867,64 @@ const nearYou = async (req, res) => {
             };
           })
           .sort((a, b) => b.hybridScore - a.hybridScore)
-          .slice(0, 20);
+          .slice(0, neededUnclaimed); // Dynamic limit
       }
     } else {
-      // We have >= 20 claimed restaurants, don't return unclaimed
-      console.log(`[nearYou] Found ${withUrls.length} claimed restaurants (>= 20). Not returning unclaimed.`);
+      // We have >= TARGET_TOTAL_RESTAURANTS claimed restaurants, no need for unclaimed
+      console.log(`[nearYou] Found ${withUrls.length} claimed restaurants (>= ${TARGET_TOTAL_RESTAURANTS}). No need for unclaimed.`);
       unclaimedRestaurants = [];
     }
 
-    // Implement pagination for claimed restaurants
+    // COMBINED PAGINATION: claimed first, then unclaimed
+    // Page 1: All claimed (if <= 20) + remaining slots filled with unclaimed
+    // Page 1: First 20 claimed (if > 20) + 0 unclaimed
+    // Page 2+: Continue with unclaimed OR remaining claimed
     const page = parseInt(req.query.page) || 1;
     const limit = 20;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-
-    const paginatedRestaurants = withUrls.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
 
     // Simplify unclaimed restaurants for UX (only essential fields)
     const simplifiedUnclaimed = unclaimedRestaurants.map(simplifyUnclaimedRestaurant);
 
+    let paginatedClaimed = [];
+    let paginatedUnclaimed = [];
+
+    // Total available items
+    const totalClaimed = withUrls.length;
+    const totalUnclaimed = simplifiedUnclaimed.length;
+    const totalItems = totalClaimed + totalUnclaimed;
+
+    // Calculate what to show on this page
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    if (startIndex < totalClaimed) {
+      // Still showing claimed restaurants
+      const claimedEnd = Math.min(endIndex, totalClaimed);
+      paginatedClaimed = withUrls.slice(startIndex, claimedEnd);
+
+      // If we have room left on this page, add unclaimed
+      const remainingSlots = limit - paginatedClaimed.length;
+      if (remainingSlots > 0 && totalUnclaimed > 0) {
+        paginatedUnclaimed = simplifiedUnclaimed.slice(0, remainingSlots);
+      }
+    } else {
+      // Only showing unclaimed restaurants
+      const unclaimedStart = startIndex - totalClaimed;
+      const unclaimedEnd = unclaimedStart + limit;
+      paginatedUnclaimed = simplifiedUnclaimed.slice(unclaimedStart, unclaimedEnd);
+    }
+
+    const totalPages = Math.ceil(totalItems / limit);
+
     return res.json({
-      restaurants: paginatedRestaurants,
-      unclaimedRestaurants: simplifiedUnclaimed, // Simplified: id, slug, name, address, distance, rating
+      restaurants: paginatedClaimed,
+      unclaimedRestaurants: paginatedUnclaimed,
       pagination: {
         currentPage: page,
         totalPages,
-        totalRestaurants: restaurantsWithDistance.length,
-        unclaimedTotal: simplifiedUnclaimed.length,
+        totalClaimed,
+        totalUnclaimed,
+        totalRestaurants: totalItems,
       },
     });
   } catch (error) {
