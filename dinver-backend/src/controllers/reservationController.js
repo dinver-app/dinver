@@ -1332,7 +1332,7 @@ const acceptSuggestedTime = async (req, res) => {
 // Dohvati dostupne termine za rezervaciju
 const getAvailableTimes = async (req, res) => {
   try {
-    const { restaurantId, date } = req.query;
+    const { restaurantId, date } = req.query; // očekuje se format 'YYYY-MM-DD'
     if (!restaurantId || !date) {
       return res
         .status(400)
@@ -1376,14 +1376,19 @@ const getAvailableTimes = async (req, res) => {
     const closeMin = toMinutes(period.close.time);
     if (openMin === null || closeMin === null) return res.json([]);
 
-    // Ako je radno vrijeme npr. 08:00 - 00:00, closeMin će biti 0, pa trebaš detektirati prelazak u idući dan
+    // Ako je radno vrijeme npr. 08:00 - 02:00 (sutradan), closeMin će biti manji od openMin
+    // Detektiramo prelazak u idući dan kada je closeMin <= openMin
     let lastSlot = closeMin - 60;
-    if (closeMin === 0) lastSlot = 24 * 60 - 60; // do 23:00
+    if (closeMin <= openMin) {
+      // Restoran zatvara nakon ponoći
+      lastSlot = closeMin + 24 * 60 - 60; // dodaj 24h da bi bio u sljedećem danu
+    }
 
     // Generiraj termine po 30 min
     const slots = [];
     for (let min = openMin; min <= lastSlot; min += 30) {
-      slots.push(toHHMM(min));
+      const displayMin = min >= 24 * 60 ? min - 24 * 60 : min; // normaliziraj za prikaz
+      slots.push(toHHMM(displayMin));
     }
 
     return res.json(slots);
