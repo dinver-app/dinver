@@ -165,42 +165,6 @@ if (!restaurant.isClaimed && !restaurant.phone && restaurant.placeId) {
 
 **Cijena:** $0.017 po restoranu (Place Details API)
 
-### Opening Hours format
-
-```json
-{
-  "openingHours": {
-    "weekday_text": [
-      "Monday: Closed",
-      "Tuesday: Closed",
-      "Wednesday: 12:00 – 10:00 PM",
-      "Thursday: 12:00 – 10:00 PM",
-      "Friday: 12:00 – 10:00 PM",
-      "Saturday: 12:00 – 10:00 PM",
-      "Sunday: Closed"
-    ],
-    "periods": [
-      {
-        "open": { "day": 2, "time": "1200" },
-        "close": { "day": 2, "time": "2200" }
-      }
-    ],
-    "open_now": false
-  }
-}
-```
-
-**Važno:** Dani su konvertirani u naš format:
-- **0 = Ponedjeljak**
-- **1 = Utorak**
-- **2 = Srijeda**
-- **3 = Četvrtak**
-- **4 = Petak**
-- **5 = Subota**
-- **6 = Nedjelja**
-
-(Google koristi 0=Nedjelja, mi konvertiramo u 0=Ponedjeljak)
-
 ## Primjeri korištenja
 
 ### 1. Korisnik u Zagrebu (40 partnera)

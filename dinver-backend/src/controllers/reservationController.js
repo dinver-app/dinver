@@ -668,7 +668,7 @@ const suggestAlternativeTime = async (req, res) => {
     if (dateObj > today) {
       existingReservation = await Reservation.findOne({
         where: {
-          userId,
+          userId: reservation.userId,
           restaurantId: reservation.restaurantId,
           id: { [Op.ne]: reservation.id },
           date,
@@ -680,7 +680,7 @@ const suggestAlternativeTime = async (req, res) => {
     } else if (dateObj.getTime() === today.getTime()) {
       existingReservation = await Reservation.findOne({
         where: {
-          userId,
+          userId: reservation.userId,
           restaurantId: reservation.restaurantId,
           id: { [Op.ne]: reservation.id },
           date,
