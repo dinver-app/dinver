@@ -1,6 +1,5 @@
-const { GoogleApiLog } = require('../../models');
+const { GoogleApiLog, sequelize } = require('../../models');
 const { Op } = require('sequelize');
-const sequelize = require('../../config/database');
 
 /**
  * Get Google API logs summary - daily costs, total, by API type
