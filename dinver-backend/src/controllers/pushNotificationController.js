@@ -43,7 +43,7 @@ const registerPushToken = async (req, res) => {
           userId,
           action: ActionTypes.UPDATE,
           entity: Entities.PUSH_TOKEN,
-          entityId: pushToken.id,
+          entityId: String(pushToken.id),
           changes: {
             old: { userId: pushToken.userId },
             new: { userId, deviceInfo, platform },
@@ -68,7 +68,7 @@ const registerPushToken = async (req, res) => {
           userId,
           action: ActionTypes.CREATE,
           entity: Entities.PUSH_TOKEN,
-          entityId: pushToken.id,
+          entityId: String(pushToken.id),
           changes: { new: { token, platform, deviceInfo } },
         });
       }
@@ -133,7 +133,7 @@ const unregisterPushToken = async (req, res) => {
         userId,
         action: ActionTypes.UPDATE,
         entity: Entities.PUSH_TOKEN,
-        entityId: pushToken.id,
+        entityId: String(pushToken.id),
         changes: {
           old: { isActive: true },
           new: { isActive: false },

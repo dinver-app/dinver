@@ -254,7 +254,7 @@ const GoogleApiLogs = () => {
                 outerRadius={80}
                 label={(entry) => `${entry.apiType}: $${entry.totalCost.toFixed(2)}`}
               >
-                {summary.byApiType.map((entry, index) => (
+                {summary.byApiType.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}

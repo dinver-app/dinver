@@ -49,8 +49,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       entityId: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
+        comment: 'ID of the entity (can be UUID, integer, or other identifier types)',
       },
       changes: {
         type: DataTypes.JSONB,
