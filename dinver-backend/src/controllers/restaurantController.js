@@ -2718,7 +2718,6 @@ const nearYou = async (req, res) => {
           'placeId',
           'userRatingsTotal',
           'openingHours',
-          'hasFullDetails',
         ],
         where: existingUnclaimedWhere,
       });
