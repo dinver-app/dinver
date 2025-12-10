@@ -51,8 +51,43 @@ const {
   updateRestaurantFromGoogle,
   searchNearbyRestaurants,
   importUnclaimedRestaurantBasic,
+  setLogContext,
+  clearLogContext,
 } = require('../services/googlePlacesService');
 const { addTestFilter } = require('../../utils/restaurantFilter');
+
+/**
+ * Simplify unclaimed restaurant response for UX
+ * Returns only essential fields: id, slug, name, address, place, country, distance, rating, reviewsCount
+ * Note: rating and reviewsCount map to dinverRating and dinverReviewsCount to maintain consistent API structure
+ */
+function simplifyUnclaimedRestaurant(restaurant) {
+  return {
+    id: restaurant.id,
+    slug: restaurant.slug,
+    name: restaurant.name,
+    address: restaurant.address,
+    place: restaurant.place || null,
+    country: restaurant.country || null,
+    distance: restaurant.distance,
+    rating: restaurant.dinverRating || restaurant.rating || null, // Prioritize Dinver rating
+    reviewsCount: restaurant.dinverReviewsCount || restaurant.userRatingsTotal || 0,
+    isClaimed: false,
+  };
+}
+
+/**
+ * Map claimed restaurant to use Dinver ratings in response
+ * Replaces 'rating' and 'reviewsCount' fields with dinverRating and dinverReviewsCount values
+ * This ensures all API endpoints return Dinver ratings consistently
+ */
+function mapToDinverRating(restaurant) {
+  return {
+    ...restaurant,
+    rating: restaurant.dinverRating || restaurant.rating || null,
+    reviewsCount: restaurant.dinverReviewsCount || restaurant.userRatingsTotal || 0,
+  };
+}
 
 const getRestaurantsList = async (req, res) => {
   try {
@@ -2292,7 +2327,7 @@ const getSampleRestaurants = async (req, res) => {
       totalRestaurants: restaurantsWithStatus.length,
       totalPages,
       currentPage: page,
-      restaurants: paginatedRestaurants.map((r) => ({
+      restaurants: paginatedRestaurants.map((r) => mapToDinverRating({
         ...r,
         thumbnailUrl: r.thumbnailUrl
           ? getMediaUrl(r.thumbnailUrl, 'image')
@@ -2411,6 +2446,9 @@ const getNewRestaurants = async (req, res) => {
             'longitude',
             'phone',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
+            'userRatingsTotal',
             'priceLevel',
             'thumbnailUrl',
             'isClaimed',
@@ -2467,8 +2505,8 @@ const getNewRestaurants = async (req, res) => {
     let newRestaurants = [mostRecent, ...randomRest]
       .filter(Boolean)
       .slice(0, 3);
-    // Transform thumbnail URLs
-    newRestaurants = newRestaurants.map((r) => ({
+    // Transform thumbnail URLs and map to Dinver ratings
+    newRestaurants = newRestaurants.map((r) => mapToDinverRating({
       ...r,
       thumbnailUrl: r.thumbnailUrl
         ? getMediaUrl(r.thumbnailUrl, 'image')
@@ -2519,6 +2557,9 @@ const getAllNewRestaurants = async (req, res) => {
             'longitude',
             'phone',
             'rating',
+            'dinverRating',
+            'dinverReviewsCount',
+            'userRatingsTotal',
             'priceLevel',
             'thumbnailUrl',
             'isClaimed',
@@ -2552,8 +2593,8 @@ const getAllNewRestaurants = async (req, res) => {
       .filter((r) => r.distance <= 50)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Transform thumbnail URLs
-    newRestaurants = newRestaurants.map((r) => ({
+    // Transform thumbnail URLs and map to Dinver ratings
+    newRestaurants = newRestaurants.map((r) => mapToDinverRating({
       ...r,
       thumbnailUrl: r.thumbnailUrl
         ? getMediaUrl(r.thumbnailUrl, 'image')
@@ -2600,6 +2641,9 @@ const nearYou = async (req, res) => {
         'longitude',
         'phone',
         'rating',
+        'dinverRating',
+        'dinverReviewsCount',
+        'userRatingsTotal',
         'priceLevel',
         'thumbnailUrl',
         'slug',
@@ -2635,11 +2679,21 @@ const nearYou = async (req, res) => {
         : null,
     }));
 
-    // NEW LOGIC: Only process unclaimed if we have < 10 claimed restaurants
+    // NEW LOGIC: Target minimum 100 total restaurants (claimed + unclaimed)
+    // PLUS: Ensure user has restaurants NEARBY (within 3km), not just within 60km
+    const TARGET_TOTAL_RESTAURANTS = 100;
+    const NEARBY_RADIUS_KM = 3; // Check density within 3km (realistic "nearby")
+    const MIN_NEARBY_RESTAURANTS = 5; // Need at least 5 within 3km
+
+    const neededUnclaimed = Math.max(0, TARGET_TOTAL_RESTAURANTS - withUrls.length);
+
+    // Count how many claimed restaurants are within NEARBY_RADIUS_KM
+    const claimedNearby = withUrls.filter(r => r.distance <= NEARBY_RADIUS_KM).length;
+
     let unclaimedRestaurants = [];
 
-    if (withUrls.length < 10) {
-      console.log(`[nearYou] Only ${withUrls.length} claimed restaurants. Checking unclaimed...`);
+    if (neededUnclaimed > 0) {
+      console.log(`[nearYou] Have ${withUrls.length} claimed (${claimedNearby} within ${NEARBY_RADIUS_KM}km). Need ${neededUnclaimed} unclaimed to reach ${TARGET_TOTAL_RESTAURANTS} total.`);
 
       // Check existing unclaimed restaurants in DB within 60km
       const existingUnclaimedWhere = addTestFilter({ isClaimed: false }, userEmail);
@@ -2650,19 +2704,26 @@ const nearYou = async (req, res) => {
           'description',
           'address',
           'place',
+          'country',
           'latitude',
           'longitude',
           'phone',
           'rating',
+          'dinverRating',
+          'dinverReviewsCount',
           'priceLevel',
           'slug',
           'isClaimed',
           'priceCategoryId',
+          'placeId',
+          'userRatingsTotal',
+          'openingHours',
+          'hasFullDetails',
         ],
         where: existingUnclaimedWhere,
       });
 
-      // Calculate distance for unclaimed restaurants
+      // Calculate distance for unclaimed restaurants from DB
       const existingUnclaimedWithDistance = existingUnclaimed
         .map((restaurant) => {
           const distance = calculateDistance(
@@ -2675,145 +2736,287 @@ const nearYou = async (req, res) => {
           return {
             ...restaurant.toJSON(),
             distance,
+            isImported: true, // From DB
+            source: 'database',
           };
         })
         .filter((restaurant) => restaurant.distance <= 60)
         .sort((a, b) => a.distance - b.distance);
 
-      // Check if we need to fetch from Google (if claimed + unclaimed < 10)
+      // Check if we need to fetch from Google
       const totalNearby = withUrls.length + existingUnclaimedWithDistance.length;
       unclaimedRestaurants = existingUnclaimedWithDistance;
 
-      if (totalNearby < 10) {
-      console.log(`[nearYou] Only ${totalNearby} total restaurants (${withUrls.length} claimed, ${existingUnclaimedWithDistance.length} unclaimed). Fetching from Google...`);
+      // Count restaurants within NEARBY_RADIUS (5km) - both claimed and unclaimed
+      const unclaimedNearby = existingUnclaimedWithDistance.filter(r => r.distance <= NEARBY_RADIUS_KM).length;
+      const totalNearbyClose = claimedNearby + unclaimedNearby;
 
-      try {
-        // Fetch nearby restaurants from Google Places (within 60km = 60000m)
-        const googleResults = await searchNearbyRestaurants(
-          userLat,
-          userLon,
-          60000, // 60km radius
-          30 // Fetch 30 restaurants
-        );
+      // PROXIMITY CHECK: Even if we have 100+ restaurants in 60km,
+      // we should fetch from Google if user has < 10 restaurants within 5km
+      // This ensures User 2 in West Berlin gets restaurants near THEM, not just from East Berlin
+      const needsProximityFetch = totalNearbyClose < MIN_NEARBY_RESTAURANTS;
 
-        console.log(`[nearYou] Found ${googleResults.length} restaurants from Google Places`);
+      if (totalNearby < TARGET_TOTAL_RESTAURANTS || needsProximityFetch) {
+        const reason = needsProximityFetch
+          ? `only ${totalNearbyClose} restaurants within ${NEARBY_RADIUS_KM}km (need ${MIN_NEARBY_RESTAURANTS})`
+          : `only ${totalNearby} total (need ${TARGET_TOTAL_RESTAURANTS})`;
+        console.log(`[nearYou] Fetching from Google: ${reason}`);
 
-        // Import restaurants to DB using BASIC data (saves $0.017 per restaurant)
-        const importPromises = googleResults.map(async (place) => {
-          try {
-            // Use basic import - NO Place Details call (cheaper!)
-            const restaurant = await importUnclaimedRestaurantBasic(place);
+        try {
+          // EXPANDING RADIUS STRATEGY:
+          // Start with smaller radius, expand if not enough restaurants found
+          // This ensures we get nearby restaurants first, but don't leave user empty-handed
+          const RADIUS_STEPS = needsProximityFetch
+            ? [10000, 20000, 40000]  // 10km → 20km → 40km for proximity fetch
+            : [30000, 45000, 60000]; // 30km → 45km → 60km for total count fetch
+          const MIN_RESULTS_TO_STOP = 20; // Stop expanding if we find at least this many
 
-            // Calculate distance
-            const distance = calculateDistance(
+          const stillNeeded = TARGET_TOTAL_RESTAURANTS - totalNearby;
+          const fetchLimit = Math.min(Math.max(stillNeeded, 40), 60); // Fetch between 40-60
+
+          console.log(`[nearYou] Starting expanding radius search (need ${stillNeeded} restaurants)`);
+
+          // Set logging context for Google API calls
+          setLogContext({
+            triggeredBy: 'near_you',
+            triggerReason: reason,
+            userId: req.user?.id || null,
+          });
+
+          let googleResults = [];
+          let usedRadius = 0;
+
+          for (const searchRadius of RADIUS_STEPS) {
+            console.log(`[nearYou] Trying radius ${searchRadius / 1000}km...`);
+
+            googleResults = await searchNearbyRestaurants(
               userLat,
               userLon,
-              restaurant.latitude,
-              restaurant.longitude,
+              searchRadius,
+              fetchLimit
             );
+            usedRadius = searchRadius;
 
-            return {
-              id: restaurant.id,
-              name: restaurant.name,
-              description: restaurant.description,
-              address: restaurant.address,
-              place: restaurant.place,
-              latitude: restaurant.latitude,
-              longitude: restaurant.longitude,
-              phone: restaurant.phone,
-              rating: restaurant.rating,
-              priceLevel: restaurant.priceLevel,
-              thumbnailUrl: null, // Unclaimed don't have custom thumbnails
-              slug: restaurant.slug,
-              isClaimed: false,
-              priceCategoryId: restaurant.priceCategoryId,
-              distance,
-            };
-          } catch (error) {
-            console.error(`[nearYou] Error importing restaurant ${place.placeId}:`, error.message);
-            return null;
+            console.log(`[nearYou] Found ${googleResults.length} restaurants at ${searchRadius / 1000}km radius`);
+
+            // Stop if we found enough restaurants
+            if (googleResults.length >= MIN_RESULTS_TO_STOP) {
+              console.log(`[nearYou] Found enough restaurants (${googleResults.length} >= ${MIN_RESULTS_TO_STOP}), stopping radius expansion`);
+              break;
+            }
+
+            // If we're at last radius step, use whatever we got
+            if (searchRadius === RADIUS_STEPS[RADIUS_STEPS.length - 1]) {
+              console.log(`[nearYou] Reached max radius (${searchRadius / 1000}km), using ${googleResults.length} results`);
+            }
           }
-        });
 
-        const importedRestaurants = await Promise.all(importPromises);
-        const newlyImported = importedRestaurants.filter(r => r !== null);
+          console.log(`[nearYou] Final: Found ${googleResults.length} restaurants from Google Places (radius: ${usedRadius / 1000}km)`);
 
-        console.log(`[nearYou] Successfully imported ${newlyImported.length} new unclaimed restaurants`);
+          // Build set of existing placeIds to avoid duplicates
+          const existingPlaceIds = new Set(
+            existingUnclaimedWithDistance
+              .filter(r => r.placeId)
+              .map(r => r.placeId)
+          );
 
-        // Merge existing unclaimed with newly imported
-        const allUnclaimed = [...existingUnclaimedWithDistance, ...newlyImported];
+          console.log(`[nearYou] Already have ${existingPlaceIds.size} unclaimed in DB (checking duplicates)`);
 
-        // Remove duplicates by ID (in case of race condition)
-        const uniqueUnclaimed = allUnclaimed.reduce((acc, curr) => {
-          if (!acc.find(r => r.id === curr.id)) {
-            acc.push(curr);
+          // Filter out duplicates and separate by quality
+          const highQuality = [];
+          const lowQuality = [];
+
+          for (const place of googleResults) {
+            // Skip if already in DB
+            if (existingPlaceIds.has(place.placeId)) {
+              console.log(`[nearYou] Skipping duplicate: ${place.name} (${place.placeId})`);
+              continue;
+            }
+
+            // Check quality
+            const isHighQuality =
+              place.rating >= 4.0 &&
+              place.userRatingsTotal >= 10;
+
+            if (isHighQuality) {
+              highQuality.push(place);
+            } else {
+              lowQuality.push(place);
+            }
           }
-          return acc;
-        }, []);
 
-        // Sort by hybrid score (rating × proximity)
-        // Formula: score = (rating / 5) × (1 / (distance + 1))
-        // Higher rating + closer = higher score
-        unclaimedRestaurants = uniqueUnclaimed
+          console.log(`[nearYou] After filtering: ${highQuality.length} high-quality, ${lowQuality.length} low-quality (filtered ${googleResults.length - highQuality.length - lowQuality.length} duplicates)`);
+
+          // IMMEDIATE BASIC IMPORT - import to DB right away (no Place Details API call)
+          // This saves cost for future users (they get data from DB, not Google API)
+          const importedHighQuality = [];
+          for (const place of highQuality) {
+            try {
+              const restaurant = await importUnclaimedRestaurantBasic(place);
+              const distance = calculateDistance(
+                userLat,
+                userLon,
+                restaurant.latitude,
+                restaurant.longitude,
+              );
+
+              importedHighQuality.push({
+                ...restaurant.toJSON(),
+                distance,
+                isImported: true, // In DB
+                hasFullDetails: false, // Basic import only (no openingHours, phone, etc.)
+                source: 'google_basic_import',
+              });
+            } catch (importError) {
+              console.error(`[nearYou] Failed to import ${place.name}:`, importError.message);
+              // Skip this restaurant if import fails
+            }
+          }
+
+          console.log(`[nearYou] Imported ${importedHighQuality.length} high-quality restaurants to DB`);
+
+          // Check if we still need low-quality to reach TARGET
+          const currentTotal = withUrls.length + existingUnclaimedWithDistance.length + importedHighQuality.length;
+          const needed = Math.max(0, TARGET_TOTAL_RESTAURANTS - currentTotal);
+
+          let importedLowQuality = [];
+          if (needed > 0) {
+            console.log(`[nearYou] Need ${needed} more restaurants to reach ${TARGET_TOTAL_RESTAURANTS}. Importing low-quality restaurants.`);
+
+            const lowQualityToImport = lowQuality.slice(0, needed);
+            for (const place of lowQualityToImport) {
+              try {
+                const restaurant = await importUnclaimedRestaurantBasic(place);
+                const distance = calculateDistance(
+                  userLat,
+                  userLon,
+                  restaurant.latitude,
+                  restaurant.longitude,
+                );
+
+                importedLowQuality.push({
+                  ...restaurant.toJSON(),
+                  distance,
+                  isImported: true,
+                  hasFullDetails: false,
+                  source: 'google_basic_import',
+                });
+              } catch (importError) {
+                console.error(`[nearYou] Failed to import ${place.name}:`, importError.message);
+              }
+            }
+          }
+
+          // Merge all unclaimed: DB existing + newly imported high-quality + newly imported low-quality
+          const allUnclaimed = [
+            ...existingUnclaimedWithDistance,
+            ...importedHighQuality,
+            ...importedLowQuality,
+          ];
+
+          // Sort by hybrid score (rating × proximity)
+          // This will naturally put high-quality first, low-quality last
+          unclaimedRestaurants = allUnclaimed
+            .map(r => {
+              const normalizedRating = (r.rating || 3.5) / 5;
+              const proximityScore = 1 / (r.distance + 1);
+              const hybridScore = normalizedRating * proximityScore * 100;
+
+              return {
+                ...r,
+                hybridScore,
+              };
+            })
+            .sort((a, b) => b.hybridScore - a.hybridScore)
+            .slice(0, neededUnclaimed); // Dynamic limit based on claimed count
+
+          console.log(`[nearYou] Final unclaimed: ${unclaimedRestaurants.length} total (${existingUnclaimedWithDistance.length} existing DB + ${importedHighQuality.length} new high-quality + ${importedLowQuality.length} new low-quality)`);
+
+          // Clear logging context
+          clearLogContext();
+        } catch (googleError) {
+          console.error('[nearYou] Error fetching from Google Places:', googleError);
+          // Clear logging context on error too
+          clearLogContext();
+          // Continue with existing unclaimed restaurants if Google API fails
+        }
+      } else {
+        // We have claimed + unclaimed >= TARGET, just return existing unclaimed sorted by hybrid score
+        console.log(`[nearYou] Sufficient restaurants found (${totalNearby} total). Returning existing unclaimed up to needed amount.`);
+
+        unclaimedRestaurants = existingUnclaimedWithDistance
           .map(r => {
-            const normalizedRating = (r.rating || 3.5) / 5; // Normalize rating to 0-1
-            const proximityScore = 1 / (r.distance + 1); // Closer = higher score
-            const hybridScore = normalizedRating * proximityScore * 100; // Scale up for readability
+            const normalizedRating = (r.rating || 3.5) / 5;
+            const proximityScore = 1 / (r.distance + 1);
+            const hybridScore = normalizedRating * proximityScore * 100;
 
             return {
               ...r,
-              hybridScore, // For debugging
+              hybridScore,
             };
           })
-          .sort((a, b) => b.hybridScore - a.hybridScore) // Best score first
-          .slice(0, 20); // Return max 20 unclaimed
-
-        console.log(`[nearYou] Total unclaimed restaurants to return: ${unclaimedRestaurants.length} (${existingUnclaimedWithDistance.length} existing + ${newlyImported.length} new)`);
-      } catch (googleError) {
-        console.error('[nearYou] Error fetching from Google Places:', googleError);
-        // Continue with existing unclaimed restaurants if Google API fails
+          .sort((a, b) => b.hybridScore - a.hybridScore)
+          .slice(0, neededUnclaimed); // Dynamic limit
       }
     } else {
-      // We have claimed + unclaimed >= 10, just return existing unclaimed sorted by hybrid score
-      console.log(`[nearYou] Sufficient restaurants found (${totalNearby} total). Returning existing unclaimed.`);
-
-      unclaimedRestaurants = existingUnclaimedWithDistance
-        .map(r => {
-          const normalizedRating = (r.rating || 3.5) / 5;
-          const proximityScore = 1 / (r.distance + 1);
-          const hybridScore = normalizedRating * proximityScore * 100;
-
-          return {
-            ...r,
-            hybridScore,
-          };
-        })
-        .sort((a, b) => b.hybridScore - a.hybridScore)
-        .slice(0, 20);
-    }
-    } else {
-      // We have >= 10 claimed restaurants, don't return unclaimed
-      console.log(`[nearYou] Found ${withUrls.length} claimed restaurants (>= 10). Not returning unclaimed.`);
+      // We have >= TARGET_TOTAL_RESTAURANTS claimed restaurants, no need for unclaimed
+      console.log(`[nearYou] Found ${withUrls.length} claimed restaurants (>= ${TARGET_TOTAL_RESTAURANTS}). No need for unclaimed.`);
       unclaimedRestaurants = [];
     }
 
-    // Implement pagination for claimed restaurants
+    // COMBINED PAGINATION: claimed first, then unclaimed
+    // Page 1: All claimed (if <= 20) + remaining slots filled with unclaimed
+    // Page 1: First 20 claimed (if > 20) + 0 unclaimed
+    // Page 2+: Continue with unclaimed OR remaining claimed
     const page = parseInt(req.query.page) || 1;
     const limit = 20;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
 
-    const paginatedRestaurants = withUrls.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(restaurantsWithDistance.length / limit);
+    // Simplify unclaimed restaurants for UX (only essential fields)
+    const simplifiedUnclaimed = unclaimedRestaurants.map(simplifyUnclaimedRestaurant);
+
+    let paginatedClaimed = [];
+    let paginatedUnclaimed = [];
+
+    // Total available items
+    const totalClaimed = withUrls.length;
+    const totalUnclaimed = simplifiedUnclaimed.length;
+    const totalItems = totalClaimed + totalUnclaimed;
+
+    // Calculate what to show on this page
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    if (startIndex < totalClaimed) {
+      // Still showing claimed restaurants
+      const claimedEnd = Math.min(endIndex, totalClaimed);
+      paginatedClaimed = withUrls.slice(startIndex, claimedEnd);
+
+      // If we have room left on this page, add unclaimed
+      const remainingSlots = limit - paginatedClaimed.length;
+      if (remainingSlots > 0 && totalUnclaimed > 0) {
+        paginatedUnclaimed = simplifiedUnclaimed.slice(0, remainingSlots);
+      }
+    } else {
+      // Only showing unclaimed restaurants
+      const unclaimedStart = startIndex - totalClaimed;
+      const unclaimedEnd = unclaimedStart + limit;
+      paginatedUnclaimed = simplifiedUnclaimed.slice(unclaimedStart, unclaimedEnd);
+    }
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Map claimed restaurants to use Dinver ratings
+    const mappedClaimed = paginatedClaimed.map(mapToDinverRating);
 
     return res.json({
-      restaurants: paginatedRestaurants,
-      unclaimedRestaurants: unclaimedRestaurants, // Always return (empty array if none)
+      restaurants: mappedClaimed,
+      unclaimedRestaurants: paginatedUnclaimed,
       pagination: {
         currentPage: page,
         totalPages,
-        totalRestaurants: restaurantsWithDistance.length,
-        unclaimedTotal: unclaimedRestaurants.length,
+        totalClaimed,
+        totalUnclaimed,
+        totalRestaurants: totalItems,
       },
     });
   } catch (error) {
@@ -2873,6 +3076,10 @@ const getFullRestaurantDetails = async (req, res) => {
   try {
     const id = req.restaurantId || req.params.restaurantId;
     const { includeWifi } = req.query;
+
+    // NOTE: All restaurants are now imported immediately (basic import)
+    // No need for google: prefix handling anymore
+    // Full details (phone, openingHours) are lazy loaded below if missing
 
     // Get restaurant base data
     const restaurant = await Restaurant.findOne({

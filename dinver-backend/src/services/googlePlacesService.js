@@ -1,7 +1,37 @@
 const axios = require('axios');
-const { Restaurant } = require('../../models');
+const { Restaurant, GoogleApiLog } = require('../../models');
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+
+// Context for logging - will be set by the caller
+let currentLogContext = {
+  triggeredBy: null,
+  triggerReason: null,
+  userId: null,
+};
+
+/**
+ * Set context for API logging (called before API calls)
+ * @param {Object} context - { triggeredBy, triggerReason, userId }
+ */
+function setLogContext(context) {
+  currentLogContext = {
+    triggeredBy: context.triggeredBy || null,
+    triggerReason: context.triggerReason || null,
+    userId: context.userId || null,
+  };
+}
+
+/**
+ * Clear log context after API calls
+ */
+function clearLogContext() {
+  currentLogContext = {
+    triggeredBy: null,
+    triggerReason: null,
+    userId: null,
+  };
+}
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || GOOGLE_PLACES_API_KEY;
 
 /**
@@ -255,13 +285,53 @@ async function getPlaceDetails(placeId) {
     });
 
     if (response.data.status !== 'OK') {
+      // LOG: Failed API call
+      await GoogleApiLog.logApiCall({
+        apiType: 'place_details',
+        query: placeId,
+        resultsCount: 0,
+        triggeredBy: currentLogContext.triggeredBy,
+        triggerReason: currentLogContext.triggerReason,
+        userId: currentLogContext.userId,
+        success: false,
+        errorMessage: `API returned: ${response.data.status}`,
+      });
       throw new Error(`Google Places API error: ${response.data.status}`);
     }
 
     const result = response.data.result;
+
+    // LOG: Place Details API call
+    await GoogleApiLog.logApiCall({
+      apiType: 'place_details',
+      latitude: result.geometry?.location?.lat || null,
+      longitude: result.geometry?.location?.lng || null,
+      query: placeId,
+      resultsCount: 1,
+      triggeredBy: currentLogContext.triggeredBy,
+      triggerReason: currentLogContext.triggerReason,
+      userId: currentLogContext.userId,
+      success: true,
+    });
+
     return result;
   } catch (error) {
     console.error('Error fetching place details:', error);
+
+    // LOG: Failed API call (only if not already logged above)
+    if (!error.message.includes('API returned:')) {
+      await GoogleApiLog.logApiCall({
+        apiType: 'place_details',
+        query: placeId,
+        resultsCount: 0,
+        triggeredBy: currentLogContext.triggeredBy,
+        triggerReason: currentLogContext.triggerReason,
+        userId: currentLogContext.userId,
+        success: false,
+        errorMessage: error.message,
+      });
+    }
+
     throw error;
   }
 }
@@ -659,9 +729,38 @@ async function searchNearbyRestaurants(lat, lng, radius = 10000, limit = 20) {
     const results = allResults.slice(0, limit);
 
     console.log(`[Google Places] Completed: ${results.length} restaurants from ${pageCount} page(s) (filtered out ${totalFiltered} hotels/invalid)`);
+
+    // LOG: Nearby Search API call
+    await GoogleApiLog.logApiCall({
+      apiType: 'nearby_search',
+      latitude: lat,
+      longitude: lng,
+      radiusMeters: radius,
+      resultsCount: results.length,
+      triggeredBy: currentLogContext.triggeredBy,
+      triggerReason: currentLogContext.triggerReason,
+      userId: currentLogContext.userId,
+      success: true,
+    });
+
     return results;
   } catch (error) {
     console.error('Error searching nearby restaurants:', error);
+
+    // LOG: Failed API call
+    await GoogleApiLog.logApiCall({
+      apiType: 'nearby_search',
+      latitude: lat,
+      longitude: lng,
+      radiusMeters: radius,
+      resultsCount: 0,
+      triggeredBy: currentLogContext.triggeredBy,
+      triggerReason: currentLogContext.triggerReason,
+      userId: currentLogContext.userId,
+      success: false,
+      errorMessage: error.message,
+    });
+
     throw error;
   }
 }
@@ -827,6 +926,129 @@ async function importUnclaimedRestaurant(placeId) {
   }
 }
 
+/**
+ * Search restaurants using Google Places Text Search API
+ * Used for global search fallback when no results in database
+ * @param {string} query - Search query (e.g., "Pizza Milano")
+ * @param {number} userLat - User latitude (for location bias)
+ * @param {number} userLng - User longitude (for location bias)
+ * @param {number} limit - Max results to return
+ * @returns {Promise<Array>} Array of restaurant data (not yet imported)
+ */
+async function searchGooglePlacesText(query, userLat, userLng, limit = 10) {
+  try {
+    console.log(`[Google Text Search] Query: "${query}", Location: ${userLat},${userLng}`);
+
+    const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
+      params: {
+        query: `${query} restaurant`,
+        location: `${userLat},${userLng}`, // Bias towards user location
+        radius: 50000, // 50km bias (not hard limit)
+        type: 'restaurant',
+        language: 'hr',
+        key: GOOGLE_PLACES_API_KEY,
+      },
+    });
+
+    if (response.data.status === 'ZERO_RESULTS') {
+      console.log('[Google Text Search] No results found');
+      return [];
+    }
+
+    if (response.data.status !== 'OK') {
+      console.error('[Google Text Search] API error:', response.data.status);
+      throw new Error(`Google Places API error: ${response.data.status}`);
+    }
+
+    // Filter and transform results
+    const results = response.data.results
+      .filter(place => {
+        // 1. Must have rating and reviews
+        if (!place.rating || !place.user_ratings_total) {
+          return false;
+        }
+
+        // 2. Filter out lodging
+        const types = place.types || [];
+        const isLodging = types.some(t => ['lodging', 'campground', 'rv_park'].includes(t));
+        if (isLodging) {
+          return false;
+        }
+
+        return true;
+      })
+      .slice(0, limit)
+      .map(place => {
+        // Parse address
+        const addressParts = (place.formatted_address || place.vicinity || '').split(',').map(p => p.trim());
+
+        let street = place.vicinity || addressParts[0] || 'Address not available';
+        let city = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '';
+        let country = null;
+
+        // Try to extract country (last part)
+        if (addressParts.length >= 2) {
+          const lastPart = addressParts[addressParts.length - 1];
+          if (COUNTRY_CALLING_CODES[lastPart]) {
+            country = lastPart;
+          }
+        }
+
+        return {
+          placeId: place.place_id,
+          name: place.name,
+          address: street,
+          place: city,
+          country: country,
+          rating: place.rating,
+          userRatingsTotal: place.user_ratings_total,
+          types: place.types,
+          location: place.geometry.location,
+          businessStatus: place.business_status,
+          priceLevel: place.price_level,
+          photoReference: place.photos?.[0]?.photo_reference || null,
+        };
+      });
+
+    console.log(`[Google Text Search] Found ${results.length} restaurants`);
+
+    // LOG: Text Search API call
+    await GoogleApiLog.logApiCall({
+      apiType: 'text_search',
+      latitude: userLat,
+      longitude: userLng,
+      query: query,
+      radiusMeters: 50000,
+      resultsCount: results.length,
+      triggeredBy: currentLogContext.triggeredBy,
+      triggerReason: currentLogContext.triggerReason,
+      userId: currentLogContext.userId,
+      success: true,
+    });
+
+    return results;
+  } catch (error) {
+    console.error('[Google Text Search] Error:', error.message);
+
+    // LOG: Failed API call
+    await GoogleApiLog.logApiCall({
+      apiType: 'text_search',
+      latitude: userLat,
+      longitude: userLng,
+      query: query,
+      radiusMeters: 50000,
+      resultsCount: 0,
+      triggeredBy: currentLogContext.triggeredBy,
+      triggerReason: currentLogContext.triggerReason,
+      userId: currentLogContext.userId,
+      success: false,
+      errorMessage: error.message,
+    });
+
+    throw error;
+  }
+}
+
 module.exports = {
   extractPlaceIdFromUrl,
   searchPlacesByText,
@@ -841,4 +1063,8 @@ module.exports = {
   importUnclaimedRestaurant,
   importUnclaimedRestaurantBasic,
   generateSlug,
+  searchGooglePlacesText,
+  // Logging context helpers
+  setLogContext,
+  clearLogContext,
 };
