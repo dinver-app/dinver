@@ -9,6 +9,8 @@ const { addTestFilter } = require('../../utils/restaurantFilter');
 const {
   searchGooglePlacesText,
   importUnclaimedRestaurantBasic,
+  setLogContext,
+  clearLogContext,
 } = require('../services/googlePlacesService');
 
 /**
@@ -118,7 +120,7 @@ async function performExtendedDatabaseSearch(params) {
   // Perform search
   const restaurants = await Restaurant.findAll(extendedQuery);
 
-  // Calculate distances
+  // Calculate distances and filter by proximity + relevance
   const restaurantsWithDistance = restaurants.map((restaurant) => {
     const distance = calculateDistance(
       userLat,
@@ -136,6 +138,37 @@ async function performExtendedDatabaseSearch(params) {
   });
 
   console.log(`[Tier 2] Found ${restaurantsWithDistance.length} restaurants worldwide`);
+
+  // SMART FILTERING: If too many results (> 100), prioritize nearby + exact matches
+  if (restaurantsWithDistance.length > 100) {
+    const query = (searchTerms[0] || '').toLowerCase().trim();
+
+    // Separate into nearby (< 50km) and distant
+    const nearby = restaurantsWithDistance.filter(r => r.distance <= 50);
+    const distant = restaurantsWithDistance.filter(r => r.distance > 50);
+
+    // Find exact/startsWith matches (high priority)
+    const exactMatches = nearby.filter(r => {
+      const name = (r.name || '').toLowerCase().trim();
+      return name === query || name.startsWith(query + ' ');
+    });
+
+    // Take top 50 nearby + all exact matches from distant
+    const distantExactMatches = distant.filter(r => {
+      const name = (r.name || '').toLowerCase().trim();
+      return name === query || name.startsWith(query + ' ');
+    });
+
+    const filtered = [
+      ...exactMatches,
+      ...nearby.filter(r => !exactMatches.includes(r)).slice(0, 50),
+      ...distantExactMatches.slice(0, 10),
+    ];
+
+    console.log(`[Tier 2] Filtered from ${restaurantsWithDistance.length} to ${filtered.length} (prioritized nearby + exact matches)`);
+    return filtered;
+  }
+
   return restaurantsWithDistance;
 }
 
@@ -150,9 +183,17 @@ async function performGooglePlacesFallback(params) {
     userLng,
     calculateDistance: calcDist,
     MAX_SEARCH_DISTANCE_KM,
+    userId,
   } = params;
 
   console.log('[Tier 3] Performing Google Places Text Search fallback...');
+
+  // Set logging context for Google API calls
+  setLogContext({
+    triggeredBy: 'global_search',
+    triggerReason: `text_search_fallback: "${query}"`,
+    userId: userId || null,
+  });
 
   try {
     // Fetch from Google Places Text Search
@@ -164,18 +205,35 @@ async function performGooglePlacesFallback(params) {
       return [];
     }
 
+    // STRICT NAME FILTERING: Only keep results with decent name match
+    // This prevents irrelevant results like "River pub" for query "basc"
+    const MIN_NAME_MATCH_SCORE = 0.5; // Name must contain part of the query
+
+    const nameFilteredResults = [];
+    let filteredOutCount = 0;
+
+    for (const place of googleResults) {
+      const matchScore = calculateMatchScore(query, place.name);
+
+      if (matchScore >= MIN_NAME_MATCH_SCORE) {
+        nameFilteredResults.push({ ...place, matchScore });
+      } else {
+        filteredOutCount++;
+        console.log(`[Tier 3] Filtered out "${place.name}" (match score: ${matchScore.toFixed(2)} < ${MIN_NAME_MATCH_SCORE})`);
+      }
+    }
+
+    console.log(`[Tier 3] Name filtering: kept ${nameFilteredResults.length}, filtered ${filteredOutCount} irrelevant results`);
+
     // Separate high-quality and low-quality for logging purposes
     const highQuality = [];
     const lowQuality = [];
 
-    for (const place of googleResults) {
-      // Calculate match score (simple name similarity)
-      const matchScore = calculateMatchScore(query, place.name);
-
+    for (const place of nameFilteredResults) {
       const isHighQuality =
         place.rating >= 4.0 &&
         place.userRatingsTotal >= 10 &&
-        matchScore >= 0.8;
+        place.matchScore >= 0.8;
 
       if (isHighQuality) {
         highQuality.push(place);
@@ -186,65 +244,112 @@ async function performGooglePlacesFallback(params) {
 
     console.log(`[Tier 3] Found ${highQuality.length} high-quality, ${lowQuality.length} low-quality`);
 
-    // IMMEDIATE BASIC IMPORT - import ALL to DB right away (no Place Details API call)
-    // This saves cost for future users (they get data from DB, not Google API)
+    // BULK DUPLICATE CHECK: Check all placeIds at once BEFORE importing
+    const allPlaces = [...highQuality, ...lowQuality];
+    const allPlaceIds = allPlaces.map(p => p.placeId);
+
+    const existingRestaurants = await Restaurant.findAll({
+      attributes: ['id', 'placeId', 'name', 'latitude', 'longitude', 'dinverRating', 'dinverReviewsCount', 'userRatingsTotal'],
+      where: {
+        placeId: allPlaceIds,
+      },
+    });
+
+    const existingPlaceIdsMap = new Map(
+      existingRestaurants.map(r => [r.placeId, r])
+    );
+
+    console.log(`[Tier 3] Bulk duplicate check: ${existingPlaceIdsMap.size} already in DB, ${allPlaces.length - existingPlaceIdsMap.size} new`);
+
+    // IMMEDIATE BASIC IMPORT - import NEW restaurants only
+    // Return BOTH existing (from DB) and newly imported
     const allResults = [];
+    let importedCount = 0;
+    let skippedCount = 0;
 
-    // Import high-quality restaurants
-    for (const place of highQuality) {
-      try {
-        const restaurant = await importUnclaimedRestaurantBasic(place);
+    for (const place of allPlaces) {
+      const existingRestaurant = existingPlaceIdsMap.get(place.placeId);
+
+      if (existingRestaurant) {
+        // Already in DB - return it directly
         const distance = calcDist(
           userLat,
           userLng,
-          restaurant.latitude,
-          restaurant.longitude,
+          existingRestaurant.latitude,
+          existingRestaurant.longitude,
         );
 
-        allResults.push({
-          ...restaurant.toJSON(),
-          distance,
-          isDistant: distance > MAX_SEARCH_DISTANCE_KM,
-          source: 'google_basic_import',
-          isImported: true,
-          hasFullDetails: false, // Basic import - no openingHours, phone, etc.
-        });
-      } catch (error) {
-        console.error(`[Tier 3] Failed to import high-quality ${place.name}:`, error.message);
-      }
-    }
+        const restaurantData = existingRestaurant.toJSON();
 
-    // Import low-quality restaurants too (they all go to DB now, no cache)
-    for (const place of lowQuality) {
-      try {
-        const restaurant = await importUnclaimedRestaurantBasic(place);
-        const distance = calcDist(
-          userLat,
-          userLng,
-          restaurant.latitude,
-          restaurant.longitude,
-        );
+        // Calculate basic smartScore for exact/startsWith match boost
+        const name = (restaurantData.name || '').toLowerCase().trim();
+        const queryLower = query.toLowerCase().trim();
+        const exactMatchBoost = name === queryLower ? 500 : 0;
+        const startsWithBoost = name.startsWith(queryLower + ' ') ? 200 : 0;
+        const distanceWeight = 1 / (1 + distance);
+        const ratingBoost = ((restaurantData.dinverRating || restaurantData.rating || 0) / 5) * 3;
 
         allResults.push({
-          ...restaurant.toJSON(),
+          ...restaurantData,
           distance,
           isDistant: distance > MAX_SEARCH_DISTANCE_KM,
-          source: 'google_basic_import',
-          isImported: true,
-          hasFullDetails: false,
+          source: 'database', // Already in DB
+          isImported: false,
+          // Map ONLY Dinver ratings (no Google fallback)
+          rating: restaurantData.dinverRating || null,
+          reviewsCount: restaurantData.dinverReviewsCount || 0,
+          // SmartScore for sorting (exact match gets priority)
+          smartScore: exactMatchBoost + startsWithBoost + distanceWeight * 12 + ratingBoost,
         });
-      } catch (error) {
-        console.error(`[Tier 3] Failed to import low-quality ${place.name}:`, error.message);
+        skippedCount++;
+      } else {
+        // New restaurant - import it
+        try {
+          const restaurant = await importUnclaimedRestaurantBasic(place);
+          const distance = calcDist(
+            userLat,
+            userLng,
+            restaurant.latitude,
+            restaurant.longitude,
+          );
+
+          // Calculate basic smartScore for exact/startsWith match boost
+          const name = (restaurant.name || '').toLowerCase().trim();
+          const queryLower = query.toLowerCase().trim();
+          const exactMatchBoost = name === queryLower ? 500 : 0;
+          const startsWithBoost = name.startsWith(queryLower + ' ') ? 200 : 0;
+          const distanceWeight = 1 / (1 + distance);
+          const ratingBoost = ((restaurant.rating || 0) / 5) * 3;
+
+          allResults.push({
+            ...restaurant.toJSON(),
+            distance,
+            isDistant: distance > MAX_SEARCH_DISTANCE_KM,
+            source: 'google_basic_import',
+            isImported: true,
+            hasFullDetails: false, // Basic import - no openingHours, phone, etc.
+            // SmartScore for sorting (exact match gets priority)
+            smartScore: exactMatchBoost + startsWithBoost + distanceWeight * 12 + ratingBoost,
+          });
+          importedCount++;
+        } catch (error) {
+          console.error(`[Tier 3] Failed to import ${place.name}:`, error.message);
+        }
       }
     }
 
     console.log(
-      `[Tier 3] Imported ${allResults.length} restaurants to DB (${highQuality.length} high-quality + ${lowQuality.length} low-quality)`
+      `[Tier 3] Results: ${importedCount} newly imported, ${skippedCount} from DB (total: ${allResults.length})`
     );
+
+    // Clear logging context
+    clearLogContext();
 
     return allResults;
   } catch (error) {
     console.error('[Tier 3] Google Places error:', error.message);
+    // Clear logging context on error too
+    clearLogContext();
     return [];
   }
 }
@@ -316,6 +421,7 @@ async function enhanceSearchResults(localResults, params) {
     MAX_SEARCH_DISTANCE_KM,
     minResultsForTier2,
     minResultsForTier3,
+    userId, // For API logging
   } = params;
 
   // If Local Discovery mode (menu search or filters), return only local claimed
@@ -364,20 +470,48 @@ async function enhanceSearchResults(localResults, params) {
     console.log(`[Tier 2] Added ${extendedCount} worldwide results (total: ${allResults.length})`);
   }
 
-  // Tier 3: Google Places Fallback (if still < threshold)
-  if (allResults.length < minResultsForTier3) {
-    console.log(`[Tier 3] Only ${allResults.length} total results, fetching from Google...`);
+  // Tier 3: Google Places Fallback
+  // SMART TRIGGER - Balance between quality and cost:
+  // 1. Not enough total results (< threshold), OR
+  // 2. No exact/startsWith match NEARBY (< 5km) AND few nearby results (< 3)
+  //
+  // This prevents calling Google for generic queries like "pizza" or "italian"
+  // that have many results, but DOES call Google for specific restaurants
+  // like "Pizzeria 14" that don't exist nearby.
+  const NEARBY_RADIUS_KM = 5; // Consider only nearby restaurants
+  const nearbyResults = allResults.filter(r => r.distance <= NEARBY_RADIUS_KM);
+
+  // Check if we have exact/startsWith match NEARBY (not distant)
+  const hasExactMatchNearby = nearbyResults.some(r => {
+    const name = (r.name || '').toLowerCase().trim();
+    const queryLower = query.toLowerCase().trim();
+    return name === queryLower || name.startsWith(queryLower + ' ');
+  });
+
+  const shouldCallGoogle =
+    allResults.length < minResultsForTier3 ||                   // Scenario 1: Not enough total results
+    (!hasExactMatchNearby && nearbyResults.length < 3);        // Scenario 2: No exact match nearby + few nearby
+
+  if (shouldCallGoogle) {
+    if (!hasExactMatchNearby && nearbyResults.length < 3) {
+      console.log(`[Tier 3] No exact/startsWith match nearby (${nearbyResults.length} nearby < 3), fetching from Google...`);
+    } else {
+      console.log(`[Tier 3] Not enough total results (${allResults.length} < ${minResultsForTier3}), fetching from Google...`);
+    }
 
     const googleResults = await performGooglePlacesFallback({
       ...params,
       calculateDistance,
+      userId,
     });
 
     allResults = [...allResults, ...googleResults];
     googleCount = googleResults.length;
     tier = 'google';
 
-    console.log(`[Tier 3] Added ${googleCount} Google results (total: ${allResults.length})`);
+    console.log(`[Tier 3] Added ${googleResults.length} Google results (total: ${allResults.length})`);
+  } else {
+    console.log(`[Tier 3] Skipping Google - found exact/startsWith match in database`);
   }
 
   return {

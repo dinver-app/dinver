@@ -21,7 +21,8 @@ const {
 
 /**
  * Simplify unclaimed restaurant for UX
- * Returns only essential fields: id, slug, name, address, distance, rating
+ * Returns only essential fields: id, slug, name, address, place, country, distance, rating, reviewsCount
+ * Note: rating and reviewsCount ONLY use dinverRating/dinverReviewsCount (no Google fallback)
  */
 function simplifyUnclaimedRestaurant(restaurant) {
   return {
@@ -29,9 +30,28 @@ function simplifyUnclaimedRestaurant(restaurant) {
     slug: restaurant.slug,
     name: restaurant.name,
     address: restaurant.address,
+    place: restaurant.place || null,
+    country: restaurant.country || null,
     distance: restaurant.distance,
-    rating: restaurant.rating,
+    rating: restaurant.dinverRating || null, // ONLY Dinver rating
+    reviewsCount: restaurant.dinverReviewsCount || 0, // ONLY Dinver reviews
     isClaimed: false,
+  };
+}
+
+/**
+ * Map claimed restaurant to use Dinver ratings in response
+ * Replaces 'rating' and 'reviewsCount' fields with dinverRating and dinverReviewsCount values
+ * This ensures all API endpoints return Dinver ratings consistently
+ * Removes Google-specific fields (userRatingsTotal) from response
+ */
+function mapToDinverRating(restaurant) {
+  const { dinverRating, dinverReviewsCount, userRatingsTotal, ...rest } = restaurant;
+
+  return {
+    ...rest,
+    rating: dinverRating || null,
+    reviewsCount: dinverReviewsCount || 0,
   };
 }
 
@@ -147,6 +167,35 @@ function createNormalizedLikeCondition(column, searchTerm, tableName) {
   });
 }
 
+/**
+ * PostgreSQL Trigram Fuzzy Search Condition
+ * Uses pg_trgm extension for fuzzy matching with typo tolerance
+ *
+ * Examples:
+ * - "basc" → "Baščaršija" (similarity: 0.6)
+ * - "bascr" → "Baschiera" (similarity: 0.5)
+ * - "pizzria" → "Pizzeria" (similarity: 0.7) - typo tolerance!
+ *
+ * @param {string} column - Column name to search
+ * @param {string} searchTerm - User query
+ * @param {string} tableName - Table name for qualification
+ * @param {number} minSimilarity - Minimum similarity score (0-1), default 0.3
+ */
+function createTrigramSimilarityCondition(column, searchTerm, tableName, minSimilarity = 0.3) {
+  // Escape single quotes in search term for SQL safety
+  const escapedTerm = searchTerm.replace(/'/g, "''");
+
+  const qualifiedColumn = tableName
+    ? `"${tableName}"."${column}"`
+    : `"${column}"`;
+
+  // Uses PostgreSQL similarity() function from pg_trgm extension
+  // Returns WHERE condition that similarity >= threshold
+  return Sequelize.literal(
+    `similarity(${qualifiedColumn}, '${escapedTerm}') > ${minSimilarity}`
+  );
+}
+
 function computeTokenSimilarity(term, token) {
   if (!term || !token) return 0;
   if (term === token) return 1.0; // exact token match
@@ -228,6 +277,35 @@ function computeSimilarity(termRaw, textRaw) {
   return best;
 }
 
+/**
+ * Detect if restaurant name is an exact match or starts with the query
+ * Returns match type for priority boosting in search results
+ *
+ * Examples:
+ * - "pizzeria 14" vs "Pizzeria 14" → exact
+ * - "pizzeria" vs "Pizzeria 14" → startsWith
+ * - "pizzeria" vs "Stara Pizzeria" → partial (no boost)
+ */
+function getNameMatchType(queryRaw, restaurantNameRaw) {
+  const query = normalizeText(queryRaw).trim();
+  const name = normalizeText(restaurantNameRaw).trim();
+
+  if (!query || !name) return 'none';
+
+  // Exact match (ignoring case and diacritics)
+  if (query === name) return 'exact';
+
+  // Starts with (e.g., "pizzeria" matches "Pizzeria 14")
+  if (name.startsWith(query + ' ') || name.startsWith(query)) {
+    // Ensure it's a word boundary (not "pizz" matching "pizzeria")
+    if (name.startsWith(query + ' ') || name.length === query.length) {
+      return 'startsWith';
+    }
+  }
+
+  return 'partial';
+}
+
 function isExactWordMatch(termRaw, textRaw) {
   const term = normalizeText(termRaw);
   const text = normalizeText(textRaw);
@@ -296,12 +374,14 @@ module.exports = {
           'description',
           'address',
           'place',
+          'country',
           'latitude',
           'longitude',
           'phone',
           'rating',
           'dinverRating',
           'dinverReviewsCount',
+          'userRatingsTotal',
           'priceLevel',
           'thumbnailUrl',
           'slug',
@@ -411,10 +491,12 @@ module.exports = {
 
       // Search by terms if provided
       if (searchTerms.length > 0) {
-        // Search in restaurant names - koristimo normalizaciju za dijakritike
-        const nameConditions = searchTerms.map((term) =>
-          createNormalizedLikeCondition('name', term, 'Restaurant'),
-        );
+        // Search in restaurant names - use FUZZY SEARCH (trigram) + fallback to LIKE
+        // Trigram provides typo tolerance: "basc" → "Baščaršija", "bascr" → "Baschiera"
+        const nameConditions = searchTerms.flatMap((term) => [
+          createTrigramSimilarityCondition('name', term, 'Restaurant', 0.3), // Fuzzy match
+          createNormalizedLikeCondition('name', term, 'Restaurant'),         // Exact substring fallback
+        ]);
 
         // Search in menu items - koristimo normalizaciju za dijakritike
         const menuItems = await MenuItemTranslation.findAll({
@@ -794,6 +876,13 @@ module.exports = {
                 ? searchTerms.reduce((acc, t) => acc + (nameSims[t] || 0), 0) /
                   searchTerms.length
                 : 0;
+
+            // EXACT MATCH DETECTION for multi-term (join terms with space)
+            const fullQuery = searchTerms.join(' ');
+            const nameMatchType = getNameMatchType(fullQuery, restaurant.name);
+            const exactMatchBoost = nameMatchType === 'exact' ? 500 : 0;
+            const startsWithBoost = nameMatchType === 'startsWith' ? 200 : 0;
+
             matchType =
               coverage > 0 && nameAvg > 0
                 ? 'mixed'
@@ -807,6 +896,8 @@ module.exports = {
               : 0;
             const lowNamePenalty = nameAvg < 0.2 ? 20 : 0;
             smartScore =
+              exactMatchBoost +
+              startsWithBoost +
               coverage * 1000 + // hard group separation 2/2 > 1/2 > 0/2
               coverageScore * 100 +
               nameAvg * 60 +
@@ -823,6 +914,12 @@ module.exports = {
             const nameSim = nameSims[term] || 0;
             const isMenuStrong = menuSim >= NAME_STRICT_THRESHOLD;
             const isNameStrong = nameSim >= NAME_STRICT_THRESHOLD;
+
+            // EXACT MATCH DETECTION for priority boosting (like BELI)
+            const nameMatchType = getNameMatchType(term, restaurant.name);
+            const exactMatchBoost = nameMatchType === 'exact' ? 500 : 0;
+            const startsWithBoost = nameMatchType === 'startsWith' ? 200 : 0;
+
             matchType =
               isMenuStrong && isNameStrong
                 ? 'mixed'
@@ -835,6 +932,8 @@ module.exports = {
               ? itemCandidates[0].sim * 30
               : 0;
             smartScore =
+              exactMatchBoost +
+              startsWithBoost +
               core * 100 +
               distanceWeight * 12 +
               popularityBoost * 2 +
@@ -902,15 +1001,24 @@ module.exports = {
         const TARGET_TOTAL = 100;
         const claimedCount = localResults.filter(r => r.isClaimed).length;
 
-        // If we have 50 claimed → need 50 more for Tier 2/3
-        // If we have 10 claimed → need 90 more for Tier 2/3
+        // DYNAMIC THRESHOLDS based on search mode
+        // Name search (no menu, no filters) = User looking for specific restaurant
+        // → Lower thresholds: 3-5 results is enough, don't spam Google
+        // Menu/Filter search = Already handled by Local Discovery mode
+        let minResultsForTier2, minResultsForTier3;
+
+        if (searchMode.isGlobalSearch) {
+          // Pure name search - very conservative thresholds
+          minResultsForTier2 = 3;  // Go to Extended DB if < 3 local results
+          minResultsForTier3 = 5;  // Go to Google if < 5 total results
+          console.log('[Global Search] Name search mode - using conservative thresholds (3/5)');
+        } else {
+          // Fallback (shouldn't happen, but safe default)
+          minResultsForTier2 = 10;
+          minResultsForTier3 = 20;
+        }
+
         const neededForTarget = Math.max(0, TARGET_TOTAL - localResults.length);
-
-        // Tier 2 threshold: trigger if we need more to reach 100
-        const minResultsForTier2 = TARGET_TOTAL;
-
-        // Tier 3 threshold: trigger if Tier 2 didn't fill us to 100
-        const minResultsForTier3 = TARGET_TOTAL;
 
         console.log(`[Global Search] Have ${localResults.length} local (${claimedCount} claimed). Target: ${TARGET_TOTAL}. Need: ${neededForTarget}`);
 
@@ -926,6 +1034,7 @@ module.exports = {
           searchTerms,
           userEmail,
           restaurantQuery,
+          userId: req.user?.id || null, // For Google API logging
         });
 
         // Sort: CLAIMED FIRST, then unclaimed by sort criteria
@@ -1010,7 +1119,8 @@ module.exports = {
 
         // Implement pagination for regular mode
         const page = parseInt(req.query.page) || 1;
-        const pageLimit = 20;
+        // BELI-style pagination: 5 results for Global Search (restaurant name), 20 for others
+        const pageLimit = searchMode.isGlobalSearch ? 5 : 20;
         const startIndex = (page - 1) * pageLimit;
         const endIndex = page * pageLimit;
 
@@ -1023,13 +1133,14 @@ module.exports = {
             if (!r.isClaimed) {
               return simplifyUnclaimedRestaurant(r);
             }
-            return {
+            // Map claimed restaurants to use Dinver ratings
+            return mapToDinverRating({
               ...r,
               thumbnailUrl: r.thumbnailUrl
                 ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
                 : null,
               thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
-            };
+            });
           }),
           meta: searchMeta,
           pagination: {
@@ -1118,6 +1229,7 @@ module.exports = {
             searchTerms: [],
             userEmail,
             restaurantQuery,
+            userId: req.user?.id || null, // For Google API logging
           });
 
       // Sort: CLAIMED FIRST, then unclaimed
@@ -1183,7 +1295,8 @@ module.exports = {
 
       // Implement pagination for regular mode
       const page = parseInt(req.query.page) || 1;
-      const pageLimit = 20;
+      // BELI-style pagination: 5 results for Global Search (restaurant name), 20 for others
+      const pageLimit = searchMode.isGlobalSearch ? 5 : 20;
       const startIndex = (page - 1) * pageLimit;
       const endIndex = page * pageLimit;
 
@@ -1196,13 +1309,14 @@ module.exports = {
           if (!r.isClaimed) {
             return simplifyUnclaimedRestaurant(r);
           }
-          return {
+          // Map claimed restaurants to use Dinver ratings
+          return mapToDinverRating({
             ...r,
             thumbnailUrl: r.thumbnailUrl
               ? getMediaUrl(r.thumbnailUrl, 'image', 'thumbnail')
               : null,
             thumbnailUrls: r.thumbnailUrl ? getImageUrls(r.thumbnailUrl) : null,
-          };
+          });
         }),
         meta: searchMeta2,
         pagination: {
