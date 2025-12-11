@@ -33,8 +33,11 @@ function simplifyUnclaimedRestaurant(restaurant) {
     place: restaurant.place || null,
     country: restaurant.country || null,
     distance: restaurant.distance,
-    rating: restaurant.dinverRating || null, // ONLY Dinver rating
-    reviewsCount: restaurant.dinverReviewsCount || 0, // ONLY Dinver reviews
+    rating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+    reviewsCount: restaurant.dinverReviewsCount || 0,
+    userRatingsTotal: restaurant.userRatingsTotal != null ? Number(restaurant.userRatingsTotal) : null,
+    dinverRating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+    dinverReviewsCount: restaurant.dinverReviewsCount != null ? Number(restaurant.dinverReviewsCount) : null,
     isClaimed: false,
   };
 }
@@ -50,8 +53,11 @@ function mapToDinverRating(restaurant) {
 
   return {
     ...rest,
-    rating: dinverRating || null,
+    rating: dinverRating != null ? Number(dinverRating) : null,
     reviewsCount: dinverReviewsCount || 0,
+    userRatingsTotal: userRatingsTotal != null ? Number(userRatingsTotal) : null,
+    dinverRating: dinverRating != null ? Number(dinverRating) : null,
+    dinverReviewsCount: dinverReviewsCount != null ? Number(dinverReviewsCount) : null,
   };
 }
 

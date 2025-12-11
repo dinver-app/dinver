@@ -70,8 +70,11 @@ function simplifyUnclaimedRestaurant(restaurant) {
     place: restaurant.place || null,
     country: restaurant.country || null,
     distance: restaurant.distance,
-    rating: restaurant.dinverRating || restaurant.rating || null, // Prioritize Dinver rating
+    rating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : (restaurant.rating != null ? Number(restaurant.rating) : null),
     reviewsCount: restaurant.dinverReviewsCount || restaurant.userRatingsTotal || 0,
+    userRatingsTotal: restaurant.userRatingsTotal != null ? Number(restaurant.userRatingsTotal) : null,
+    dinverRating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+    dinverReviewsCount: restaurant.dinverReviewsCount != null ? Number(restaurant.dinverReviewsCount) : null,
     isClaimed: false,
   };
 }
@@ -84,8 +87,11 @@ function simplifyUnclaimedRestaurant(restaurant) {
 function mapToDinverRating(restaurant) {
   return {
     ...restaurant,
-    rating: restaurant.dinverRating || restaurant.rating || null,
+    rating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : (restaurant.rating != null ? Number(restaurant.rating) : null),
     reviewsCount: restaurant.dinverReviewsCount || restaurant.userRatingsTotal || 0,
+    userRatingsTotal: restaurant.userRatingsTotal != null ? Number(restaurant.userRatingsTotal) : null,
+    dinverRating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+    dinverReviewsCount: restaurant.dinverReviewsCount != null ? Number(restaurant.dinverReviewsCount) : null,
   };
 }
 
@@ -4416,7 +4422,6 @@ const submitClaimForm = async (req, res) => {
       priceCategoryId,
       contactInfo,
       name,
-
       email,
       phone,
       workingHours,

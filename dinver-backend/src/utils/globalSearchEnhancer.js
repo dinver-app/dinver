@@ -296,8 +296,11 @@ async function performGooglePlacesFallback(params) {
           source: 'database', // Already in DB
           isImported: false,
           // Map ONLY Dinver ratings (no Google fallback)
-          rating: restaurantData.dinverRating || null,
+          rating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
           reviewsCount: restaurantData.dinverReviewsCount || 0,
+          userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+          dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+          dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
           // SmartScore for sorting (exact match gets priority)
           smartScore: exactMatchBoost + startsWithBoost + distanceWeight * 12 + ratingBoost,
         });
@@ -321,13 +324,18 @@ async function performGooglePlacesFallback(params) {
           const distanceWeight = 1 / (1 + distance);
           const ratingBoost = ((restaurant.rating || 0) / 5) * 3;
 
+          const restaurantJson = restaurant.toJSON();
           allResults.push({
-            ...restaurant.toJSON(),
+            ...restaurantJson,
             distance,
             isDistant: distance > MAX_SEARCH_DISTANCE_KM,
             source: 'google_basic_import',
             isImported: true,
             hasFullDetails: false, // Basic import - no openingHours, phone, etc.
+            rating: restaurantJson.rating != null ? Number(restaurantJson.rating) : null,
+            userRatingsTotal: restaurantJson.userRatingsTotal != null ? Number(restaurantJson.userRatingsTotal) : null,
+            dinverRating: restaurantJson.dinverRating != null ? Number(restaurantJson.dinverRating) : null,
+            dinverReviewsCount: restaurantJson.dinverReviewsCount != null ? Number(restaurantJson.dinverReviewsCount) : null,
             // SmartScore for sorting (exact match gets priority)
             smartScore: exactMatchBoost + startsWithBoost + distanceWeight * 12 + ratingBoost,
           });

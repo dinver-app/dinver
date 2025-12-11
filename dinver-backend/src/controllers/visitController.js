@@ -756,12 +756,17 @@ const getUserVisits = async (req, res) => {
       } else {
         // Create new restaurant group
         const visitDateStr = visit.visitDate || visit.submittedAt;
+        const restaurantData = visit.restaurant.get();
         restaurantMap.set(restaurantId, {
           restaurant: {
-            ...visit.restaurant.get(),
+            ...restaurantData,
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
+            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,
@@ -1904,12 +1909,17 @@ const getOtherUserVisits = async (req, res) => {
       } else {
         // Create new restaurant group
         const visitDateStr = visit.visitDate || visit.submittedAt;
+        const restaurantData = visit.restaurant.get();
         restaurantMap.set(restaurantId, {
           restaurant: {
-            ...visit.restaurant.get(),
+            ...restaurantData,
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
+            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,

@@ -108,12 +108,19 @@ const getUserFavorites = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const favoritesWithUrls = user.favoriteRestaurants.map((r) => ({
-      ...r.get(),
-      thumbnailUrl: r.thumbnailUrl
-        ? getMediaUrl(r.thumbnailUrl, 'image')
-        : null,
-    }));
+    const favoritesWithUrls = user.favoriteRestaurants.map((r) => {
+      const data = r.get();
+      return {
+        ...data,
+        thumbnailUrl: r.thumbnailUrl
+          ? getMediaUrl(r.thumbnailUrl, 'image')
+          : null,
+        rating: data.rating != null ? Number(data.rating) : null,
+        userRatingsTotal: data.userRatingsTotal != null ? Number(data.userRatingsTotal) : null,
+        dinverRating: data.dinverRating != null ? Number(data.dinverRating) : null,
+        dinverReviewsCount: data.dinverReviewsCount != null ? Number(data.dinverReviewsCount) : null,
+      };
+    });
 
     res.status(200).json(favoritesWithUrls);
   } catch (error) {

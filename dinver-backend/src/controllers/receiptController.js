@@ -2124,7 +2124,7 @@ const searchRestaurantsForReceipt = async (req, res) => {
         10, // 10km radius for manual search
         {
           limit: 10,
-          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'userRatingsTotal', 'dinverRating', 'dinverReviewsCount', 'latitude', 'longitude'],
         },
       );
 
@@ -2139,7 +2139,10 @@ const searchRestaurantsForReceipt = async (req, res) => {
           name: r.name,
           address: r.address,
           place: r.place,
-          rating: r.rating,
+          rating: r.rating != null ? Number(r.rating) : null,
+          userRatingsTotal: r.userRatingsTotal != null ? Number(r.userRatingsTotal) : null,
+          dinverRating: r.dinverRating != null ? Number(r.dinverRating) : null,
+          dinverReviewsCount: r.dinverReviewsCount != null ? Number(r.dinverReviewsCount) : null,
           distance: r.get('distance'),
           existsInDatabase: true,
         }));
