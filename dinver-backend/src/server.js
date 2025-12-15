@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
+const { logs } = require('@opentelemetry/api-logs');
 
 let sequelize;
 if (config.use_env_variable) {
@@ -32,5 +33,14 @@ sequelize.sync().then(() => {
     });
 
     console.log('Leaderboard cycle cron job scheduled to run every hour');
+
+    const logger = logs.getLogger('logger-first');
+    logger.emit(
+      {
+        severityText: 'info',
+        body: `Application started successfully (${new Date().toISOString()}) `,
+        attributes: {port: PORT, environment: env}
+      }
+    );
   });
 });

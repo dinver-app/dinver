@@ -5,6 +5,7 @@ const session = require('express-session');
 const passport = require('passport');
 const { createClient } = require('redis');
 const RedisStore = require('connect-redis')(session);
+const { PostHog, setupExpressErrorHandler } = require('posthog-node');
 
 const adminRoutes = require('./routes/adminRoutes');
 const sysadminRoutes = require('./routes/sysadminRoutes');
@@ -64,7 +65,7 @@ cron.schedule('0 2 * * *', cleanupOldNotifications);
 const redisClient = createClient({
   url: process.env.REDIS_URL,
   socket: {
-    tls: true,
+    tls: false,
     rejectUnauthorized: false,
   },
 });
@@ -165,6 +166,27 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+if (process.env.NODE_ENV !== 'development') {
+  const posthog = new PostHog(
+    process.env.POSTHOG_API_KEY,
+    {
+      host: 'https://eu.i.posthog.com',
+      enableExceptionAutocapture: true
+    }
+  )
+  setupExpressErrorHandler(posthog, app)
+
+  posthog.capture({
+    distinctId: 'server-startup',
+    event: 'server started',
+    properties: {
+      node_env: process.env.NODE_ENV,
+      version: process.env.KAMAL_VERSION || 'unknown',
+      host: process.env.KAMAL_HOST || 'unknown',
+    },
+  });
+}
+
 // Apple App Site Association for iOS Keychain integration
 app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -173,6 +195,10 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
       apps: ['A5FJC265LU.com.dinver.app'],
     },
   });
+});
+
+app.get('/up', (_, res) => {
+  res.status(200).send('OK');
 });
 
 app.use('/api/admin', adminRoutes);
