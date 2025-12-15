@@ -167,6 +167,36 @@ router.get('/unread-count', appAuthenticateToken, async (req, res) => {
 });
 
 /**
+ * DELETE /api/app/notifications/bulk
+ * Obriši više notifikacija odjednom
+ */
+router.delete('/bulk', appAuthenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    const userId = req.user.id;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const deleted = await Notification.destroy({
+      where: {
+        id: { [Op.in]: ids },
+        userId,
+      },
+    });
+
+    res.json({
+      success: true,
+      deletedCount: deleted,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting notifications:', error);
+    res.status(500).json({ error: 'Failed to delete notifications' });
+  }
+});
+
+/**
  * DELETE /api/app/notifications/:id
  * Obriši jednu notifikaciju
  */
@@ -187,28 +217,6 @@ router.delete('/:id', appAuthenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error deleting notification:', error);
     res.status(500).json({ error: 'Failed to delete notification' });
-  }
-});
-
-/**
- * DELETE /api/app/notifications
- * Obriši sve notifikacije za korisnika
- */
-router.delete('/', appAuthenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const deleted = await Notification.destroy({
-      where: { userId },
-    });
-
-    res.json({
-      success: true,
-      deletedCount: deleted,
-    });
-  } catch (error) {
-    console.error('Error deleting all notifications:', error);
-    res.status(500).json({ error: 'Failed to delete notifications' });
   }
 });
 

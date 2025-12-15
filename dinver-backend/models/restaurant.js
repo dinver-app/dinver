@@ -151,15 +151,19 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       dinverRating: {
-        type: DataTypes.DECIMAL,
+        type: DataTypes.DECIMAL(3, 1),
         allowNull: true,
-        comment: 'Dinver custom rating (1.00-5.00) based on Experiences reviews system',
+        validate: {
+          min: 1.0,
+          max: 10.0,
+        },
+        comment: 'Dinver rating (1.0-10.0) - average of unique user ratings from Experiences',
       },
       dinverReviewsCount: {
         type: DataTypes.INTEGER,
         allowNull: true,
         defaultValue: 0,
-        comment: 'Count of Dinver reviews from Experiences system',
+        comment: 'Count of unique users who rated this restaurant via Experiences',
       },
       isOpenNow: {
         type: DataTypes.BOOLEAN,

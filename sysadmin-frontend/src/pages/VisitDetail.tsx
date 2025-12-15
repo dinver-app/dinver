@@ -12,8 +12,6 @@ const VisitDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
 
   // Receipt form state
   const [receiptForm, setReceiptForm] = useState<UpdateReceiptPayload>({
@@ -77,63 +75,8 @@ const VisitDetail: React.FC = () => {
     }
   };
 
-  const handleApprove = async () => {
-    if (!visit?.id) return;
-
-    // Check if all required fields are filled
-    if (
-      !receiptForm.totalAmount ||
-      !receiptForm.jir ||
-      !receiptForm.zki ||
-      !receiptForm.oib ||
-      !receiptForm.issueDate ||
-      !receiptForm.issueTime
-    ) {
-      toast.error(
-        "Please fill in all required receipt fields before approving"
-      );
-      return;
-    }
-
-    try {
-      setSaving(true);
-      // First save any unsaved changes
-      if (visit.receipt?.id) {
-        await visitService.updateReceipt(visit.receipt.id, receiptForm);
-      }
-      // Then approve
-      const result = await visitService.approveVisit(visit.id);
-      toast.success(
-        `Visit approved! ${result.pointsAwarded} points awarded to user.`
-      );
-      navigate("/visits");
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to approve visit");
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!visit?.id || !rejectionReason.trim()) {
-      toast.error("Please provide a rejection reason");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      await visitService.rejectVisit(visit.id, { reason: rejectionReason });
-      toast.success("Visit rejected successfully");
-      setShowRejectModal(false);
-      navigate("/visits");
-    } catch (err) {
-      toast.error("Failed to reject visit");
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // NOTE: Visit approval/rejection removed - handled through Receipts page
+  // Visit status is automatically updated when receipt is approved/rejected
 
   const handleDeleteClick = () => {
     setDeleteConfirmText("");
@@ -255,24 +198,7 @@ const VisitDetail: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            {visit.status === "PENDING" && (
-              <>
-                <button
-                  onClick={() => setShowRejectModal(true)}
-                  disabled={saving}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition"
-                >
-                  Reject
-                </button>
-                <button
-                  onClick={handleApprove}
-                  disabled={saving}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition"
-                >
-                  {saving ? "Approving..." : "Approve Visit"}
-                </button>
-              </>
-            )}
+            {/* NOTE: Approve/Reject removed - handled through Receipts page */}
             <button
               onClick={handleDeleteClick}
               disabled={saving}
@@ -664,46 +590,6 @@ const VisitDetail: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Reject Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Reject Visit
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Please provide a reason for rejecting this visit. The user will
-              see this message.
-            </p>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
-              rows={4}
-              placeholder="Enter rejection reason..."
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectionReason("");
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={!rejectionReason.trim() || saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
-              >
-                {saving ? "Rejecting..." : "Reject Visit"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && visit && (

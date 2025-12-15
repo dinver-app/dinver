@@ -13,11 +13,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'user',
       });
-
-      ExperienceLike.belongsTo(models.LeaderboardCycle, {
-        foreignKey: 'cycleId',
-        as: 'cycle',
-      });
     }
   }
 
@@ -46,26 +41,6 @@ module.exports = (sequelize, DataTypes) => {
         },
         onDelete: 'CASCADE',
       },
-      cycleId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'LeaderboardCycles',
-          key: 'id',
-        },
-        comment: 'Points are awarded per cycle to prevent duplicate points',
-      },
-      // Anti-fraud fields
-      deviceId: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        comment: 'Device identifier for fraud detection',
-      },
-      ipAddress: {
-        type: DataTypes.STRING(45),
-        allowNull: true,
-        comment: 'IP address for fraud detection',
-      },
     },
     {
       sequelize,
@@ -79,16 +54,10 @@ module.exports = (sequelize, DataTypes) => {
           fields: ['userId'],
         },
         {
-          fields: ['cycleId'],
-        },
-        {
-          // Ensure one like per user per experience per cycle
+          // One like per user per experience
           unique: true,
-          fields: ['experienceId', 'userId', 'cycleId'],
-          name: 'unique_like_per_cycle',
-        },
-        {
-          fields: ['deviceId'],
+          fields: ['experienceId', 'userId'],
+          name: 'unique_experience_like',
         },
         {
           fields: ['createdAt'],

@@ -9,8 +9,8 @@ const {
   UserSettings,
 } = require('../../models');
 const { Op } = require('sequelize');
+const { getI18nForLanguage } = require('../../utils/i18n');
 const { sendReservationEmail } = require('../../utils/emailService');
-const { sendReservationSMS } = require('../../utils/smsService');
 const { DateTime } = require('luxon');
 const {
   createAndSendNotificationToUsers,
@@ -138,9 +138,10 @@ const createReservation = async (req, res) => {
     });
 
     // Kreiraj inicijalnu sistemsku poruku
+    const t = getI18nForLanguage('hr');
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      'Nova rezervacija kreirana',
+      t('reservationThread.newReservationCreated'),
       {
         type: 'reservation_created',
         guests,
@@ -458,15 +459,6 @@ const confirmReservation = async (req, res) => {
         reservation,
       });
 
-      // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-      if (reservation.user.phone) {
-        await sendReservationSMS({
-          to: reservation.user.phone,
-          type: 'confirmation',
-          reservation,
-        });
-      }
-
       // Pošalji push notifikaciju korisniku o potvrdi rezervacije
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
@@ -486,25 +478,6 @@ const confirmReservation = async (req, res) => {
           'Error sending push notification for reservation confirmation:',
           error,
         );
-      }
-    } else if (reservation.isCustomReservation && reservation.guestPhone) {
-      // Pošalji SMS potvrdu gostu za custom rezervaciju
-      try {
-        await sendReservationSMS({
-          to: reservation.guestPhone,
-          type: 'custom_reservation_confirmed',
-          reservation: {
-            ...reservation.toJSON(),
-            guestName: reservation.guestName,
-            restaurantName: reservation.restaurant.name,
-          },
-        });
-      } catch (error) {
-        console.error(
-          'Error sending SMS confirmation for custom reservation:',
-          error,
-        );
-        // Ne vraćamo grešku jer je SMS opcionalan
       }
     }
 
@@ -607,15 +580,6 @@ const declineReservation = async (req, res) => {
         reservation,
       });
 
-      // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-      if (reservation.user.phone) {
-        await sendReservationSMS({
-          to: reservation.user.phone,
-          type: 'decline',
-          reservation,
-        });
-      }
-
       // Pošalji push notifikaciju korisniku o odbijanju rezervacije
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
@@ -704,7 +668,7 @@ const suggestAlternativeTime = async (req, res) => {
     if (dateObj > today) {
       existingReservation = await Reservation.findOne({
         where: {
-          userId,
+          userId: reservation.userId,
           restaurantId: reservation.restaurantId,
           id: { [Op.ne]: reservation.id },
           date,
@@ -716,7 +680,7 @@ const suggestAlternativeTime = async (req, res) => {
     } else if (dateObj.getTime() === today.getTime()) {
       existingReservation = await Reservation.findOne({
         where: {
-          userId,
+          userId: reservation.userId,
           restaurantId: reservation.restaurantId,
           id: { [Op.ne]: reservation.id },
           date,
@@ -784,15 +748,6 @@ const suggestAlternativeTime = async (req, res) => {
       type: 'alternative',
       reservation,
     });
-
-    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-    if (reservation.user.phone) {
-      await sendReservationSMS({
-        to: reservation.user.phone,
-        type: 'alternative',
-        reservation,
-      });
-    }
 
     // Pošalji push notifikaciju korisniku o predloženom alternativnom terminu
     try {
@@ -1082,18 +1037,6 @@ const cancelReservationByRestaurant = async (req, res) => {
         },
       });
 
-      // Pošalji SMS korisniku
-      if (reservation.user.phone) {
-        await sendReservationSMS({
-          to: reservation.user.phone,
-          type: 'cancellation_by_restaurant',
-          reservation: {
-            ...reservation.toJSON(),
-            cancellationReason,
-          },
-        });
-      }
-
       // Pošalji push notifikaciju korisniku o otkazivanju od strane restorana
       try {
         await createAndSendNotificationToUsers([reservation.userId], {
@@ -1325,16 +1268,62 @@ const acceptSuggestedTime = async (req, res) => {
       reservation: updatedReservation,
     });
 
-    // Pošalji SMS korisniku samo ako ima verificiran broj telefona
-    if (updatedReservation.user.phone) {
-      await sendReservationSMS({
-        to: updatedReservation.user.phone,
-        type: 'accepted_alternative',
-        reservation: updatedReservation,
-      });
+    res.json(updatedReservation);
+
+    // Dohvati sve admine restorana
+    const admins = await UserAdmin.findAll({
+      where: { restaurantId: updatedReservation.restaurantId },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['email', 'name', 'pushToken'],
+        },
+      ],
+    });
+
+    // Pošalji email i push notifikaciju svakom adminu
+    const adminUserIds = [];
+    for (const admin of admins) {
+      let adminEmail = admin.user?.email;
+      if (!adminEmail) {
+        const adminUser = await User.findByPk(admin.userId);
+        adminEmail = adminUser?.email;
+      }
+      if (adminEmail) {
+        await sendReservationEmail({
+          to: adminEmail,
+          type: 'alternative_accepted_admin',
+          reservation: updatedReservation,
+        });
+      }
+      adminUserIds.push(admin.userId);
     }
 
-    res.json(updatedReservation);
+    // Pošalji push notifikaciju adminima o prihvaćenom alternativnom terminu
+    if (adminUserIds.length > 0) {
+      try {
+        await createAndSendNotificationToUsers(adminUserIds, {
+          type: 'alternative_time_accepted',
+          actorUserId: userId,
+          restaurantId: updatedReservation.restaurantId,
+          data: {
+            type: 'alternative_time_accepted',
+            reservationId: updatedReservation.id,
+            restaurantId: updatedReservation.restaurantId,
+            restaurantName: updatedReservation.restaurant.name,
+            userName: updatedReservation.user.name,
+            date: formatDateDisplay(updatedReservation.date),
+            time: formatTimeDisplay(updatedReservation.time),
+          },
+        });
+      } catch (error) {
+        console.error(
+          'Error sending push notification for accepted alternative time:',
+          error,
+        );
+      }
+    }
   } catch (error) {
     console.error('Full error:', error);
     console.error('Error accepting alternative time:', error.message);
@@ -1345,7 +1334,7 @@ const acceptSuggestedTime = async (req, res) => {
 // Dohvati dostupne termine za rezervaciju
 const getAvailableTimes = async (req, res) => {
   try {
-    const { restaurantId, date } = req.query;
+    const { restaurantId, date } = req.query; // očekuje se format 'YYYY-MM-DD'
     if (!restaurantId || !date) {
       return res
         .status(400)
@@ -1389,14 +1378,19 @@ const getAvailableTimes = async (req, res) => {
     const closeMin = toMinutes(period.close.time);
     if (openMin === null || closeMin === null) return res.json([]);
 
-    // Ako je radno vrijeme npr. 08:00 - 00:00, closeMin će biti 0, pa trebaš detektirati prelazak u idući dan
+    // Ako je radno vrijeme npr. 08:00 - 02:00 (sutradan), closeMin će biti manji od openMin
+    // Detektiramo prelazak u idući dan kada je closeMin <= openMin
     let lastSlot = closeMin - 60;
-    if (closeMin === 0) lastSlot = 24 * 60 - 60; // do 23:00
+    if (closeMin <= openMin) {
+      // Restoran zatvara nakon ponoći
+      lastSlot = closeMin + 24 * 60 - 60; // dodaj 24h da bi bio u sljedećem danu
+    }
 
     // Generiraj termine po 30 min
     const slots = [];
     for (let min = openMin; min <= lastSlot; min += 30) {
-      slots.push(toHHMM(min));
+      const displayMin = min >= 24 * 60 ? min - 24 * 60 : min; // normaliziraj za prikaz
+      slots.push(toHHMM(displayMin));
     }
 
     return res.json(slots);
@@ -1482,9 +1476,10 @@ const createCustomReservation = async (req, res) => {
     });
 
     // Kreiraj inicijalnu sistemsku poruku
+    const t = getI18nForLanguage('hr');
     await ReservationMessage.createSystemMessage(
       reservation.id,
-      `Custom rezervacija kreirana - ${guestName}`,
+      t('reservationThread.customReservationCreated', { guestName }),
       {
         type: 'custom_reservation_created',
         guests,
@@ -1505,24 +1500,6 @@ const createCustomReservation = async (req, res) => {
         messageType: 'user',
         content: noteFromUser,
       });
-    }
-
-    // Pošalji SMS potvrdu gostu ako je unesen broj mobitela
-    if (reservation.guestPhone) {
-      try {
-        await sendReservationSMS({
-          to: reservation.guestPhone,
-          type: 'custom_reservation_created',
-          reservation: {
-            ...reservation.toJSON(),
-            guestName: reservation.guestName,
-            restaurantName: restaurant.name,
-          },
-        });
-      } catch (error) {
-        console.error('Error sending SMS for custom reservation:', error);
-        // Ne vraćamo grešku jer je SMS opcionalan
-      }
     }
 
     // Dohvati rezervaciju s porukama

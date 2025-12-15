@@ -8,6 +8,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'experienceId',
         as: 'experience',
       });
+
+      ExperienceMedia.belongsTo(models.MenuItem, {
+        foreignKey: 'menuItemId',
+        as: 'menuItem',
+      });
     }
   }
 
@@ -28,8 +33,9 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
       },
       kind: {
-        type: DataTypes.ENUM('IMAGE', 'VIDEO'),
+        type: DataTypes.ENUM('IMAGE'),
         allowNull: false,
+        defaultValue: 'IMAGE',
       },
       storageKey: {
         type: DataTypes.STRING(500),
@@ -63,43 +69,38 @@ module.exports = (sequelize, DataTypes) => {
       transcodingStatus: {
         type: DataTypes.ENUM('PENDING', 'PROCESSING', 'DONE', 'FAILED'),
         allowNull: false,
-        defaultValue: 'PENDING',
-      },
-      transcodingError: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+        defaultValue: 'DONE',
       },
       thumbnails: {
         type: DataTypes.JSONB,
         allowNull: true,
         comment: 'Array of thumbnail objects: [{w, h, cdnUrl}]',
       },
-      // Video-specific fields
-      videoFormats: {
-        type: DataTypes.JSONB,
-        allowNull: true,
-        comment: 'Available video formats: {hls, mp4_720p, mp4_480p, etc.}',
-      },
-      durationSec: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-        comment: 'Video duration in seconds',
-      },
-      // Image-specific fields
       mimeType: {
         type: DataTypes.STRING(100),
         allowNull: true,
       },
-      // AI/ML analysis
-      contentLabels: {
-        type: DataTypes.JSONB,
+      // "Što je na slici?" answer
+      caption: {
+        type: DataTypes.STRING(255),
         allowNull: true,
-        comment: 'Content labels from image/video analysis',
+        comment: 'User description of what is in the image',
       },
-      nsfwScore: {
-        type: DataTypes.FLOAT,
+      menuItemId: {
+        type: DataTypes.UUID,
         allowNull: true,
-        comment: 'NSFW detection score from 0-1',
+        references: {
+          model: 'MenuItems',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+        comment: 'Link to menu item if user selected from menu',
+      },
+      isRecommended: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'User marked this dish as recommended',
       },
     },
     {
@@ -112,9 +113,6 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           fields: ['experienceId', 'orderIndex'],
-        },
-        {
-          fields: ['transcodingStatus'],
         },
       ],
     },

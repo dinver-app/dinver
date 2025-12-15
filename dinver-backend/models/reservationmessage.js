@@ -1,5 +1,7 @@
 'use strict';
 const { Model } = require('sequelize');
+const { getI18nForLanguage } = require('../utils/i18n');
+
 module.exports = (sequelize, DataTypes) => {
   class ReservationMessage extends Model {
     /**
@@ -37,12 +39,14 @@ module.exports = (sequelize, DataTypes) => {
       oldTime,
       newDate,
       newTime,
+      language = 'hr',
     ) {
+      const t = getI18nForLanguage(language);
       return await this.create({
         reservationId,
         senderId: userId,
         messageType: 'system',
-        content: 'Predložena promjena termina rezervacije',
+        content: t('reservationThread.timeChangeSuggested'),
         metadata: {
           type: 'time_change',
           oldDate,
@@ -60,23 +64,31 @@ module.exports = (sequelize, DataTypes) => {
       oldStatus,
       newStatus,
       reason = null,
+      language = 'hr',
     ) {
-      const statusMessages = {
-        confirmed: 'Rezervacija je potvrđena',
-        declined: 'Rezervacija je odbijena',
-        cancelled_by_user: 'Korisnik je otkazao rezervaciju',
-        cancelled_by_restaurant: 'Restoran je otkazao rezervaciju',
-        suggested_alt: 'Predložen je alternativni termin',
-        completed: 'Rezervacija je završena',
-        no_show: 'Gost se nije pojavio',
+      const t = getI18nForLanguage(language);
+
+      const statusMessagesKeys = {
+        confirmed: 'reservationThread.reservationConfirmed',
+        declined: 'reservationThread.reservationDeclined',
+        cancelled_by_user: 'reservationThread.reservationCancelledByUser',
+        cancelled_by_restaurant:
+          'reservationThread.reservationCancelledByRestaurant',
+        suggested_alt: 'reservationThread.alternativeTimeSuggested',
+        completed: 'reservationThread.reservationCompleted',
+        no_show: 'reservationThread.noShow',
       };
+
+      const messageKey = statusMessagesKeys[newStatus];
+      const content = messageKey
+        ? t(messageKey)
+        : `Status promijenjen u ${newStatus}`;
 
       return await this.create({
         reservationId,
         senderId: userId,
         messageType: 'system',
-        content:
-          statusMessages[newStatus] || `Status promijenjen u ${newStatus}`,
+        content,
         metadata: {
           type: 'status_change',
           oldStatus,

@@ -133,6 +133,7 @@ const uploadReceipt = async (req, res) => {
       const { variants } = await processImage(req.file.buffer, {
         originalName: req.file.originalname,
         skipOriginal: false, // Enable ORIGINAL variant for OCR
+        mimeType: req.file.mimetype || file.mimetype,
       });
 
       // Upload all variants to S3
@@ -759,6 +760,9 @@ const searchRestaurants = async (req, res) => {
             'place',
             'placeId',
             'rating',
+            'userRatingsTotal',
+            'dinverRating',
+            'dinverReviewsCount',
             'latitude',
             'longitude',
           ],
@@ -775,7 +779,10 @@ const searchRestaurants = async (req, res) => {
           name: r.name,
           address: r.address,
           place: r.place,
-          rating: r.rating,
+          rating: r.rating != null ? Number(r.rating) : null,
+          userRatingsTotal: r.userRatingsTotal != null ? Number(r.userRatingsTotal) : null,
+          dinverRating: r.dinverRating != null ? Number(r.dinverRating) : null,
+          dinverReviewsCount: r.dinverReviewsCount != null ? Number(r.dinverReviewsCount) : null,
           distance: r.get('distance'),
           existsInDatabase: true,
         }));

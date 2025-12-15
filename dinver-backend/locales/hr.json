@@ -30,11 +30,43 @@
     },
     "user_followed_you": {
       "title": "Novi pratitelj! 👤",
-      "body": "{{actorName}} je počeo/la pratiti Vas"
+      "body": "{{actorName}} te je počeo/la pratiti"
     },
     "new_restaurant": {
       "title": "Novi restoran na Dinveru | {{place}}! 🍽️",
       "body": "Restoran \"{{restaurantName}}\" se pridružio Dinveru! Pogledaj što sve nudi!"
+    },
+    "alternative_time_accepted": {
+      "title": "Alternativni termin prihvaćen! ✅",
+      "body": "{{userName}} je prihvatio/la alternativni termin za rezervaciju u restoranu {{restaurantName}} ({{date}}, {{time}})"
+    },
+    "receipt_approved": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}}"
+    },
+    "receipt_approved_shared": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}} (podijeljeno s {{buddyCount}} prijateljem)"
+    },
+    "receipt_approved_shared_plural": {
+      "title": "Račun odobren! 🎉",
+      "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}} (podijeljeno s {{buddyCount}} prijatelja)"
+    },
+    "receipt_approved_buddy": {
+      "title": "Dobio/la si bodove! 🎉",
+      "body": "{{actorName}} te je označio/la na računu iz {{restaurantName}} - dobio/la si {{points}} bodova!"
     }
+  },
+  "reservationThread": {
+    "newReservationCreated": "Nova rezervacija kreirana",
+    "customReservationCreated": "Custom rezervacija kreirana - {{guestName}}",
+    "timeChangeSuggested": "Predložena promjena termina rezervacije",
+    "reservationConfirmed": "Rezervacija je potvrđena",
+    "reservationDeclined": "Rezervacija je odbijena",
+    "reservationCancelledByUser": "Korisnik je otkazao rezervaciju",
+    "reservationCancelledByRestaurant": "Restoran je otkazao rezervaciju",
+    "alternativeTimeSuggested": "Predložen je alternativni termin",
+    "reservationCompleted": "Rezervacija je završena",
+    "noShow": "Gost se nije pojavio"
   }
 }

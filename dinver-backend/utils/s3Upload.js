@@ -164,12 +164,7 @@ async function uploadBufferToS3(buffer, key, contentType = 'image/jpeg') {
 
     await s3Client.send(new PutObjectCommand(params));
 
-    // Verify upload
-    const exists = await verifyFileExists(bucketName, key);
-    if (!exists) {
-      throw new Error('File upload verification failed');
-    }
-
+    // S3 PutObject is atomic - no need for verification
     return key;
   } catch (error) {
     console.error('Error in uploadBufferToS3:', error);

@@ -19,6 +19,7 @@ export interface Receipt {
   verifierId?: string;
   verifiedAt?: string;
   rejectionReason?: string;
+  rejectionReasonEn?: string;
   pointsAwarded?: number;
   hasReservationBonus?: boolean;
   reservationId?: string;
@@ -106,6 +107,12 @@ export interface Receipt {
     guests: number;
     status: string;
   }>;
+  taggedBuddies?: Array<{
+    id: string;
+    username: string;
+    name: string;
+    profileImage?: string | null;
+  }>;
 }
 
 export interface ReceiptFilters {
@@ -149,6 +156,7 @@ export interface ApproveReceiptData {
 
 export interface RejectReceiptData {
   rejectionReason: string;
+  rejectionReasonEn: string;
 }
 
 class ReceiptService {

@@ -34,6 +34,8 @@ const leaderboardCycleRoutes = require('./appRoutes/leaderboardCycleRoutes');
 const followRoutes = require('./appRoutes/followRoutes');
 const visitRoutes = require('./appRoutes/visitRoutes');
 const mustVisitRoutes = require('./appRoutes/mustVisitRoutes');
+const experienceRoutes = require('./appRoutes/experienceRoutes');
+const supportTicketRoutes = require('./appRoutes/supportTicketRoutes');
 const router = express.Router();
 
 router.use(authRoutes);
@@ -71,5 +73,7 @@ router.use(leaderboardCycleRoutes);
 router.use(followRoutes);
 router.use(visitRoutes);
 router.use(mustVisitRoutes);
+router.use('/experiences', experienceRoutes);
+router.use(supportTicketRoutes);
 
 module.exports = router;

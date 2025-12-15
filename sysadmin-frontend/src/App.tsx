@@ -30,6 +30,9 @@ import ExperienceDetails from "./pages/ExperienceDetails";
 import UserExperienceStats from "./pages/UserExperienceStats";
 import OcrAnalytics from "./pages/OcrAnalytics";
 import ReceiptAnalytics from "./pages/ReceiptAnalytics";
+import SupportTickets from "./pages/SupportTickets";
+import SupportTicketDetails from "./pages/SupportTicketDetails";
+import GoogleApiLogs from "./pages/GoogleApiLogs";
 
 function App() {
   return (
@@ -78,6 +81,9 @@ function App() {
             />
             <Route path="/ocr-analytics" element={<OcrAnalytics />} />
             <Route path="/receipt-analytics" element={<ReceiptAnalytics />} />
+            <Route path="/support-tickets" element={<SupportTickets />} />
+            <Route path="/support-tickets/:id" element={<SupportTicketDetails />} />
+            <Route path="/google-api-logs" element={<GoogleApiLogs />} />
           </Route>
         </Routes>
       </Router>

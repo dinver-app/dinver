@@ -30,7 +30,10 @@ const getAnthropicClient = () => {
  * @param {string} mimeType - Image MIME type (e.g., 'image/jpeg')
  * @returns {Promise<Object>} Extracted receipt data with confidence scores
  */
-const extractReceiptWithClaude = async (imageBuffer, mimeType = 'image/jpeg') => {
+const extractReceiptWithClaude = async (
+  imageBuffer,
+  mimeType = 'image/jpeg',
+) => {
   const client = getAnthropicClient();
 
   if (!client) {
@@ -42,25 +45,40 @@ const extractReceiptWithClaude = async (imageBuffer, mimeType = 'image/jpeg') =>
     console.log('[Claude OCR] Starting receipt extraction...');
     const startTime = Date.now();
 
-    // Check image size and compress if needed (Claude has 5MB limit)
+    // Check image size and normalize format
+    // Claude API requires media_type to match actual image format
+    // To avoid mismatches (e.g., PNG sent with wrong mime type), always convert to JPEG
     const imageSizeMB = imageBuffer.length / (1024 * 1024);
     let processedBuffer = imageBuffer;
+    const sharp = require('sharp');
 
-    if (imageSizeMB > 4.5) {
-      // Compress to under 4.5MB to be safe
-      console.log(`[Claude OCR] Image too large (${imageSizeMB.toFixed(2)}MB), compressing...`);
-      const sharp = require('sharp');
+    // Always convert to JPEG to ensure format consistency
+    // This handles: PNG, WebP, GIF, and any other formats
+    // Also resize if needed (Claude has 5MB limit)
+    const needsResize = imageSizeMB > 4.5;
+    const needsConversion = mimeType !== 'image/jpeg';
 
-      processedBuffer = await sharp(imageBuffer)
-        .resize(2400, 2400, {
+    if (needsResize || needsConversion) {
+      console.log(
+        `[Claude OCR] Processing image: size=${imageSizeMB.toFixed(2)}MB, format=${mimeType}, needsResize=${needsResize}, needsConversion=${needsConversion}`,
+      );
+
+      let sharpInstance = sharp(imageBuffer);
+
+      if (needsResize) {
+        sharpInstance = sharpInstance.resize(2400, 2400, {
           fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 90 })
-        .toBuffer();
+          withoutEnlargement: true,
+        });
+      }
+
+      processedBuffer = await sharpInstance.jpeg({ quality: 90 }).toBuffer();
+
+      // IMPORTANT: Update mimeType since we converted to JPEG
+      mimeType = 'image/jpeg';
 
       const newSizeMB = processedBuffer.length / (1024 * 1024);
-      console.log(`[Claude OCR] Compressed to ${newSizeMB.toFixed(2)}MB`);
+      console.log(`[Claude OCR] Converted to JPEG: ${newSizeMB.toFixed(2)}MB`);
     }
 
     // Convert buffer to base64
@@ -291,7 +309,8 @@ IMPORTANT NOTES:
     });
 
     const textContent = response.content.find((block) => block.type === 'text');
-    if (!textContent) return { restaurantId: null, confidence: 0, matchedBy: null };
+    if (!textContent)
+      return { restaurantId: null, confidence: 0, matchedBy: null };
 
     let content = textContent.text.trim();
     if (content.startsWith('```json')) {
@@ -300,9 +319,17 @@ IMPORTANT NOTES:
 
     const match = JSON.parse(content);
 
-    if (!match.matchIndex || match.matchIndex < 1 || match.matchIndex > restaurants.length) {
+    if (
+      !match.matchIndex ||
+      match.matchIndex < 1 ||
+      match.matchIndex > restaurants.length
+    ) {
       console.log('[Claude Matching] No confident match found');
-      return { restaurantId: null, confidence: match.confidence || 0, matchedBy: match.matchedBy };
+      return {
+        restaurantId: null,
+        confidence: match.confidence || 0,
+        matchedBy: match.matchedBy,
+      };
     }
 
     const matchedRestaurant = restaurants[match.matchIndex - 1];
@@ -315,7 +342,8 @@ IMPORTANT NOTES:
     });
 
     // Return placeId for Google results (no id field), or id for DB results
-    const restaurantIdentifier = matchedRestaurant.id || matchedRestaurant.placeId;
+    const restaurantIdentifier =
+      matchedRestaurant.id || matchedRestaurant.placeId;
 
     console.log('[Claude Matching] Returning identifier:', {
       type: matchedRestaurant.id ? 'database_id' : 'placeId',
@@ -342,11 +370,16 @@ IMPORTANT NOTES:
  * @param {string} mimeType - Image MIME type (e.g., 'image/jpeg')
  * @returns {Promise<Object>} { isReceipt: boolean, confidence: number, reason: string }
  */
-const validateReceiptWithClaude = async (imageBuffer, mimeType = 'image/jpeg') => {
+const validateReceiptWithClaude = async (
+  imageBuffer,
+  mimeType = 'image/jpeg',
+) => {
   const client = getAnthropicClient();
 
   if (!client) {
-    console.log('[Claude Validation] Anthropic client not available, skipping validation');
+    console.log(
+      '[Claude Validation] Anthropic client not available, skipping validation',
+    );
     return { isReceipt: true, confidence: 1, reason: 'Claude not configured' };
   }
 
@@ -354,25 +387,36 @@ const validateReceiptWithClaude = async (imageBuffer, mimeType = 'image/jpeg') =
     console.log('[Claude Validation] Validating image is a receipt...');
     const startTime = Date.now();
 
-    // Check image size and compress if needed (Claude has 5MB limit)
+    // Check image size and normalize format
+    // Claude API requires media_type to match actual image format
     const imageSizeMB = imageBuffer.length / (1024 * 1024);
     let processedBuffer = imageBuffer;
+    const sharp = require('sharp');
 
-    if (imageSizeMB > 4.5) {
-      // Compress to under 4.5MB to be safe
-      console.log(`[Claude Validation] Image too large (${imageSizeMB.toFixed(2)}MB), compressing...`);
-      const sharp = require('sharp');
+    const needsResize = imageSizeMB > 4.5;
+    const needsConversion = mimeType !== 'image/jpeg';
 
-      processedBuffer = await sharp(imageBuffer)
-        .resize(1600, 1600, {
+    if (needsResize || needsConversion) {
+      console.log(
+        `[Claude Validation] Processing image: size=${imageSizeMB.toFixed(2)}MB, format=${mimeType}`,
+      );
+
+      let sharpInstance = sharp(imageBuffer);
+
+      if (needsResize) {
+        sharpInstance = sharpInstance.resize(1600, 1600, {
           fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+          withoutEnlargement: true,
+        });
+      }
+
+      processedBuffer = await sharpInstance.jpeg({ quality: 85 }).toBuffer();
+      mimeType = 'image/jpeg';
 
       const newSizeMB = processedBuffer.length / (1024 * 1024);
-      console.log(`[Claude Validation] Compressed to ${newSizeMB.toFixed(2)}MB`);
+      console.log(
+        `[Claude Validation] Converted to JPEG: ${newSizeMB.toFixed(2)}MB`,
+      );
     }
 
     // Convert buffer to base64
@@ -468,14 +512,27 @@ Be strict: Return false if image is:
     console.error('[Claude Validation] Full error:', error);
 
     // If it's a model not found error, return validation failure
-    if (error.message?.includes('not_found_error') || error.message?.includes('404')) {
+    if (
+      error.message?.includes('not_found_error') ||
+      error.message?.includes('404')
+    ) {
       console.error('[Claude Validation] Model not found - validation failed');
-      return { isReceipt: false, confidence: 0, reason: 'Validation service unavailable' };
+      return {
+        isReceipt: false,
+        confidence: 0,
+        reason: 'Validation service unavailable',
+      };
     }
 
     // For other errors (network, timeout), fail open but log warning
-    console.warn('[Claude Validation] Allowing processing despite validation error (fail open)');
-    return { isReceipt: true, confidence: 0.5, reason: 'Validation error, allowing processing' };
+    console.warn(
+      '[Claude Validation] Allowing processing despite validation error (fail open)',
+    );
+    return {
+      isReceipt: true,
+      confidence: 0.5,
+      reason: 'Validation error, allowing processing',
+    };
   }
 };
 

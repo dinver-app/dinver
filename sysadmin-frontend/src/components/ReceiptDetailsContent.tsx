@@ -35,6 +35,7 @@ const ReceiptDetailsContent: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionReasonEn, setRejectionReasonEn] = useState("");
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
@@ -187,9 +188,11 @@ const ReceiptDetailsContent: React.FC<Props> = ({
       toast.success(t("receipts.approve_success", { points: pointsPreview }));
       onUpdate();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      // Extract error message from API response or fallback to generic message
       const message =
-        error instanceof Error ? error.message : t("receipts.approve_failed");
+        error?.response?.data?.error ||
+        (error instanceof Error ? error.message : t("receipts.approve_failed"));
       setApproveError(message);
       toast.error(message);
     } finally {
@@ -209,7 +212,11 @@ const ReceiptDetailsContent: React.FC<Props> = ({
 
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
-      toast.error(t("receipts.rejection_reason_required"));
+      toast.error("Razlog odbijanja (hrvatski) je obavezan");
+      return;
+    }
+    if (!rejectionReasonEn.trim()) {
+      toast.error("Rejection reason (English) is required");
       return;
     }
 
@@ -217,6 +224,7 @@ const ReceiptDetailsContent: React.FC<Props> = ({
       setLoading(true);
       const rejectData: RejectReceiptData = {
         rejectionReason: rejectionReason.trim(),
+        rejectionReasonEn: rejectionReasonEn.trim(),
       };
 
       await receiptService.rejectReceipt(receipt.id, rejectData);
@@ -843,6 +851,48 @@ const ReceiptDetailsContent: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Tagged Buddies Section */}
+              {receipt.taggedBuddies && receipt.taggedBuddies.length > 0 && (
+                <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                  <div className="flex items-center mb-3">
+                    <svg className="h-5 w-5 text-purple-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <h5 className="text-sm font-medium text-gray-900">
+                      Tagged Buddies ({receipt.taggedBuddies.length})
+                    </h5>
+                  </div>
+                  <div className="space-y-2">
+                    {receipt.taggedBuddies.map((buddy) => (
+                      <div key={buddy.id} className="flex items-center space-x-3 bg-purple-50 px-3 py-2 rounded-lg">
+                        {buddy.profileImage ? (
+                          <img
+                            src={buddy.profileImage}
+                            alt={buddy.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center">
+                            <span className="text-purple-700 font-medium text-sm">
+                              {buddy.name?.charAt(0)?.toUpperCase() || '?'}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{buddy.name}</p>
+                          <p className="text-xs text-gray-500">@{buddy.username}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-purple-100">
+                    <p className="text-xs text-purple-700">
+                      Bodovi će se podijeliti: {pointsPreview.toFixed(2)} / {receipt.taggedBuddies.length + 1} = <strong>{(pointsPreview / (receipt.taggedBuddies.length + 1)).toFixed(2)} bodova</strong> po osobi
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -900,20 +950,39 @@ const ReceiptDetailsContent: React.FC<Props> = ({
 
         {showRejectForm && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h5 className="text-sm font-medium text-red-900 mb-2">
-              {t("receipts.rejection_reason")}
+            <h5 className="text-sm font-medium text-red-900 mb-3">
+              Razlog odbijanja / Rejection Reason
             </h5>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="w-full border border-red-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-              rows={3}
-              placeholder={t("receipts.rejection_reason_placeholder")}
-            />
-            <div className="mt-2 flex gap-2">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hrvatski (Croatian) *
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full border border-red-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={2}
+                  placeholder="Unesite razlog odbijanja na hrvatskom..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  English *
+                </label>
+                <textarea
+                  value={rejectionReasonEn}
+                  onChange={(e) => setRejectionReasonEn(e.target.value)}
+                  className="w-full border border-red-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={2}
+                  placeholder="Enter rejection reason in English..."
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
               <button
                 onClick={handleReject}
-                disabled={loading || !rejectionReason.trim()}
+                disabled={loading || !rejectionReason.trim() || !rejectionReasonEn.trim()}
                 className="inline-flex items-center px-4 py-2 rounded-md bg-red-600 text-white shadow-sm hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
               >
                 {loading

@@ -809,10 +809,57 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
               : ''
           }
         </div>
-        
+
         <div class="text-center">
           <p>Prijavite se u Dinver admin panel za upravljanje rezervacijama.</p>
           <p class="text-muted">Molimo odgovorite na rezervaciju što prije.</p>
+        </div>
+      `;
+      break;
+
+    case 'alternative_accepted_admin':
+      subject = 'Korisnik je prihvatio alternativni termin';
+      text =
+        `Korisnik ${reservation.user.name} (${reservation.user.email}) je prihvatio alternativni termin za rezervaciju u vašem restoranu "${reservation.restaurant.name}".\n\n` +
+        `Potvrđeni detalji rezervacije:\n` +
+        `Restoran: "${reservation.restaurant.name}"\n` +
+        `Datum: ${formattedDate}\n` +
+        `Vrijeme: ${formattedTime}\n` +
+        `Broj gostiju: ${reservation.guests}`;
+
+      htmlContent = `
+        <div class="text-center">
+          <h1>✅ Alternativni termin prihvaćen</h1>
+          <p>Korisnik je prihvatio vaš predloženi alternativni termin.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top: 0;">Potvrđeni detalji rezervacije</h3>
+          <div class="detail-row">
+            <span class="detail-label">👤 Korisnik:</span>
+            <span class="detail-value">${reservation.user.name}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📧 Email:</span>
+            <span class="detail-value"><a href="mailto:${reservation.user.email}">${reservation.user.email}</a></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📅 Datum:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🕐 Vrijeme:</span>
+            <span class="detail-value">${formattedTime}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">👥 Broj gostiju:</span>
+            <span class="detail-value">${reservation.guests}</span>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <p>Rezervacija je sada potvrđena. Gost će doći u navedenom terminu.</p>
+          <p class="text-muted">Prijavite se u Dinver admin panel za pregled rezervacija.</p>
         </div>
       `;
       break;

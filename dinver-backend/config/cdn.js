@@ -57,6 +57,11 @@ function getSignedUrlForCloudFront(mediaKey) {
     cacheStats.misses++;
 
     const baseUrl = (process.env.CLOUDFRONT_URL || '').replace(/\/+$/, '');
+
+    if (!baseUrl || !process.env.CLOUDFRONT_KEY_PAIR_ID || !process.env.CLOUDFRONT_PRIVATE_KEY) {
+      return getS3Url(mediaKey);
+    }
+
     const url = `${baseUrl}/${mediaKey}`;
     const expiresIn = 23 * 60 * 60 * 1000; // 23h (malo manje od stvarnog isteka)
 
@@ -100,16 +105,32 @@ function getS3Url(mediaKey) {
 function getMediaUrl(mediaKey, mediaType = 'image', size = 'medium') {
   if (!mediaKey) return null;
 
-  // Remove any full URLs if they were accidentally stored
+  // If it's an external URL (Google, Facebook, etc.), return it directly
+  // These are profile images from OAuth providers and don't need CloudFront signing
   if (mediaKey.startsWith('http')) {
+    const isExternalProvider =
+      mediaKey.includes('googleusercontent.com') ||
+      mediaKey.includes('facebook.com') ||
+      mediaKey.includes('fbcdn.net') ||
+      mediaKey.includes('graph.facebook.com');
+
+    if (isExternalProvider) {
+      return mediaKey;
+    }
+
+    // For S3 URLs that were accidentally stored as full URLs, extract the key
     mediaKey = mediaKey.split('.com/').pop();
   }
+
+  // Receipts use QUICK strategy without variants, so don't add size suffix
+  const isReceipt = mediaKey.startsWith('receipts/');
 
   // If requesting a specific size and mediaKey doesn't already have a size suffix
   if (
     mediaType === 'image' &&
     size &&
     size !== 'original' &&
+    !isReceipt && // Don't add suffix for receipts
     !mediaKey.match(/-(thumb|medium|full)\.(jpg|jpeg|png|webp)$/i)
   ) {
     // Try to construct the variant key

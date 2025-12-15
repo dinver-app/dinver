@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       restaurantId: {
         type: DataTypes.UUID,
-        allowNull: true, // Allow null for fallback scenarios with manual restaurant data
+        allowNull: true,
         references: {
           model: 'Restaurants',
           key: 'id',
@@ -62,7 +62,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED', 'RETAKE_NEEDED'),
+        type: DataTypes.ENUM(
+          'PENDING',
+          'APPROVED',
+          'REJECTED',
+          'RETAKE_NEEDED',
+        ),
         allowNull: false,
         defaultValue: 'PENDING',
       },

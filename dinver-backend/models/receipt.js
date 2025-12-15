@@ -199,7 +199,12 @@ module.exports = (sequelize, DataTypes) => {
       rejectionReason: {
         type: DataTypes.TEXT,
         allowNull: true,
-        comment: 'Reason for rejection if applicable',
+        comment: 'Reason for rejection in Croatian',
+      },
+      rejectionReasonEn: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Reason for rejection in English',
       },
       pointsAwarded: {
         type: DataTypes.DECIMAL(10, 2),
@@ -213,6 +218,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
         comment:
           'Whether this receipt qualifies for reservation bonus (20% extra points)',
+      },
+      partySize: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 1,
+        comment: 'Number of people in the group',
       },
       reservationId: {
         type: DataTypes.UUID,

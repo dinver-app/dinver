@@ -20,7 +20,7 @@ router.get(
 router.get(
   '/leaderboard/cycles/:id',
   appApiKeyAuth,
-  appAuthenticateToken,
+  appOptionalAuth,
   leaderboardCycleController.getCycleLeaderboard,
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.get(
   '/leaderboard/history',
   appApiKeyAuth,
-  appAuthenticateToken,
+  appOptionalAuth,
   leaderboardCycleController.getCycleHistory,
 );
 
@@ -38,6 +38,24 @@ router.get(
   appApiKeyAuth,
   appAuthenticateToken,
   leaderboardCycleController.getUserCycleStats,
+);
+
+// ==================== VISITS LEADERBOARD ====================
+
+// Get list of available places (cities) with visit stats
+router.get(
+  '/leaderboard/places',
+  appApiKeyAuth,
+  appOptionalAuth,
+  leaderboardCycleController.getAvailablePlaces,
+);
+
+// Get visits leaderboard with filters (members: all/buddies, place: all/cityName)
+router.get(
+  '/leaderboard/visits',
+  appApiKeyAuth,
+  appOptionalAuth,
+  leaderboardCycleController.getVisitsLeaderboard,
 );
 
 module.exports = router;

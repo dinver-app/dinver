@@ -65,7 +65,7 @@ exports.getAllVisits = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'status', 'title'],
+          attributes: ['id', 'status', 'overallRating'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -73,40 +73,60 @@ exports.getAllVisits = async (req, res) => {
       offset: parseInt(offset),
     });
 
-    const visitsWithUrls = visits.map((visit) => ({
-      ...visit.get(),
-      receiptImageUrl: visit.receiptImageUrl
-        ? getMediaUrl(visit.receiptImageUrl, 'image')
-        : null,
-      receipt: visit.receipt
-        ? {
-            ...visit.receipt.get(),
-            thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image', 'original')
+    // Fetch tagged buddies (expand UUIDs to User objects)
+    const visitsWithBuddies = await Promise.all(
+      visits.map(async (visit) => {
+        let buddies = [];
+        if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+          buddies = await User.findAll({
+            where: { id: visit.taggedBuddies },
+            attributes: ['id', 'username', 'name', 'profileImage'],
+          });
+          buddies = buddies.map((buddy) => ({
+            ...buddy.get(),
+            profileImage: buddy.profileImage
+              ? getMediaUrl(buddy.profileImage, 'image', 'original')
               : null,
-            mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image', 'original')
-              : null,
-            fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image', 'original')
-              : null,
-            originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image', 'original')
-              : null,
-          }
-        : null,
-      restaurant: visit.restaurant
-        ? {
-            ...visit.restaurant.get(),
-            thumbnailUrl: visit.restaurant.thumbnailUrl
-              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-              : null,
-          }
-        : null,
-    }));
+          }));
+        }
+
+        return {
+          ...visit.get(),
+          taggedBuddies: buddies, // Replace UUIDs with User objects
+          receiptImageUrl: visit.receiptImageUrl
+            ? getMediaUrl(visit.receiptImageUrl, 'image', 'original')
+            : null,
+          receipt: visit.receipt
+            ? {
+                ...visit.receipt.get(),
+                thumbnailUrl: visit.receipt.thumbnailUrl
+                  ? getMediaUrl(visit.receipt.thumbnailUrl, 'image', 'original')
+                  : null,
+                mediumUrl: visit.receipt.mediumUrl
+                  ? getMediaUrl(visit.receipt.mediumUrl, 'image', 'original')
+                  : null,
+                fullscreenUrl: visit.receipt.fullscreenUrl
+                  ? getMediaUrl(visit.receipt.fullscreenUrl, 'image', 'original')
+                  : null,
+                originalUrl: visit.receipt.originalUrl
+                  ? getMediaUrl(visit.receipt.originalUrl, 'image', 'original')
+                  : null,
+              }
+            : null,
+          restaurant: visit.restaurant
+            ? {
+                ...visit.restaurant.get(),
+                thumbnailUrl: visit.restaurant.thumbnailUrl
+                  ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+                  : null,
+              }
+            : null,
+        };
+      })
+    );
 
     res.status(200).json({
-      visits: visitsWithUrls,
+      visits: visitsWithBuddies,
       pagination: {
         total: count,
         page: parseInt(page),
@@ -152,6 +172,9 @@ exports.getVisitById = async (req, res) => {
             'address',
             'thumbnailUrl',
             'rating',
+            'userRatingsTotal',
+            'dinverRating',
+            'dinverReviewsCount',
             'priceLevel',
           ],
         },
@@ -176,26 +199,49 @@ exports.getVisitById = async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
 
+    // Fetch tagged buddies (expand UUIDs to User objects)
+    let buddies = [];
+    if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      buddies = await User.findAll({
+        where: { id: visit.taggedBuddies },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      buddies = buddies.map((buddy) => ({
+        ...buddy.get(),
+        profileImage: buddy.profileImage
+          ? getMediaUrl(buddy.profileImage, 'image', 'original')
+          : null,
+      }));
+    }
+
     const response = {
       ...visit.get(),
+      taggedBuddies: buddies, // Replace UUIDs with User objects
       receiptImageUrl: visit.receiptImageUrl
-        ? getMediaUrl(visit.receiptImageUrl, 'image')
+        ? getMediaUrl(visit.receiptImageUrl, 'image', 'original')
         : null,
       user: visit.user
         ? {
             ...visit.user.get(),
             profileImage: visit.user.profileImage
-              ? getMediaUrl(visit.user.profileImage, 'image')
+              ? getMediaUrl(visit.user.profileImage, 'image', 'original')
               : null,
           }
         : null,
       restaurant: visit.restaurant
-        ? {
-            ...visit.restaurant.get(),
-            thumbnailUrl: visit.restaurant.thumbnailUrl
-              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-              : null,
-          }
+        ? (() => {
+            const restaurantData = visit.restaurant.get();
+            return {
+              ...restaurantData,
+              thumbnailUrl: visit.restaurant.thumbnailUrl
+                ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+                : null,
+              rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+              userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+              dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+              dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+            };
+          })()
         : null,
       receipt: visit.receipt
         ? {
@@ -232,132 +278,9 @@ exports.getVisitById = async (req, res) => {
   }
 };
 
-/**
- * Approve visit (sysadmin)
- * POST /api/sysadmin/visits/:id/approve
- */
-exports.approveVisit = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const adminId = req.user.id;
-
-    const visit = await Visit.findByPk(id, {
-      include: [{ model: Receipt, as: 'receipt' }],
-    });
-
-    if (!visit) {
-      return res.status(404).json({ error: 'Visit not found' });
-    }
-
-    if (visit.status === 'APPROVED') {
-      return res.status(400).json({ error: 'Visit is already approved' });
-    }
-
-    // Check if receipt has all required data
-    if (!visit.receipt || !visit.receipt.hasRequiredDataForApproval()) {
-      return res.status(400).json({
-        error: 'Receipt is missing required data for approval',
-        missingFields: {
-          restaurantId: !visit.receipt?.restaurantId,
-          totalAmount: !visit.receipt?.totalAmount,
-          jir: !visit.receipt?.jir,
-          zki: !visit.receipt?.zki,
-          oib: !visit.receipt?.oib,
-          issueDate: !visit.receipt?.issueDate,
-          issueTime: !visit.receipt?.issueTime,
-        },
-      });
-    }
-
-    // Update Visit status
-    await visit.update({
-      status: 'APPROVED',
-      reviewedAt: new Date(),
-      reviewedBy: adminId,
-    });
-
-    // Update Receipt status
-    await visit.receipt.update({
-      status: 'approved',
-      verifiedAt: new Date(),
-      verifierId: adminId,
-    });
-
-    // Calculate and award points
-    const points = visit.receipt.getPoints();
-    await visit.receipt.update({ pointsAwarded: points });
-
-    // TODO: Award points to user via UserPointsHistory
-
-    res.status(200).json({
-      message: 'Visit approved successfully',
-      visit: visit.get(),
-      pointsAwarded: points,
-    });
-  } catch (error) {
-    console.error('Error approving visit:', error);
-    res.status(500).json({ error: 'Failed to approve visit' });
-  }
-};
-
-/**
- * Reject visit (sysadmin)
- * POST /api/sysadmin/visits/:id/reject
- */
-exports.rejectVisit = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({ error: 'Rejection reason is required' });
-    }
-
-    const visit = await Visit.findByPk(id, {
-      include: [{ model: Receipt, as: 'receipt' }],
-    });
-
-    if (!visit) {
-      return res.status(404).json({ error: 'Visit not found' });
-    }
-
-    if (visit.status === 'REJECTED') {
-      return res.status(400).json({ error: 'Visit is already rejected' });
-    }
-
-    // Calculate retake deadline (7 days from now)
-    const retakeDeadline = new Date();
-    retakeDeadline.setDate(retakeDeadline.getDate() + 7);
-
-    // Update Visit status
-    await visit.update({
-      status: 'REJECTED',
-      reviewedAt: new Date(),
-      reviewedBy: adminId,
-      rejectionReason: reason,
-      retakeDeadline: retakeDeadline,
-    });
-
-    // Update Receipt status
-    if (visit.receipt) {
-      await visit.receipt.update({
-        status: 'rejected',
-        verifiedAt: new Date(),
-        verifierId: adminId,
-        rejectionReason: reason,
-      });
-    }
-
-    res.status(200).json({
-      message: 'Visit rejected successfully',
-      visit: visit.get(),
-    });
-  } catch (error) {
-    console.error('Error rejecting visit:', error);
-    res.status(500).json({ error: 'Failed to reject visit' });
-  }
-};
+// NOTE: Visit approval/rejection has been removed
+// All approval/rejection is now handled through Receipts
+// When a receipt is approved/rejected, the visit status is automatically updated
 
 /**
  * Delete visit (sysadmin)

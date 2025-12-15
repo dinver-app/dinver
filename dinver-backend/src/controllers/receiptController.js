@@ -7,6 +7,7 @@ const {
   Reservation,
   UserSettings,
   Visit,
+  Experience,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -47,6 +48,7 @@ const {
 } = require('../utils/antifraudUtils');
 const {
   sendPushNotificationToUsers,
+  createAndSendNotification,
 } = require('../../utils/pushNotificationService');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { Op } = require('sequelize');
@@ -822,20 +824,117 @@ const uploadReceipt = async (req, res) => {
 };
 
 /**
- * Get user's receipts
+ * Delete user's own pending receipt
+ * User can only delete receipts that are still pending (not yet reviewed)
+ */
+const deleteUserReceipt = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const receipt = await Receipt.findByPk(id);
+
+    if (!receipt) {
+      return res.status(404).json({ error: 'Račun nije pronađen' });
+    }
+
+    // Check ownership
+    if (receipt.userId !== userId) {
+      return res.status(403).json({ error: 'Nemate pristup ovom računu' });
+    }
+
+    // Only allow deleting pending receipts
+    if (receipt.status !== 'pending') {
+      return res.status(400).json({
+        error: 'Možete obrisati samo račune koji čekaju provjeru. Već pregledani računi ne mogu se obrisati.',
+      });
+    }
+
+    // Delete associated Visit if exists
+    if (receipt.visitId) {
+      const Visit = require('../../models').Visit;
+      await Visit.destroy({ where: { id: receipt.visitId } });
+    }
+
+    // Delete receipt images from S3
+    if (
+      receipt.thumbnailUrl ||
+      receipt.mediumUrl ||
+      receipt.fullscreenUrl ||
+      receipt.originalUrl ||
+      receipt.imageUrl
+    ) {
+      try {
+        const { deleteImageVariants } = require('../utils/s3Upload');
+        await deleteImageVariants(
+          receipt.thumbnailUrl,
+          receipt.mediumUrl,
+          receipt.fullscreenUrl,
+          receipt.originalUrl,
+        );
+        // Also try to delete the main imageUrl if it's different
+        if (receipt.imageUrl && receipt.imageUrl !== receipt.originalUrl) {
+          const { deleteFile } = require('../utils/s3Upload');
+          await deleteFile(receipt.imageUrl);
+        }
+      } catch (s3Error) {
+        console.error('Error deleting receipt images from S3:', s3Error.message);
+        // Continue with deletion even if S3 cleanup fails
+      }
+    }
+
+    // Log audit before deletion
+    await logAudit({
+      userId,
+      action: ActionTypes.DELETE,
+      entity: Entities.RECEIPT,
+      entityId: receipt.id,
+      changes: {
+        old: {
+          status: receipt.status,
+          totalAmount: receipt.totalAmount,
+          merchantName: receipt.merchantName,
+        },
+        reason: 'User deleted pending receipt',
+      },
+    });
+
+    // Delete the receipt
+    await receipt.destroy();
+
+    res.json({ message: 'Račun uspješno obrisan' });
+  } catch (error) {
+    console.error('Error deleting user receipt:', error);
+    res.status(500).json({ error: 'Brisanje računa nije uspjelo' });
+  }
+};
+
+/**
+ * Get user's receipts (all statuses - pending, approved, rejected)
+ * This is for the "My Receipts" list where user sees all their uploaded receipts
  */
 const getUserReceipts = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
+
+    const whereClause = { userId };
+    if (status) {
+      whereClause.status = status;
+    }
 
     const receipts = await Receipt.findAndCountAll({
-      where: { userId },
+      where: whereClause,
       include: [
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'address', 'place', 'thumbnailUrl', 'isClaimed'],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'taggedBuddies'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -843,11 +942,73 @@ const getUserReceipts = async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
-    // Transform image URLs to signed URLs
+    // Collect all buddy IDs to fetch in one query
+    const allBuddyIds = new Set();
+    receipts.rows.forEach((receipt) => {
+      if (receipt.visit?.taggedBuddies) {
+        receipt.visit.taggedBuddies.forEach((id) => allBuddyIds.add(id));
+      }
+    });
+
+    // Fetch all buddy users at once
+    let buddyUsersMap = {};
+    if (allBuddyIds.size > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: Array.from(allBuddyIds) },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      buddyUsersMap = buddyUsers.reduce((acc, buddy) => {
+        acc[buddy.id] = {
+          id: buddy.id,
+          username: buddy.username,
+          name: buddy.name,
+          profileImage: buddy.profileImage
+            ? getMediaUrl(buddy.profileImage, 'image', 'original')
+            : null,
+        };
+        return acc;
+      }, {});
+    }
+
+    // Transform receipts with image URLs
     const transformedReceipts = receipts.rows.map((receipt) => {
-      const receiptData = receipt.toJSON();
-      receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
-      return receiptData;
+      // Map tagged buddy IDs to user objects
+      let taggedBuddies = [];
+      if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+        taggedBuddies = receipt.visit.taggedBuddies
+          .map((id) => buddyUsersMap[id])
+          .filter(Boolean);
+      }
+
+      return {
+        id: receipt.id,
+        status: receipt.status,
+        submittedAt: receipt.submittedAt,
+        verifiedAt: receipt.verifiedAt,
+        rejectionReason: receipt.rejectionReason,
+        rejectionReasonEn: receipt.rejectionReasonEn,
+        totalAmount: receipt.totalAmount,
+        merchantName: receipt.merchantName,
+        issueDate: receipt.issueDate,
+        pointsAwarded: receipt.pointsAwarded,
+        imageUrl: receipt.imageUrl ? getMediaUrl(receipt.imageUrl, 'image') : null,
+        thumbnailUrl: receipt.thumbnailUrl ? getMediaUrl(receipt.thumbnailUrl, 'image') : null,
+        restaurant: receipt.restaurant
+          ? {
+              id: receipt.restaurant.id,
+              name: receipt.restaurant.name,
+              address: receipt.restaurant.address,
+              place: receipt.restaurant.place,
+              thumbnailUrl: receipt.restaurant.thumbnailUrl
+                ? getMediaUrl(receipt.restaurant.thumbnailUrl, 'image')
+                : null,
+              isClaimed: receipt.restaurant.isClaimed,
+            }
+          : null,
+        visitId: receipt.visit?.id || null,
+        visitStatus: receipt.visit?.status || null,
+        taggedBuddies,
+      };
     });
 
     res.json({
@@ -926,16 +1087,59 @@ const getAllReceipts = async (req, res) => {
             },
           ],
         },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'taggedBuddies'],
+        },
       ],
       order: [['submittedAt', 'DESC']],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
     });
 
-    // Transform image URLs to signed URLs
+    // Collect all buddy IDs to fetch in one query
+    const allBuddyIds = new Set();
+    receipts.rows.forEach((receipt) => {
+      if (receipt.visit?.taggedBuddies) {
+        receipt.visit.taggedBuddies.forEach((id) => allBuddyIds.add(id));
+      }
+    });
+
+    // Fetch all buddy users at once
+    let buddyUsersMap = {};
+    if (allBuddyIds.size > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: Array.from(allBuddyIds) },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      buddyUsersMap = buddyUsers.reduce((acc, buddy) => {
+        acc[buddy.id] = {
+          id: buddy.id,
+          username: buddy.username,
+          name: buddy.name,
+          profileImage: buddy.profileImage
+            ? getMediaUrl(buddy.profileImage, 'image', 'original')
+            : null,
+        };
+        return acc;
+      }, {});
+    }
+
+    // Transform image URLs to signed URLs and add tagged buddies
     const transformedReceipts = receipts.rows.map((receipt) => {
       const receiptData = receipt.toJSON();
       receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+
+      // Map tagged buddy IDs to user objects
+      if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+        receiptData.taggedBuddies = receipt.visit.taggedBuddies
+          .map((id) => buddyUsersMap[id])
+          .filter(Boolean);
+      } else {
+        receiptData.taggedBuddies = [];
+      }
+
       return receiptData;
     });
 
@@ -982,6 +1186,11 @@ const getReceiptById = async (req, res) => {
             },
           ],
         },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'taggedBuddies'],
+        },
       ],
     });
 
@@ -991,6 +1200,24 @@ const getReceiptById = async (req, res) => {
 
     const receiptData = receipt.toJSON();
     receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+
+    // Fetch tagged buddies user info if visit has taggedBuddies
+    let taggedBuddies = [];
+    if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: receipt.visit.taggedBuddies },
+        attributes: ['id', 'username', 'name', 'profileImage'],
+      });
+      taggedBuddies = buddyUsers.map((buddy) => ({
+        id: buddy.id,
+        username: buddy.username,
+        name: buddy.name,
+        profileImage: buddy.profileImage
+          ? getMediaUrl(buddy.profileImage, 'image', 'original')
+          : null,
+      }));
+    }
+    receiptData.taggedBuddies = taggedBuddies;
 
     // Add image meta and OCR confidence if available
     const meta = receipt.ocrData?.meta || null;
@@ -1418,7 +1645,24 @@ const approveReceipt = async (req, res) => {
       ? calculateAccuracy(correctionsMade)
       : null;
 
-    // Update receipt
+    // Get Visit to check for tagged buddies BEFORE updating receipt
+    let visit = null;
+    let taggedBuddiesCount = 0;
+
+    if (receipt.visitId) {
+      visit = await Visit.findByPk(receipt.visitId);
+      if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        taggedBuddiesCount = visit.taggedBuddies.length;
+      }
+    }
+
+    // Calculate points per person (split among user + buddies)
+    const totalPeople = 1 + taggedBuddiesCount; // User + buddies
+    const pointsPerPerson = Math.round((pointsAwarded / totalPeople) * 100) / 100;
+
+    console.log(`[Receipt Approval] Points distribution: ${pointsAwarded} total points / ${totalPeople} people = ${pointsPerPerson} points each`);
+
+    // Update receipt - save pointsPerPerson (what user actually gets), not total
     await receipt.update({
       restaurantId,
       totalAmount: parseFloat(totalAmount),
@@ -1430,7 +1674,7 @@ const approveReceipt = async (req, res) => {
       status: 'approved',
       verifierId: sysadmin.id,
       verifiedAt: new Date(),
-      pointsAwarded,
+      pointsAwarded: pointsPerPerson, // Save per-person points, not total
       hasReservationBonus: hasReservationBonus || false,
       reservationId: reservationId || null,
       // ML Training fields
@@ -1439,36 +1683,67 @@ const approveReceipt = async (req, res) => {
       accuracy: accuracy,
     });
 
-    // Award points
+    // Award points to main user
     await UserPointsHistory.logPoints({
       userId: receipt.userId,
       actionType: 'receipt_approved',
-      points: pointsAwarded,
+      points: pointsPerPerson,
       referenceId: receipt.id,
       restaurantId: receipt.restaurantId,
-      description: `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
+      description: taggedBuddiesCount > 0
+        ? `Račun odobren - ${restaurant.name} (${totalAmount}€) - podijeljeno sa ${taggedBuddiesCount} buddies`
+        : `Račun odobren - ${restaurant.name} (${totalAmount}€)`,
     });
 
+    // Award points to tagged buddies
+    if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      console.log(`[Receipt Approval] Awarding ${pointsPerPerson} points to each of ${visit.taggedBuddies.length} buddies`);
+
+      for (const buddyId of visit.taggedBuddies) {
+        await UserPointsHistory.logPoints({
+          userId: buddyId,
+          actionType: 'receipt_approved_buddy',
+          points: pointsPerPerson,
+          referenceId: receipt.id,
+          restaurantId: receipt.restaurantId,
+          description: `Račun odobren - ${restaurant.name} (${totalAmount}€) - tagovan od ${receipt.userId}`,
+        });
+      }
+    }
+
     // Update existing Visit or create new one when receipt is approved
-    let visit = null;
+    // (visit variable already declared above for buddy points)
     try {
-      if (receipt.visitId) {
-        // Visit already exists (user created it before approval)
+      if (receipt.visitId && !visit) {
+        // Re-fetch if not already loaded
         visit = await Visit.findByPk(receipt.visitId);
+      }
 
-        if (visit) {
-          // Update existing Visit to APPROVED
-          await visit.update({
+      if (receipt.visitId && visit) {
+        // Visit already exists (user created it before approval)
+        // Update existing Visit to APPROVED with restaurant
+        await visit.update({
+          status: 'APPROVED',
+          restaurantId: restaurantId, // Set the restaurant from approved receipt
+          visitDate: visit.visitDate || new Date(issueDate),
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id,
+        });
+
+        console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
+
+        // Update associated Experience with restaurantId if it exists
+        const experience = await Experience.findOne({
+          where: { visitId: visit.id },
+        });
+
+        if (experience) {
+          await experience.update({
+            restaurantId: restaurantId,
             status: 'APPROVED',
-            visitDate: visit.visitDate || new Date(issueDate), // Use existing or receipt date
-            reviewedAt: new Date(),
-            reviewedBy: req.user.id,
+            publishedAt: experience.publishedAt || new Date(),
           });
-
-          console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status`);
-        } else {
-          console.error(`[Receipt Approval] Visit ${receipt.visitId} not found, will create new one`);
-          visit = null; // Fall through to create new one
+          console.log(`[Receipt Approval] Updated Experience ${experience.id} with restaurant ${restaurantId} and set to APPROVED`);
         }
       }
 
@@ -1554,20 +1829,60 @@ const approveReceipt = async (req, res) => {
       );
     }
 
-    // Send push notification
+    // Send push notification to main user (using i18n)
     try {
-      await sendPushNotificationToUsers([receipt.userId], {
-        title: 'Račun odobren! 🎉',
-        body: `Dodano ${pointsAwarded} bodova za račun iz ${restaurant.name}`,
+      // Determine which notification type to use based on buddies count
+      let notificationType = 'receipt_approved';
+      if (taggedBuddiesCount === 1) {
+        notificationType = 'receipt_approved_shared';
+      } else if (taggedBuddiesCount > 1) {
+        notificationType = 'receipt_approved_shared_plural';
+      }
+
+      await createAndSendNotification(receipt.userId, {
+        type: notificationType,
         data: {
-          type: 'receipt_approved',
+          points: pointsPerPerson,
+          restaurantName: restaurant.name,
+          buddyCount: taggedBuddiesCount,
           receiptId: receipt.id,
-          points: pointsAwarded,
-          restaurantId: receipt.restaurantId,
+          totalPoints: pointsAwarded,
+          sharedWith: taggedBuddiesCount,
         },
+        restaurantId: receipt.restaurantId,
       });
     } catch (notificationError) {
       console.error('Error sending push notification:', notificationError);
+    }
+
+    // Send push notifications to tagged buddies (using i18n)
+    if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      try {
+        // Get main user's name for the notification
+        const mainUser = await User.findByPk(receipt.userId, {
+          attributes: ['name', 'username'],
+        });
+        const mainUserName = mainUser?.name || mainUser?.username || 'Prijatelj';
+
+        // Send notification to each buddy individually (for i18n support)
+        for (const buddyId of visit.taggedBuddies) {
+          await createAndSendNotification(buddyId, {
+            type: 'receipt_approved_buddy',
+            data: {
+              actorName: mainUserName,
+              restaurantName: restaurant.name,
+              points: pointsPerPerson,
+              receiptId: receipt.id,
+            },
+            actorUserId: receipt.userId,
+            restaurantId: receipt.restaurantId,
+          });
+        }
+
+        console.log(`[Receipt Approval] Sent notifications to ${visit.taggedBuddies.length} buddies`);
+      } catch (buddyNotificationError) {
+        console.error('Error sending buddy push notifications:', buddyNotificationError);
+      }
     }
 
     // Log audit
@@ -1582,7 +1897,9 @@ const approveReceipt = async (req, res) => {
           status: 'approved',
           restaurantId,
           totalAmount,
-          pointsAwarded,
+          pointsAwarded: pointsPerPerson,
+          totalPointsBeforeSplit: pointsAwarded,
+          buddyCount: taggedBuddiesCount,
           verifierId: req.user.id,
         },
       },
@@ -1590,8 +1907,10 @@ const approveReceipt = async (req, res) => {
 
     res.json({
       message: 'Receipt approved successfully',
-      pointsAwarded,
-      visitId: createdVisit?.id || null, // Include created visit ID
+      pointsAwarded: pointsPerPerson, // Points user actually gets
+      totalPoints: pointsAwarded, // Total before split (for display)
+      buddyCount: taggedBuddiesCount,
+      visitId: visit?.id || null, // Include created/updated visit ID
     });
   } catch (error) {
     console.error('Error approving receipt:', error);
@@ -1605,11 +1924,17 @@ const approveReceipt = async (req, res) => {
 const rejectReceipt = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rejectionReason } = req.body;
+    const { rejectionReason, rejectionReasonEn } = req.body;
 
     if (!rejectionReason || rejectionReason.trim().length === 0) {
       return res.status(400).json({
-        error: 'Rejection reason is required',
+        error: 'Rejection reason (Croatian) is required',
+      });
+    }
+
+    if (!rejectionReasonEn || rejectionReasonEn.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Rejection reason (English) is required',
       });
     }
 
@@ -1650,6 +1975,7 @@ const rejectReceipt = async (req, res) => {
       verifierId: sysadmin.id,
       verifiedAt: new Date(),
       rejectionReason: rejectionReason.trim(),
+      rejectionReasonEn: rejectionReasonEn.trim(),
     });
 
     // Send push notification
@@ -1677,6 +2003,7 @@ const rejectReceipt = async (req, res) => {
         new: {
           status: 'rejected',
           rejectionReason,
+          rejectionReasonEn,
           verifierId: req.user.id,
         },
       },
@@ -1797,7 +2124,7 @@ const searchRestaurantsForReceipt = async (req, res) => {
         10, // 10km radius for manual search
         {
           limit: 10,
-          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'userRatingsTotal', 'dinverRating', 'dinverReviewsCount', 'latitude', 'longitude'],
         },
       );
 
@@ -1812,7 +2139,10 @@ const searchRestaurantsForReceipt = async (req, res) => {
           name: r.name,
           address: r.address,
           place: r.place,
-          rating: r.rating,
+          rating: r.rating != null ? Number(r.rating) : null,
+          userRatingsTotal: r.userRatingsTotal != null ? Number(r.userRatingsTotal) : null,
+          dinverRating: r.dinverRating != null ? Number(r.dinverRating) : null,
+          dinverReviewsCount: r.dinverReviewsCount != null ? Number(r.dinverReviewsCount) : null,
           distance: r.get('distance'),
           existsInDatabase: true,
         }));
@@ -2498,6 +2828,7 @@ const deleteReceipt = async (req, res) => {
 module.exports = {
   uploadReceipt,
   getUserReceipts,
+  deleteUserReceipt,
   getAllReceipts,
   getReceiptById,
   updateReceiptData,

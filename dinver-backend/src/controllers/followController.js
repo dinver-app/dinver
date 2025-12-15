@@ -805,7 +805,6 @@ const getUserProfileWithStats = async (req, res) => {
       req.params.userId === 'me' ? req.user.id : req.params.userId;
     const currentUserId = req.user.id;
 
-    // Get user with points
     const user = await User.findByPk(targetUserId, {
       attributes: [
         'id',
@@ -825,6 +824,11 @@ const getUserProfileWithStats = async (req, res) => {
           model: UserPoints,
           as: 'points',
           attributes: ['totalPoints', 'level', 'levelName'],
+        },
+        {
+          model: require('../../models').UserSettings,
+          as: 'settings',
+          attributes: ['profileVisibility'],
         },
       ],
     });
@@ -896,6 +900,7 @@ const getUserProfileWithStats = async (req, res) => {
         city: user.city,
         country: user.country,
         memberSince: user.createdAt,
+        profileVisibility: user.settings ? user.settings.profileVisibility : 'public',
         followStats: {
           followersCount,
           followingCount,

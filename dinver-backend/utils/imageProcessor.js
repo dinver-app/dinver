@@ -187,12 +187,11 @@ async function generateVariant(imageBuffer, config, outputFormat = 'jpeg') {
     });
   }
 
-  // Apply format-specific optimizations
+  // Apply format-specific optimizations (no mozjpeg for speed)
   switch (outputFormat) {
     case 'jpeg':
       pipeline = pipeline.jpeg({
         quality: quality || 80,
-        mozjpeg: true, // Use mozjpeg for better compression
         progressive: true, // Progressive JPEG for better perceived loading
       });
       break;
@@ -205,20 +204,20 @@ async function generateVariant(imageBuffer, config, outputFormat = 'jpeg') {
     case 'png':
       pipeline = pipeline.png({
         quality: quality || 80,
-        compressionLevel: 9,
+        compressionLevel: 6, // Faster than 9, still good compression
       });
       break;
     default:
-      pipeline = pipeline.jpeg({ quality: quality || 80, mozjpeg: true });
+      pipeline = pipeline.jpeg({ quality: quality || 80 });
   }
 
-  const buffer = await pipeline.toBuffer();
-  const metadata = await sharp(buffer).metadata();
+  // Get buffer and metadata in single operation
+  const { data: buffer, info } = await pipeline.toBuffer({ resolveWithObject: true });
 
   return {
     buffer,
-    width: metadata.width,
-    height: metadata.height,
+    width: info.width,
+    height: info.height,
     size: buffer.length,
     format: outputFormat,
     suffix: suffix || '',
@@ -248,8 +247,6 @@ async function validateImage(imageBuffer) {
       'webp',
       'gif',
       'tiff',
-      'heic',
-      'heif',
     ];
     if (!supportedFormats.includes(metadata.format)) {
       return {
@@ -273,6 +270,8 @@ async function validateImage(imageBuffer) {
 
 /**
  * Quick optimize without creating variants (for receipts, etc.)
+ * Smart skip: if image is already JPEG and <= maxWidth, returns original buffer
+ * This avoids double compression when frontend already compressed the image
  *
  * @param {Buffer} imageBuffer - Original image buffer
  * @param {Object} options - Optimization options
@@ -282,17 +281,109 @@ async function quickOptimize(imageBuffer, options = {}) {
   const { maxWidth = 1600, quality = 80 } = options;
 
   try {
-    const metadata = await sharp(imageBuffer).metadata();
-    let pipeline = sharp(imageBuffer).rotate();
+    const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
 
-    if (metadata.width > maxWidth) {
-      pipeline = pipeline.resize({ width: maxWidth });
+    // Smart skip: if already JPEG and width <= maxWidth, return original
+    // This prevents double compression when frontend already compressed
+    if (metadata.format === 'jpeg' && metadata.width <= maxWidth) {
+      console.log(`[quickOptimize] Smart skip: already JPEG ${metadata.width}px <= ${maxWidth}px`);
+      return imageBuffer;
     }
 
-    return await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
+    // Only process if needed
+    let pipeline = sharp(imageBuffer, { failOn: 'none' }).rotate();
+
+    if (metadata.width > maxWidth) {
+      pipeline = pipeline.resize({ width: maxWidth, withoutEnlargement: true });
+    }
+
+    // Use default libjpeg (faster) instead of mozjpeg (slower but better compression)
+    const result = await pipeline.jpeg({ quality, progressive: true }).toBuffer();
+
+    console.log(`[quickOptimize] Processed: ${metadata.format} ${metadata.width}px -> JPEG, ${Math.round(imageBuffer.length/1024)}KB -> ${Math.round(result.length/1024)}KB`);
+
+    return result;
   } catch (error) {
     console.error('Quick optimize failed:', error);
     return imageBuffer; // Return original on failure
+  }
+}
+
+/**
+ * Process receipt image (OPTIMIZED - single variant only!)
+ * Creates ONE high-quality variant optimized for OCR + admin review
+ *
+ * @param {Buffer} imageBuffer - Original receipt image buffer
+ * @returns {Promise<Object>} Processed receipt with buffer and metadata
+ */
+async function processReceiptImage(imageBuffer) {
+  const startTime = Date.now();
+
+  try {
+    // Get original metadata
+    const metadata = await sharp(imageBuffer, { failOn: 'none' }).metadata();
+
+    if (!metadata || !metadata.format) {
+      throw new Error('Invalid image format');
+    }
+
+    // Receipt size config (optimized for OCR + admin review)
+    const RECEIPT_SIZE = {
+      width: 2000,      // Large enough for OCR accuracy
+      quality: 88,      // High quality for text recognition
+    };
+
+    // Fast path: if already JPEG and small enough, skip processing
+    if (metadata.format === 'jpeg' && metadata.width <= RECEIPT_SIZE.width) {
+      const duration = Date.now() - startTime;
+      return {
+        buffer: imageBuffer,
+        width: metadata.width,
+        height: metadata.height,
+        size: imageBuffer.length,
+        format: 'jpeg',
+        duration,
+      };
+    }
+
+    // Build pipeline
+    let pipeline = sharp(imageBuffer, { failOn: 'none' });
+
+    // Auto-rotate based on EXIF
+    pipeline = pipeline.rotate();
+
+    // Resize only if image is larger than target
+    if (metadata.width > RECEIPT_SIZE.width) {
+      pipeline = pipeline.resize({
+        width: RECEIPT_SIZE.width,
+        height: null,
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+    }
+
+    // Convert to JPEG (no mozjpeg for speed)
+    pipeline = pipeline.jpeg({
+      quality: RECEIPT_SIZE.quality,
+      progressive: true,
+    });
+
+    // Get buffer and metadata in single operation
+    const { data: buffer, info } = await pipeline.toBuffer({ resolveWithObject: true });
+
+    const duration = Date.now() - startTime;
+
+    return {
+      buffer,
+      width: info.width,
+      height: info.height,
+      size: buffer.length,
+      format: 'jpeg',
+      duration,
+    };
+  } catch (error) {
+    console.error('[Receipt Processor] Failed:', error);
+    throw new Error(`Receipt image processing failed: ${error.message}`);
   }
 }
 
@@ -300,6 +391,7 @@ module.exports = {
   processImage,
   validateImage,
   quickOptimize,
+  processReceiptImage,
   IMAGE_SIZES,
   MAX_ORIGINAL_SIZE,
 };

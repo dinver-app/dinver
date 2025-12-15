@@ -4,6 +4,7 @@ const {
   LeaderboardCycleWinner,
   User,
   UserSysadmin,
+  sequelize,
 } = require('../../models');
 const { Op } = require('sequelize');
 const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
@@ -312,7 +313,7 @@ const getCycleById = async (req, res) => {
               attributes: [
                 'id',
                 'name',
-                
+                'username',
                 'email',
                 'city',
                 'profileImage',
@@ -331,7 +332,7 @@ const getCycleById = async (req, res) => {
               attributes: [
                 'id',
                 'name',
-                
+                'username',
                 'email',
                 'city',
                 'profileImage',
@@ -651,7 +652,7 @@ const getCycleParticipants = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -670,6 +671,18 @@ const getCycleParticipants = async (req, res) => {
       participantData.userName = participant.user
         ? participant.user.name
         : 'Unknown';
+      participantData.userUsername = participant.user?.username || null;
+      participantData.userProfileImage = participant.user?.profileImage
+        ? getMediaUrl(participant.user.profileImage, 'image', 'original')
+        : null;
+      // Also transform profileImage in nested user object
+      if (participantData.user && participantData.user.profileImage) {
+        participantData.user.profileImage = getMediaUrl(
+          participantData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       return participantData;
     });
 
@@ -704,7 +717,7 @@ const getCycleWinners = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -719,6 +732,18 @@ const getCycleWinners = async (req, res) => {
       winnerData.userName = winner.user
         ? winner.user.name
         : 'Unknown';
+      winnerData.userUsername = winner.user?.username || null;
+      winnerData.userProfileImage = winner.user?.profileImage
+        ? getMediaUrl(winner.user.profileImage, 'image', 'original')
+        : null;
+      // Also transform profileImage in nested user object
+      if (winnerData.user && winnerData.user.profileImage) {
+        winnerData.user.profileImage = getMediaUrl(
+          winnerData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       winnerData.rankOrdinal = winner.getRankOrdinal();
       winnerData.formattedPoints = winner.getFormattedPoints();
       return winnerData;
@@ -738,25 +763,30 @@ const getCycleWinners = async (req, res) => {
  */
 const getActiveCycle = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+
+    const includeOptions = [];
+
+    // Only include user's participant data if they are logged in
+    if (userId) {
+      includeOptions.push({
+        model: LeaderboardCycleParticipant,
+        as: 'participants',
+        where: { userId },
+        required: false,
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'username', 'profileImage'],
+          },
+        ],
+      });
+    }
 
     const activeCycle = await LeaderboardCycle.findOne({
       where: { status: 'active' },
-      include: [
-        {
-          model: LeaderboardCycleParticipant,
-          as: 'participants',
-          where: { userId },
-          required: false,
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'name', 'profileImage'],
-            },
-          ],
-        },
-      ],
+      include: includeOptions,
     });
 
     if (!activeCycle) {
@@ -776,12 +806,12 @@ const getActiveCycle = async (req, res) => {
     cycleData.remainingDays = activeCycle.getRemainingDays();
     cycleData.durationInDays = activeCycle.getDurationInDays();
 
-    // Get user's position in leaderboard
-    const userParticipant = cycleData.participants[0];
+    // Get user's position in leaderboard (only if logged in)
+    const userParticipant = cycleData.participants?.[0];
     let userPosition = null;
     let userPoints = 0;
 
-    if (userParticipant) {
+    if (userId && userParticipant) {
       userPoints = userParticipant.totalPoints;
       // Get user's rank
       const userRank = await LeaderboardCycleParticipant.count({
@@ -835,7 +865,7 @@ const getCycleLeaderboard = async (req, res) => {
           attributes: [
             'id',
             'name',
-            
+            'username',
             'email',
             'city',
             'profileImage',
@@ -854,6 +884,18 @@ const getCycleLeaderboard = async (req, res) => {
       participantData.userName = participant.user
         ? participant.user.name
         : 'Unknown';
+      participantData.userUsername = participant.user?.username || null;
+      participantData.userProfileImage = participant.user?.profileImage
+        ? getMediaUrl(participant.user.profileImage, 'image', 'original')
+        : null;
+      // Also transform profileImage in nested user object
+      if (participantData.user && participantData.user.profileImage) {
+        participantData.user.profileImage = getMediaUrl(
+          participantData.user.profileImage,
+          'image',
+          'original'
+        );
+      }
       participantData.formattedPoints = participant.getFormattedPoints();
       return participantData;
     });
@@ -929,7 +971,7 @@ const getCycleHistory = async (req, res) => {
             {
               model: User,
               as: 'user',
-              attributes: ['id', 'name', 'profileImage'],
+              attributes: ['id', 'name', 'username', 'profileImage'],
             },
           ],
           order: [['rank', 'ASC']],
@@ -952,6 +994,18 @@ const getCycleHistory = async (req, res) => {
         winnerData.userName = winner.user
           ? winner.user.name
           : 'Unknown';
+        winnerData.userUsername = winner.user?.username || null;
+        winnerData.userProfileImage = winner.user?.profileImage
+          ? getMediaUrl(winner.user.profileImage, 'image', 'original')
+          : null;
+        // Also transform profileImage in nested user object
+        if (winnerData.user && winnerData.user.profileImage) {
+          winnerData.user.profileImage = getMediaUrl(
+            winnerData.user.profileImage,
+            'image',
+            'original'
+          );
+        }
         winnerData.rankOrdinal = winner.getRankOrdinal();
         winnerData.formattedPoints = winner.getFormattedPoints();
         return winnerData;
@@ -1141,6 +1195,250 @@ const deleteCycle = async (req, res) => {
   }
 };
 
+// ==================== GLOBAL VISITS LEADERBOARD ====================
+
+/**
+ * Get global leaderboard - shows users with most unique restaurant visits
+ * Filters:
+ * - members: 'all' (everyone) or 'buddies' (mutual followers only) - requires auth for buddies
+ * - place: 'all' (global) or specific city name
+ *
+ * Each user's visit to the same restaurant counts only once
+ */
+const getVisitsLeaderboard = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, members = 'all', place = 'all' } = req.query;
+    const userId = req.user?.id;
+
+    // Buddies filter requires authentication
+    if (members === 'buddies' && !userId) {
+      return res.status(401).json({
+        error: 'Authentication required to view buddies leaderboard',
+      });
+    }
+
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Build WHERE conditions
+    let buddiesCondition = '';
+    let placeJoinCondition = '';
+    const replacements = { limit: limitNum, offset };
+
+    // Place filter - used in JOIN condition
+    if (place && place !== 'all') {
+      placeJoinCondition = 'AND r.place ILIKE :place';
+      replacements.place = `%${place}%`;
+    }
+
+    // Buddies filter - mutual followers + current user always included
+    if (members === 'buddies' && userId) {
+      buddiesCondition = `
+        AND (
+          u.id = :userId
+          OR u.id IN (
+            SELECT uf1."followingId"
+            FROM "UserFollows" uf1
+            INNER JOIN "UserFollows" uf2
+              ON uf1."followerId" = uf2."followingId"
+              AND uf1."followingId" = uf2."followerId"
+            WHERE uf1."followerId" = :userId
+              AND uf1.status = 'ACTIVE'
+              AND uf2.status = 'ACTIVE'
+          )
+        )
+      `;
+      replacements.userId = userId;
+    }
+
+    // Main leaderboard query - uses LEFT JOIN so current user appears even with 0 visits
+    // Current user is always included when logged in, others need at least 1 visit
+    // IMPORTANT: COUNT must check r.id IS NOT NULL to respect place filter
+    const leaderboardQuery = await sequelize.query(
+      `
+      SELECT
+        u.id as "userId",
+        u.name as "userName",
+        u.username as "userUsername",
+        u."profileImage" as "profileImagePath",
+        COUNT(DISTINCT CASE
+          WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+          THEN v."restaurantId"
+        END) as "uniqueVisits"
+      FROM "Users" u
+      LEFT JOIN "Visits" v ON v."userId" = u.id
+      LEFT JOIN "Restaurants" r ON r.id = v."restaurantId" ${placeJoinCondition}
+      WHERE 1=1
+        ${buddiesCondition}
+      GROUP BY u.id, u.name, u.username, u."profileImage"
+      HAVING
+        COUNT(DISTINCT CASE
+          WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+          THEN v."restaurantId"
+        END) > 0
+        ${userId ? 'OR u.id = :currentUserId' : ''}
+      ORDER BY "uniqueVisits" DESC, u.name ASC
+      LIMIT :limit OFFSET :offset
+      `,
+      {
+        replacements: { ...replacements, currentUserId: userId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    // Get total count for pagination
+    const countResult = await sequelize.query(
+      `
+      SELECT COUNT(*) as total FROM (
+        SELECT u.id
+        FROM "Users" u
+        LEFT JOIN "Visits" v ON v."userId" = u.id
+        LEFT JOIN "Restaurants" r ON r.id = v."restaurantId" ${placeJoinCondition}
+        WHERE 1=1
+          ${buddiesCondition}
+        GROUP BY u.id
+        HAVING
+          COUNT(DISTINCT CASE
+            WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+            THEN v."restaurantId"
+          END) > 0
+          ${userId ? 'OR u.id = :currentUserId' : ''}
+      ) as subquery
+      `,
+      {
+        replacements: { ...replacements, currentUserId: userId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const totalCount = parseInt(countResult[0]?.total || 0);
+
+    // Format leaderboard data with ranks and profile image URLs
+    const leaderboard = leaderboardQuery.map((row, index) => ({
+      rank: offset + index + 1,
+      userId: row.userId,
+      userName: row.userName,
+      userUsername: row.userUsername,
+      userProfileImage: row.profileImagePath
+        ? getMediaUrl(row.profileImagePath, 'image', 'original')
+        : null,
+      uniqueVisits: parseInt(row.uniqueVisits),
+    }));
+
+    // Get current user's stats if logged in
+    let userStats = null;
+    if (userId) {
+      const userStatsReplacements = { ...replacements, currentUserId: userId };
+
+      const userPositionResult = await sequelize.query(
+        `
+        SELECT
+          user_rank,
+          "uniqueVisits"
+        FROM (
+          SELECT
+            u.id,
+            COUNT(DISTINCT CASE
+              WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+              THEN v."restaurantId"
+            END) as "uniqueVisits",
+            RANK() OVER (ORDER BY COUNT(DISTINCT CASE
+              WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+              THEN v."restaurantId"
+            END) DESC) as user_rank
+          FROM "Users" u
+          LEFT JOIN "Visits" v ON v."userId" = u.id
+          LEFT JOIN "Restaurants" r ON r.id = v."restaurantId" ${placeJoinCondition}
+          WHERE 1=1
+            ${buddiesCondition}
+          GROUP BY u.id
+          HAVING
+            COUNT(DISTINCT CASE
+              WHEN v.status = 'APPROVED' AND v."restaurantId" IS NOT NULL AND r.id IS NOT NULL
+              THEN v."restaurantId"
+            END) > 0
+            OR u.id = :currentUserId
+        ) ranked
+        WHERE id = :currentUserId
+        `,
+        {
+          replacements: userStatsReplacements,
+          type: sequelize.QueryTypes.SELECT,
+        }
+      );
+
+      if (userPositionResult.length > 0) {
+        userStats = {
+          position: parseInt(userPositionResult[0].user_rank),
+          uniqueVisits: parseInt(userPositionResult[0].uniqueVisits),
+        };
+      }
+    }
+
+    res.json({
+      filters: {
+        members,
+        place,
+      },
+      leaderboard,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+      },
+      userStats,
+    });
+  } catch (error) {
+    console.error('Error getting visits leaderboard:', error);
+    res.status(500).json({ error: 'Failed to get visits leaderboard' });
+  }
+};
+
+/**
+ * Get list of available places (cities) that have visits
+ */
+const getAvailablePlaces = async (req, res) => {
+  try {
+    const placesResult = await sequelize.query(
+      `
+      SELECT
+        r.place as name,
+        r.country as country,
+        COUNT(DISTINCT v.id) as "totalVisits",
+        COUNT(DISTINCT v."userId") as "totalUsers",
+        COUNT(DISTINCT r.id) as "totalRestaurants"
+      FROM "Restaurants" r
+      INNER JOIN "Visits" v ON v."restaurantId" = r.id
+      WHERE
+        r.place IS NOT NULL
+        AND r.place != ''
+        AND v.status = 'APPROVED'
+      GROUP BY r.place, r.country
+      HAVING COUNT(DISTINCT v.id) > 0
+      ORDER BY "totalVisits" DESC
+      `,
+      {
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const places = placesResult.map((row) => ({
+      name: row.name,
+      country: row.country || null,
+      totalVisits: parseInt(row.totalVisits),
+      totalUsers: parseInt(row.totalUsers),
+      totalRestaurants: parseInt(row.totalRestaurants),
+    }));
+
+    res.json({ places });
+  } catch (error) {
+    console.error('Error getting available places:', error);
+    res.status(500).json({ error: 'Failed to get available places' });
+  }
+};
+
 module.exports = {
   // Sysadmin methods
   createCycle,
@@ -1158,4 +1456,7 @@ module.exports = {
   getCycleLeaderboard,
   getCycleHistory,
   getUserCycleStats,
+  // Visits leaderboard methods
+  getVisitsLeaderboard,
+  getAvailablePlaces,
 };

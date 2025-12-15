@@ -37,19 +37,8 @@ router.delete(
   visitController.deleteVisit,
 );
 
-// Visit approval/rejection
-router.post(
-  '/visits/:id/approve',
-  sysadminAuthenticateToken,
-  checkSysadmin,
-  visitController.approveVisit,
-);
-
-router.post(
-  '/visits/:id/reject',
-  sysadminAuthenticateToken,
-  checkSysadmin,
-  visitController.rejectVisit,
-);
+// NOTE: Visit approval/rejection is handled through Receipts
+// When a receipt is rejected, the associated visit is automatically rejected
+// When a receipt is approved, the visit becomes visible to the user
 
 module.exports = router;

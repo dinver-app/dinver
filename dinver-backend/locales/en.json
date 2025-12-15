@@ -35,6 +35,38 @@
     "new_restaurant": {
       "title": "New restaurant on Dinver | {{place}}! 🍽️",
       "body": "Restaurant \"{{restaurantName}}\" joined Dinver! Check it out!"
+    },
+    "receipt_approved": {
+      "title": "Receipt approved! 🎉",
+      "body": "You received {{points}} points for your receipt at {{restaurantName}}"
+    },
+    "receipt_approved_shared": {
+      "title": "Receipt approved! 🎉",
+      "body": "You received {{points}} points for your receipt at {{restaurantName}} (shared with {{buddyCount}} buddy)"
+    },
+    "receipt_approved_shared_plural": {
+      "title": "Receipt approved! 🎉",
+      "body": "You received {{points}} points for your receipt at {{restaurantName}} (shared with {{buddyCount}} buddies)"
+    },
+    "receipt_approved_buddy": {
+      "title": "You got points! 🎉",
+      "body": "{{actorName}} tagged you on a receipt at {{restaurantName}} - you got {{points}} points!"
+    },
+    "alternative_time_accepted": {
+      "title": "Alternative time accepted! ✅",
+      "body": "{{userName}} has accepted the alternative time for reservation at {{restaurantName}} ({{date}}, {{time}})"
     }
+  },
+  "reservationThread": {
+    "newReservationCreated": "New reservation created",
+    "customReservationCreated": "Custom reservation created - {{guestName}}",
+    "timeChangeSuggested": "Reservation time change suggested",
+    "reservationConfirmed": "Reservation confirmed",
+    "reservationDeclined": "Reservation declined",
+    "reservationCancelledByUser": "User cancelled the reservation",
+    "reservationCancelledByRestaurant": "Restaurant cancelled the reservation",
+    "alternativeTimeSuggested": "Alternative time suggested",
+    "reservationCompleted": "Reservation completed",
+    "noShow": "Guest didn't show up"
   }
 }
