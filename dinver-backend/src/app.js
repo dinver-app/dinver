@@ -166,7 +166,7 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-if (process.env.NODE_ENV !== 'development') {
+if (process.env.NODE_ENV === 'staging') {
   const posthog = new PostHog(
     process.env.POSTHOG_API_KEY,
     {

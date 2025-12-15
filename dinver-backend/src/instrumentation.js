@@ -7,7 +7,7 @@ const { resourceFromAttributes } = require('@opentelemetry/resources');
 const env = process.env.NODE_ENV || 'development';
 
 // Only run in staging/production
-if (process.env.NODE_ENV !== 'development') {
+if (process.env.NODE_ENV === 'staging') {
   const posthogApiKey = process.env.POSTHOG_API_KEY;
   const posthogHost = 'https://eu.i.posthog.com';
 
