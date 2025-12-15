@@ -25,6 +25,51 @@ const {
 const {
   updateRestaurantDinverRating,
 } = require('../services/dinverRatingService');
+const { getMediaUrl } = require('../../config/cdn');
+
+/**
+ * Transform experience media to include proper URLs
+ * Converts S3 storage keys to signed CloudFront URLs
+ */
+const transformMediaUrls = (experience) => {
+  if (!experience) return experience;
+
+  const transformed = experience.toJSON ? experience.toJSON() : { ...experience };
+
+  // Transform author profile image
+  if (transformed.author?.profileImage) {
+    transformed.author.profileImage = getMediaUrl(
+      transformed.author.profileImage,
+      'image',
+      'original'
+    );
+  }
+
+  // Transform restaurant thumbnail
+  if (transformed.restaurant?.thumbnailUrl) {
+    transformed.restaurant.thumbnailUrl = getMediaUrl(
+      transformed.restaurant.thumbnailUrl,
+      'image'
+    );
+  }
+
+  // Transform media items
+  if (transformed.media && Array.isArray(transformed.media)) {
+    transformed.media = transformed.media.map((m) => {
+      const mediaItem = m.toJSON ? m.toJSON() : { ...m };
+      // Experience images use EXPERIENCE strategy - no variants, use original key
+      if (mediaItem.storageKey) {
+        mediaItem.imageUrl = getMediaUrl(mediaItem.storageKey, 'image', 'original');
+      }
+      if (mediaItem.cdnUrl) {
+        mediaItem.cdnUrl = getMediaUrl(mediaItem.cdnUrl, 'image', 'original');
+      }
+      return mediaItem;
+    });
+  }
+
+  return transformed;
+};
 
 /**
  * Create Experience with images in one request
@@ -418,9 +463,11 @@ const getExperience = async (req, res) => {
       hasLiked = !!like;
     }
 
+    const transformedExperience = transformMediaUrls(experience);
+
     res.status(200).json({
       experience: {
-        ...experience.toJSON(),
+        ...transformedExperience,
         hasLiked,
       },
     });
@@ -573,8 +620,9 @@ const getExperienceFeed = async (req, res) => {
 
     // Calculate distance for each experience if coordinates provided
     const experiencesWithStatus = experiences.map((exp) => {
+      const transformed = transformMediaUrls(exp);
       const result = {
-        ...exp.toJSON(),
+        ...transformed,
         hasLiked: likedIds.includes(exp.id),
       };
 
@@ -819,7 +867,7 @@ const getUserExperiences = async (req, res) => {
     }
 
     const experiencesWithStatus = experiences.map((exp) => ({
-      ...exp.toJSON(),
+      ...transformMediaUrls(exp),
       hasLiked: likedIds.includes(exp.id),
     }));
 
@@ -939,7 +987,7 @@ const getRestaurantExperiences = async (req, res) => {
     }
 
     const experiencesWithStatus = experiences.map((exp) => ({
-      ...exp.toJSON(),
+      ...transformMediaUrls(exp),
       hasLiked: likedIds.includes(exp.id),
     }));
 

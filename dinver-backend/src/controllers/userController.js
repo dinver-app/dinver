@@ -112,7 +112,9 @@ const getUserProfile = async (req, res) => {
       instagramUrl: user.instagramUrl,
       tiktokUrl: user.tiktokUrl,
       birthDate: user.birthDate,
-      profileImage: user.profileImage,
+      profileImage: user.profileImage
+        ? getMediaUrl(user.profileImage, 'image', 'original')
+        : null,
       location: {
         street: user.streetAddress,
         city: user.city,
