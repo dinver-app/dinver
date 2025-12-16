@@ -8,7 +8,6 @@ const {
   UserAdmin,
 } = require('../../models');
 const { sequelize } = require('../../models');
-const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
