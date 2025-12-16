@@ -373,7 +373,7 @@ const GoogleApiLogs = () => {
                     {log.resultsCount} ({log.importedCount} imported)
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    ${log.costUsd.toFixed(4)}
+                    ${Number(log.costUsd).toFixed(4)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {log.success ? (
