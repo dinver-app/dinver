@@ -23,6 +23,7 @@ import {
   CpuChipIcon,
   ShoppingBagIcon,
   ChatBubbleLeftRightIcon,
+  CloudIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -164,6 +165,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           name: "Receipt Analytics",
           path: "/receipt-analytics",
           icon: <ShoppingBagIcon className="h-3.5 w-3.5 mr-2.5" />,
+        },
+        {
+          name: "Google API Logs",
+          path: "/google-api-logs",
+          icon: <CloudIcon className="h-3.5 w-3.5 mr-2.5" />,
         },
       ],
     },

@@ -56,5 +56,17 @@
       "title": "Alternative time accepted! ✅",
       "body": "{{userName}} has accepted the alternative time for reservation at {{restaurantName}} ({{date}}, {{time}})"
     }
+  },
+  "reservationThread": {
+    "newReservationCreated": "New reservation created",
+    "customReservationCreated": "Custom reservation created - {{guestName}}",
+    "timeChangeSuggested": "Reservation time change suggested",
+    "reservationConfirmed": "Reservation confirmed",
+    "reservationDeclined": "Reservation declined",
+    "reservationCancelledByUser": "User cancelled the reservation",
+    "reservationCancelledByRestaurant": "Restaurant cancelled the reservation",
+    "alternativeTimeSuggested": "Alternative time suggested",
+    "reservationCompleted": "Reservation completed",
+    "noShow": "Guest didn't show up"
   }
 }

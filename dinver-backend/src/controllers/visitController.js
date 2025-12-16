@@ -7,7 +7,9 @@ const {
   UserSettings,
   UserFollow,
   Experience,
+  ExperienceLike,
 } = require('../../models');
+const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
 const { uploadVariantsToS3 } = require('../../utils/s3Upload');
 const { processImage } = require('../../utils/imageProcessor');
@@ -685,6 +687,8 @@ const getUserVisits = async (req, res) => {
             'priceLevel',
             'address',
             'place',
+            'latitude',
+            'longitude',
             'isClaimed',
             'thumbnailUrl',
             'userRatingsTotal',
@@ -729,6 +733,8 @@ const getUserVisits = async (req, res) => {
               ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
               serviceRating: parseFloat(visit.experience.serviceRating) || null,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
@@ -750,12 +756,17 @@ const getUserVisits = async (req, res) => {
       } else {
         // Create new restaurant group
         const visitDateStr = visit.visitDate || visit.submittedAt;
+        const restaurantData = visit.restaurant.get();
         restaurantMap.set(restaurantId, {
           restaurant: {
-            ...visit.restaurant.get(),
+            ...restaurantData,
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
+            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,
@@ -797,87 +808,6 @@ const getUserVisits = async (req, res) => {
   } catch (error) {
     console.error('Error fetching visits:', error);
     res.status(500).json({ error: 'Failed to fetch visits' });
-  }
-};
-
-// Get single visit details
-const getVisitById = async (req, res) => {
-  try {
-    const { visitId } = req.params;
-    const userId = req.user.id;
-
-    const visit = await Visit.findOne({
-      where: { id: visitId, userId: userId },
-      include: [
-        {
-          model: Restaurant,
-          as: 'restaurant',
-          attributes: [
-            'id',
-            'name',
-            'rating',
-            'dinverRating',
-            'dinverReviewsCount',
-            'priceLevel',
-            'address',
-            'place',
-            'thumbnailUrl',
-          ],
-        },
-        {
-          model: Receipt,
-          as: 'receipt',
-          attributes: [
-            'id',
-            'thumbnailUrl',
-            'mediumUrl',
-            'fullscreenUrl',
-            'originalUrl',
-            'status',
-          ],
-        },
-      ],
-    });
-
-    if (!visit) {
-      return res.status(404).json({ error: 'Visit not found' });
-    }
-
-    const response = {
-      ...visit.get(),
-      receiptImageUrl: getMediaUrl(visit.receiptImageUrl, 'image'),
-      receipt: visit.receipt
-        ? {
-            id: visit.receipt.id,
-            thumbnailUrl: visit.receipt.thumbnailUrl
-              ? getMediaUrl(visit.receipt.thumbnailUrl, 'image')
-              : null,
-            mediumUrl: visit.receipt.mediumUrl
-              ? getMediaUrl(visit.receipt.mediumUrl, 'image')
-              : null,
-            fullscreenUrl: visit.receipt.fullscreenUrl
-              ? getMediaUrl(visit.receipt.fullscreenUrl, 'image')
-              : null,
-            originalUrl: visit.receipt.originalUrl
-              ? getMediaUrl(visit.receipt.originalUrl, 'image')
-              : null,
-            status: visit.receipt.status,
-          }
-        : null,
-      restaurant: visit.restaurant
-        ? {
-            ...visit.restaurant.get(),
-            thumbnailUrl: visit.restaurant.thumbnailUrl
-              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-              : null,
-          }
-        : null,
-    };
-
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Error fetching visit:', error);
-    res.status(500).json({ error: 'Failed to fetch visit' });
   }
 };
 
@@ -1452,8 +1382,6 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
       console.log('│ 🔍 Strategy 2: Name-based Database Search');
       console.log(`│    Searching for name: "${claudeResult.merchantName}"...`);
 
-      const { Op } = require('sequelize');
-
       // Normalize merchant name (remove diacritics for fuzzy matching)
       const normalizeName = (name) => {
         return name
@@ -1922,6 +1850,8 @@ const getOtherUserVisits = async (req, res) => {
             'priceLevel',
             'address',
             'place',
+            'latitude',
+            'longitude',
             'isClaimed',
             'thumbnailUrl',
             'userRatingsTotal',
@@ -1930,7 +1860,7 @@ const getOtherUserVisits = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status', 'sharesCount', 'likesCount'],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -1956,6 +1886,8 @@ const getOtherUserVisits = async (req, res) => {
           ? {
               id: visit.experience.id,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
@@ -1977,12 +1909,17 @@ const getOtherUserVisits = async (req, res) => {
       } else {
         // Create new restaurant group
         const visitDateStr = visit.visitDate || visit.submittedAt;
+        const restaurantData = visit.restaurant.get();
         restaurantMap.set(restaurantId, {
           restaurant: {
-            ...visit.restaurant.get(),
+            ...restaurantData,
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
+            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,
@@ -2071,9 +2008,77 @@ const getVisitsByRestaurant = async (req, res) => {
           as: 'receipt',
           attributes: ['id', 'totalAmount', 'pointsAwarded'],
         },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'sharesCount',
+            'status',
+            'publishedAt',
+          ],
+          include: [
+            {
+              model: require('../../models').ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'width',
+                'height',
+                'orderIndex',
+                'thumbnails',
+                'caption',
+                'isRecommended',
+                'menuItemId',
+              ],
+              include: [
+                {
+                  model: require('../../models').MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id', 'restaurantId'],
+                  required: false,
+                  include: [
+                    {
+                      model: require('../../models').MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
+              order: [['orderIndex', 'ASC']],
+            },
+          ],
+        },
       ],
       order: [['submittedAt', 'DESC']],
     });
+
+    // Get hasLiked status for all experiences
+    const experienceIds = visits
+      .filter((v) => v.experience)
+      .map((v) => v.experience.id);
+
+    let likedIds = [];
+    if (experienceIds.length > 0) {
+      const likes = await ExperienceLike.findAll({
+        where: {
+          experienceId: { [Op.in]: experienceIds },
+          userId: userId,
+        },
+        attributes: ['experienceId'],
+      });
+      likedIds = likes.map((l) => l.experienceId);
+    }
 
     const visitsData = visits.map((visit) => ({
       id: visit.id,
@@ -2081,8 +2086,232 @@ const getVisitsByRestaurant = async (req, res) => {
       reviewedAt: visit.reviewedAt,
       visitDate: visit.visitDate,
       wasInMustVisit: visit.wasInMustVisit,
+      taggedBuddies: visit.taggedBuddies,
       totalAmount: visit.receipt?.totalAmount || null,
       pointsAwarded: visit.receipt?.pointsAwarded || null,
+      experience: visit.experience
+        ? {
+            id: visit.experience.id,
+            foodRating: parseFloat(visit.experience.foodRating) || null,
+            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+            serviceRating: parseFloat(visit.experience.serviceRating) || null,
+            overallRating: parseFloat(visit.experience.overallRating) || null,
+            description: visit.experience.description || null,
+            mealType: visit.experience.mealType || null,
+            likesCount: visit.experience.likesCount || 0,
+            sharesCount: visit.experience.sharesCount || 0,
+            publishedAt: visit.experience.publishedAt || null,
+            hasLiked: likedIds.includes(visit.experience.id),
+            media: visit.experience.media
+              ? visit.experience.media.map((m) => ({
+                  id: m.id,
+                  kind: m.kind,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image', 'original') : null,
+                  width: m.width,
+                  height: m.height,
+                  orderIndex: m.orderIndex,
+                  caption: m.caption,
+                  isRecommended: m.isRecommended,
+                  menuItemId: m.menuItemId,
+                  menuItem: m.menuItem ? {
+                    id: m.menuItem.id,
+                    restaurantId: m.menuItem.restaurantId,
+                    translations: m.menuItem.translations || [],
+                  } : null,
+                }))
+              : [],
+          }
+        : null,
+    }));
+
+    res.status(200).json({
+      restaurant: {
+        ...restaurant.get(),
+        thumbnailUrl: restaurant.thumbnailUrl
+          ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
+          : null,
+      },
+      visitCount: visits.length,
+      visits: visitsData,
+    });
+  } catch (error) {
+    console.error('Error fetching visits by restaurant:', error);
+    res.status(500).json({ error: 'Failed to fetch visits' });
+  }
+};
+
+/**
+ * Get other user's visits for a specific restaurant (with privacy check)
+ * GET /api/app/users/:userId/visits/restaurant/:restaurantId
+ * Returns all visits to a specific restaurant for another user
+ */
+const getOtherUserVisitsByRestaurant = async (req, res) => {
+  try {
+    const { userId: targetUserId, restaurantId } = req.params;
+    const viewerUserId = req.user?.id || null;
+
+    // Check if target user exists
+    const targetUser = await User.findByPk(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check privacy settings
+    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    if (!canView) {
+      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+    }
+
+    // Get restaurant details
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: [
+        'id',
+        'name',
+        'rating',
+        'dinverRating',
+        'dinverReviewsCount',
+        'priceLevel',
+        'address',
+        'place',
+        'isClaimed',
+        'thumbnailUrl',
+        'userRatingsTotal',
+      ],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Fetch all APPROVED visits for this restaurant and user
+    const visits = await Visit.findAll({
+      where: {
+        userId: targetUserId,
+        restaurantId: restaurantId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'sharesCount',
+            'status',
+            'publishedAt',
+          ],
+          include: [
+            {
+              model: require('../../models').ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'width',
+                'height',
+                'orderIndex',
+                'thumbnails',
+                'caption',
+                'isRecommended',
+                'menuItemId',
+              ],
+              include: [
+                {
+                  model: require('../../models').MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id', 'restaurantId'],
+                  required: false,
+                  include: [
+                    {
+                      model: require('../../models').MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
+              order: [['orderIndex', 'ASC']],
+            },
+          ],
+        },
+      ],
+      order: [['submittedAt', 'DESC']],
+    });
+
+    // Get hasLiked status for all experiences if viewer is authenticated
+    const experienceIds = visits
+      .filter((v) => v.experience)
+      .map((v) => v.experience.id);
+
+    let likedIds = [];
+    if (viewerUserId && experienceIds.length > 0) {
+      const likes = await ExperienceLike.findAll({
+        where: {
+          experienceId: { [Op.in]: experienceIds },
+          userId: viewerUserId,
+        },
+        attributes: ['experienceId'],
+      });
+      likedIds = likes.map((l) => l.experienceId);
+    }
+
+    // Don't include receipt info (totalAmount, pointsAwarded) for privacy
+    const visitsData = visits.map((visit) => ({
+      id: visit.id,
+      submittedAt: visit.submittedAt,
+      reviewedAt: visit.reviewedAt,
+      visitDate: visit.visitDate,
+      wasInMustVisit: visit.wasInMustVisit,
+      taggedBuddies: visit.taggedBuddies,
+      experience: visit.experience
+        ? {
+            id: visit.experience.id,
+            foodRating: parseFloat(visit.experience.foodRating) || null,
+            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+            serviceRating: parseFloat(visit.experience.serviceRating) || null,
+            overallRating: parseFloat(visit.experience.overallRating) || null,
+            description: visit.experience.description || null,
+            mealType: visit.experience.mealType || null,
+            likesCount: visit.experience.likesCount || 0,
+            sharesCount: visit.experience.sharesCount || 0,
+            publishedAt: visit.experience.publishedAt || null,
+            hasLiked: likedIds.includes(visit.experience.id),
+            media: visit.experience.media
+              ? visit.experience.media.map((m) => ({
+                  id: m.id,
+                  kind: m.kind,
+                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                  storageKey: m.storageKey,
+                  width: m.width,
+                  height: m.height,
+                  orderIndex: m.orderIndex,
+                  thumbnails: m.thumbnails
+                    ? {
+                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image') : null,
+                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image') : null,
+                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image') : null,
+                      }
+                    : null,
+                  caption: m.caption,
+                  isRecommended: m.isRecommended,
+                  menuItemId: m.menuItemId,
+                  menuItem: m.menuItem ? {
+                    id: m.menuItem.id,
+                    restaurantId: m.menuItem.restaurantId,
+                    translations: m.menuItem.translations || [],
+                  } : null,
+                }))
+              : [],
+          }
+        : null,
     }));
 
     res.status(200).json({
@@ -2153,7 +2382,7 @@ const getRestaurantVisitors = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'overallRating', 'status'],
+          attributes: ['id', 'overallRating', 'status', 'sharesCount', 'likesCount'],
           where: { status: 'APPROVED' },
           required: false,
         },
@@ -2177,6 +2406,8 @@ const getRestaurantVisitors = async (req, res) => {
           ? {
               id: visit.experience.id,
               overallRating: parseFloat(visit.experience.overallRating) || null,
+              sharesCount: visit.experience.sharesCount || 0,
+              likesCount: visit.experience.likesCount || 0,
             }
           : null,
       };
@@ -2261,17 +2492,127 @@ const getRestaurantVisitors = async (req, res) => {
   }
 };
 
+/**
+ * Get user's visits for map (optimized - only ID, lat, lng)
+ * GET /api/app/visits/map
+
+ */
+const getUserVisitsForMap = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const visits = await Visit.findAll({
+      where: {
+        userId: userId,
+        status: 'APPROVED',
+        restaurantId: { [Op.not]: null },
+      },
+      attributes: ['id'],
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'latitude', 'longitude'],
+          where: {
+            latitude: { [Op.not]: null },
+            longitude: { [Op.not]: null },
+          },
+          required: true,
+        },
+      ],
+      raw: true,
+    });
+
+    const mapVisits = visits.map((visit) => ({
+      visitId: visit.id,
+      restaurantId: visit['restaurant.id'],
+      latitude: parseFloat(visit['restaurant.latitude']),
+      longitude: parseFloat(visit['restaurant.longitude']),
+    }));
+
+    const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+
+    res.status(200).json({
+      visits: mapVisits,
+      total: uniqueRestaurants.size,
+    });
+  } catch (error) {
+    console.error('Error fetching visits for map:', error);
+    res.status(500).json({ error: 'Failed to fetch visits for map' });
+  }
+};
+
+/**
+ * Get other user's visits for map (optimized - only ID, lat, lng)
+ * GET /api/app/users/:userId/visits/map
+ */
+const getOtherUserVisitsForMap = async (req, res) => {
+  try {
+    const { userId: targetUserId } = req.params;
+    const viewerUserId = req.user?.id || null;
+
+    const targetUser = await User.findByPk(targetUserId);
+    if (!targetUser) 
+      return res.status(404).json({ error: 'User not found' });
+    
+    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    if (!canView) 
+      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+  
+    const visits = await Visit.findAll({
+      where: {
+        userId: targetUserId,
+        status: 'APPROVED',
+        restaurantId: { [Op.not]: null },
+      },
+      attributes: ['id'],
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'latitude', 'longitude'],
+          where: {
+            latitude: { [Op.not]: null },
+            longitude: { [Op.not]: null },
+          },
+          required: true,
+        },
+      ],
+      raw: true,
+    });
+
+    const mapVisits = visits.map((visit) => ({
+      visitId: visit.id,
+      restaurantId: visit['restaurant.id'],
+      latitude: parseFloat(visit['restaurant.latitude']),
+      longitude: parseFloat(visit['restaurant.longitude']),
+    }));
+
+    const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+
+    res.status(200).json({
+      visits: mapVisits,
+      total: uniqueRestaurants.size,
+    });
+  } catch (error) {
+    console.error('Error fetching user visits for map:', error);
+    res.status(500).json({ error: 'Failed to fetch visits for map' });
+  }
+};
+
 module.exports = {
   uploadReceiptAndCreateVisit,
   createVisitFromReceipt,
   createVisit,
   getUserVisits,
-  getVisitById,
   retakeReceipt,
   checkHasVisited,
   deleteVisit,
   getUserBuddies,
   getOtherUserVisits,
+  getOtherUserVisitsByRestaurant,
   getVisitsByRestaurant,
   getRestaurantVisitors,
+  getUserVisitsForMap,
+  getOtherUserVisitsForMap,
 };

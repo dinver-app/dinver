@@ -272,8 +272,10 @@ async function buildComprehensiveRestaurantData(restaurantId, lang = 'hr') {
 
       // ===== RATINGS - DINVER CUSTOM =====
       // Use Dinver ratings (from Experiences) instead of Google ratings
-      rating: restaurant.dinverRating ? Number(restaurant.dinverRating) : null,
-      userRatingsTotal: restaurant.dinverReviewsCount || 0,
+      rating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+      userRatingsTotal: restaurant.userRatingsTotal != null ? Number(restaurant.userRatingsTotal) : null,
+      dinverRating: restaurant.dinverRating != null ? Number(restaurant.dinverRating) : null,
+      dinverReviewsCount: restaurant.dinverReviewsCount != null ? Number(restaurant.dinverReviewsCount) : null,
       // Note: foodQuality, service, atmosphere will come from Experiences aggregation later
       foodQuality: null, // TODO: Calculate from Experiences when implemented
       service: null,

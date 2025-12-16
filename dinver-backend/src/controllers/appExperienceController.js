@@ -18,8 +18,58 @@ const {
 } = require('../../models');
 const { literal } = require('sequelize');
 const { Op } = require('sequelize');
-const { uploadImage, UPLOAD_STRATEGY } = require('../../services/imageUploadService');
-const { updateRestaurantDinverRating } = require('../services/dinverRatingService');
+const {
+  uploadImage,
+  UPLOAD_STRATEGY,
+} = require('../../services/imageUploadService');
+const {
+  updateRestaurantDinverRating,
+} = require('../services/dinverRatingService');
+const { getMediaUrl } = require('../../config/cdn');
+
+/**
+ * Transform experience media to include proper URLs
+ * Converts S3 storage keys to signed CloudFront URLs
+ */
+const transformMediaUrls = (experience) => {
+  if (!experience) return experience;
+
+  const transformed = experience.toJSON ? experience.toJSON() : { ...experience };
+
+  // Transform author profile image
+  if (transformed.author?.profileImage) {
+    transformed.author.profileImage = getMediaUrl(
+      transformed.author.profileImage,
+      'image',
+      'original'
+    );
+  }
+
+  // Transform restaurant thumbnail
+  if (transformed.restaurant?.thumbnailUrl) {
+    transformed.restaurant.thumbnailUrl = getMediaUrl(
+      transformed.restaurant.thumbnailUrl,
+      'image'
+    );
+  }
+
+  // Transform media items
+  if (transformed.media && Array.isArray(transformed.media)) {
+    transformed.media = transformed.media.map((m) => {
+      const mediaItem = m.toJSON ? m.toJSON() : { ...m };
+      // Experience images use EXPERIENCE strategy - no variants, use original key
+      if (mediaItem.storageKey) {
+        mediaItem.imageUrl = getMediaUrl(mediaItem.storageKey, 'image', 'original');
+      }
+      if (mediaItem.cdnUrl) {
+        mediaItem.cdnUrl = getMediaUrl(mediaItem.cdnUrl, 'image', 'original');
+      }
+      return mediaItem;
+    });
+  }
+
+  return transformed;
+};
 
 /**
  * Create Experience with images in one request
@@ -74,9 +124,10 @@ const createExperience = async (req, res) => {
     }
 
     // Parse recommendedImageIndex - which image has the "recommended" badge
-    const recommendedImageIndex = req.body.recommendedImageIndex !== undefined
-      ? parseInt(req.body.recommendedImageIndex)
-      : null;
+    const recommendedImageIndex =
+      req.body.recommendedImageIndex !== undefined
+        ? parseInt(req.body.recommendedImageIndex)
+        : null;
 
     const files = req.files || [];
 
@@ -92,7 +143,8 @@ const createExperience = async (req, res) => {
     if (!foodRating || !ambienceRating || !serviceRating) {
       await transaction.rollback();
       return res.status(400).json({
-        error: 'All ratings are required (foodRating, ambienceRating, serviceRating)',
+        error:
+          'All ratings are required (foodRating, ambienceRating, serviceRating)',
       });
     }
 
@@ -139,7 +191,14 @@ const createExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'place', 'latitude', 'longitude'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: Experience,
@@ -167,11 +226,23 @@ const createExperience = async (req, res) => {
 
     // Calculate overall rating (average of 3 ratings)
     const overallRating = parseFloat(
-      ((parseFloat(foodRating) + parseFloat(ambienceRating) + parseFloat(serviceRating)) / 3).toFixed(1)
+      (
+        (parseFloat(foodRating) +
+          parseFloat(ambienceRating) +
+          parseFloat(serviceRating)) /
+        3
+      ).toFixed(1),
     );
 
     // Validate mealType
-    const validMealTypes = ['breakfast', 'brunch', 'lunch', 'dinner', 'sweet', 'drinks'];
+    const validMealTypes = [
+      'breakfast',
+      'brunch',
+      'lunch',
+      'dinner',
+      'sweet',
+      'drinks',
+    ];
     if (mealType && !validMealTypes.includes(mealType)) {
       await transaction.rollback();
       return res.status(400).json({
@@ -202,7 +273,7 @@ const createExperience = async (req, res) => {
         cityCached: visit.restaurant?.place || null,
         publishedAt,
       },
-      { transaction }
+      { transaction },
     );
 
     // Upload images in PARALLEL (much faster than sequential!)
@@ -219,7 +290,7 @@ const createExperience = async (req, res) => {
         imageResult,
         index: i,
         caption: captions[i] || null,
-      }))
+      })),
     );
 
     // Wait for all uploads to complete in parallel
@@ -247,7 +318,7 @@ const createExperience = async (req, res) => {
           menuItemId,
           isRecommended,
         },
-        { transaction }
+        { transaction },
       );
 
       mediaRecords.push({
@@ -268,7 +339,10 @@ const createExperience = async (req, res) => {
     // Update restaurant's Dinver rating (async, don't block response)
     if (visit.restaurantId && status === 'APPROVED') {
       updateRestaurantDinverRating(visit.restaurantId).catch((err) => {
-        console.error('[Create Experience] Failed to update Dinver rating:', err.message);
+        console.error(
+          '[Create Experience] Failed to update Dinver rating:',
+          err.message,
+        );
       });
     }
 
@@ -312,17 +386,41 @@ const getExperience = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'address', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
           include: [
             {
               model: MenuItem,
               as: 'menuItem',
-              attributes: ['id'],
+              attributes: ['id', 'restaurantId'],
               required: false,
               include: [
                 {
@@ -340,6 +438,7 @@ const getExperience = async (req, res) => {
           attributes: ['id', 'status', 'visitDate'],
         },
       ],
+      order: [[{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC']],
     });
 
     if (!experience) {
@@ -364,9 +463,11 @@ const getExperience = async (req, res) => {
       hasLiked = !!like;
     }
 
+    const transformedExperience = transformMediaUrls(experience);
+
     res.status(200).json({
       experience: {
-        ...experience.toJSON(),
+        ...transformedExperience,
         hasLiked,
       },
     });
@@ -410,7 +511,16 @@ const getExperienceFeed = async (req, res) => {
     const restaurantInclude = {
       model: Restaurant,
       as: 'restaurant',
-      attributes: ['id', 'name', 'slug', 'place', 'thumbnailUrl', 'latitude', 'longitude', 'isClaimed'],
+      attributes: [
+        'id',
+        'name',
+        'slug',
+        'place',
+        'thumbnailUrl',
+        'latitude',
+        'longitude',
+        'isClaimed',
+      ],
       required: true,
     };
 
@@ -445,11 +555,50 @@ const getExperienceFeed = async (req, res) => {
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
-          limit: 1, // Only get first image for feed
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
-      order: [['publishedAt', 'DESC']], // Chronological (newest first)
+      order: [
+        ['publishedAt', 'DESC'], // Chronological (newest first)
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -471,16 +620,19 @@ const getExperienceFeed = async (req, res) => {
 
     // Calculate distance for each experience if coordinates provided
     const experiencesWithStatus = experiences.map((exp) => {
+      const transformed = transformMediaUrls(exp);
       const result = {
-        ...exp.toJSON(),
+        ...transformed,
         hasLiked: likedIds.includes(exp.id),
       };
 
       // Add distance if coordinates provided
       if (lat && lng && exp.restaurant?.latitude && exp.restaurant?.longitude) {
         const R = 6371; // Earth's radius in km
-        const dLat = ((exp.restaurant.latitude - parseFloat(lat)) * Math.PI) / 180;
-        const dLon = ((exp.restaurant.longitude - parseFloat(lng)) * Math.PI) / 180;
+        const dLat =
+          ((exp.restaurant.latitude - parseFloat(lat)) * Math.PI) / 180;
+        const dLon =
+          ((exp.restaurant.longitude - parseFloat(lng)) * Math.PI) / 180;
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
           Math.cos((parseFloat(lat) * Math.PI) / 180) *
@@ -552,9 +704,12 @@ const likeExperience = async (req, res) => {
     // Increment likes count
     await experience.increment('likesCount');
 
+    // Reload to get updated count
+    await experience.reload();
+
     res.status(201).json({
       message: 'Liked',
-      likesCount: experience.likesCount + 1,
+      likesCount: experience.likesCount,
     });
   } catch (error) {
     console.error('[Like Experience] Error:', error);
@@ -589,11 +744,13 @@ const unlikeExperience = async (req, res) => {
     const experience = await Experience.findByPk(experienceId);
     if (experience && experience.likesCount > 0) {
       await experience.decrement('likesCount');
+      // Reload to get updated count
+      await experience.reload();
     }
 
     res.status(200).json({
       message: 'Unliked',
-      likesCount: experience ? Math.max(0, experience.likesCount - 1) : 0,
+      likesCount: experience ? experience.likesCount : 0,
     });
   } catch (error) {
     console.error('[Unlike Experience] Error:', error);
@@ -635,16 +792,62 @@ const getUserExperiences = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'place', 'isClaimed'],
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
         },
         {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
-          limit: 1,
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [
+        ['createdAt', 'DESC'],
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -664,7 +867,7 @@ const getUserExperiences = async (req, res) => {
     }
 
     const experiencesWithStatus = experiences.map((exp) => ({
-      ...exp.toJSON(),
+      ...transformMediaUrls(exp),
       hasLiked: likedIds.includes(exp.id),
     }));
 
@@ -707,12 +910,64 @@ const getRestaurantExperiences = async (req, res) => {
           attributes: ['id', 'name', 'username', 'profileImage'],
         },
         {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+          ],
+        },
+        {
           model: ExperienceMedia,
           as: 'media',
-          order: [['orderIndex', 'ASC']],
+          attributes: [
+            'id',
+            'experienceId',
+            'kind',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'bytes',
+            'transcodingStatus',
+            'mimeType',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+            'createdAt',
+            'updatedAt',
+          ],
+          include: [
+            {
+              model: MenuItem,
+              as: 'menuItem',
+              attributes: ['id', 'restaurantId'],
+              required: false,
+              include: [
+                {
+                  model: MenuItemTranslation,
+                  as: 'translations',
+                  attributes: ['language', 'name'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'status', 'visitDate'],
         },
       ],
-      order: [['publishedAt', 'DESC']],
+      order: [
+        ['publishedAt', 'DESC'],
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -732,7 +987,7 @@ const getRestaurantExperiences = async (req, res) => {
     }
 
     const experiencesWithStatus = experiences.map((exp) => ({
-      ...exp.toJSON(),
+      ...transformMediaUrls(exp),
       hasLiked: likedIds.includes(exp.id),
     }));
 
@@ -743,13 +998,25 @@ const getRestaurantExperiences = async (req, res) => {
       avgOverall = 0;
     if (experiences.length > 0) {
       avgFood =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.foodRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.foodRating) || 0),
+          0,
+        ) / experiences.length;
       avgAmbience =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.ambienceRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.ambienceRating) || 0),
+          0,
+        ) / experiences.length;
       avgService =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.serviceRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.serviceRating) || 0),
+          0,
+        ) / experiences.length;
       avgOverall =
-        experiences.reduce((sum, e) => sum + (parseFloat(e.overallRating) || 0), 0) / experiences.length;
+        experiences.reduce(
+          (sum, e) => sum + (parseFloat(e.overallRating) || 0),
+          0,
+        ) / experiences.length;
     }
 
     res.status(200).json({
@@ -860,7 +1127,10 @@ const deleteExperience = async (req, res) => {
     // Update restaurant's Dinver rating (async, don't block response)
     if (restaurantId) {
       updateRestaurantDinverRating(restaurantId).catch((err) => {
-        console.error('[Delete Experience] Failed to update Dinver rating:', err.message);
+        console.error(
+          '[Delete Experience] Failed to update Dinver rating:',
+          err.message,
+        );
       });
     }
 

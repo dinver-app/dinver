@@ -204,16 +204,23 @@ const getMustVisitList = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    const favoritesWithUrls = favorites.map((fav) => ({
-      id: fav.id,
-      addedAt: fav.createdAt,
-      restaurant: {
-        ...fav.restaurant.get(),
-        thumbnailUrl: fav.restaurant.thumbnailUrl
-          ? getMediaUrl(fav.restaurant.thumbnailUrl, 'image')
-          : null,
-      },
-    }));
+    const favoritesWithUrls = favorites.map((fav) => {
+      const restaurantData = fav.restaurant.get();
+      return {
+        id: fav.id,
+        addedAt: fav.createdAt,
+        restaurant: {
+          ...restaurantData,
+          thumbnailUrl: fav.restaurant.thumbnailUrl
+            ? getMediaUrl(fav.restaurant.thumbnailUrl, 'image')
+            : null,
+          rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+          userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+          dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+          dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+        },
+      };
+    });
 
     res.status(200).json(favoritesWithUrls);
   } catch (error) {
@@ -289,16 +296,23 @@ const getUserMustVisitList = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    const favoritesWithUrls = favorites.map((fav) => ({
-      id: fav.id,
-      addedAt: fav.createdAt,
-      restaurant: {
-        ...fav.restaurant.get(),
-        thumbnailUrl: fav.restaurant.thumbnailUrl
-          ? getMediaUrl(fav.restaurant.thumbnailUrl, 'image')
-          : null,
-      },
-    }));
+    const favoritesWithUrls = favorites.map((fav) => {
+      const restaurantData = fav.restaurant.get();
+      return {
+        id: fav.id,
+        addedAt: fav.createdAt,
+        restaurant: {
+          ...restaurantData,
+          thumbnailUrl: fav.restaurant.thumbnailUrl
+            ? getMediaUrl(fav.restaurant.thumbnailUrl, 'image')
+            : null,
+          rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+          userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+          dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+          dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+        },
+      };
+    });
 
     res.status(200).json(favoritesWithUrls);
   } catch (error) {
@@ -354,18 +368,25 @@ const getUserVisitedList = async (req, res) => {
       order: [['removedAt', 'DESC']], // Most recently visited first
     });
 
-    const visitedWithUrls = visitedRestaurants.map((visited) => ({
-      id: visited.id,
-      addedAt: visited.createdAt,
-      visitedAt: visited.removedAt,
-      visitId: visited.removedForVisitId,
-      restaurant: {
-        ...visited.restaurant.get(),
-        thumbnailUrl: visited.restaurant.thumbnailUrl
-          ? getMediaUrl(visited.restaurant.thumbnailUrl, 'image')
-          : null,
-      },
-    }));
+    const visitedWithUrls = visitedRestaurants.map((visited) => {
+      const restaurantData = visited.restaurant.get();
+      return {
+        id: visited.id,
+        addedAt: visited.createdAt,
+        visitedAt: visited.removedAt,
+        visitId: visited.removedForVisitId,
+        restaurant: {
+          ...restaurantData,
+          thumbnailUrl: visited.restaurant.thumbnailUrl
+            ? getMediaUrl(visited.restaurant.thumbnailUrl, 'image')
+            : null,
+          rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+          userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+          dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+          dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+        },
+      };
+    });
 
     res.status(200).json(visitedWithUrls);
   } catch (error) {

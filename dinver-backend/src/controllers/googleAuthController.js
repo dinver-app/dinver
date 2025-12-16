@@ -15,6 +15,8 @@ const googleSignIn = async (req, res) => {
 
     // Verify Google ID token
     let ticket;
+
+    console.log('### Google client ID: ', process.env.GOOGLE_CLIENT_ID);
     try {
       ticket = await client.verifyIdToken({
         idToken: idToken,

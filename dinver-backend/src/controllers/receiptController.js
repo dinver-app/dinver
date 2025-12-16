@@ -7,6 +7,7 @@ const {
   Reservation,
   UserSettings,
   Visit,
+  Experience,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -1730,6 +1731,20 @@ const approveReceipt = async (req, res) => {
         });
 
         console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
+
+        // Update associated Experience with restaurantId if it exists
+        const experience = await Experience.findOne({
+          where: { visitId: visit.id },
+        });
+
+        if (experience) {
+          await experience.update({
+            restaurantId: restaurantId,
+            status: 'APPROVED',
+            publishedAt: experience.publishedAt || new Date(),
+          });
+          console.log(`[Receipt Approval] Updated Experience ${experience.id} with restaurant ${restaurantId} and set to APPROVED`);
+        }
       }
 
       // If no existing Visit, create one (backward compatibility for old receipts)
@@ -2109,7 +2124,7 @@ const searchRestaurantsForReceipt = async (req, res) => {
         10, // 10km radius for manual search
         {
           limit: 10,
-          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'address', 'place', 'placeId', 'rating', 'userRatingsTotal', 'dinverRating', 'dinverReviewsCount', 'latitude', 'longitude'],
         },
       );
 
@@ -2124,7 +2139,10 @@ const searchRestaurantsForReceipt = async (req, res) => {
           name: r.name,
           address: r.address,
           place: r.place,
-          rating: r.rating,
+          rating: r.rating != null ? Number(r.rating) : null,
+          userRatingsTotal: r.userRatingsTotal != null ? Number(r.userRatingsTotal) : null,
+          dinverRating: r.dinverRating != null ? Number(r.dinverRating) : null,
+          dinverReviewsCount: r.dinverReviewsCount != null ? Number(r.dinverReviewsCount) : null,
           distance: r.get('distance'),
           existsInDatabase: true,
         }));

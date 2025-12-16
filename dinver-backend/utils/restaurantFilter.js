@@ -6,6 +6,7 @@
 const WHITELISTED_TEST_EMAILS = [
   'ivankikic49@gmail.com',
   'mbaivic23@student.foi.hr',
+  'johndoe@gmail.com'
 ];
 
 /**

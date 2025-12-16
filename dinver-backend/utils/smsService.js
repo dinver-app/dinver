@@ -1,113 +1,84 @@
-const twilio = require('twilio');
-const { format } = require('date-fns');
+const https = require('follow-redirects').https;
 
-// Twilio konfiguracija
-const twilioClient = process.env.TWILIO_ACCOUNT_SID
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-  : null;
-
-const formatDate = (dateStr) => {
-  return format(new Date(dateStr), 'dd.MM.yyyy.');
-};
-
-const formatTime = (timeStr) => {
-  return timeStr.substring(0, 5); // Format HH:mm from HH:mm:ss
-};
+// Infobip konfiguracija
+const infobipApiKey = process.env.INFOBIP_API_KEY;
+const infobipBaseUrl = process.env.INFOBIP_API_BASE_URL; // npr. 2m66ez.api.infobip.com
+const infobipSender = process.env.INFOBIP_SENDER || '447491163443'; // Default sender iz dokumentacije
 
 const sendVerificationSMS = async (phone, code) => {
-  if (process.env.NODE_ENV === 'development' || !twilioClient) {
-    console.log('Development mode: SMS would be sent');
+  // Check if Infobip is configured
+  if (!infobipApiKey || !infobipBaseUrl) {
+    console.log('Infobip not configured - SMS would be sent');
     console.log('To:', phone);
     console.log('Verification Code:', code);
-    return;
+    // In development, you might want to just log instead of throwing error
+    if (process.env.NODE_ENV === 'development') {
+      return;
+    }
+    throw new Error('SMS service not configured');
   }
 
-  try {
-    await twilioClient.messages.create({
-      body: `Your Dinver verification code is: ${code}. This code will expire in 10 minutes.`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: phone,
-    });
-    console.log('Verification SMS sent successfully');
-  } catch (error) {
-    console.error('Error sending verification SMS:', error);
-    throw error;
-  }
-};
-
-const sendReservationSMS = async ({ to, type, reservation }) => {
-  if (!to) {
-    console.error('No phone number provided for SMS');
-    return;
-  }
-
-  const formattedDate = formatDate(reservation.date);
-  const formattedTime = formatTime(reservation.time);
-  const formattedSuggestedDate = reservation.suggestedDate
-    ? formatDate(reservation.suggestedDate)
-    : null;
-  const formattedSuggestedTime = reservation.suggestedTime
-    ? formatTime(reservation.suggestedTime)
-    : null;
-
-  let message;
-
-  switch (type) {
-    case 'confirmation':
-      message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je potvrđena. Broj gostiju: ${reservation.guests}`;
-      break;
-    case 'decline':
-      message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je odbijena.`;
-      if (reservation.noteFromOwner) {
-        message += ` Razlog: ${reservation.noteFromOwner}`;
+  return new Promise((resolve, reject) => {
+    const options = {
+      method: 'POST',
+      hostname: infobipBaseUrl,
+      path: '/sms/2/text/advanced',
+      headers: {
+        'Authorization': `App ${infobipApiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       }
-      break;
-    case 'alternative':
-      message = `Restoran "${reservation.restaurant.name}" predlaže alternativni termin za vašu rezervaciju: ${formattedSuggestedDate} u ${formattedSuggestedTime}.`;
-      break;
-    case 'accepted_alternative':
-      message = `Prihvatili ste alternativni termin rezervacije u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime}. Broj gostiju: ${reservation.guests}`;
-      break;
-    case 'cancellation':
-      message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana.`;
-      break;
-    case 'cancellation_by_restaurant':
-      message = `Vaša rezervacija u restoranu "${reservation.restaurant.name}" za ${formattedDate} u ${formattedTime} je otkazana od strane restorana.`;
-      if (reservation.cancellationReason) {
-        message += ` Razlog: ${reservation.cancellationReason}`;
-      }
-      break;
-    case 'custom_reservation_created':
-      message = `Hvala vam na rezervaciji! Vaša rezervacija u restoranu "${reservation.restaurantName}" za ${formattedDate} u ${formattedTime} je zaprimljena. Broj gostiju: ${reservation.guests}. Potvrda će vam stići uskoro.`;
-      break;
-    case 'custom_reservation_confirmed':
-      message = `Vaša rezervacija u restoranu "${reservation.restaurantName}" za ${formattedDate} u ${formattedTime} je potvrđena. Broj gostiju: ${reservation.guests}. Vidimo se uskoro!`;
-      break;
-    default:
-      throw new Error('Invalid SMS type');
-  }
+    };
 
-  if (process.env.NODE_ENV === 'development' || !twilioClient) {
-    console.log('Development mode: SMS would be sent');
-    console.log('To:', to);
-    console.log('Message:', message);
-    return;
-  }
+    const req = https.request(options, (res) => {
+      let chunks = [];
 
-  try {
-    await twilioClient.messages.create({
-      body: message,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: to,
+      res.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+
+      res.on('end', () => {
+        const body = Buffer.concat(chunks);
+        const response = JSON.parse(body.toString());
+
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`Verification SMS sent successfully to ${phone}`);
+          resolve(response);
+        } else {
+          console.error('Error sending SMS via Infobip:', response);
+          reject(new Error(`Infobip API error: ${response.requestError?.serviceException?.text || 'Unknown error'}`));
+        }
+      });
+
+      res.on('error', (error) => {
+        console.error('Error sending verification SMS:', error);
+        reject(error);
+      });
     });
-    console.log('Reservation SMS sent successfully');
-  } catch (error) {
-    console.error('Error sending reservation SMS:', error);
-    throw error;
-  }
+
+    // Remove leading + from phone number if present (Infobip expects without +)
+    const cleanPhoneNumber = phone.startsWith('+') ? phone.substring(1) : phone;
+
+    const postData = JSON.stringify({
+      messages: [
+        {
+          destinations: [{ to: cleanPhoneNumber }],
+          from: infobipSender,
+          text: `Your Dinver verification code is: ${code}. This code will expire in 10 minutes.`
+        }
+      ]
+    });
+
+    req.on('error', (error) => {
+      console.error('Request error:', error);
+      reject(error);
+    });
+
+    req.write(postData);
+    req.end();
+  });
 };
 
 module.exports = {
   sendVerificationSMS,
-  sendReservationSMS,
 };

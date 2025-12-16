@@ -8,7 +8,6 @@ const {
   UserAdmin,
 } = require('../../models');
 const { sequelize } = require('../../models');
-const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
@@ -112,7 +111,9 @@ const getUserProfile = async (req, res) => {
       instagramUrl: user.instagramUrl,
       tiktokUrl: user.tiktokUrl,
       birthDate: user.birthDate,
-      profileImage: user.profileImage,
+      profileImage: user.profileImage
+        ? getMediaUrl(user.profileImage, 'image', 'original')
+        : null,
       location: {
         street: user.streetAddress,
         city: user.city,

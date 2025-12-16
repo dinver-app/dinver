@@ -1,0 +1,11 @@
+service: dinver-backend
+image: dinverdev/dinver-backend
+
+builder:
+  arch: amd64
+
+registry:
+  username: dinverdev
+  password:
+    - DOCKER_REGISTRY_PASSWORD
+

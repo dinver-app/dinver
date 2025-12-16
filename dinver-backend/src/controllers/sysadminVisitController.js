@@ -172,6 +172,7 @@ exports.getVisitById = async (req, res) => {
             'address',
             'thumbnailUrl',
             'rating',
+            'userRatingsTotal',
             'dinverRating',
             'dinverReviewsCount',
             'priceLevel',
@@ -228,12 +229,19 @@ exports.getVisitById = async (req, res) => {
           }
         : null,
       restaurant: visit.restaurant
-        ? {
-            ...visit.restaurant.get(),
-            thumbnailUrl: visit.restaurant.thumbnailUrl
-              ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
-              : null,
-          }
+        ? (() => {
+            const restaurantData = visit.restaurant.get();
+            return {
+              ...restaurantData,
+              thumbnailUrl: visit.restaurant.thumbnailUrl
+                ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+                : null,
+              rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
+              userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
+              dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
+              dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+            };
+          })()
         : null,
       receipt: visit.receipt
         ? {

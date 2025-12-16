@@ -10,6 +10,15 @@ const { sequelize } = require('../../models');
 const {
   createAndSendNotification,
 } = require('../../utils/pushNotificationService');
+const { getMediaUrl } = require('../../config/cdn');
+
+/**
+ * Transform profileImage to signed URL
+ */
+const transformProfileImage = (profileImage) => {
+  if (!profileImage) return null;
+  return getMediaUrl(profileImage, 'image', 'original');
+};
 
 /**
  * Follow a user
@@ -307,7 +316,7 @@ const getFollowers = async (req, res) => {
           bio: follow.follower.bio,
           instagramUrl: follow.follower.instagramUrl,
           tiktokUrl: follow.follower.tiktokUrl,
-          profileImage: follow.follower.profileImage,
+          profileImage: transformProfileImage(follow.follower.profileImage),
           city: follow.follower.city,
           isBuddy: followStatus.isBuddy,
           followedAt: follow.createdAt,
@@ -430,7 +439,7 @@ const getFollowing = async (req, res) => {
           bio: follow.following.bio,
           instagramUrl: follow.following.instagramUrl,
           tiktokUrl: follow.following.tiktokUrl,
-          profileImage: follow.following.profileImage,
+          profileImage: transformProfileImage(follow.following.profileImage),
           city: follow.following.city,
           isBuddy: followStatus.isBuddy,
           followedAt: follow.createdAt,
@@ -593,7 +602,7 @@ const getBuddies = async (req, res) => {
         bio: buddy.bio,
         instagramUrl: buddy.instagramUrl,
         tiktokUrl: buddy.tiktokUrl,
-        profileImage: buddy.profileImage,
+        profileImage: transformProfileImage(buddy.profileImage),
         city: buddy.city,
         buddiesSince: buddyData.buddies_since,
         mutualBuddiesCount: 0, // TODO: Calculate mutual buddies in future
@@ -755,7 +764,7 @@ const searchUsers = async (req, res) => {
           bio: user.bio,
           instagramUrl: user.instagramUrl,
           tiktokUrl: user.tiktokUrl,
-          profileImage: user.profileImage,
+          profileImage: transformProfileImage(user.profileImage),
           city: user.city,
           followStatus: {
             isFollowing: followStatus.isFollowing,
@@ -896,7 +905,7 @@ const getUserProfileWithStats = async (req, res) => {
         bio: user.bio,
         instagramUrl: user.instagramUrl,
         tiktokUrl: user.tiktokUrl,
-        profileImage: user.profileImage,
+        profileImage: transformProfileImage(user.profileImage),
         city: user.city,
         country: user.country,
         memberSince: user.createdAt,
