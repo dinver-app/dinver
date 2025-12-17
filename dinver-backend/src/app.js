@@ -27,6 +27,7 @@ const {
 const { runDataHealthChecks } = require('./cron/dataHealthCron');
 const { cleanupExpiredVisits } = require('./cron/cleanupExpiredVisits');
 const { cleanupOldNotifications } = require('./cron/cleanupNotifications');
+const { expireUpdates } = require('./cron/expireUpdates');
 dotenv.config();
 
 const app = express();
@@ -60,6 +61,9 @@ cron.schedule('0 4 * * *', async () => {
 
 // Čišćenje starih notifikacija (svaki dan u 02:00) - briše notifikacije starije od 30 dana
 cron.schedule('0 2 * * *', cleanupOldNotifications);
+
+// Expire old restaurant updates (svaki sat) - markira ACTIVE updateove kao EXPIRED ako je expiresAt prošao
+cron.schedule('0 * * * *', expireUpdates);
 
 // Initialize client.
 const redisClient = createClient({
