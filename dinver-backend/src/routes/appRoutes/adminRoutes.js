@@ -5,6 +5,7 @@ const menuController = require('../../controllers/menuController');
 const drinksController = require('../../controllers/drinkController');
 const restaurantPostController = require('../../controllers/restaurantPostController');
 const sizeController = require('../../controllers/sizeController');
+const restaurantUpdateController = require('../../controllers/restaurantUpdateController');
 
 const {
   appAuthenticateToken,
@@ -444,6 +445,43 @@ router.delete(
   appAuthenticateToken,
   checkAdmin,
   sizeController.deleteSize,
+);
+
+// ============================================================
+// RESTAURANT UPDATES (What's New)
+// ============================================================
+
+// Create a new update (with optional image)
+// POST /api/app/admin/updates
+// Body: restaurantId, content, category, durationDays (1, 3, or 7)
+// Optional: image file
+router.post(
+  '/admin/updates',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  upload.single('image'),
+  restaurantUpdateController.createUpdate,
+);
+
+// Get all updates for a restaurant
+// GET /api/app/admin/updates/:restaurantId?status=ACTIVE&limit=20&offset=0
+router.get(
+  '/admin/updates/:restaurantId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  restaurantUpdateController.getRestaurantUpdates,
+);
+
+// Delete (soft delete) an update
+// DELETE /api/app/admin/updates/:updateId
+router.delete(
+  '/admin/updates/:updateId',
+  appAuthenticateToken,
+  appApiKeyAuth,
+  checkAdmin,
+  restaurantUpdateController.deleteUpdate,
 );
 
 module.exports = router;
