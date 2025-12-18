@@ -59,5 +59,7 @@ coverage/
 .env.test.local
 .env.production.local
 
+.env.keys
+.env
 # CloudFront keys
 config/keys/
