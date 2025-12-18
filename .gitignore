@@ -14,6 +14,7 @@ secrets/
 !.env.staging
 !.env.production
 .env.keys
+.env
 
 # MacOS
 .DS_Store
