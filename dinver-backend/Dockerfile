@@ -50,6 +50,7 @@ FROM node:22-bookworm-slim AS runner
   COPY --from=builder /app/src ./src
   COPY --from=builder /app/utils ./utils
   COPY --from=builder /app/seeders ./seeders
+  COPY --from=builder /app/migrations ./migrations
 
   RUN mkdir -p logs && chown -R node:node /app
 
