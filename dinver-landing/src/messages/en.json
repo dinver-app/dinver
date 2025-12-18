@@ -4,7 +4,7 @@
     "howItWorks": "How It Works",
     "restaurants": "For Restaurants",
     "explore": "Explore",
-    "contact": "Contact",
+    "contact": "Partner",
     "downloadApp": "Download App",
     "language": "HR"
   },
@@ -12,7 +12,7 @@
     "tagline": "Discover. Share. Experience.",
     "title": "Your Next Great Meal Awaits",
     "subtitle": "Dinver is more than a restaurant guide. It's a community of food lovers discovering hidden gems, sharing authentic experiences, and earning rewards for every visit.",
-    "cta": "Join the Waitlist",
+    "cta": "Download Now",
     "ctaSecondary": "Explore Restaurants",
     "stats": {
       "restaurants": "Partner Restaurants",
@@ -95,7 +95,7 @@
         "description": "Connect with a community that loves discovering new dining experiences."
       }
     },
-    "cta": "Partner With Us",
+    "cta": "Become a Partner",
     "ctaSecondary": "Learn More"
   },
   "map": {
@@ -104,14 +104,14 @@
     "cta": "View All Restaurants"
   },
   "contact": {
-    "title": "Join the Waitlist",
-    "subtitle": "Be the first to know when Dinver launches in your city",
+    "title": "Become a Partner",
+    "subtitle": "Join our partner network and reach food lovers actively looking for their next great meal",
     "form": {
       "email": "Your email",
       "city": "Your city",
-      "submit": "Join Waitlist",
-      "submitting": "Joining...",
-      "success": "You're on the list! We'll notify you when Dinver arrives.",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "success": "Application received! We'll be in touch soon.",
       "error": "Something went wrong. Please try again."
     },
     "restaurant": {

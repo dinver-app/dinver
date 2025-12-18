@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Globe } from 'lucide-react';
+import { Menu, X, Globe, Download } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
+import AppStoreButtons from '@/components/ui/AppStoreButtons';
 import { Messages, Locale } from '@/lib/i18n';
 
 interface HeaderProps {
@@ -16,6 +17,7 @@ interface HeaderProps {
 export default function Header({ messages, locale, onLocaleChange }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +47,7 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
         transition={{ duration: 0.5 }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-white/90 backdrop-blur-md shadow-sm'
+            ? 'bg-white/95 backdrop-blur-md shadow-sm'
             : 'bg-transparent'
         }`}
       >
@@ -53,7 +55,7 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <a href="#" className="flex-shrink-0">
-              <Logo variant={isScrolled ? 'dark' : 'dark'} />
+              <Logo variant="dark" />
             </a>
 
             {/* Desktop Navigation */}
@@ -78,9 +80,38 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                 <Globe size={18} />
                 <span className="font-medium">{messages.nav.language}</span>
               </button>
-              <Button size="sm" onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}>
-                {messages.nav.downloadApp}
-              </Button>
+
+              {/* Download Button with Dropdown */}
+              <div className="relative">
+                <Button
+                  size="sm"
+                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                  className="flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  {messages.nav.downloadApp}
+                </Button>
+
+                <AnimatePresence>
+                  {showDownloadMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowDownloadMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4"
+                      >
+                        <AppStoreButtons variant="dark" layout="vertical" />
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -133,14 +164,10 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                     <Globe size={20} />
                     <span className="font-medium">{messages.nav.language}</span>
                   </button>
-                  <Button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    {messages.nav.downloadApp}
-                  </Button>
+                  <div className="pt-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-500 mb-3">{messages.nav.downloadApp}</p>
+                    <AppStoreButtons variant="dark" layout="vertical" />
+                  </div>
                 </div>
               </div>
             </motion.nav>

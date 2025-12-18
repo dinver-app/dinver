@@ -2,40 +2,37 @@ interface LogoProps {
   className?: string;
   showText?: boolean;
   variant?: 'light' | 'dark';
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function Logo({ className = '', showText = true, variant = 'dark' }: LogoProps) {
-  const textColor = variant === 'dark' ? 'text-dinver-dark' : 'text-white';
+export default function Logo({ className = '', showText = true, variant = 'dark', size = 'md' }: LogoProps) {
+  const textColor = variant === 'dark' ? 'text-dinver-dark' : 'text-dinver-cream';
+
+  const sizeClasses = {
+    sm: { logo: 'w-8 h-8', text: 'text-xl' },
+    md: { logo: 'w-10 h-10', text: 'text-2xl' },
+    lg: { logo: 'w-14 h-14', text: 'text-3xl' },
+  };
+
+  const currentSize = sizeClasses[size];
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      {/* Official Dinver Logo - D mark */}
       <svg
-        width="40"
-        height="40"
-        viewBox="0 0 40 40"
+        viewBox="0 0 1000 1000"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="flex-shrink-0"
+        className={`flex-shrink-0 rounded-xl ${currentSize.logo}`}
       >
-        {/* Fork and knife forming a D shape */}
-        <circle cx="20" cy="20" r="18" fill="#10B981" />
+        <rect width="1000" height="1000" rx="200" fill="#1E3329"/>
         <path
-          d="M14 10V30M14 10C14 10 18 12 18 16C18 20 14 20 14 20"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M26 10V14M26 14V18M26 18C28 18 28 14 28 14M26 18V30M24 10V14M24 14C22 14 22 18 24 18M24 14V10M28 10V14"
-          stroke="white"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          d="M418.47 787H315.754H243V212H315.754H418.47H590.086C620.047 212 647.863 224.958 673.54 250.875C699.223 276.505 719.476 311.534 734.316 355.966C749.437 400.107 757 448.093 757 499.926C757 551.473 749.437 599.323 734.316 643.463C719.476 687.609 699.223 722.638 673.54 748.554C647.863 774.185 620.047 787 590.086 787H418.47ZM418.47 242.759V760.94H445.861C469.824 760.94 492.222 748.125 513.054 722.495C534.167 696.864 550.715 664.114 562.694 624.238C574.678 584.086 580.67 542.647 580.67 499.926C580.67 457.205 574.678 416.196 562.694 376.897C550.715 337.307 534.167 305.129 513.054 280.351C492.222 255.288 469.824 242.759 445.861 242.759H418.47Z"
+          fill="#FFF5C4"
         />
       </svg>
       {showText && (
-        <span className={`text-2xl font-bold tracking-tight ${textColor}`}>
+        <span className={`${currentSize.text} font-bold tracking-tight ${textColor}`}>
           Dinver
         </span>
       )}

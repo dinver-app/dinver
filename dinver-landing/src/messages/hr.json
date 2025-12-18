@@ -4,7 +4,7 @@
     "howItWorks": "Kako radi",
     "restaurants": "Za Restorane",
     "explore": "Istraži",
-    "contact": "Kontakt",
+    "contact": "Partneri",
     "downloadApp": "Preuzmi aplikaciju",
     "language": "EN"
   },
@@ -12,7 +12,7 @@
     "tagline": "Otkrij. Podijeli. Doživi.",
     "title": "Tvoj sljedeći odličan obrok te čeka",
     "subtitle": "Dinver je više od vodiča za restorane. To je zajednica ljubitelja hrane koji otkrivaju skrivene dragulje, dijele autentična iskustva i zarađuju nagrade za svaki posjet.",
-    "cta": "Pridruži se listi čekanja",
+    "cta": "Preuzmi sada",
     "ctaSecondary": "Istraži restorane",
     "stats": {
       "restaurants": "Partner restorana",
@@ -104,14 +104,14 @@
     "cta": "Pogledaj sve restorane"
   },
   "contact": {
-    "title": "Pridruži se listi čekanja",
-    "subtitle": "Budi prvi koji će saznati kada Dinver stigne u tvoj grad",
+    "title": "Postani partner",
+    "subtitle": "Pridruži se našoj partnerskoj mreži i dođi do ljubitelja hrane koji aktivno traže svoj sljedeći odličan obrok",
     "form": {
       "email": "Tvoj email",
       "city": "Tvoj grad",
-      "submit": "Pridruži se",
-      "submitting": "Učlanjujem...",
-      "success": "Na listi si! Obavijestit ćemo te kada Dinver stigne.",
+      "submit": "Pošalji",
+      "submitting": "Šaljem...",
+      "success": "Prijava zaprimljena! Javit ćemo vam se uskoro.",
       "error": "Nešto je pošlo po zlu. Pokušaj ponovno."
     },
     "restaurant": {
