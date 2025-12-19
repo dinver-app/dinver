@@ -47,7 +47,12 @@ const getReservationMessages = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'thumbnailUrl', 'address', 'place', 'slug'],
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'profileImage', 'username'],
         },
       ],
     });
@@ -125,6 +130,21 @@ const getReservationMessages = async (req, res) => {
       guests: reservation.guests,
       threadActive: reservation.threadActive,
       canSendMessages: reservation.canSendMessages,
+      restaurant: reservation.restaurant ? {
+        id: reservation.restaurant.id,
+        name: reservation.restaurant.name,
+        thumbnailUrl: reservation.restaurant.thumbnailUrl,
+        address: reservation.restaurant.address,
+        place: reservation.restaurant.place,
+        slug: reservation.restaurant.slug,
+      } : null,
+      user: reservation.user ? {
+        id: reservation.user.id,
+        name: reservation.user.name,
+        email: reservation.user.email,
+        profileImage: reservation.user.profileImage,
+        username: reservation.user.username,
+      } : null,
     };
 
     // Calculate pagination metadata
