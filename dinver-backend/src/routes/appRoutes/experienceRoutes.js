@@ -44,7 +44,7 @@ const upload = multer({
 // ============================================================
 
 // Get Experience Feed (public, chronological, with distance filter)
-// GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner&limit=20&offset=0
+// GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner&onlyFollowing=true&limit=20&offset=0
 router.get('/feed', appApiKeyAuth, appOptionalAuth, experienceController.getExperienceFeed);
 
 // ============================================================
