@@ -15,6 +15,10 @@ const { DateTime } = require('luxon');
 const {
   createAndSendNotificationToUsers,
 } = require('../../utils/pushNotificationService');
+const {
+  notifyStatusChange,
+  notifyReservationUpdate,
+} = require('../services/socketService');
 
 // Helpers: format dates/times for notification copy
 const formatDateDisplay = (dateStr) => {
@@ -450,6 +454,13 @@ const confirmReservation = async (req, res) => {
         },
       ],
     });
+
+    notifyStatusChange(id, oldStatus, 'confirmed', {
+      reservation: updatedReservation,
+      noteFromOwner,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
 
     // Pošalji email korisniku samo ako nije custom rezervacija
     if (!reservation.isCustomReservation && reservation.user) {

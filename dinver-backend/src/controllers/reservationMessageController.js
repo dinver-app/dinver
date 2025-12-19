@@ -9,6 +9,10 @@ const { Op } = require('sequelize');
 const {
   createAndSendNotificationToUsers,
 } = require('../../utils/pushNotificationService');
+const {
+  notifyNewMessage,
+  notifyUnreadCountUpdate,
+} = require('../services/socketService');
 
 // Helpers: format for notification copy
 const formatDateDisplay = (dateStr) => {
@@ -208,6 +212,13 @@ const sendMessage = async (req, res) => {
           attributes: ['id', 'name'],
         },
       ],
+    });
+
+    notifyNewMessage(reservationId, messageWithSender);
+
+    notifyUnreadCountUpdate(reservation.restaurantId, {
+      reservationId,
+      unreadCount: 1,
     });
 
     // Pošalji push notifikaciju o novoj poruci
