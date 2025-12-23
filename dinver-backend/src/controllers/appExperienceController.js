@@ -572,10 +572,10 @@ const getExperienceFeed = async (req, res) => {
       restaurantInclude.where = literal(`
         (6371 * acos(
           cos(radians(${userLat})) *
-          cos(radians("Restaurant"."latitude")) *
-          cos(radians("Restaurant"."longitude") - radians(${userLng})) +
+          cos(radians("restaurant"."latitude")) *
+          cos(radians("restaurant"."longitude") - radians(${userLng})) +
           sin(radians(${userLat})) *
-          sin(radians("Restaurant"."latitude"))
+          sin(radians("restaurant"."latitude"))
         )) <= ${distanceKm}
       `);
     }
