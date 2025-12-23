@@ -5,6 +5,7 @@ const {
   emitReservationUpdate,
   emitUnreadCountUpdate,
   emitUserNotification,
+  emitMessagesRead,
 } = require('../socket/reservation.socket');
 
 function notifyNewMessage(reservationId, message) {
@@ -74,10 +75,23 @@ function notifyUser(userId, notification) {
   emitUserNotification(io, userId, notification);
 }
 
+function notifyMessagesRead(reservationId, messageIds) {
+  const io = getIO();
+  if (!io) {
+    console.warn(
+      '[SocketService] IO not initialized, skipping messages read emit',
+    );
+    return;
+  }
+
+  emitMessagesRead(io, reservationId, messageIds);
+}
+
 module.exports = {
   notifyNewMessage,
   notifyStatusChange,
   notifyReservationUpdate,
   notifyUnreadCountUpdate,
   notifyUser,
+  notifyMessagesRead,
 };

@@ -12,7 +12,9 @@ const {
 const {
   notifyNewMessage,
   notifyUnreadCountUpdate,
+  notifyMessagesRead,
 } = require('../services/socketService');
+const { getMediaUrl } = require('../../config/cdn');
 
 // Helpers: format for notification copy
 const formatDateDisplay = (dateStr) => {
@@ -111,14 +113,17 @@ const getReservationMessages = async (req, res) => {
     );
 
     if (unreadMessages.length > 0) {
+      const messageIds = unreadMessages.map((msg) => msg.id);
       await ReservationMessage.update(
         { readAt: new Date() },
         {
           where: {
-            id: unreadMessages.map((msg) => msg.id),
+            id: messageIds,
           },
         },
       );
+
+      notifyMessagesRead(reservationId, messageIds);
     }
 
     // Get reservation details
@@ -133,7 +138,9 @@ const getReservationMessages = async (req, res) => {
       restaurant: reservation.restaurant ? {
         id: reservation.restaurant.id,
         name: reservation.restaurant.name,
-        thumbnailUrl: reservation.restaurant.thumbnailUrl,
+        thumbnailUrl: reservation.restaurant.thumbnailUrl
+          ? getMediaUrl(reservation.restaurant.thumbnailUrl, 'image')
+          : null,
         address: reservation.restaurant.address,
         place: reservation.restaurant.place,
         slug: reservation.restaurant.slug,
@@ -142,7 +149,9 @@ const getReservationMessages = async (req, res) => {
         id: reservation.user.id,
         name: reservation.user.name,
         email: reservation.user.email,
-        profileImage: reservation.user.profileImage,
+        profileImage: reservation.user.profileImage
+          ? getMediaUrl(reservation.user.profileImage, 'image', 'original')
+          : null,
         username: reservation.user.username,
       } : null,
     };
@@ -328,6 +337,7 @@ const markMessageAsRead = async (req, res) => {
     // Mark as read if not already read
     if (!message.readAt) {
       await message.update({ readAt: new Date() });
+      notifyMessagesRead(message.reservation.id, [messageId]);
     }
 
     res.json(message);
@@ -375,7 +385,7 @@ const markMessagesAsRead = async (req, res) => {
     }
 
     // Mark all messages as read
-    await ReservationMessage.update(
+    const result = await ReservationMessage.update(
       { readAt: new Date() },
       {
         where: {
@@ -384,6 +394,17 @@ const markMessagesAsRead = async (req, res) => {
         },
       },
     );
+
+    if (messages.length > 0 && result[0] > 0) {
+      const reservationId = messages[0].reservation.id;
+      const updatedMessageIds = messages
+        .filter((msg) => !msg.readAt)
+        .map((msg) => msg.id);
+
+      if (updatedMessageIds.length > 0) {
+        notifyMessagesRead(reservationId, updatedMessageIds);
+      }
+    }
 
     res.json({ success: true, updatedCount: messageIds.length });
   } catch (error) {
