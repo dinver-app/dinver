@@ -229,7 +229,7 @@ const getUpdateById = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'thumbnail'],
+          attributes: ['id', 'name', 'slug', 'thumbnailUrl'],
         },
       ],
     });
@@ -244,8 +244,8 @@ const getUpdateById = async (req, res) => {
         id: update.restaurant.id,
         name: update.restaurant.name,
         slug: update.restaurant.slug,
-        thumbnail: update.restaurant.thumbnail
-          ? getMediaUrl(update.restaurant.thumbnail, 'image', 'thumbnail')
+        thumbnail: update.restaurant.thumbnailUrl
+          ? getMediaUrl(update.restaurant.thumbnailUrl, 'image', 'thumbnail')
           : null,
       },
       content: update.content,
@@ -345,7 +345,7 @@ const getUpdatesFeed = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'thumbnail', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'slug', 'thumbnailUrl', 'latitude', 'longitude'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -408,8 +408,8 @@ const getUpdatesFeed = async (req, res) => {
           id: updateData.restaurant.id,
           name: updateData.restaurant.name,
           slug: updateData.restaurant.slug,
-          thumbnail: updateData.restaurant.thumbnail
-            ? getMediaUrl(updateData.restaurant.thumbnail, 'image', 'thumbnail')
+          thumbnail: updateData.restaurant.thumbnailUrl
+            ? getMediaUrl(updateData.restaurant.thumbnailUrl, 'image', 'thumbnail')
             : null,
         },
         content: updateData.content,
