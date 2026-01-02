@@ -189,6 +189,20 @@ function emitUserNotification(io, userId, notification) {
   console.log(`[Socket] Emitted notification to user: ${userId}`);
 }
 
+function emitMessagesRead(io, reservationId, messageIds) {
+  const roomName = `reservation:${reservationId}`;
+
+  io.to(roomName).emit('reservation:messages:read', {
+    reservationId,
+    messageIds,
+    timestamp: new Date().toISOString(),
+  });
+
+  console.log(
+    `[Socket] Emitted messages read to room: ${roomName}, count: ${messageIds.length}`,
+  );
+}
+
 module.exports = {
   initReservationSocketHandlers,
   emitNewMessage,
@@ -196,4 +210,5 @@ module.exports = {
   emitReservationUpdate,
   emitUnreadCountUpdate,
   emitUserNotification,
+  emitMessagesRead,
 };

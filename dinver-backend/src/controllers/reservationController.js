@@ -185,6 +185,8 @@ const createReservation = async (req, res) => {
       ],
     });
 
+    notifyReservationUpdate(reservation.id, reservationWithMessages);
+
     res.status(201).json(reservationWithMessages);
 
     // Dohvati sve admine restorana
@@ -583,6 +585,40 @@ const declineReservation = async (req, res) => {
       });
     }
 
+    const updatedReservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'phone'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'phone'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'name'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    notifyStatusChange(id, oldStatus, 'declined', {
+      reservation: updatedReservation,
+      noteFromOwner,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
+
     // Pošalji email korisniku samo ako nije custom rezervacija
     if (!reservation.isCustomReservation && reservation.user) {
       await sendReservationEmail({
@@ -613,7 +649,7 @@ const declineReservation = async (req, res) => {
       }
     }
 
-    res.json(reservation);
+    res.json(updatedReservation);
   } catch (error) {
     console.error('Error declining reservation:', error);
     res.status(500).json({ error: 'Failed to decline reservation' });
@@ -753,6 +789,42 @@ const suggestAlternativeTime = async (req, res) => {
       suggestedTime,
     );
 
+    const updatedReservation = await Reservation.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'phone'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'address', 'place', 'phone'],
+        },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'name'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    notifyStatusChange(id, oldStatus, 'suggested_alt', {
+      reservation: updatedReservation,
+      suggestedDate,
+      suggestedTime,
+      noteFromOwner,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
+
     // Pošalji email korisniku
     await sendReservationEmail({
       to: reservation.user.email,
@@ -781,7 +853,7 @@ const suggestAlternativeTime = async (req, res) => {
       );
     }
 
-    res.json(reservation);
+    res.json(updatedReservation);
   } catch (error) {
     console.error('Error suggesting alternative time:', error);
     res.status(500).json({ error: 'Failed to suggest alternative time' });
@@ -904,6 +976,13 @@ const cancelReservation = async (req, res) => {
         },
       ],
     });
+
+    notifyStatusChange(id, oldStatus, 'cancelled_by_user', {
+      reservation: updatedReservation,
+      cancellationReason,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
 
     // Pošalji email korisniku o otkazivanju
     await sendReservationEmail({
@@ -1036,6 +1115,13 @@ const cancelReservationByRestaurant = async (req, res) => {
         },
       ],
     });
+
+    notifyStatusChange(id, oldStatus, 'cancelled_by_restaurant', {
+      reservation: updatedReservation,
+      cancellationReason,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
 
     // Pošalji email korisniku samo ako nije custom rezervacija
     if (!reservation.isCustomReservation && reservation.user) {
@@ -1269,8 +1355,29 @@ const acceptSuggestedTime = async (req, res) => {
           as: 'restaurant',
           attributes: ['id', 'name', 'address', 'place'],
         },
+        {
+          model: ReservationMessage,
+          as: 'messages',
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'name'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
       ],
     });
+
+    // Notify via socket about status change
+    notifyStatusChange(id, oldStatus, 'confirmed', {
+      reservation: updatedReservation,
+      acceptedDate: reservation.suggestedDate,
+      acceptedTime: reservation.suggestedTime,
+    });
+
+    notifyReservationUpdate(id, updatedReservation);
 
     // Pošalji email korisniku
     await sendReservationEmail({
@@ -1530,6 +1637,8 @@ const createCustomReservation = async (req, res) => {
         },
       ],
     });
+
+    notifyReservationUpdate(reservation.id, reservationWithMessages);
 
     res.status(201).json(reservationWithMessages);
   } catch (error) {
