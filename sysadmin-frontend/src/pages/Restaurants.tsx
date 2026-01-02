@@ -14,6 +14,7 @@ import {
   updateRestaurantAdmin,
   removeRestaurantAdmin,
 } from "../services/sysadminService";
+import { listUsers } from "../services/userService";
 import ImportRestaurantModal from "../components/ImportRestaurantModal";
 
 const formatRating = (rating: number | undefined, language: string) => {
@@ -50,6 +51,12 @@ const Restaurants = () => {
   const [newAdminRole, setNewAdminRole] = useState("admin");
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isAddAdminModalOpen, setAddAdminModalOpen] = useState(false);
+
+  // User autocomplete states
+  const [userSuggestions, setUserSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<{
     userId: string;
@@ -140,6 +147,56 @@ const Restaurants = () => {
     };
   }, []);
 
+  // Close autocomplete dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutsideAutocomplete = (event: MouseEvent) => {
+      if (
+        autocompleteRef.current &&
+        !autocompleteRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutsideAutocomplete);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideAutocomplete);
+    };
+  }, []);
+
+  // Debounced user search
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (newAdminEmail.length < 2) {
+        setUserSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      setLoadingSuggestions(true);
+      try {
+        const data = await listUsers(1, newAdminEmail);
+        setUserSuggestions(data.users || []);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error("Failed to search users", error);
+        setUserSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchUsers, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [newAdminEmail]);
+
+  const handleSelectUser = (user: any) => {
+    setNewAdminEmail(user.email);
+    setShowSuggestions(false);
+    setUserSuggestions([]);
+  };
+
   const handleManageAdmins = (restaurantId: string) => {
     setSelectedRestaurantId(restaurantId);
     fetchAdmins(restaurantId);
@@ -159,6 +216,8 @@ const Restaurants = () => {
         fetchAdmins(selectedRestaurantId);
         setNewAdminEmail("");
         setNewAdminRole("admin");
+        setUserSuggestions([]);
+        setShowSuggestions(false);
         toast.success(t("admin_added_successfully"));
         setAddAdminModalOpen(false);
       } catch (error: any) {
@@ -166,6 +225,14 @@ const Restaurants = () => {
         toast.error(t(error.message));
       }
     }
+  };
+
+  const handleCloseAddAdminModal = () => {
+    setAddAdminModalOpen(false);
+    setNewAdminEmail("");
+    setNewAdminRole("admin");
+    setUserSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const handleDeleteAdmin = async () => {
@@ -552,7 +619,7 @@ const Restaurants = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
             <button
-              onClick={() => setAddAdminModalOpen(false)}
+              onClick={handleCloseAddAdminModal}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             >
               &times;
@@ -571,7 +638,7 @@ const Restaurants = () => {
               </div>
             </div>
             <div className="h-line mb-4"></div>
-            <div className="mb-4">
+            <div className="mb-4 relative" ref={autocompleteRef}>
               <label className="block text-sm font-medium text-gray-700">
                 {t("admin_email")}
               </label>
@@ -580,7 +647,50 @@ const Restaurants = () => {
                 value={newAdminEmail}
                 onChange={(e) => setNewAdminEmail(e.target.value)}
                 className="mt-1 block w-full p-2 border border-gray-300 rounded outline-gray-300"
+                placeholder="Type to search users..."
+                autoComplete="off"
               />
+
+              {/* Autocomplete Dropdown */}
+              {showSuggestions && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {loadingSuggestions ? (
+                    <div className="p-3 text-center text-sm text-gray-500">
+                      Searching...
+                    </div>
+                  ) : userSuggestions.length > 0 ? (
+                    <ul>
+                      {userSuggestions.map((user) => (
+                        <li
+                          key={user.id}
+                          onClick={() => handleSelectUser(user)}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {user.email}
+                              </div>
+                            </div>
+                            {user.banned && (
+                              <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                                Banned
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-3 text-center text-sm text-gray-500">
+                      No users found
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">
@@ -599,7 +709,7 @@ const Restaurants = () => {
             <div className="h-line"></div>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setAddAdminModalOpen(false)}
+                onClick={handleCloseAddAdminModal}
                 className="secondary-button"
               >
                 {t("cancel")}
