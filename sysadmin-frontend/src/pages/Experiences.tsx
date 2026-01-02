@@ -2,493 +2,505 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
-  PlayIcon,
   PhotoIcon,
-  ClockIcon,
-  EyeIcon,
-  HeartIcon,
-  BookmarkIcon,
-  ExclamationTriangleIcon,
+  StarIcon,
+  MapPinIcon,
+  UserIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  XMarkIcon,
   CheckCircleIcon,
-  ArrowPathIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
-import experienceService, {
-  ModerationQueue,
-  ModerationStats,
-} from "../services/experienceService";
+import experienceService, { Experience } from "../services/experienceService";
+import toast from "react-hot-toast";
 
 const Experiences: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<ModerationStats | null>(null);
-  const [queue, setQueue] = useState<ModerationQueue[]>([]);
-  const [selectedState, setSelectedState] = useState<
-    "PENDING" | "IN_REVIEW" | "DECIDED" | "ESCALATED"
-  >("PENDING");
-  const [selectedPriority, setSelectedPriority] = useState<
-    "LOW" | "NORMAL" | "HIGH" | "URGENT" | undefined
-  >(undefined);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [stats, setStats] = useState<any>(null);
+
+  // Filters
+  const [selectedStatus, setSelectedStatus] = useState<
+    "PENDING" | "APPROVED" | "REJECTED" | ""
+  >("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedMealType, setSelectedMealType] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 20;
+
+  // UI state
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadData();
-  }, [selectedState, selectedPriority, currentPage]);
+  }, [
+    selectedStatus,
+    selectedCity,
+    selectedMealType,
+    searchQuery,
+    dateFrom,
+    dateTo,
+    currentPage,
+  ]);
 
   const loadData = async () => {
     try {
       setLoading(true);
 
-      // Load stats
-      const statsResponse = await experienceService.getModerationStats();
-      setStats(statsResponse.data);
+      // Load stats (only once on mount)
+      if (!stats) {
+        const statsResponse = await experienceService.getExperienceStats();
+        setStats(statsResponse.data);
+      }
 
-      // Load queue
-      const queueResponse = await experienceService.getModerationQueue(
-        selectedState,
-        selectedPriority,
+      // Load experiences with filters
+      const response = await experienceService.getAllExperiences(
+        selectedStatus || undefined,
+        selectedCity || undefined,
+        selectedMealType || undefined,
+        dateFrom || undefined,
+        dateTo || undefined,
+        searchQuery || undefined,
         currentPage,
-        20
+        limit
       );
-      setQueue(queueResponse.data.queue);
-      setTotalPages(queueResponse.pagination.totalPages);
+
+      setExperiences(response.experiences);
+      setTotalPages(response.pagination.totalPages);
+      setTotalCount(response.pagination.total);
     } catch (error) {
       console.error("Error loading experiences:", error);
+      toast.error("Failed to load experiences");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssignToMe = async (experienceId: string) => {
-    try {
-      setActionLoading(experienceId);
-      await experienceService.assignModerator(experienceId);
-      await loadData();
-    } catch (error) {
-      console.error("Error assigning moderator:", error);
-      alert(t("error_assigning_moderator"));
-    } finally {
-      setActionLoading(null);
-    }
+  const handleClearFilters = () => {
+    setSelectedStatus("");
+    setSelectedCity("");
+    setSelectedMealType("");
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
+    setCurrentPage(1);
   };
 
-  const handleApprove = async (experienceId: string) => {
-    if (!window.confirm(t("confirm_approve_experience"))) return;
-
-    try {
-      setActionLoading(experienceId);
-      await experienceService.approveExperience(experienceId);
-      await loadData();
-    } catch (error) {
-      console.error("Error approving experience:", error);
-      alert(t("error_approving_experience"));
-    } finally {
-      setActionLoading(null);
-    }
+  const handleViewExperience = (experienceId: string) => {
+    navigate(`/experiences/${experienceId}`);
   };
 
-  const handleReject = async (experienceId: string) => {
-    const reason = window.prompt(t("enter_rejection_reason"));
-    if (!reason) return;
-
-    if (!window.confirm(t("confirm_reject_experience"))) return;
-
-    try {
-      setActionLoading(experienceId);
-      await experienceService.rejectExperience(experienceId, reason);
-      await loadData();
-    } catch (error) {
-      console.error("Error rejecting experience:", error);
-      alert(t("error_rejecting_experience"));
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "URGENT":
-        return "bg-red-100 text-red-800 border-red-300";
-      case "HIGH":
-        return "bg-orange-100 text-orange-800 border-orange-300";
-      case "NORMAL":
-        return "bg-blue-100 text-blue-800 border-blue-300";
-      case "LOW":
-        return "bg-gray-100 text-gray-800 border-gray-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "APPROVED":
         return "bg-green-100 text-green-800";
-      case "REJECTED":
-        return "bg-red-100 text-red-800";
       case "PENDING":
         return "bg-yellow-100 text-yellow-800";
+      case "REJECTED":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 60) return `${diffMins} ${t("minutes_ago")}`;
-    if (diffHours < 24) return `${diffHours} ${t("hours_ago")}`;
-    return `${diffDays} ${t("days_ago")}`;
+  const getMealTypeLabel = (mealType: string | undefined) => {
+    if (!mealType) return "-";
+    const labels: { [key: string]: string } = {
+      breakfast: "🍳 Breakfast",
+      brunch: "🥞 Brunch",
+      lunch: "🍽️ Lunch",
+      dinner: "🍷 Dinner",
+      sweet: "🍰 Sweet",
+      drinks: "🍹 Drinks",
+    };
+    return labels[mealType] || mealType;
   };
 
-  const formatDeadline = (dateString: string) => {
-    const deadline = new Date(dateString);
-    const now = new Date();
-    const diffMs = deadline.getTime() - now.getTime();
-    const diffHours = Math.floor(diffMs / 3600000);
-
-    if (diffHours < 0) return t("sla_overdue");
-    if (diffHours < 1) return t("less_than_1_hour");
-    if (diffHours < 24) return `${diffHours} ${t("hours_remaining")}`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} ${t("days_remaining")}`;
-  };
+  const activeFiltersCount = [
+    selectedStatus,
+    selectedCity,
+    selectedMealType,
+    searchQuery,
+    dateFrom,
+    dateTo,
+  ].filter((f) => f).length;
 
   return (
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t("experience_moderation")}
-        </h1>
-        <p className="text-gray-600 mt-1">{t("manage_experience_posts")}</p>
+        <h1 className="text-2xl font-bold text-gray-900">Experiences</h1>
+        <p className="text-gray-600 mt-1">
+          Manage and review user experiences
+        </p>
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+          <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{t("pending_queue")}</p>
+                <p className="text-sm text-gray-600">Total</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.queue.pending}
+                  {stats.total}
                 </p>
               </div>
-              <ClockIcon className="h-10 w-10 text-yellow-500" />
+              <PhotoIcon className="h-8 w-8 text-gray-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+          <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{t("in_review")}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.queue.inReview}
+                <p className="text-sm text-gray-600">Approved</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.statusBreakdown.APPROVED}
                 </p>
               </div>
-              <ArrowPathIcon className="h-10 w-10 text-blue-500" />
+              <CheckCircleIcon className="h-8 w-8 text-green-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+          <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{t("sla_violated")}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.queue.slaViolated}
+                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {stats.statusBreakdown.PENDING}
                 </p>
               </div>
-              <ExclamationTriangleIcon className="h-10 w-10 text-red-500" />
+              <ClockIcon className="h-8 w-8 text-yellow-400" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+          <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{t("total_approved")}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.experiences.totalApproved}
+                <p className="text-sm text-gray-600">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {stats.statusBreakdown.REJECTED}
                 </p>
               </div>
-              <CheckCircleIcon className="h-10 w-10 text-green-500" />
+              <XMarkIcon className="h-8 w-8 text-red-400" />
             </div>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t("filter_by_state")}
-            </label>
-            <select
-              value={selectedState}
-              onChange={(e) => {
-                setSelectedState(
-                  e.target.value as
-                    | "PENDING"
-                    | "IN_REVIEW"
-                    | "DECIDED"
-                    | "ESCALATED"
-                );
-                setCurrentPage(1);
-              }}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FunnelIcon className="h-5 w-5 text-gray-400" />
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              {activeFiltersCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-sm text-blue-600 hover:text-blue-700"
             >
-              <option value="PENDING">{t("pending")}</option>
-              <option value="IN_REVIEW">{t("in_review")}</option>
-              <option value="DECIDED">{t("decided")}</option>
-              <option value="ESCALATED">{t("escalated")}</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t("filter_by_priority")}
-            </label>
-            <select
-              value={selectedPriority || ""}
-              onChange={(e) => {
-                setSelectedPriority(
-                  e.target.value
-                    ? (e.target.value as "LOW" | "NORMAL" | "HIGH" | "URGENT")
-                    : undefined
-                );
-                setCurrentPage(1);
-              }}
-              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">{t("all_priorities")}</option>
-              <option value="LOW">{t("low_priority")}</option>
-              <option value="NORMAL">{t("normal_priority")}</option>
-              <option value="HIGH">{t("high_priority")}</option>
-              <option value="URGENT">{t("urgent_priority")}</option>
-            </select>
+              {showFilters ? "Hide" : "Show"}
+            </button>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="p-4 space-y-4">
+            {/* Row 1: Status, City, Meal Type */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(
+                      e.target.value as "PENDING" | "APPROVED" | "REJECTED" | ""
+                    );
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </div>
+
+              {/* City Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={selectedCity}
+                  onChange={(e) => {
+                    setSelectedCity(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Enter city name..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Meal Type Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Meal Type
+                </label>
+                <select
+                  value={selectedMealType}
+                  onChange={(e) => {
+                    setSelectedMealType(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Meal Types</option>
+                  <option value="breakfast">Breakfast</option>
+                  <option value="brunch">Brunch</option>
+                  <option value="lunch">Lunch</option>
+                  <option value="dinner">Dinner</option>
+                  <option value="sweet">Sweet</option>
+                  <option value="drinks">Drinks</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Search and Date Range */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Description
+                </label>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search in descriptions..."
+                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Date From */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            {activeFiltersCount > 0 && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Queue List */}
+      {/* Results Count */}
+      <div className="mb-4 text-sm text-gray-600">
+        Showing {experiences.length} of {totalCount} experiences
+      </div>
+
+      {/* Experiences Grid */}
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <ArrowPathIcon className="h-8 w-8 text-blue-600 animate-spin" />
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600 mt-2">Loading experiences...</p>
         </div>
-      ) : queue.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">{t("no_experiences_in_queue")}</p>
+      ) : experiences.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No experiences found</p>
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={handleClearFilters}
+              className="mt-4 text-blue-600 hover:text-blue-700"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {queue.map((item) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {experiences.map((experience) => (
             <div
-              key={item.id}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+              key={experience.id}
+              onClick={() => handleViewExperience(experience.id)}
+              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
             >
-              <div className="p-6">
-                <div className="flex items-start gap-4">
-                  {/* Thumbnail */}
-                  <div
-                    className="flex-shrink-0 w-24 h-32 bg-gray-200 rounded-lg overflow-hidden cursor-pointer"
-                    onClick={() =>
-                      navigate(`/experiences/${item.experienceId}`)
-                    }
+              {/* Image */}
+              {experience.media && experience.media.length > 0 && (
+                <div className="aspect-video bg-gray-200 relative">
+                  <img
+                    src={experience.media[0].cdnUrl}
+                    alt="Experience"
+                    className="w-full h-full object-cover"
+                  />
+                  {experience.media.length > 1 && (
+                    <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                      +{experience.media.length - 1} more
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="p-4">
+                {/* Status Badge */}
+                <div className="mb-2">
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded ${getStatusBadge(
+                      experience.status
+                    )}`}
                   >
-                    {item.experience?.media?.[0]?.cdnUrl ? (
-                      <img
-                        src={item.experience.media[0].cdnUrl}
-                        alt={item.experience.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        {item.experience?.mediaKind === "VIDEO" ? (
-                          <PlayIcon className="h-8 w-8 text-gray-400" />
-                        ) : (
-                          <PhotoIcon className="h-8 w-8 text-gray-400" />
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    {experience.status}
+                  </span>
+                </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3
-                          className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600"
-                          onClick={() =>
-                            navigate(`/experiences/${item.experienceId}`)
-                          }
-                        >
-                          {item.experience?.title || t("untitled_experience")}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {item.experience?.author?.name}•{" "}
-                          {item.experience?.restaurant?.name}
-                        </p>
-                      </div>
-
-                      {/* Priority & Status Badges */}
-                      <div className="flex gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(
-                            item.priority
-                          )}`}
-                        >
-                          {t(`${item.priority.toLowerCase()}_priority`)}
-                        </span>
-                        {item.experience?.status && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              item.experience.status
-                            )}`}
-                          >
-                            {t(item.experience.status.toLowerCase())}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    {item.experience?.description && (
-                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">
-                        {item.experience.description}
-                      </p>
-                    )}
-
-                    {/* Ratings */}
-                    {item.experience && (
-                      <div className="flex gap-4 mb-3 text-sm text-gray-600">
-                        {item.experience.foodRating && (
-                          <span>
-                            {t("food")}: {item.experience.foodRating}/5
-                          </span>
-                        )}
-                        {item.experience.serviceRating && (
-                          <span>
-                            {t("service")}: {item.experience.serviceRating}/5
-                          </span>
-                        )}
-                        {item.experience.atmosphereRating && (
-                          <span>
-                            {t("atmosphere")}:{" "}
-                            {item.experience.atmosphereRating}/5
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Engagement Stats */}
-                    <div className="flex gap-6 mb-3 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <EyeIcon className="h-4 w-4" />
-                        <span>{item.experience?.viewsCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HeartIcon className="h-4 w-4" />
-                        <span>{item.experience?.likesCount || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <BookmarkIcon className="h-4 w-4" />
-                        <span>{item.experience?.savesCount || 0}</span>
-                      </div>
-                      {item.reportCount > 0 && (
-                        <div className="flex items-center gap-1 text-red-600">
-                          <ExclamationTriangleIcon className="h-4 w-4" />
-                          <span>
-                            {item.reportCount} {t("reports")}
-                          </span>
+                {/* Restaurant & User */}
+                <div className="space-y-2 mb-3">
+                  {experience.restaurant && (
+                    <div className="flex items-start gap-2">
+                      <MapPinIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">
+                          {experience.restaurant.name}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Meta Info */}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>
-                        {t("created")}: {formatTimeAgo(item.createdAt)}
-                      </span>
-                      <span
-                        className={
-                          item.slaViolated ? "text-red-600 font-medium" : ""
-                        }
-                      >
-                        {t("sla_deadline")}: {formatDeadline(item.slaDeadline)}
-                      </span>
-                      {item.assignedTo && (
-                        <span>
-                          {t("assigned_to")}: {item.assignedTo.name}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    {selectedState === "PENDING" && (
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={() => handleAssignToMe(item.experienceId)}
-                          disabled={
-                            actionLoading === item.experienceId ||
-                            !!item.assignedToId
-                          }
-                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        >
-                          {item.assignedToId
-                            ? t("assigned")
-                            : t("assign_to_me")}
-                        </button>
-                        <button
-                          onClick={() => handleApprove(item.experienceId)}
-                          disabled={actionLoading === item.experienceId}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        >
-                          {t("approve")}
-                        </button>
-                        <button
-                          onClick={() => handleReject(item.experienceId)}
-                          disabled={actionLoading === item.experienceId}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        >
-                          {t("reject")}
-                        </button>
-                        <button
-                          onClick={() =>
-                            navigate(`/experiences/${item.experienceId}`)
-                          }
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                        >
-                          {t("view_details")}
-                        </button>
+                        <div className="text-gray-500">
+                          {experience.restaurant.city}
+                        </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {selectedState === "DECIDED" && (
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={() =>
-                            navigate(`/experiences/${item.experienceId}`)
-                          }
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                        >
-                          {t("view_details")}
-                        </button>
-                        {item.decidedBy && (
-                          <span className="text-sm text-gray-600 px-4 py-2">
-                            {t("decided_by")}: {item.decidedBy.name}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  {experience.author && (
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-600">
+                        {experience.author.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ratings */}
+                <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
+                  <div className="text-center">
+                    <div className="text-gray-500 text-xs">Food</div>
+                    <div className="font-semibold flex items-center justify-center gap-1">
+                      <StarIcon className="h-3 w-3 text-yellow-500" />
+                      {experience.foodRating?.toFixed(1) || "-"}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-500 text-xs">Ambience</div>
+                    <div className="font-semibold flex items-center justify-center gap-1">
+                      <StarIcon className="h-3 w-3 text-yellow-500" />
+                      {experience.ambienceRating?.toFixed(1) || "-"}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-500 text-xs">Service</div>
+                    <div className="font-semibold flex items-center justify-center gap-1">
+                      <StarIcon className="h-3 w-3 text-yellow-500" />
+                      {experience.serviceRating?.toFixed(1) || "-"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meal Type */}
+                {experience.mealType && (
+                  <div className="mb-2">
+                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      {getMealTypeLabel(experience.mealType)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Description Preview */}
+                {experience.description && (
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                    {experience.description}
+                  </p>
+                )}
+
+                {/* Footer: Date & Engagement */}
+                <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon className="h-3 w-3" />
+                    {new Date(
+                      experience.publishedAt || experience.createdAt
+                    ).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span>❤️ {experience.likesCount || 0}</span>
+                    <span>👁️ {experience.viewsCount || 0}</span>
                   </div>
                 </div>
               </div>
@@ -499,24 +511,28 @@ const Experiences: React.FC = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-6">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("previous")}
-          </button>
-          <span className="text-gray-600">
-            {t("page")} {currentPage} {t("of")} {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("next")}
-          </button>
+        <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow px-4 py-3">
+          <div className="text-sm text-gray-700">
+            Page {currentPage} of {totalPages}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       )}
     </div>

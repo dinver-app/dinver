@@ -2,9 +2,9 @@
   "development": {
     "username": "postgres",
     "password": "postgres",
-    "database": "d6ur4t6g8c1t7h",
+    "database": "dinver",
     "host": "localhost",
-    "port": 5432,
+    "port": 5433,
     "dialect": "postgres"
   },
   "staging": {

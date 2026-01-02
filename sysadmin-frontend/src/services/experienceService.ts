@@ -358,6 +358,87 @@ const experienceService = {
     );
     return response.data;
   },
+
+  /**
+   * Get all experiences with filters (NEW - for general listing)
+   */
+  async getAllExperiences(
+    status?: "PENDING" | "APPROVED" | "REJECTED",
+    city?: string,
+    mealType?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    search?: string,
+    page = 1,
+    limit = 20
+  ): Promise<
+    PaginatedResponse<{ experiences: Experience[] }>
+  > {
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    if (city) params.append("city", city);
+    if (mealType) params.append("mealType", mealType);
+    if (dateFrom) params.append("dateFrom", dateFrom);
+    if (dateTo) params.append("dateTo", dateTo);
+    if (search) params.append("search", search);
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    const response = await apiClient.get(
+      `/sysadmin/experiences?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get experience statistics (NEW)
+   */
+  async getExperienceStats(): Promise<{
+    data: {
+      total: number;
+      statusBreakdown: {
+        PENDING: number;
+        APPROVED: number;
+        REJECTED: number;
+      };
+      topCities: Array<{ city: string; count: number }>;
+      mealTypeBreakdown: { [key: string]: number };
+    };
+  }> {
+    const response = await apiClient.get("/sysadmin/experiences/stats");
+    return response.data;
+  },
+
+  /**
+   * Get single experience by ID (NEW)
+   */
+  async getExperienceById(experienceId: string): Promise<{ data: { experience: Experience } }> {
+    const response = await apiClient.get(`/sysadmin/experiences/${experienceId}`);
+    return response.data;
+  },
+
+  /**
+   * Delete experience (NEW)
+   */
+  async deleteExperience(experienceId: string): Promise<{ data: { message: string } }> {
+    const response = await apiClient.delete(`/sysadmin/experiences/${experienceId}`);
+    return response.data;
+  },
+
+  /**
+   * Update experience status (NEW)
+   */
+  async updateExperienceStatus(
+    experienceId: string,
+    status: "PENDING" | "APPROVED" | "REJECTED",
+    rejectionReason?: string
+  ): Promise<{ data: { message: string; experience: Experience } }> {
+    const response = await apiClient.put(`/sysadmin/experiences/${experienceId}/status`, {
+      status,
+      rejectionReason,
+    });
+    return response.data;
+  },
 };
 
 export default experienceService;
