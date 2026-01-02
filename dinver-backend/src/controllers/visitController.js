@@ -85,6 +85,19 @@ const createVisitFromReceipt = async (req, res) => {
       return res.status(400).json({ error: 'Receipt ID is required' });
     }
 
+    let parsedTaggedBuddies = taggedBuddies;
+    if (typeof taggedBuddies === 'string') {
+      try {
+        parsedTaggedBuddies = JSON.parse(taggedBuddies);
+      } catch (e) {
+        console.warn('[Visit Create] Failed to parse taggedBuddies JSON, using raw value:', e.message);
+      }
+    }
+    
+    if (parsedTaggedBuddies && !Array.isArray(parsedTaggedBuddies)) 
+       parsedTaggedBuddies = [parsedTaggedBuddies];
+    
+
     console.log(
       `[Visit Create] Creating visit from receipt ${receiptId} for user ${userId}`,
     );
@@ -345,7 +358,11 @@ const createVisitFromReceipt = async (req, res) => {
       status: 'PENDING',
       wasInMustVisit: wasInMustVisit,
       submittedAt: new Date(),
-      taggedBuddies: taggedBuddies || [],
+      receiptImageUrl: receipt.mediumUrl || receipt.imageUrl,
+      status: 'PENDING',
+      wasInMustVisit: wasInMustVisit,
+      submittedAt: new Date(),
+      taggedBuddies: parsedTaggedBuddies || [],
       manualRestaurantName: !finalRestaurantId ? manualRestaurantName : null,
       manualRestaurantCity: !finalRestaurantId ? manualRestaurantCity : null,
     });
@@ -381,6 +398,29 @@ const createVisitFromReceipt = async (req, res) => {
           removedForVisitId: visit.id,
         });
         console.log(`[Visit Create] Updated Must Visit entry with visit ID`);
+      }
+    }
+
+    if (parsedTaggedBuddies && parsedTaggedBuddies.length > 0) {
+      for (const buddyId of parsedTaggedBuddies) {
+        try {
+          await Visit.create({
+            userId: buddyId,
+            restaurantId: finalRestaurantId || null,
+            receiptImageUrl: receipt.mediumUrl || receipt.imageUrl,
+            status: 'PENDING',
+            wasInMustVisit: false,
+            submittedAt: new Date(),
+            taggedBuddies: [visit.id], // Link to main visit
+            manualRestaurantName: !finalRestaurantId ? manualRestaurantName : null,
+            manualRestaurantCity: !finalRestaurantId ? manualRestaurantCity : null,
+          });
+        } catch (e) {
+          console.error(
+            `[Visit Create] Failed to create visit for buddy ${buddyId}`,
+            e,
+          );
+        }
       }
     }
 
@@ -1243,6 +1283,32 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
       { transaction },
     );
 
+    const parsedTaggedBuddies = taggedBuddies ? JSON.parse(taggedBuddies) : [];
+    if (parsedTaggedBuddies.length > 0) {
+      for (const buddyId of parsedTaggedBuddies) {
+        try {
+          await Visit.create(
+            {
+              userId: buddyId,
+              restaurantId: null,
+              receiptImageUrl: imageUrl,
+              status: 'PENDING',
+              wasInMustVisit: false,
+              submittedAt: new Date(),
+              taggedBuddies: [visit.id],
+            },
+            { transaction },
+          );
+          console.log(`[Upload & Create Visit] Created buddy visit for user ${buddyId}`);
+        } catch (buddyError) {
+          console.error(
+            `[Upload & Create Visit] Failed to create buddy visit for ${buddyId}:`,
+            buddyError.message,
+          );
+        }
+      }
+    }
+
     // === COMMIT TRANSACTION ===
     await transaction.commit();
 
@@ -1620,10 +1686,11 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
     console.log('└───────────────────────────────────────────────────────┘\n');
 
     // ========================================================================
-    // STEP 4: UPDATE VISIT
+    // STEP 4: UPDATE VISIT (and BUDDY VISITS)
     // ========================================================================
     console.log('┌─ STEP 4: Update Visit ───────────────────────────────┐');
     if (matchedRestaurant) {
+      // Update main visit
       await Visit.update(
         {
           restaurantId: matchedRestaurant.id,
@@ -1633,6 +1700,26 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
         },
       );
       console.log(`│ ✅ Visit linked to restaurant: ${matchedRestaurant.name}`);
+
+      try {
+        const { Op } = require('sequelize');
+        const updatedBuddyVisits = await Visit.update(
+          {
+            restaurantId: matchedRestaurant.id,
+          },
+          {
+            where: {
+              taggedBuddies: { [Op.contains]: [receipt.visitId] },
+              userId: { [Op.ne]: receipt.userId },
+            },
+          },
+        );
+
+        if (updatedBuddyVisits[0] > 0) {
+        }
+      } catch (buddyUpdateError) {
+        console.log('│ ⚠️  Failed to update buddy visits:', buddyUpdateError.message);
+      }
     } else {
       console.log('│ ⚠️  No restaurant matched - Visit remains unlinked');
       console.log('│    → Admin will manually link restaurant');
