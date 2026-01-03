@@ -265,17 +265,16 @@ export default function PartnersSection({ messages, locale }: PartnersSectionPro
             </div>
 
             {/* CTA */}
-            <div className="pt-4">
-              <Button
+            <div className="pt-6">
+              <button
                 onClick={() =>
                   document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
                 }
-                size="lg"
-                className="bg-dinver-cream text-dinver-dark hover:bg-dinver-cream/90"
+                className="inline-flex items-center bg-white text-dinver-dark font-medium px-5 py-2 text-sm rounded-md"
               >
                 {messages.forRestaurants.cta}
-                <ChevronRight size={18} className="ml-1" />
-              </Button>
+                <ChevronRight size={16} className="ml-1" />
+              </button>
             </div>
           </AnimatedSection>
         </div>

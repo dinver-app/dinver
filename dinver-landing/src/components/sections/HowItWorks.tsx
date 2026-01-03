@@ -1,40 +1,40 @@
-'use client';
+"use client";
 
-import { useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
-import { Compass, Receipt, Trophy, Gift } from 'lucide-react';
-import { Messages } from '@/lib/i18n';
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
+import { Compass, Receipt, Trophy, Gift } from "lucide-react";
+import { Messages } from "@/lib/i18n";
 
 interface HowItWorksProps {
   messages: Messages;
-  locale: 'en' | 'hr';
+  locale: "en" | "hr";
 }
 
 export default function HowItWorks({ messages, locale }: HowItWorksProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, margin: '-100px' });
+  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
 
   const steps = [
     {
       icon: Compass,
       title: messages.howItWorks.steps.discover.title,
       description: messages.howItWorks.steps.discover.description,
-      color: 'bg-emerald-500',
-      iconBg: 'bg-emerald-500/20',
+      color: "bg-emerald-500",
+      iconBg: "bg-emerald-500/20",
     },
     {
       icon: Receipt,
       title: messages.howItWorks.steps.visit.title,
       description: messages.howItWorks.steps.visit.description,
-      color: 'bg-dinver-green',
-      iconBg: 'bg-dinver-green/20',
+      color: "bg-dinver-green",
+      iconBg: "bg-dinver-green/20",
     },
     {
       icon: Trophy,
       title: messages.howItWorks.steps.share.title,
       description: messages.howItWorks.steps.share.description,
-      color: 'bg-amber-500',
-      iconBg: 'bg-amber-500/20',
+      color: "bg-amber-500",
+      iconBg: "bg-amber-500/20",
     },
   ];
 
@@ -58,7 +58,7 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
           className="text-center max-w-3xl mx-auto mb-20"
         >
           <span className="inline-block px-4 py-2 bg-white/10 text-dinver-cream rounded-full text-sm font-medium mb-6">
-            {locale === 'hr' ? '3 Jednostavna koraka' : '3 Simple Steps'}
+            {locale === "hr" ? "3 Jednostavna koraka" : "3 Simple Steps"}
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
             {messages.howItWorks.title}
@@ -87,12 +87,18 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
                     {/* Glowing background */}
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: index * 0.3,
+                      }}
                       className={`absolute inset-0 ${step.color} rounded-3xl blur-xl opacity-30`}
                     />
 
                     {/* Main icon container */}
-                    <div className={`relative w-20 h-20 ${step.color} rounded-3xl flex items-center justify-center shadow-2xl`}>
+                    <div
+                      className={`relative w-20 h-20 ${step.color} rounded-3xl flex items-center justify-center shadow-2xl`}
+                    >
                       <step.icon size={36} className="text-white" />
                     </div>
 
@@ -120,8 +126,8 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
                       transition={{ duration: 0.5, delay: 0.5 + index * 0.3 }}
                       className={`h-full origin-left ${
                         index === 0
-                          ? 'bg-gradient-to-r from-emerald-500 to-dinver-green'
-                          : 'bg-gradient-to-r from-dinver-green to-amber-500'
+                          ? "bg-gradient-to-r from-emerald-500 to-dinver-green"
+                          : "bg-gradient-to-r from-dinver-green to-amber-500"
                       }`}
                     />
                   </div>
@@ -153,9 +159,9 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/5 rounded-full border border-white/10">
             <Gift size={18} className="text-dinver-cream" />
             <p className="text-gray-400 text-sm">
-              {locale === 'hr'
-                ? 'Top 3 istraživača osvajaju Mystery Box svakih 2 tjedna!'
-                : 'Top 3 explorers win a Mystery Box every 2 weeks!'}
+              {locale === "hr"
+                ? "Top 2 istraživača osvajaju Mystery Box svakih 2 tjedna!"
+                : "Top 2 explorers win a Mystery Box every 2 weeks!"}
             </p>
           </div>
         </motion.div>

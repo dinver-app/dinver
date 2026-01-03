@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Globe, Download } from 'lucide-react';
+import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import AppStoreButtons from '@/components/ui/AppStoreButtons';
@@ -31,8 +32,8 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
     { href: '#features', label: messages.nav.features },
     { href: '#how-it-works', label: messages.nav.howItWorks },
     { href: '#restaurants', label: messages.nav.restaurants },
-    { href: '#explore', label: messages.nav.explore },
-    { href: '#contact', label: messages.nav.contact },
+    { href: '#faq', label: 'FAQ' },
+    { href: '/kontakt', label: messages.nav.contact },
   ];
 
   const toggleLocale = () => {
@@ -60,19 +61,33 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
-              {navItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className={`transition-colors font-medium ${
-                    isScrolled
-                      ? 'text-gray-700 hover:text-dinver-green'
-                      : 'text-white/80 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </a>
-              ))}
+              {navItems.map((item) =>
+                item.href.startsWith('/') ? (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`transition-colors font-medium ${
+                      isScrolled
+                        ? 'text-gray-700 hover:text-dinver-green'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={`transition-colors font-medium ${
+                      isScrolled
+                        ? 'text-gray-700 hover:text-dinver-green'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                )
+              )}
             </nav>
 
             {/* Desktop Actions */}
@@ -157,16 +172,27 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
             >
               <div className="flex flex-col h-full pt-20 pb-6 px-6">
                 <div className="flex flex-col gap-4">
-                  {navItems.map((item) => (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
-                    >
-                      {item.label}
-                    </a>
-                  ))}
+                  {navItems.map((item) =>
+                    item.href.startsWith('/') ? (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
+                      >
+                        {item.label}
+                      </a>
+                    )
+                  )}
                 </div>
                 <div className="mt-auto flex flex-col gap-4">
                   <button

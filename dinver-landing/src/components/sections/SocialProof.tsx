@@ -89,12 +89,12 @@ export default function SocialProof({ locale }: SocialProofProps) {
           <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10" />
           <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10" />
 
-          {/* Scrolling partners */}
-          <div className="flex animate-marquee whitespace-nowrap">
+          {/* Scrolling partners - non-interactive, continuous loop */}
+          <div className="flex animate-marquee whitespace-nowrap pointer-events-none select-none">
             {[...partners, ...partners].map((partner, i) => (
               <span
                 key={`${partner.id}-${i}`}
-                className="mx-8 text-gray-400 text-lg font-medium hover:text-dinver-green transition-colors"
+                className="mx-8 text-gray-400 text-lg font-medium"
               >
                 {partner.name}
               </span>

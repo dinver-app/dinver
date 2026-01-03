@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -19,6 +19,133 @@ interface FeaturesBentoProps {
 
 export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Infinite scroll loop
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const cardWidth = 320 + 24; // card width + gap
+    const totalWidth = cardWidth * 6; // 6 original cards
+
+    const handleScroll = () => {
+      // When scrolled to the cloned end, jump to start
+      if (container.scrollLeft >= totalWidth) {
+        container.scrollLeft = container.scrollLeft - totalWidth;
+      }
+      // When scrolled before start, jump to end
+      if (container.scrollLeft <= 0) {
+        container.scrollLeft = container.scrollLeft + totalWidth;
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+
+    // Start in the middle (at first set of cards)
+    container.scrollLeft = cardWidth;
+
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Smooth drag to scroll
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+    let velX = 0;
+    let momentumID: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      startX = e.pageX;
+      scrollLeft = container.scrollLeft;
+      cancelAnimationFrame(momentumID);
+    };
+
+    const handleMouseLeave = () => {
+      if (isDown) {
+        isDown = false;
+        beginMomentum();
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDown) {
+        isDown = false;
+        beginMomentum();
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX;
+      const walk = (startX - x) * 1.2;
+      velX = startX - x;
+      startX = x;
+      container.scrollLeft = scrollLeft + walk;
+      scrollLeft = container.scrollLeft;
+    };
+
+    const beginMomentum = () => {
+      const friction = 0.95;
+      const momentum = () => {
+        velX *= friction;
+        container.scrollLeft += velX * 0.5;
+        if (Math.abs(velX) > 0.5) {
+          momentumID = requestAnimationFrame(momentum);
+        }
+      };
+      momentum();
+    };
+
+    // Touch events for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      isDown = true;
+      startX = e.touches[0].pageX;
+      scrollLeft = container.scrollLeft;
+      cancelAnimationFrame(momentumID);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDown) return;
+      const x = e.touches[0].pageX;
+      const walk = (startX - x) * 1.2;
+      velX = startX - x;
+      startX = x;
+      container.scrollLeft = scrollLeft + walk;
+      scrollLeft = container.scrollLeft;
+    };
+
+    const handleTouchEnd = () => {
+      if (isDown) {
+        isDown = false;
+        beginMomentum();
+      }
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      cancelAnimationFrame(momentumID);
+    };
+  }, []);
 
   const features = [
     {
@@ -108,17 +235,24 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
 
         <div
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto scrollbar-hide px-8 lg:px-16 pb-4 snap-x snap-mandatory"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          className="flex gap-6 overflow-x-auto scrollbar-hide px-8 lg:px-16 pb-4 cursor-grab active:cursor-grabbing select-none"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
         >
-          {features.map((feature, index) => (
+          {/* Triple the cards for infinite loop effect */}
+          {[...features, ...features, ...features].map((feature, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="flex-shrink-0 w-[320px] snap-center"
+              transition={{ delay: (index % 6) * 0.05 }}
+              className="flex-shrink-0 w-[320px]"
             >
               <div
                 className={`relative bg-gradient-to-br ${feature.gradient} rounded-3xl p-6 h-full min-h-[280px] shadow-sm hover:shadow-lg transition-shadow duration-300`}
@@ -140,33 +274,14 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
                 </div>
 
                 {/* Content */}
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 pointer-events-none">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed text-sm">
+                <p className="text-gray-600 leading-relaxed text-sm pointer-events-none">
                   {feature.description}
                 </p>
               </div>
             </motion.div>
-          ))}
-        </div>
-
-        {/* Scroll indicators */}
-        <div className="flex justify-center gap-2 mt-6">
-          {features.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                if (scrollRef.current) {
-                  const cardWidth = 320 + 24; // card width + gap
-                  scrollRef.current.scrollTo({
-                    left: cardWidth * index,
-                    behavior: 'smooth',
-                  });
-                }
-              }}
-              className="w-2 h-2 rounded-full bg-gray-300 hover:bg-dinver-green transition-colors"
-            />
           ))}
         </div>
       </div>

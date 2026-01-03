@@ -12,6 +12,7 @@ import ExperienceFeedNew from '@/components/sections/ExperienceFeedNew';
 import RewardsSection from '@/components/sections/RewardsSection';
 import PartnersSection from '@/components/sections/PartnersSection';
 import SocialProof from '@/components/sections/SocialProof';
+import FAQ from '@/components/sections/FAQ';
 
 // Keep original sections that work well
 import HowItWorks from '@/components/sections/HowItWorks';
@@ -60,6 +61,9 @@ export default function Home() {
 
       {/* Social Proof with partners marquee, stats, and experiences */}
       <SocialProof locale={locale} />
+
+      {/* FAQ Section */}
+      <FAQ locale={locale} />
 
       {/* Contact form - kept from original */}
       <Contact messages={messages} />

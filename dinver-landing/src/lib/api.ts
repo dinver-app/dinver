@@ -480,3 +480,26 @@ export async function getLandingWhatsNew(params?: {
 export async function getLandingStats(): Promise<LandingStatsResponse> {
   return apiRequest<LandingStatsResponse>('/stats');
 }
+
+// ==================== CONTACT ====================
+
+export interface ContactFormRequest {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  type?: 'general' | 'partnership' | 'support' | 'press' | 'other';
+  phone?: string;
+}
+
+export interface ContactFormResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function submitContactForm(data: ContactFormRequest): Promise<ContactFormResponse> {
+  return apiRequest<ContactFormResponse>('/contact', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
