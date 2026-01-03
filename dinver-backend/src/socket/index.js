@@ -20,6 +20,7 @@ function initializeSocket(httpServer) {
         'https://app.dinver.eu',
         'https://admin.dinver.eu',
         'https://sysadmin.dinver.eu',
+        'https://dinver-staging-landing.vercel.app',
         /^https:\/\/([a-zA-Z0-9-]+\.)*dinver\.eu$/,
       ],
       credentials: true,
