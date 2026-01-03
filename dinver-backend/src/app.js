@@ -140,6 +140,7 @@ const allowedOrigins = [
   'https://sysadmin.dinver.eu',
   'https://dinver.eu',
   'https://www.dinver.eu',
+  'https://dinver-staging-landing.vercel.app',
 ];
 
 app.use(
