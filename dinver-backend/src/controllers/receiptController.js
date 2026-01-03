@@ -1129,7 +1129,7 @@ const getAllReceipts = async (req, res) => {
     // Transform image URLs to signed URLs and add tagged buddies
     const transformedReceipts = receipts.rows.map((receipt) => {
       const receiptData = receipt.toJSON();
-      receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image');
+      receiptData.imageUrl = getMediaUrl(receipt.imageUrl, 'image', 'original');
 
       // Map tagged buddy IDs to user objects
       if (receipt.visit?.taggedBuddies && receipt.visit.taggedBuddies.length > 0) {

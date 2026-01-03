@@ -1,0 +1,249 @@
+{
+  "nav": {
+    "features": "Mogućnosti",
+    "howItWorks": "Kako radi",
+    "restaurants": "Za Restorane",
+    "explore": "Istraži",
+    "contact": "Partneri",
+    "downloadApp": "Preuzmi aplikaciju",
+    "language": "EN"
+  },
+  "hero": {
+    "tagline": "Otkrij. Podijeli. Doživi.",
+    "title": "Tvoj sljedeći odličan obrok te čeka",
+    "subtitle": "Dinver je više od vodiča za restorane. To je zajednica ljubitelja hrane koji otkrivaju skrivene dragulje, dijele autentična iskustva i zarađuju nagrade za svaki posjet.",
+    "cta": "Preuzmi sada",
+    "ctaSecondary": "Istraži restorane",
+    "stats": {
+      "restaurants": "Partner restorana",
+      "users": "Istraživača hrane",
+      "experiences": "Podijeljenih doživljaja"
+    }
+  },
+  "features": {
+    "title": "Zašto Dinver?",
+    "subtitle": "Sve što trebaš za otkrivanje svog sljedećeg omiljenog restorana",
+    "items": {
+      "community": {
+        "title": "Zajednica na prvom mjestu",
+        "description": "Prati prijatelje, vidi gdje su bili i otkrij restorane kroz preporuke od povjerenja."
+      },
+      "experiences": {
+        "title": "Feed doživljaja",
+        "description": "Listaj kroz autentične gastro doživljaje kao na društvenoj mreži. Prave slike, prave recenzije, pravi ljudi."
+      },
+      "rewards": {
+        "title": "Osvoji nagrade",
+        "description": "Skeniraj račun, zabilježi posjet i natječi se na ljestvici. Najbolji istraživači osvajaju nagrade svaka dva tjedna."
+      },
+      "lists": {
+        "title": "Must Visit & Visited",
+        "description": "Prati mjesta koja želiš posjetiti i stvori osobni dnevnik svih mjesta gdje si bio."
+      },
+      "search": {
+        "title": "Pretraži po jelu",
+        "description": "Želiš lazanje? Pretraži jela i pronađi koji restorani nude točno ono što želiš."
+      },
+      "details": {
+        "title": "Kompletne informacije",
+        "description": "360° virtualne šetnje, interaktivni meniji, radno vrijeme, fotografije i sve što trebaš za odabir."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Kako radi",
+    "subtitle": "Od otkrića do večere u tri jednostavna koraka",
+    "steps": {
+      "discover": {
+        "title": "Otkrij",
+        "description": "Pregledaj feed doživljaja, pretraži po jelu ili lokaciji, ili provjeri što je novo u tvojim omiljenim restoranima."
+      },
+      "visit": {
+        "title": "Posjeti i slikaj",
+        "description": "Večeraj u bilo kojem restoranu i uslikaj račun. Verificirat ćemo tvoj posjet i dodati ga u tvoju povijest."
+      },
+      "share": {
+        "title": "Podijeli i osvoji",
+        "description": "Kreiraj doživljaj sa slikama i ocjenama. Penjaj se na ljestvici i otključaj ekskluzivne nagrade."
+      }
+    }
+  },
+  "experienceFeed": {
+    "title": "Feed doživljaja",
+    "subtitle": "Autentični trenuci od pravih ljubitelja hrane",
+    "description": "Zaboravi tradicionalne recenzije. Naš feed doživljaja ti pokazuje prave gastro trenutke - ambijent, hranu, atmosferu. Listaj kao na omiljenoj društvenoj mreži i otkrij svoj sljedeći obrok.",
+    "cta": "Pogledaj više doživljaja"
+  },
+  "forRestaurants": {
+    "title": "Za restorane",
+    "subtitle": "Pridruži se Dinver partnerskoj mreži",
+    "benefits": {
+      "visibility": {
+        "title": "Pojačana vidljivost",
+        "description": "Istakni se s posebnim pozicioniranjem, virtualnim šetnjama i interaktivnim menijima."
+      },
+      "analytics": {
+        "title": "Prava analitika",
+        "description": "Prati preglede, klikove, rezervacije i razumij svoje goste bolje."
+      },
+      "updates": {
+        "title": "What's New objave",
+        "description": "Podijeli večeri s glazbom uživo, nova jela ili posebne događaje direktno s obližnjim ljubiteljima hrane."
+      },
+      "community": {
+        "title": "Angažirana zajednica",
+        "description": "Poveži se sa zajednicom koja obožava otkrivati nova gastro iskustva."
+      }
+    },
+    "cta": "Postani partner",
+    "ctaSecondary": "Saznaj više"
+  },
+  "map": {
+    "title": "Istraži partner restorane",
+    "subtitle": "Otkrij verificirana gastro iskustva u blizini",
+    "cta": "Pogledaj sve restorane"
+  },
+  "contact": {
+    "title": "Postani partner",
+    "subtitle": "Pridruži se našoj partnerskoj mreži i dođi do ljubitelja hrane koji aktivno traže svoj sljedeći odličan obrok",
+    "form": {
+      "email": "Tvoj email",
+      "city": "Tvoj grad",
+      "submit": "Pošalji",
+      "submitting": "Šaljem...",
+      "success": "Prijava zaprimljena! Javit ćemo vam se uskoro.",
+      "error": "Nešto je pošlo po zlu. Pokušaj ponovno."
+    },
+    "restaurant": {
+      "title": "Imaš restoran?",
+      "description": "Pridruži se našoj partnerskoj mreži i dođi do ljubitelja hrane koji aktivno traže svoj sljedeći odličan obrok.",
+      "cta": "Registriraj svoj restoran"
+    }
+  },
+  "footer": {
+    "tagline": "Otkrij svoj sljedeći omiljeni restoran",
+    "links": {
+      "company": "Tvrtka",
+      "about": "O nama",
+      "careers": "Karijere",
+      "press": "Za medije",
+      "legal": "Pravno",
+      "privacy": "Politika privatnosti",
+      "terms": "Uvjeti korištenja",
+      "cookies": "Politika kolačića",
+      "social": "Prati nas"
+    },
+    "copyright": "© 2024 Dinver. Sva prava pridržana."
+  },
+  "whatsNew": {
+    "title": "Što je novo",
+    "subtitle": "Svježe novosti od tvojih omiljenih restorana",
+    "tags": {
+      "liveMusic": "Glazba uživo",
+      "newDish": "Novo jelo",
+      "newLocation": "Nova lokacija",
+      "specialEvent": "Posebni događaj",
+      "happyHour": "Happy Hour"
+    }
+  },
+  "rewards": {
+    "title": "Penjaj se na ljestvici",
+    "subtitle": "Zarađuj bodove, natječi se s prijateljima i osvoji prave nagrade",
+    "description": "Svaki posjet restoranu se računa. Skeniraj račun, zarađuj bodove i natječi se za titulu najboljeg istraživača. Top 3 svakih dva tjedna dobivaju mystery box na kućnu adresu!",
+    "howToEarn": "Kako zaraditi bodove",
+    "earnMethods": {
+      "visit": {
+        "title": "Skeniraj račun",
+        "description": "Potvrdi svoj posjet",
+        "points": "+50 bod"
+      },
+      "experience": {
+        "title": "Objavi doživljaj",
+        "description": "Podijeli slike i ocjenu",
+        "points": "+100 bod"
+      },
+      "streak": {
+        "title": "Tjedni niz",
+        "description": "Posjeti 3+ mjesta/tjedan",
+        "points": "+200 bod"
+      }
+    },
+    "leaderboard": {
+      "title": "Trenutna ljestvica",
+      "you": "Ti",
+      "points": "bod",
+      "blurText": "Preuzmi app da vidiš cijelu ljestvicu"
+    },
+    "mysteryBox": {
+      "title": "Mystery Box",
+      "description": "Top 2 istraživača svakih 2 tjedna osvajaju mystery box s ekskluzivnim vaučerima za restorane i Dinver merchom!",
+      "countdown": "Sljedeći ciklus nagrada završava za"
+    },
+    "cta": "Počni zarađivati bodove"
+  },
+  "partners": {
+    "title": "Unaprijedi svoj restoran",
+    "subtitle": "Pridruži se 150+ partnerskih restorana koji svaki dan dopiru do ljubitelja hrane",
+    "dashboard": {
+      "title": "Partner nadzorna ploča",
+      "views": "Pregleda profila",
+      "clicks": "Klikova na meni",
+      "experiences": "Novih doživljaja"
+    },
+    "benefits": {
+      "visibility": {
+        "title": "Istaknuto pozicioniranje",
+        "description": "Budi istaknut korisnicima koji pretražuju tvoje područje"
+      },
+      "virtualTour": {
+        "title": "360° virtualna šetnja",
+        "description": "Omogući gostima da istraže tvoj prostor prije dolaska"
+      },
+      "menu": {
+        "title": "Interaktivni meni",
+        "description": "Prikaži jela sa slikama i opisima"
+      },
+      "whatsNew": {
+        "title": "What's New objave",
+        "description": "Najavi događaje, promocije i nova jela"
+      },
+      "analytics": {
+        "title": "Prava analitika",
+        "description": "Razumij svoje goste s detaljnim uvidima"
+      },
+      "badge": {
+        "title": "Partner značka",
+        "description": "Istakni se verificiranom partner značkom"
+      }
+    },
+    "comparison": {
+      "title": "Osnovni vs Partner",
+      "basic": "Osnovni prikaz",
+      "partner": "Partner",
+      "features": {
+        "listing": "Prikaz restorana",
+        "experiences": "Korisnički doživljaji",
+        "featured": "Istaknuto pozicioniranje",
+        "virtualTour": "360° virtualna šetnja",
+        "menu": "Interaktivni meni",
+        "whatsNew": "What's New objave",
+        "analytics": "Analitička nadzorna ploča"
+      }
+    },
+    "cta": "Postani partner",
+    "ctaSecondary": "Saznaj više"
+  },
+  "socialProof": {
+    "title": "Što kažu naši korisnici",
+    "stats": {
+      "partners": "Partner restorana",
+      "users": "Aktivnih korisnika",
+      "experiences": "Objavljenih iskustava",
+      "updates": "Aktivnih What's New"
+    },
+    "marqueeCaption": "Stvarna iskustva korisnika - osvježava se uživo",
+    "availableOn": "Dostupno na",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  }
+}
