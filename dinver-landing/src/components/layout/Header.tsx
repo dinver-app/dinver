@@ -48,14 +48,14 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
             ? 'bg-white/95 backdrop-blur-md shadow-sm'
-            : 'bg-transparent'
+            : 'bg-dinver-dark/80 backdrop-blur-sm'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <a href="#" className="flex-shrink-0">
-              <Logo variant="dark" />
+              <Logo variant={isScrolled ? 'dark' : 'light'} />
             </a>
 
             {/* Desktop Navigation */}
@@ -64,7 +64,11 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                 <a
                   key={item.href}
                   href={item.href}
-                  className="text-gray-700 hover:text-dinver-green transition-colors font-medium"
+                  className={`transition-colors font-medium ${
+                    isScrolled
+                      ? 'text-gray-700 hover:text-dinver-green'
+                      : 'text-white/80 hover:text-white'
+                  }`}
                 >
                   {item.label}
                 </a>
@@ -75,7 +79,11 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
             <div className="hidden lg:flex items-center gap-4">
               <button
                 onClick={toggleLocale}
-                className="flex items-center gap-1.5 text-gray-600 hover:text-dinver-green transition-colors"
+                className={`flex items-center gap-1.5 transition-colors ${
+                  isScrolled
+                    ? 'text-gray-600 hover:text-dinver-green'
+                    : 'text-white/80 hover:text-white'
+                }`}
               >
                 <Globe size={18} />
                 <span className="font-medium">{messages.nav.language}</span>
@@ -117,7 +125,11 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-700 hover:text-dinver-green transition-colors"
+              className={`lg:hidden p-2 transition-colors ${
+                isScrolled
+                  ? 'text-gray-700 hover:text-dinver-green'
+                  : 'text-white hover:text-dinver-cream'
+              }`}
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>

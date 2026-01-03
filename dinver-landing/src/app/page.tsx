@@ -4,12 +4,17 @@ import { useState, useEffect } from 'react';
 import { Locale, getMessages, defaultLocale } from '@/lib/i18n';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import Hero from '@/components/sections/Hero';
-import Features from '@/components/sections/Features';
+
+// New redesigned sections
+import HeroNew from '@/components/sections/HeroNew';
+import FeaturesBento from '@/components/sections/FeaturesBento';
+import ExperienceFeedNew from '@/components/sections/ExperienceFeedNew';
+import RewardsSection from '@/components/sections/RewardsSection';
+import PartnersSection from '@/components/sections/PartnersSection';
+import SocialProof from '@/components/sections/SocialProof';
+
+// Keep original sections that work well
 import HowItWorks from '@/components/sections/HowItWorks';
-import ExperienceFeed from '@/components/sections/ExperienceFeed';
-import ForRestaurants from '@/components/sections/ForRestaurants';
-import RestaurantMap from '@/components/sections/RestaurantMap';
 import Contact from '@/components/sections/Contact';
 
 export default function Home() {
@@ -34,13 +39,31 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white">
       <Header messages={messages} locale={locale} onLocaleChange={handleLocaleChange} />
-      <Hero messages={messages} />
-      <Features messages={messages} />
-      <HowItWorks messages={messages} />
-      <ExperienceFeed messages={messages} />
-      <ForRestaurants messages={messages} />
-      <RestaurantMap messages={messages} />
+
+      {/* New Hero with CountUp stats and GSAP animations */}
+      <HeroNew messages={messages} />
+
+      {/* Bento grid features */}
+      <FeaturesBento messages={messages} locale={locale} />
+
+      {/* How it works - modernized */}
+      <HowItWorks messages={messages} locale={locale} />
+
+      {/* Interactive Experience Feed Demo with Swiper */}
+      <ExperienceFeedNew messages={messages} locale={locale} />
+
+      {/* Rewards & Gamification section */}
+      <RewardsSection messages={messages} locale={locale} />
+
+      {/* Partner Restaurants section */}
+      <PartnersSection messages={messages} locale={locale} />
+
+      {/* Social Proof with partners marquee, stats, and experiences */}
+      <SocialProof locale={locale} />
+
+      {/* Contact form - kept from original */}
       <Contact messages={messages} />
+
       <Footer messages={messages} />
     </main>
   );

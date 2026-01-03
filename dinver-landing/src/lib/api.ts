@@ -364,3 +364,119 @@ export function getSessionId(): string {
   }
   return sessionId;
 }
+
+// ==================== LANDING FEED ====================
+
+export interface LandingExperienceImage {
+  url: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  isRecommended?: boolean;
+}
+
+export interface LandingExperience {
+  id: string;
+  author: {
+    name: string;
+    username?: string | null;
+    avatarUrl?: string | null;
+  };
+  restaurant: {
+    id: string;
+    name: string;
+    slug: string;
+    place?: string;
+    thumbnailUrl?: string | null;
+    isPartner: boolean;
+  };
+  rating: number;
+  description: string;
+  mealType?: 'breakfast' | 'brunch' | 'lunch' | 'dinner' | 'sweet' | 'drinks' | null;
+  images: LandingExperienceImage[];
+  likesCount: number;
+  sharesCount: number;
+  publishedAt: string;
+}
+
+export interface LandingExperiencesResponse {
+  experiences: LandingExperience[];
+  meta: {
+    count: number;
+    totalExperiences: number;
+    availableCities: string[];
+    mealTypes: string[];
+  };
+}
+
+export interface LandingWhatsNewItem {
+  id: string;
+  restaurant: {
+    id: string;
+    name: string;
+    slug: string;
+    place?: string;
+    logoUrl?: string | null;
+    isPartner: boolean;
+  };
+  category: string;
+  categoryLabel: string;
+  content: string;
+  imageUrl?: string | null;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface LandingWhatsNewResponse {
+  updates: LandingWhatsNewItem[];
+  meta: {
+    count: number;
+    totalActive: number;
+    categories: Array<{
+      key: string;
+      label: string;
+      count: number;
+    }>;
+  };
+}
+
+export interface LandingStatsResponse {
+  stats: {
+    experiences: number;
+    partners: number;
+    users: number;
+    activeUpdates: number;
+  };
+}
+
+export async function getLandingExperiences(params?: {
+  limit?: number;
+  mealType?: string;
+  city?: string;
+}): Promise<LandingExperiencesResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+  if (params?.mealType) searchParams.set('mealType', params.mealType);
+  if (params?.city) searchParams.set('city', params.city);
+
+  const query = searchParams.toString();
+  return apiRequest<LandingExperiencesResponse>(`/experiences${query ? `?${query}` : ''}`);
+}
+
+export async function getLandingWhatsNew(params?: {
+  limit?: number;
+  category?: string;
+  lang?: 'en' | 'hr';
+}): Promise<LandingWhatsNewResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+  if (params?.category) searchParams.set('category', params.category);
+  if (params?.lang) searchParams.set('lang', params.lang);
+
+  const query = searchParams.toString();
+  return apiRequest<LandingWhatsNewResponse>(`/whats-new${query ? `?${query}` : ''}`);
+}
+
+export async function getLandingStats(): Promise<LandingStatsResponse> {
+  return apiRequest<LandingStatsResponse>('/stats');
+}

@@ -145,5 +145,105 @@
       "specialEvent": "Posebni događaj",
       "happyHour": "Happy Hour"
     }
+  },
+  "rewards": {
+    "title": "Penjaj se na ljestvici",
+    "subtitle": "Zarađuj bodove, natječi se s prijateljima i osvoji prave nagrade",
+    "description": "Svaki posjet restoranu se računa. Skeniraj račun, zarađuj bodove i natječi se za titulu najboljeg istraživača. Top 3 svakih dva tjedna dobivaju mystery box na kućnu adresu!",
+    "howToEarn": "Kako zaraditi bodove",
+    "earnMethods": {
+      "visit": {
+        "title": "Skeniraj račun",
+        "description": "Potvrdi svoj posjet",
+        "points": "+50 bod"
+      },
+      "experience": {
+        "title": "Objavi doživljaj",
+        "description": "Podijeli slike i ocjenu",
+        "points": "+100 bod"
+      },
+      "streak": {
+        "title": "Tjedni niz",
+        "description": "Posjeti 3+ mjesta/tjedan",
+        "points": "+200 bod"
+      }
+    },
+    "leaderboard": {
+      "title": "Trenutna ljestvica",
+      "you": "Ti",
+      "points": "bod",
+      "blurText": "Preuzmi app da vidiš cijelu ljestvicu"
+    },
+    "mysteryBox": {
+      "title": "Mystery Box",
+      "description": "Top 3 istraživača svakih 2 tjedna osvajaju mystery box s ekskluzivnim vaučerima za restorane i Dinver merchom!",
+      "countdown": "Sljedeći ciklus nagrada završava za"
+    },
+    "cta": "Počni zarađivati bodove"
+  },
+  "partners": {
+    "title": "Unaprijedi svoj restoran",
+    "subtitle": "Pridruži se 150+ partnerskih restorana koji svaki dan dopiru do ljubitelja hrane",
+    "dashboard": {
+      "title": "Partner nadzorna ploča",
+      "views": "Pregleda profila",
+      "clicks": "Klikova na meni",
+      "experiences": "Novih doživljaja"
+    },
+    "benefits": {
+      "visibility": {
+        "title": "Istaknuto pozicioniranje",
+        "description": "Budi istaknut korisnicima koji pretražuju tvoje područje"
+      },
+      "virtualTour": {
+        "title": "360° virtualna šetnja",
+        "description": "Omogući gostima da istraže tvoj prostor prije dolaska"
+      },
+      "menu": {
+        "title": "Interaktivni meni",
+        "description": "Prikaži jela sa slikama i opisima"
+      },
+      "whatsNew": {
+        "title": "What's New objave",
+        "description": "Najavi događaje, promocije i nova jela"
+      },
+      "analytics": {
+        "title": "Prava analitika",
+        "description": "Razumij svoje goste s detaljnim uvidima"
+      },
+      "badge": {
+        "title": "Partner značka",
+        "description": "Istakni se verificiranom partner značkom"
+      }
+    },
+    "comparison": {
+      "title": "Osnovni vs Partner",
+      "basic": "Osnovni prikaz",
+      "partner": "Partner",
+      "features": {
+        "listing": "Prikaz restorana",
+        "experiences": "Korisnički doživljaji",
+        "featured": "Istaknuto pozicioniranje",
+        "virtualTour": "360° virtualna šetnja",
+        "menu": "Interaktivni meni",
+        "whatsNew": "What's New objave",
+        "analytics": "Analitička nadzorna ploča"
+      }
+    },
+    "cta": "Postani partner",
+    "ctaSecondary": "Saznaj više"
+  },
+  "socialProof": {
+    "title": "Što kažu naši korisnici",
+    "stats": {
+      "partners": "Partner restorana",
+      "users": "Aktivnih korisnika",
+      "experiences": "Objavljenih iskustava",
+      "updates": "Aktivnih What's New"
+    },
+    "marqueeCaption": "Stvarna iskustva korisnika - osvježava se uživo",
+    "availableOn": "Dostupno na",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
   }
 }

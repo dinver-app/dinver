@@ -145,5 +145,105 @@
       "specialEvent": "Special Event",
       "happyHour": "Happy Hour"
     }
+  },
+  "rewards": {
+    "title": "Climb the Leaderboard",
+    "subtitle": "Earn points, compete with friends, and win real prizes",
+    "description": "Every restaurant visit counts. Scan your receipt, earn points, and compete to be the top explorer. Top 3 winners every two weeks get a mystery box delivered to their door!",
+    "howToEarn": "How to Earn Points",
+    "earnMethods": {
+      "visit": {
+        "title": "Scan Receipt",
+        "description": "Verify your visit",
+        "points": "+50 pts"
+      },
+      "experience": {
+        "title": "Post Experience",
+        "description": "Share photos & rating",
+        "points": "+100 pts"
+      },
+      "streak": {
+        "title": "Weekly Streak",
+        "description": "Visit 3+ places/week",
+        "points": "+200 pts"
+      }
+    },
+    "leaderboard": {
+      "title": "Current Leaderboard",
+      "you": "You",
+      "points": "pts",
+      "blurText": "Download app to see full leaderboard"
+    },
+    "mysteryBox": {
+      "title": "Mystery Box",
+      "description": "Top 3 explorers every 2 weeks win a mystery box with exclusive restaurant vouchers and Dinver merch!",
+      "countdown": "Next prize cycle ends in"
+    },
+    "cta": "Start Earning Points"
+  },
+  "partners": {
+    "title": "Grow Your Restaurant",
+    "subtitle": "Join 150+ partner restaurants reaching food lovers every day",
+    "dashboard": {
+      "title": "Partner Dashboard",
+      "views": "Profile Views",
+      "clicks": "Menu Clicks",
+      "experiences": "New Experiences"
+    },
+    "benefits": {
+      "visibility": {
+        "title": "Featured Placement",
+        "description": "Get highlighted to users searching in your area"
+      },
+      "virtualTour": {
+        "title": "360° Virtual Tour",
+        "description": "Let guests explore your space before they visit"
+      },
+      "menu": {
+        "title": "Interactive Menu",
+        "description": "Showcase dishes with photos and descriptions"
+      },
+      "whatsNew": {
+        "title": "What's New Posts",
+        "description": "Announce events, specials, and new dishes"
+      },
+      "analytics": {
+        "title": "Real Analytics",
+        "description": "Understand your guests with detailed insights"
+      },
+      "badge": {
+        "title": "Partner Badge",
+        "description": "Stand out with the verified partner badge"
+      }
+    },
+    "comparison": {
+      "title": "Basic vs Partner",
+      "basic": "Basic Listing",
+      "partner": "Partner",
+      "features": {
+        "listing": "Restaurant listing",
+        "experiences": "User experiences",
+        "featured": "Featured placement",
+        "virtualTour": "360° virtual tour",
+        "menu": "Interactive menu",
+        "whatsNew": "What's New posts",
+        "analytics": "Analytics dashboard"
+      }
+    },
+    "cta": "Become a Partner",
+    "ctaSecondary": "Learn More"
+  },
+  "socialProof": {
+    "title": "What Our Users Say",
+    "stats": {
+      "partners": "Partner Restaurants",
+      "users": "Active Users",
+      "experiences": "Shared Experiences",
+      "updates": "Active What's New"
+    },
+    "marqueeCaption": "Real user experiences - refreshes live",
+    "availableOn": "Available on",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
   }
 }
