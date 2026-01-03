@@ -8,6 +8,7 @@ const {
   UserSettings,
   Visit,
   Experience,
+  UserFavorite,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -1728,17 +1729,38 @@ const approveReceipt = async (req, res) => {
       }
 
       if (receipt.visitId && visit) {
-        // Visit already exists (user created it before approval)
+        // Check if restaurant was in Must Visit list
+        const mustVisitEntry = await UserFavorite.findOne({
+          where: {
+            userId: visit.userId,
+            restaurantId: restaurantId,
+            removedAt: null,
+          },
+        });
+
+        const wasInMustVisit = !!mustVisitEntry;
+        console.log(`[Receipt Approval] Checking Must Visit for user ${visit.userId}: ${wasInMustVisit ? 'YES' : 'NO'}`);
+
+        if (wasInMustVisit) {
+          // Soft delete the Must Visit entry
+          await mustVisitEntry.update({
+            removedAt: new Date(),
+            removedForVisitId: visit.id,
+          });
+        }
+
         // Update existing Visit to APPROVED with restaurant
-        await visit.update({
+        const updateData = {
           status: 'APPROVED',
           restaurantId: restaurantId, // Set the restaurant from approved receipt
           visitDate: visit.visitDate || new Date(issueDate),
           reviewedAt: new Date(),
           reviewedBy: req.user.id,
-        });
+          wasInMustVisit: wasInMustVisit,
+        };
 
-        console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
+        await visit.update(updateData);
+        await visit.reload();
 
         // Update associated Experience with restaurantId if it exists
         const experience = await Experience.findOne({
@@ -1785,15 +1807,34 @@ const approveReceipt = async (req, res) => {
           });
 
           if (buddyVisits.length > 0) {
-           
+
             for (const buddyVisit of buddyVisits) {
-              await buddyVisit.update({
+              const buddyMustVisitEntry = await UserFavorite.findOne({
+                where: {
+                  userId: buddyVisit.userId,
+                  restaurantId: restaurantId,
+                  removedAt: null,
+                },
+              });
+
+              const buddyWasInMustVisit = !!buddyMustVisitEntry;
+
+              if (buddyWasInMustVisit) {
+                await buddyMustVisitEntry.update({
+                  removedAt: new Date(),
+                  removedForVisitId: buddyVisit.id,
+                });
+              }
+
+              const buddyUpdateData = {
                 status: 'APPROVED',
                 restaurantId: restaurantId,
                 visitDate: visit.visitDate || new Date(issueDate),
                 reviewedAt: new Date(),
                 reviewedBy: req.user.id,
-              });
+                wasInMustVisit: buddyWasInMustVisit,
+              };
+              await buddyVisit.update(buddyUpdateData);
 
               const buddyExperience = await Experience.findOne({
                 where: { visitId: buddyVisit.id },
