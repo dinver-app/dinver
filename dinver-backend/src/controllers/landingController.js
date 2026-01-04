@@ -383,8 +383,114 @@ const getLandingStats = async (req, res) => {
   }
 };
 
+/**
+ * Get Restaurant Experiences for Landing Page
+ * GET /api/landing/restaurants/:restaurantId/experiences
+ *
+ * Returns approved experiences for a specific restaurant.
+ * Used on the restaurant details page to show user reviews/experiences.
+ *
+ * Query params:
+ * - limit: number of results (default 10, max 20)
+ * - offset: pagination offset (default 0)
+ */
+const getRestaurantExperiences = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const { limit = 10, offset = 0 } = req.query;
+
+    // Verify restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: ['id', 'name'],
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    // Get experiences for this restaurant
+    const { count, rows: experiences } = await Experience.findAndCountAll({
+      where: {
+        restaurantId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+        },
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: [
+            'id',
+            'storageKey',
+            'width',
+            'height',
+            'orderIndex',
+            'caption',
+            'isRecommended',
+          ],
+        },
+      ],
+      order: [
+        ['publishedAt', 'DESC'],
+        [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
+      ],
+      limit: Math.min(parseInt(limit), 20),
+      offset: parseInt(offset),
+    });
+
+    // Transform experiences for response
+    const transformedExperiences = experiences.map((exp) => {
+      const transformed = transformMediaUrls(exp);
+
+      return {
+        id: transformed.id,
+        author: {
+          name: transformed.author?.name || 'Anonymous',
+          username: transformed.author?.username || null,
+          avatarUrl: transformed.author?.profileImage || null,
+        },
+        ratings: {
+          food: parseFloat(transformed.foodRating) || 0,
+          ambience: parseFloat(transformed.ambienceRating) || 0,
+          service: parseFloat(transformed.serviceRating) || 0,
+          overall: parseFloat(transformed.overallRating) || 0,
+        },
+        description: transformed.description || '',
+        mealType: transformed.mealType || null,
+        images: (transformed.media || []).map((m) => ({
+          url: m.imageUrl,
+          width: m.width,
+          height: m.height,
+          caption: m.caption,
+          isRecommended: m.isRecommended,
+        })),
+        likesCount: transformed.likesCount || 0,
+        publishedAt: transformed.publishedAt,
+      };
+    });
+
+    res.json({
+      experiences: transformedExperiences,
+      total: count,
+      limit: Math.min(parseInt(limit), 20),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    console.error('[Restaurant Experiences] Error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch restaurant experiences',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getLandingExperiences,
   getLandingWhatsNew,
   getLandingStats,
+  getRestaurantExperiences,
 };

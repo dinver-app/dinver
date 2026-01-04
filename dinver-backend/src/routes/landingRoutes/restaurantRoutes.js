@@ -2,6 +2,7 @@ const express = require('express');
 const restaurantController = require('../../controllers/restaurantController');
 const menuController = require('../../controllers/menuController');
 const drinksController = require('../../controllers/drinkController');
+const landingController = require('../../controllers/landingController');
 const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 const {
   restaurantIdentifierMiddleware,
@@ -83,4 +84,13 @@ router.get(
   restaurantIdentifierMiddleware,
   drinksController.getDrinkItems,
 );
+
+// experiences route for restaurant details page
+router.get(
+  '/restaurants/:restaurantId/experiences',
+  landingApiKeyAuth,
+  restaurantIdentifierMiddleware,
+  landingController.getRestaurantExperiences,
+);
+
 module.exports = router;

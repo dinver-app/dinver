@@ -32,8 +32,9 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
     { href: '/#features', label: messages.nav.features },
     { href: '/#how-it-works', label: messages.nav.howItWorks },
     { href: '/#restaurants', label: messages.nav.restaurants },
+    { href: '/partneri', label: locale === 'hr' ? 'Partneri' : 'Partners' },
     { href: '/#faq', label: 'FAQ' },
-    { href: '/kontakt', label: messages.nav.contact },
+    { href: '/kontakt', label: locale === 'hr' ? 'Kontakt' : 'Contact' },
   ];
 
   const toggleLocale = () => {

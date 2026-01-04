@@ -178,10 +178,14 @@ export default function SocialProof({ locale }: SocialProofProps) {
 
       {/* Real Experiences Marquee */}
       {experiences.length > 0 && (() => {
-        // Filter experiences with images first to avoid duplicates
+        // Filter experiences with images first
         const validExperiences = experiences.filter(exp => exp.images?.[0]?.url);
-        // Duplicate the array for infinite scroll effect
-        const scrollExperiences = [...validExperiences, ...validExperiences];
+
+        // Only duplicate if we have enough unique experiences (at least 8)
+        // Otherwise, show them once to avoid obvious repetition
+        const scrollExperiences = validExperiences.length >= 8
+          ? [...validExperiences, ...validExperiences]
+          : validExperiences;
 
         return (
           <div>
