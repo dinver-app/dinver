@@ -9,9 +9,10 @@
     "language": "HR"
   },
   "hero": {
-    "tagline": "Discover. Share. Experience.",
-    "title": "Your Next Great Meal Awaits",
-    "subtitle": "Dinver is more than a restaurant guide. It's a community of food lovers discovering hidden gems, sharing authentic experiences, and earning rewards for every visit.",
+    "badge": "New Food Discovery Platform",
+    "tagline": "Discover. Share. Get Rewarded.",
+    "title": "Discover Where Everyone Eats",
+    "subtitle": "Real experiences from real people. Follow foodies, discover hidden gems, and share your own finds. Earn rewards for every visit and climb the leaderboard.",
     "cta": "Download Now",
     "ctaSecondary": "Explore Restaurants",
     "stats": {
@@ -47,6 +48,10 @@
       "details": {
         "title": "Complete Info",
         "description": "360° virtual tours, interactive menus, working hours, photos, and everything you need to choose."
+      },
+      "reservations": {
+        "title": "Easy Reservations",
+        "description": "Book a table in seconds. Pick your date, time, and number of guests - all within the app."
       }
     }
   },
@@ -93,6 +98,10 @@
       "community": {
         "title": "Engaged Community",
         "description": "Connect with a community that loves discovering new dining experiences."
+      },
+      "reservations": {
+        "title": "Built-in Reservations",
+        "description": "Accept table reservations directly through the app. No extra tools needed."
       }
     },
     "cta": "Become a Partner",

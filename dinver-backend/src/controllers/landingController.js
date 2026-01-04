@@ -91,17 +91,18 @@ const transformMediaUrls = (experience) => {
  * Get Featured Experiences for Landing Page
  * GET /api/landing/experiences
  *
- * Returns recent approved experiences for the landing page feed demo.
+ * Returns random approved experiences for the landing page feed demo.
  * Filtered to show only experiences with images.
+ * Results are randomized on each request.
  *
  * Query params:
- * - limit: number of results (default 10, max 20)
+ * - limit: number of results (default 15, max 20)
  * - mealType: filter by meal type (breakfast, brunch, lunch, dinner, sweet, drinks)
  * - city: filter by city
  */
 const getLandingExperiences = async (req, res) => {
   try {
-    const { limit = 10, mealType, city } = req.query;
+    const { limit = 15, mealType, city } = req.query;
 
     // Build where clause
     const where = {
@@ -119,6 +120,7 @@ const getLandingExperiences = async (req, res) => {
     }
 
     // Get experiences with media (only show those with images)
+    // Use random order and fetch more than needed to ensure uniqueness
     const experiences = await Experience.findAll({
       where,
       include: [
@@ -149,10 +151,10 @@ const getLandingExperiences = async (req, res) => {
         },
       ],
       order: [
-        ['publishedAt', 'DESC'],
+        [require('sequelize').literal('RANDOM()')], // Random order on each request
         [{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC'],
       ],
-      limit: Math.min(parseInt(limit), 20), // Max 20
+      limit: Math.min(parseInt(limit), 20), // Max 20, default 15
     });
 
     // Transform experiences for response

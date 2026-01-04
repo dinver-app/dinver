@@ -81,31 +81,30 @@ export default function HeroNew({ messages }: HeroNewProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           {/* Center content */}
           <div className="text-center max-w-4xl mx-auto">
-            {/* Animated tagline */}
+            {/* NEW Platform Badge */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-8 border border-white/10"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-dinver-cream/20 backdrop-blur-sm rounded-full mb-8 border border-dinver-cream/30"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dinver-cream opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-dinver-cream"></span>
               </span>
-              <span className="text-dinver-cream text-sm font-medium">
-                {messages.hero.tagline}
+              <span className="text-dinver-cream text-sm font-semibold uppercase tracking-wider">
+                {messages.hero.badge}
               </span>
             </motion.div>
 
-            {/* Main title with gradient */}
+            {/* Main title - solid color, no gradient */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6"
             >
-              <span className="block">{messages.hero.title.split(' ').slice(0, 3).join(' ')}</span>
-              <span className="text-gradient-light">{messages.hero.title.split(' ').slice(3).join(' ')}</span>
+              {messages.hero.title}
             </motion.h1>
 
             {/* Subtitle */}
@@ -134,28 +133,36 @@ export default function HeroNew({ messages }: HeroNewProps) {
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.8 }}
-            className="relative flex justify-center items-end h-[400px] sm:h-[500px] lg:h-[550px]"
+            className="relative flex justify-center items-end h-[340px] sm:h-[480px] lg:h-[550px]"
           >
             {phones.map((phone, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 100, rotate: phone.rotate }}
                 animate={{ opacity: 1, y: 0, rotate: phone.rotate }}
-                transition={{ delay: 0.8 + index * 0.15, duration: 0.6, type: 'spring' }}
-                whileHover={{ y: -20, scale: 1.05, zIndex: 10 }}
-                style={{ zIndex: phone.z }}
+                transition={{
+                  delay: 0.8 + index * 0.15,
+                  duration: 0.8,
+                  type: 'spring',
+                  stiffness: 100,
+                  damping: 15
+                }}
+                style={{
+                  zIndex: phone.z,
+                  willChange: 'transform'
+                }}
                 className={`absolute ${
-                  index === 0 ? '-left-4 sm:left-[15%] lg:left-[20%]' :
+                  index === 0 ? 'left-2 sm:left-[15%] lg:left-[20%]' :
                   index === 1 ? 'left-1/2 -translate-x-1/2' :
-                  '-right-4 sm:right-[15%] lg:right-[20%]'
-                } bottom-0 cursor-pointer transition-all duration-300`}
+                  'right-2 sm:right-[15%] lg:right-[20%]'
+                } bottom-0`}
               >
                 <div className={`relative ${
                   index === 1
-                    ? 'w-[180px] sm:w-[220px] lg:w-[260px] h-[360px] sm:h-[440px] lg:h-[520px]'
-                    : 'w-[140px] sm:w-[180px] lg:w-[220px] h-[280px] sm:h-[360px] lg:h-[440px]'
-                } bg-gray-900 rounded-[2rem] sm:rounded-[2.5rem] p-1.5 sm:p-2 shadow-2xl`}>
-                  <div className="w-full h-full bg-white rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden relative">
+                    ? 'w-[160px] sm:w-[200px] lg:w-[260px] h-[320px] sm:h-[400px] lg:h-[520px]'
+                    : 'w-[120px] sm:w-[160px] lg:w-[220px] h-[240px] sm:h-[320px] lg:h-[440px]'
+                } bg-gray-900 rounded-[1.75rem] sm:rounded-[2rem] lg:rounded-[2.5rem] p-1 sm:p-1.5 lg:p-2 shadow-2xl`}>
+                  <div className="w-full h-full bg-white rounded-[1.5rem] sm:rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden relative">
                     <Image
                       src={phone.src}
                       alt={phone.alt}
@@ -164,14 +171,12 @@ export default function HeroNew({ messages }: HeroNewProps) {
                       priority={index === 1}
                     />
                   </div>
-                  {/* Glowing border effect */}
-                  <div className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-t from-dinver-green/20 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none" />
                 </div>
               </motion.div>
             ))}
 
             {/* Glow behind phones */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-dinver-green/20 rounded-full blur-[80px] -z-10" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[200px] sm:h-[300px] bg-dinver-green/20 rounded-full blur-[60px] sm:blur-[80px] -z-10" />
           </motion.div>
 
           {/* Stats bar */}
@@ -179,7 +184,7 @@ export default function HeroNew({ messages }: HeroNewProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2 }}
-            className="flex justify-center gap-8 sm:gap-16 mt-12 pt-8 border-t border-white/10"
+            className="flex justify-center gap-6 sm:gap-10 lg:gap-16 mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-white/10"
           >
             {[
               { value: stats?.partners || 150, suffix: '+', label: messages.hero.stats.restaurants, icon: MapPin },
@@ -187,15 +192,15 @@ export default function HeroNew({ messages }: HeroNewProps) {
               { value: stats?.experiences ? Math.floor(stats.experiences / 1000) : 25, suffix: 'K+', label: messages.hero.stats.experiences, icon: Star },
             ].map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <stat.icon size={16} className="text-dinver-cream" />
-                  <span className="text-2xl sm:text-3xl font-bold text-white">
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1">
+                  <stat.icon size={14} className="text-dinver-cream sm:w-4 sm:h-4" />
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
                     {isVisible && (
                       <CountUp start={0} end={stat.value} duration={2} delay={0.3 + index * 0.2} suffix={stat.suffix} />
                     )}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-400">{stat.label}</p>
+                <p className="text-[10px] sm:text-xs lg:text-sm text-gray-400 max-w-[80px] sm:max-w-none">{stat.label}</p>
               </div>
             ))}
           </motion.div>
