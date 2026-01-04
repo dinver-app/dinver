@@ -774,7 +774,7 @@ const getUserVisits = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded'],
+          attributes: ['id', 'totalAmount', 'pointsAwarded', 'reservationId'],
         },
         {
           model: User,
@@ -2402,7 +2402,7 @@ const getVisitsByRestaurant = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded'],
+          attributes: ['id', 'totalAmount', 'pointsAwarded', 'reservationId'],
         },
         {
           model: User,
