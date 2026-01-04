@@ -53,7 +53,7 @@ export default function SocialProof({ locale }: SocialProofProps) {
         const [statsData, partnersData, experiencesData] = await Promise.all([
           getLandingStats(),
           getPartners(),
-          getLandingExperiences({ limit: 20 }),
+          getLandingExperiences({ limit: 15 }), // Fetch 15 random experiences
         ]);
 
         setStats(statsData.stats);
@@ -73,28 +73,28 @@ export default function SocialProof({ locale }: SocialProofProps) {
   }, []);
 
   return (
-    <section ref={containerRef} className="py-16 lg:py-24 bg-white overflow-hidden">
+    <section ref={containerRef} className="py-12 sm:py-16 lg:py-24 bg-white overflow-hidden">
       {/* Partners Marquee - Simple scrolling names */}
-      <div className="mb-16">
+      <div className="mb-10 sm:mb-16">
         <motion.h3
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
-          className="text-center text-lg font-semibold text-gray-600 mb-8"
+          className="text-center text-base sm:text-lg font-semibold text-gray-600 mb-6 sm:mb-8"
         >
           {locale === 'hr' ? 'Naši partneri' : 'Our Partners'}
         </motion.h3>
 
         <div className="relative">
-          {/* Gradient fades */}
-          <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10" />
-          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10" />
+          {/* Gradient fades - smaller on mobile */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 lg:w-32 bg-gradient-to-r from-white to-transparent z-10" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 lg:w-32 bg-gradient-to-l from-white to-transparent z-10" />
 
           {/* Scrolling partners - non-interactive, continuous loop */}
           <div className="flex animate-marquee whitespace-nowrap pointer-events-none select-none">
             {[...partners, ...partners].map((partner, i) => (
               <span
                 key={`${partner.id}-${i}`}
-                className="mx-8 text-gray-400 text-lg font-medium"
+                className="mx-4 sm:mx-6 lg:mx-8 text-gray-400 text-sm sm:text-base lg:text-lg font-medium"
               >
                 {partner.name}
               </span>
@@ -104,13 +104,13 @@ export default function SocialProof({ locale }: SocialProofProps) {
       </div>
 
       {/* Stats Section */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 sm:mb-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          className="bg-gray-50 rounded-3xl p-8 lg:p-12"
+          className="bg-gray-50 rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-12"
         >
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {[
               {
                 icon: MapPin,
@@ -153,11 +153,11 @@ export default function SocialProof({ locale }: SocialProofProps) {
                 className="text-center"
               >
                 <div
-                  className={`w-14 h-14 mx-auto mb-4 rounded-2xl ${stat.bgColor} flex items-center justify-center ${stat.color}`}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 mx-auto mb-2 sm:mb-3 lg:mb-4 rounded-xl sm:rounded-2xl ${stat.bgColor} flex items-center justify-center ${stat.color}`}
                 >
-                  <stat.icon size={26} />
+                  <stat.icon size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <div className="text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
+                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-0.5 sm:mb-1">
                   {isInView && stats && (
                     <CountUp
                       start={0}
@@ -169,7 +169,7 @@ export default function SocialProof({ locale }: SocialProofProps) {
                     />
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -177,59 +177,64 @@ export default function SocialProof({ locale }: SocialProofProps) {
       </div>
 
       {/* Real Experiences Marquee */}
-      {experiences.length > 0 && (
-        <div>
-          <motion.h3
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            className="text-center text-lg font-semibold text-gray-600 mb-8"
-          >
-            {locale === 'hr'
-              ? 'Stvarna iskustva korisnika'
-              : 'Real user experiences'}
-          </motion.h3>
+      {experiences.length > 0 && (() => {
+        // Filter experiences with images first to avoid duplicates
+        const validExperiences = experiences.filter(exp => exp.images?.[0]?.url);
+        // Duplicate the array for infinite scroll effect
+        const scrollExperiences = [...validExperiences, ...validExperiences];
 
-          <div className="relative">
-            {/* Gradient fades */}
-            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10" />
-            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10" />
+        return (
+          <div>
+            <motion.h3
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              className="text-center text-base sm:text-lg font-semibold text-gray-600 mb-6 sm:mb-8"
+            >
+              {locale === 'hr'
+                ? 'Stvarna iskustva korisnika'
+                : 'Real user experiences'}
+            </motion.h3>
 
-            {/* Scrolling experience images */}
-            <div className="flex animate-marquee-slow gap-4">
-              {[...experiences, ...experiences]
-                .filter(exp => exp.images?.[0]?.url)
-                .map((exp, i) => (
-                <div
-                  key={`${exp.id}-${i}`}
-                  className="flex-shrink-0 w-64 h-44 rounded-2xl overflow-hidden relative group shadow-lg"
-                >
-                  <Image
-                    src={exp.images[0].url}
-                    alt={exp.restaurant.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+            <div className="relative">
+              {/* Gradient fades - smaller on mobile */}
+              <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 lg:w-32 bg-gradient-to-r from-white to-transparent z-10" />
+              <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 lg:w-32 bg-gradient-to-l from-white to-transparent z-10" />
 
-                  {/* Overlay with info */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-white text-sm font-medium truncate">
-                      {exp.restaurant.name}
-                    </p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Star size={12} className="text-amber-400" fill="currentColor" />
-                      <span className="text-white/90 text-xs">{exp.rating.toFixed(1)}</span>
-                      <span className="text-white/60 text-xs ml-1">
-                        by {exp.author.name}
-                      </span>
+              {/* Scrolling experience images */}
+              <div className="flex animate-marquee-slow gap-3 sm:gap-4">
+                {scrollExperiences.map((exp, i) => (
+                  <div
+                    key={`${exp.id}-${i}`}
+                    className="shrink-0 w-52 sm:w-56 lg:w-64 h-36 sm:h-40 lg:h-44 rounded-xl sm:rounded-2xl overflow-hidden relative group shadow-lg"
+                  >
+                    <Image
+                      src={exp.images[0].url}
+                      alt={exp.restaurant.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+
+                    {/* Overlay with info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3">
+                      <p className="text-white text-xs sm:text-sm font-medium truncate">
+                        {exp.restaurant.name}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Star size={10} className="text-amber-400 sm:w-3 sm:h-3" fill="currentColor" />
+                        <span className="text-white/90 text-[10px] sm:text-xs">{exp.rating.toFixed(1)}</span>
+                        <span className="text-white/60 text-[10px] sm:text-xs ml-1">
+                          by {exp.author.name}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </section>
   );
 }

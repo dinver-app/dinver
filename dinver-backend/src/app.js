@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const session = require('express-session');
 const passport = require('passport');
-const { createClient } = require('redis');
+const Redis = require('ioredis');
 const RedisStore = require('connect-redis')(session);
 const { PostHog, setupExpressErrorHandler } = require('posthog-node');
 
@@ -65,21 +65,44 @@ cron.schedule('0 2 * * *', cleanupOldNotifications);
 // Expire old restaurant updates (svaki sat) - markira ACTIVE updateove kao EXPIRED ako je expiresAt prošao
 cron.schedule('0 * * * *', expireUpdates);
 
-// Initialize client.
-const redisClient = createClient({
-  url: process.env.REDIS_URL,
-  socket: {
-    tls: false,
-    rejectUnauthorized: false,
-  },
-});
-
-// Initialize redis connection
-redisClient.connect().catch(console.error);
+// Initialize Redis client with ioredis
+// Support both full Redis URL and separate host/port config
+const redisClient = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+      retryStrategy: (times) => {
+        if (times > 10) {
+          console.log('[Redis Session] Max retries reached');
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      enableOfflineQueue: true,
+      maxRetriesPerRequest: null,
+      tls: process.env.REDIS_URL.includes('upstash') ? {} : undefined,
+    })
+  : new Redis({
+      host: 'localhost',
+      port: parseInt(process.env.REDIS_PORT) || 6379,
+      password: process.env.REDIS_PASSWORD || undefined,
+      retryStrategy: (times) => {
+        if (times > 10) {
+          console.log('[Redis Session] Max retries reached');
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      enableOfflineQueue: true,
+      maxRetriesPerRequest: null,
+    });
 
 // Redis error handling
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-redisClient.on('connect', () => console.log('Connected to Redis'));
+redisClient.on('error', (err) =>
+  console.error('[Redis Session] Error:', err.message),
+);
+redisClient.on('connect', () => console.log('[Redis Session] Connected'));
+redisClient.on('ready', () => console.log('[Redis Session] Ready'));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
@@ -117,12 +140,19 @@ const allowedOrigins = [
   'https://sysadmin.dinver.eu',
   'https://dinver.eu',
   'https://www.dinver.eu',
+  'https://dinver-staging-landing.vercel.app',
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Dozvoli sve .dinver.eu subdomene + allowedOrigins
+      // Development mode: allow all origins for mobile development
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, true);
+        return;
+      }
+
+      // Production: Dozvoli sve .dinver.eu subdomene + allowedOrigins
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
@@ -171,14 +201,11 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 if (process.env.NODE_ENV === 'staging') {
-  const posthog = new PostHog(
-    process.env.POSTHOG_API_KEY,
-    {
-      host: 'https://eu.i.posthog.com',
-      enableExceptionAutocapture: true
-    }
-  )
-  setupExpressErrorHandler(posthog, app)
+  const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+    host: 'https://eu.i.posthog.com',
+    enableExceptionAutocapture: true,
+  });
+  setupExpressErrorHandler(posthog, app);
 
   posthog.capture({
     distinctId: 'server-startup',

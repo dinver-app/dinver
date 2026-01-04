@@ -24,6 +24,7 @@ import Visits from "./pages/Visits";
 import VisitDetail from "./pages/VisitDetail";
 import LeaderboardCycles from "./pages/LeaderboardCycles";
 import LeaderboardCycleDetails from "./pages/LeaderboardCycleDetails";
+import EditLeaderboardCycle from "./pages/EditLeaderboardCycle";
 import ReviewDetails from "./pages/ReviewDetails";
 import Experiences from "./pages/Experiences";
 import ExperienceDetails from "./pages/ExperienceDetails";
@@ -72,6 +73,10 @@ function App() {
             <Route
               path="/leaderboard-cycles/:id"
               element={<LeaderboardCycleDetails />}
+            />
+            <Route
+              path="/leaderboard-cycles/:id/edit"
+              element={<EditLeaderboardCycle />}
             />
             <Route path="/experiences" element={<Experiences />} />
             <Route path="/experiences/:id" element={<ExperienceDetails />} />

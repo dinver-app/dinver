@@ -153,8 +153,7 @@ const createUpdate = async (req, res) => {
       categoryLabel: CATEGORY_LABELS[update.category],
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
-      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'medium') : null,
-      imageUrls: imageKey ? getImageUrls(imageKey) : null,
+      imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'original') : null,
       status: update.status,
       createdAt: update.createdAt,
     };
@@ -196,9 +195,8 @@ const getRestaurantUpdates = async (req, res) => {
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
-        ? getMediaUrl(update.imageKey, 'image', 'medium')
+        ? getMediaUrl(update.imageKey, 'image', 'original')
         : null,
-      imageUrls: update.imageKey ? getImageUrls(update.imageKey) : null,
       status: update.status,
       viewCount: update.viewCount,
       createdAt: update.createdAt,
@@ -229,7 +227,7 @@ const getUpdateById = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'thumbnail'],
+          attributes: ['id', 'name', 'slug', 'thumbnailUrl'],
         },
       ],
     });
@@ -244,9 +242,6 @@ const getUpdateById = async (req, res) => {
         id: update.restaurant.id,
         name: update.restaurant.name,
         slug: update.restaurant.slug,
-        thumbnail: update.restaurant.thumbnail
-          ? getMediaUrl(update.restaurant.thumbnail, 'image', 'thumbnail')
-          : null,
       },
       content: update.content,
       category: update.category,
@@ -254,9 +249,8 @@ const getUpdateById = async (req, res) => {
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
-        ? getMediaUrl(update.imageKey, 'image', 'medium')
+        ? getMediaUrl(update.imageKey, 'image', 'original')
         : null,
-      imageUrls: update.imageKey ? getImageUrls(update.imageKey) : null,
       status: update.status,
       viewCount: update.viewCount,
       createdAt: update.createdAt,
@@ -345,7 +339,7 @@ const getUpdatesFeed = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'slug', 'thumbnail', 'latitude', 'longitude'],
+          attributes: ['id', 'name', 'slug', 'thumbnailUrl', 'latitude', 'longitude'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -408,9 +402,6 @@ const getUpdatesFeed = async (req, res) => {
           id: updateData.restaurant.id,
           name: updateData.restaurant.name,
           slug: updateData.restaurant.slug,
-          thumbnail: updateData.restaurant.thumbnail
-            ? getMediaUrl(updateData.restaurant.thumbnail, 'image', 'thumbnail')
-            : null,
         },
         content: updateData.content,
         category: updateData.category,
@@ -418,9 +409,8 @@ const getUpdatesFeed = async (req, res) => {
         durationDays: updateData.durationDays,
         expiresAt: updateData.expiresAt,
         imageUrl: updateData.imageKey
-          ? getMediaUrl(updateData.imageKey, 'image', 'medium')
+          ? getMediaUrl(updateData.imageKey, 'image', 'original')
           : null,
-        imageUrls: updateData.imageKey ? getImageUrls(updateData.imageKey) : null,
         createdAt: updateData.createdAt,
         distanceKm: updateData.distanceKm
           ? parseFloat(updateData.distanceKm).toFixed(1)
@@ -527,9 +517,8 @@ const getActiveUpdatesByRestaurant = async (req, res) => {
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
-        ? getMediaUrl(update.imageKey, 'image', 'medium')
+        ? getMediaUrl(update.imageKey, 'image', 'original')
         : null,
-      imageUrls: update.imageKey ? getImageUrls(update.imageKey) : null,
       createdAt: update.createdAt,
     }));
 

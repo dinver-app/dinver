@@ -489,13 +489,14 @@ const getExperience = async (req, res) => {
  * - lng: user longitude
  * - distance: 20, 60, or "all" (km)
  * - mealType: filter by meal type
+ * - onlyFollowing: "true" to show only experiences from users you follow
  * - limit: number of results (default 20)
  * - offset: pagination offset
  */
 const getExperienceFeed = async (req, res) => {
   try {
     const userId = req.user?.id || null;
-    const { limit = 20, offset = 0, lat, lng, distance, mealType } = req.query;
+    const { limit = 20, offset = 0, lat, lng, distance, mealType, onlyFollowing } = req.query;
 
     // Build where clause
     const where = {
@@ -505,6 +506,43 @@ const getExperienceFeed = async (req, res) => {
     // Filter by meal type if provided
     if (mealType) {
       where.mealType = mealType;
+    }
+
+    // Filter by following users if requested
+    if (onlyFollowing === 'true' && userId) {
+      const { UserFollow } = require('../../models');
+
+      // Get list of users that current user follows
+      const following = await UserFollow.findAll({
+        where: {
+          followerId: userId,
+          status: 'ACTIVE',
+        },
+        attributes: ['followingId'],
+      });
+
+      const followingIds = following.map((f) => f.followingId);
+
+      // If user doesn't follow anyone, return empty results
+      if (followingIds.length === 0) {
+        return res.status(200).json({
+          experiences: [],
+          pagination: {
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            hasMore: false,
+          },
+          filters: {
+            distance: distance || 'all',
+            mealType: mealType || null,
+            onlyFollowing: true,
+            followingCount: 0,
+          },
+        });
+      }
+
+      // Add following filter to where clause
+      where.userId = { [Op.in]: followingIds };
     }
 
     // Build restaurant include with distance filter
@@ -534,10 +572,10 @@ const getExperienceFeed = async (req, res) => {
       restaurantInclude.where = literal(`
         (6371 * acos(
           cos(radians(${userLat})) *
-          cos(radians("Restaurant"."latitude")) *
-          cos(radians("Restaurant"."longitude") - radians(${userLng})) +
+          cos(radians("restaurant"."latitude")) *
+          cos(radians("restaurant"."longitude") - radians(${userLng})) +
           sin(radians(${userLat})) *
-          sin(radians("Restaurant"."latitude"))
+          sin(radians("restaurant"."latitude"))
         )) <= ${distanceKm}
       `);
     }
@@ -646,6 +684,25 @@ const getExperienceFeed = async (req, res) => {
       return result;
     });
 
+    // Prepare filter info
+    const filterInfo = {
+      distance: distance || 'all',
+      mealType: mealType || null,
+      onlyFollowing: onlyFollowing === 'true',
+    };
+
+    // Add following count if filtering by following
+    if (onlyFollowing === 'true' && userId) {
+      const { UserFollow } = require('../../models');
+      const followingCount = await UserFollow.count({
+        where: {
+          followerId: userId,
+          status: 'ACTIVE',
+        },
+      });
+      filterInfo.followingCount = followingCount;
+    }
+
     res.status(200).json({
       experiences: experiencesWithStatus,
       pagination: {
@@ -653,10 +710,7 @@ const getExperienceFeed = async (req, res) => {
         offset: parseInt(offset),
         hasMore: experiences.length === parseInt(limit),
       },
-      filters: {
-        distance: distance || 'all',
-        mealType: mealType || null,
-      },
+      filters: filterInfo,
     });
   } catch (error) {
     console.error('[Get Experience Feed] Error:', error);

@@ -8,6 +8,7 @@ const {
   UserSettings,
   Visit,
   Experience,
+  UserFavorite,
 } = require('../../models');
 const { getMediaUrl } = require('../../config/cdn');
 const {
@@ -1650,7 +1651,10 @@ const approveReceipt = async (req, res) => {
     let taggedBuddiesCount = 0;
 
     if (receipt.visitId) {
-      visit = await Visit.findByPk(receipt.visitId);
+      visit = await Visit.findByPk(receipt.visitId, {
+        attributes: ['id', 'userId', 'restaurantId', 'status', 'visitDate', 'taggedBuddies', 'submittedAt', 'wasInMustVisit'],
+      });
+
       if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
         taggedBuddiesCount = visit.taggedBuddies.length;
       }
@@ -1715,22 +1719,48 @@ const approveReceipt = async (req, res) => {
     // (visit variable already declared above for buddy points)
     try {
       if (receipt.visitId && !visit) {
-        // Re-fetch if not already loaded
-        visit = await Visit.findByPk(receipt.visitId);
+        visit = await Visit.findByPk(receipt.visitId, {
+          attributes: ['id', 'userId', 'restaurantId', 'status', 'visitDate', 'taggedBuddies', 'submittedAt'],
+        });
+      } else if (visit && !visit.taggedBuddies) {
+        await visit.reload({
+          attributes: ['id', 'userId', 'restaurantId', 'status', 'visitDate', 'taggedBuddies', 'submittedAt'],
+        });
       }
 
       if (receipt.visitId && visit) {
-        // Visit already exists (user created it before approval)
+        // Check if restaurant was in Must Visit list
+        const mustVisitEntry = await UserFavorite.findOne({
+          where: {
+            userId: visit.userId,
+            restaurantId: restaurantId,
+            removedAt: null,
+          },
+        });
+
+        const wasInMustVisit = !!mustVisitEntry;
+        console.log(`[Receipt Approval] Checking Must Visit for user ${visit.userId}: ${wasInMustVisit ? 'YES' : 'NO'}`);
+
+        if (wasInMustVisit) {
+          // Soft delete the Must Visit entry
+          await mustVisitEntry.update({
+            removedAt: new Date(),
+            removedForVisitId: visit.id,
+          });
+        }
+
         // Update existing Visit to APPROVED with restaurant
-        await visit.update({
+        const updateData = {
           status: 'APPROVED',
           restaurantId: restaurantId, // Set the restaurant from approved receipt
           visitDate: visit.visitDate || new Date(issueDate),
           reviewedAt: new Date(),
           reviewedBy: req.user.id,
-        });
+          wasInMustVisit: wasInMustVisit,
+        };
 
-        console.log(`[Receipt Approval] Updated existing Visit ${visit.id} to APPROVED status with restaurant ${restaurantId}`);
+        await visit.update(updateData);
+        await visit.reload();
 
         // Update associated Experience with restaurantId if it exists
         const experience = await Experience.findOne({
@@ -1765,6 +1795,67 @@ const approveReceipt = async (req, res) => {
 
         // Link the visit to the receipt
         await receipt.update({ visitId: visit.id });
+      }
+
+      if (visit) {
+        try {
+          const buddyVisits = await Visit.findAll({
+            where: {
+              taggedBuddies: { [Op.contains]: [visit.id] },
+              userId: { [Op.ne]: visit.userId },
+            },
+          });
+
+          if (buddyVisits.length > 0) {
+
+            for (const buddyVisit of buddyVisits) {
+              const buddyMustVisitEntry = await UserFavorite.findOne({
+                where: {
+                  userId: buddyVisit.userId,
+                  restaurantId: restaurantId,
+                  removedAt: null,
+                },
+              });
+
+              const buddyWasInMustVisit = !!buddyMustVisitEntry;
+
+              if (buddyWasInMustVisit) {
+                await buddyMustVisitEntry.update({
+                  removedAt: new Date(),
+                  removedForVisitId: buddyVisit.id,
+                });
+              }
+
+              const buddyUpdateData = {
+                status: 'APPROVED',
+                restaurantId: restaurantId,
+                visitDate: visit.visitDate || new Date(issueDate),
+                reviewedAt: new Date(),
+                reviewedBy: req.user.id,
+                wasInMustVisit: buddyWasInMustVisit,
+              };
+              await buddyVisit.update(buddyUpdateData);
+
+              const buddyExperience = await Experience.findOne({
+                where: { visitId: buddyVisit.id },
+              });
+
+              if (buddyExperience) {
+                await buddyExperience.update({
+                  restaurantId: restaurantId,
+                  status: 'APPROVED',
+                  publishedAt: buddyExperience.publishedAt || new Date(),
+                });
+            
+              }
+            }
+          }
+        } catch (buddyErr) {
+          console.error(
+            '[Receipt Approval] Failed to approve buddy visits:',
+            buddyErr,
+          );
+        }
       }
     } catch (visitError) {
       console.error('[Receipt Approval] Failed to process Visit:', visitError);
@@ -1841,47 +1932,74 @@ const approveReceipt = async (req, res) => {
 
       await createAndSendNotification(receipt.userId, {
         type: notificationType,
+        restaurantId: receipt.restaurantId,
         data: {
+          type: notificationType,
           points: pointsPerPerson,
           restaurantName: restaurant.name,
+          restaurantId: receipt.restaurantId,
           buddyCount: taggedBuddiesCount,
           receiptId: receipt.id,
+          visitId: visit?.id || null,
           totalPoints: pointsAwarded,
           sharedWith: taggedBuddiesCount,
+          screen: 'visits',
+          url: 'dinver://visits',
         },
-        restaurantId: receipt.restaurantId,
       });
     } catch (notificationError) {
       console.error('Error sending push notification:', notificationError);
     }
 
-    // Send push notifications to tagged buddies (using i18n)
     if (visit && visit.taggedBuddies && visit.taggedBuddies.length > 0) {
       try {
-        // Get main user's name for the notification
         const mainUser = await User.findByPk(receipt.userId, {
-          attributes: ['name', 'username'],
+          attributes: ['id', 'name', 'username'],
         });
-        const mainUserName = mainUser?.name || mainUser?.username || 'Prijatelj';
 
-        // Send notification to each buddy individually (for i18n support)
         for (const buddyId of visit.taggedBuddies) {
-          await createAndSendNotification(buddyId, {
-            type: 'receipt_approved_buddy',
-            data: {
-              actorName: mainUserName,
-              restaurantName: restaurant.name,
-              points: pointsPerPerson,
-              receiptId: receipt.id,
+          console.log(`[Receipt Approval] Creating notification for buddy ${buddyId}`);
+
+          const buddyVisit = await Visit.findOne({
+            where: {
+              userId: buddyId,
+              taggedBuddies: { [Op.contains]: [visit.id] },
             },
+            attributes: ['id'],
+          });
+
+          const notificationData = {
+            type: 'receipt_approved_buddy',
             actorUserId: receipt.userId,
             restaurantId: receipt.restaurantId,
-          });
+            data: {
+              type: 'receipt_approved_buddy',
+              actorUserId: receipt.userId,
+              actorName: mainUser?.name || mainUser?.username || 'korisnik',
+              receiptId: receipt.id,
+              visitId: buddyVisit?.id || null,
+              points: pointsPerPerson,
+              restaurantName: restaurant.name,
+              restaurantId: receipt.restaurantId,
+              userName: mainUser?.name || 'korisnik',
+              userUsername: mainUser?.username || null,
+              screen: 'visits',
+              url: 'dinver://visits',
+            },
+          };
+          const result = await createAndSendNotification(buddyId, notificationData);
+
+          console.log(`[Receipt Approval] Notification created: ${result?.id || 'FAILED'}`);
         }
 
-        console.log(`[Receipt Approval] Sent notifications to ${visit.taggedBuddies.length} buddies`);
+        console.log(
+          `[Receipt Approval] Sent notifications to ${visit.taggedBuddies.length} buddies`,
+        );
       } catch (buddyNotificationError) {
-        console.error('Error sending buddy push notifications:', buddyNotificationError);
+        console.error(
+          'Error sending buddy push notifications:',
+          buddyNotificationError,
+        );
       }
     }
 

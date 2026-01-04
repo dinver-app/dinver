@@ -1,7 +1,9 @@
 const app = require('./app');
+const http = require('http');
 const { Sequelize } = require('sequelize');
 const cron = require('node-cron');
 const leaderboardCycleManager = require('./cron/leaderboardCycleManager');
+const { initializeSocket } = require('./socket');
 
 const PORT = process.env.PORT || 3000;
 
@@ -22,8 +24,11 @@ if (config.use_env_variable) {
 }
 
 sequelize.sync().then(() => {
-  app.listen(PORT, () => {
+  const httpServer = http.createServer(app);
+  initializeSocket(httpServer);
+  httpServer.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`WebSocket server ready`);
 
     // Start leaderboard cycle management cron job
     // Run every minute

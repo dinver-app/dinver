@@ -29,10 +29,10 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
   }, []);
 
   const navItems = [
-    { href: '#features', label: messages.nav.features },
-    { href: '#how-it-works', label: messages.nav.howItWorks },
-    { href: '#restaurants', label: messages.nav.restaurants },
-    { href: '#faq', label: 'FAQ' },
+    { href: '/#features', label: messages.nav.features },
+    { href: '/#how-it-works', label: messages.nav.howItWorks },
+    { href: '/#restaurants', label: messages.nav.restaurants },
+    { href: '/#faq', label: 'FAQ' },
     { href: '/kontakt', label: messages.nav.contact },
   ];
 
@@ -55,39 +55,25 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <a href="#" className="flex-shrink-0">
+            <Link href="/" className="flex-shrink-0">
               <Logo variant={isScrolled ? 'dark' : 'light'} />
-            </a>
+            </Link>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
-              {navItems.map((item) =>
-                item.href.startsWith('/') ? (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`transition-colors font-medium ${
-                      isScrolled
-                        ? 'text-gray-700 hover:text-dinver-green'
-                        : 'text-white/80 hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ) : (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    className={`transition-colors font-medium ${
-                      isScrolled
-                        ? 'text-gray-700 hover:text-dinver-green'
-                        : 'text-white/80 hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </a>
-                )
-              )}
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`transition-colors font-medium ${
+                    isScrolled
+                      ? 'text-gray-700 hover:text-dinver-green'
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </nav>
 
             {/* Desktop Actions */}
@@ -172,27 +158,16 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
             >
               <div className="flex flex-col h-full pt-20 pb-6 px-6">
                 <div className="flex flex-col gap-4">
-                  {navItems.map((item) =>
-                    item.href.startsWith('/') ? (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
-                      >
-                        {item.label}
-                      </Link>
-                    ) : (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
-                      >
-                        {item.label}
-                      </a>
-                    )
-                  )}
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-lg font-medium text-gray-700 hover:text-dinver-green transition-colors py-2"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                 </div>
                 <div className="mt-auto flex flex-col gap-4">
                   <button

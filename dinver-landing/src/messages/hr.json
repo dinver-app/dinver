@@ -9,9 +9,10 @@
     "language": "EN"
   },
   "hero": {
-    "tagline": "Otkrij. Podijeli. Doživi.",
-    "title": "Tvoj sljedeći odličan obrok te čeka",
-    "subtitle": "Dinver je više od vodiča za restorane. To je zajednica ljubitelja hrane koji otkrivaju skrivene dragulje, dijele autentična iskustva i zarađuju nagrade za svaki posjet.",
+    "badge": "Nova food discovery platforma",
+    "tagline": "Otkrij. Podijeli. Osvoji nagrade.",
+    "title": "Otkrij gdje svi jedu",
+    "subtitle": "Prava iskustva od pravih ljudi. Prati foodieje, otkrivaj skrivene dragulje i dijeli svoja otkrića. Osvajaj nagrade za svaki posjet i penji se na ljestvici.",
     "cta": "Preuzmi sada",
     "ctaSecondary": "Istraži restorane",
     "stats": {
@@ -47,6 +48,10 @@
       "details": {
         "title": "Kompletne informacije",
         "description": "360° virtualne šetnje, interaktivni meniji, radno vrijeme, fotografije i sve što trebaš za odabir."
+      },
+      "reservations": {
+        "title": "Jednostavne Rezervacije",
+        "description": "Rezerviraj stol u sekundi. Odaberi datum, vrijeme i broj gostiju - sve unutar aplikacije."
       }
     }
   },
@@ -64,7 +69,7 @@
       },
       "share": {
         "title": "Podijeli i osvoji",
-        "description": "Kreiraj doživljaj sa slikama i ocjenama. Penjaj se na ljestvici i otključaj ekskluzivne nagrade."
+        "description": "Kreiraj doživljaj sa slikama i ocjenama. Penji se na ljestvici i otključaj ekskluzivne nagrade."
       }
     }
   },
@@ -93,6 +98,10 @@
       "community": {
         "title": "Angažirana zajednica",
         "description": "Poveži se sa zajednicom koja obožava otkrivati nova gastro iskustva."
+      },
+      "reservations": {
+        "title": "Ugrađene Rezervacije",
+        "description": "Primaj rezervacije stolova direktno kroz aplikaciju. Bez dodatnih alata."
       }
     },
     "cta": "Postani partner",
@@ -147,7 +156,7 @@
     }
   },
   "rewards": {
-    "title": "Penjaj se na ljestvici",
+    "title": "Penji se na ljestvici",
     "subtitle": "Zarađuj bodove, natječi se s prijateljima i osvoji prave nagrade",
     "description": "Svaki posjet restoranu se računa. Skeniraj račun, zarađuj bodove i natječi se za titulu najboljeg istraživača. Top 3 svakih dva tjedna dobivaju mystery box na kućnu adresu!",
     "howToEarn": "Kako zaraditi bodove",

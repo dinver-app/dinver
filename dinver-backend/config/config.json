@@ -1,17 +1,11 @@
 {
   "development": {
-    "username": "dinver_user",
-    "password": "tI2b894e5q9e",
+    "username": "postgres",
+    "password": "postgres",
     "database": "dinver",
-    "host": "127.0.0.1",
+    "host": "localhost",
     "port": 5433,
-    "dialect": "postgres",
-    "pool": {
-      "max": 20,
-      "min": 5,
-      "acquire": 60000,
-      "idle": 10000
-    }
+    "dialect": "postgres"
   },
   "staging": {
     "use_env_variable": "DATABASE_URL",

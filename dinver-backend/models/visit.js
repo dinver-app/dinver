@@ -19,6 +19,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'reviewer',
       });
 
+      Visit.belongsTo(models.User, {
+        foreignKey: 'taggedBy',
+        as: 'tagger',
+      });
+
       Visit.hasOne(models.Experience, {
         foreignKey: 'visitId',
         as: 'experience',
@@ -113,6 +118,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ARRAY(DataTypes.UUID),
         allowNull: true,
         defaultValue: [],
+      },
+      taggedBy: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
+        comment: 'User who tagged this person (null if main visit creator)',
       },
       manualRestaurantName: {
         type: DataTypes.STRING,

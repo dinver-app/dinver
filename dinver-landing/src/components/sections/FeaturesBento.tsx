@@ -9,6 +9,7 @@ import {
   Bookmark,
   Search,
   View,
+  Calendar,
 } from 'lucide-react';
 import { Messages } from '@/lib/i18n';
 
@@ -26,7 +27,7 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
     if (!container) return;
 
     const cardWidth = 320 + 24; // card width + gap
-    const totalWidth = cardWidth * 6; // 6 original cards
+    const totalWidth = cardWidth * 7; // 7 original cards
 
     const handleScroll = () => {
       // When scrolled to the cloned end, jump to start
@@ -200,6 +201,16 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
       iconColor: 'text-cyan-600',
       iconBg: 'bg-cyan-200',
     },
+    {
+      icon: Calendar,
+      title: messages.features.items.reservations.title,
+      description: messages.features.items.reservations.description,
+      gradient: 'from-green-100 to-emerald-100',
+      iconColor: 'text-green-600',
+      iconBg: 'bg-green-200',
+      badge: locale === 'hr' ? 'Novo' : 'New',
+      badgeColor: 'bg-green-600',
+    },
   ];
 
   return (
@@ -251,7 +262,7 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: (index % 6) * 0.05 }}
+              transition={{ delay: (index % 7) * 0.05 }}
               className="flex-shrink-0 w-[320px]"
             >
               <div

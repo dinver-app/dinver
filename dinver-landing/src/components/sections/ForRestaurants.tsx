@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Eye, BarChart3, Bell, Users } from 'lucide-react';
+import { Eye, BarChart3, Bell, Users, Calendar } from 'lucide-react';
+import Image from 'next/image';
 import AnimatedSection from '@/components/ui/AnimatedSection';
 import Button from '@/components/ui/Button';
 import { Messages } from '@/lib/i18n';
@@ -31,6 +32,11 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
       icon: Users,
       title: messages.forRestaurants.benefits.community.title,
       description: messages.forRestaurants.benefits.community.description,
+    },
+    {
+      icon: Calendar,
+      title: messages.forRestaurants.benefits.reservations.title,
+      description: messages.forRestaurants.benefits.reservations.description,
     },
   ];
 
@@ -101,19 +107,39 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                 </div>
               </div>
 
+              {/* Phone with reservation screenshot */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                className="absolute -right-8 sm:-right-12 lg:-right-16 top-1/2 -translate-y-1/2"
+              >
+                <div className="relative w-[120px] sm:w-[140px] lg:w-[160px] h-[240px] sm:h-[280px] lg:h-[320px] bg-gray-900 rounded-[1.5rem] sm:rounded-[2rem] p-1 sm:p-1.5 shadow-2xl">
+                  <div className="w-full h-full bg-white rounded-[1.25rem] sm:rounded-[1.5rem] overflow-hidden relative">
+                    <Image
+                      src="/screenshots/reservation.PNG"
+                      alt="Reservation screen"
+                      fill
+                      className="object-cover object-top"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
               {/* Floating notification */}
               <motion.div
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="absolute -right-4 top-1/4 bg-white rounded-xl shadow-lg p-3 border border-gray-100"
+                className="absolute -left-4 top-1/4 bg-white rounded-xl shadow-lg p-3 border border-gray-100"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-dinver-green rounded-lg flex items-center justify-center">
-                    <Bell className="text-white" size={16} />
+                    <Calendar className="text-white" size={16} />
                   </div>
                   <div>
-                    <p className="text-xs font-medium">New review!</p>
-                    <p className="text-xs text-gray-500">★ 9.2 rating</p>
+                    <p className="text-xs font-medium">New reservation!</p>
+                    <p className="text-xs text-gray-500">Tonight, 8 PM</p>
                   </div>
                 </div>
               </motion.div>
