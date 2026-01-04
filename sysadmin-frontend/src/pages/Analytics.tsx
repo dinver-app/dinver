@@ -1623,7 +1623,7 @@ const Analytics = () => {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
+                            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
                               {index + 1}
                             </div>
                             <h4

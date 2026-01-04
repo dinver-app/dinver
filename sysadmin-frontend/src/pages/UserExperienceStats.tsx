@@ -304,7 +304,7 @@ const UserExperienceStats: React.FC = () => {
                       )}
                     </div>
                   )}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                  <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-3">
                     <h4 className="text-white font-semibold text-sm truncate">
                       {exp.title}
                     </h4>

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Eye, BarChart3, Bell, Users, Calendar } from 'lucide-react';
-import Image from 'next/image';
-import AnimatedSection from '@/components/ui/AnimatedSection';
-import Button from '@/components/ui/Button';
-import { Messages } from '@/lib/i18n';
+import { motion } from "framer-motion";
+import { Eye, BarChart3, Bell, Users, Calendar } from "lucide-react";
+import Image from "next/image";
+import AnimatedSection from "@/components/ui/AnimatedSection";
+import Button from "@/components/ui/Button";
+import { Messages } from "@/lib/i18n";
 
 interface ForRestaurantsProps {
   messages: Messages;
@@ -41,7 +41,10 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
   ];
 
   return (
-    <section id="restaurants" className="py-24 lg:py-32 bg-gradient-to-b from-gray-50 to-white">
+    <section
+      id="restaurants"
+      className="py-24 lg:py-32 bg-linear-to-b from-gray-50 to-white"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Dashboard Preview */}
@@ -68,8 +71,12 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                   {/* Header */}
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h4 className="font-bold text-gray-900">Restaurant Dashboard</h4>
-                      <p className="text-sm text-gray-500">Welcome back, La Pergola</p>
+                      <h4 className="font-bold text-gray-900">
+                        Restaurant Dashboard
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        Welcome back, La Pergola
+                      </p>
                     </div>
                     <div className="w-10 h-10 bg-dinver-green rounded-lg flex items-center justify-center">
                       <BarChart3 className="text-white" size={20} />
@@ -83,7 +90,9 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                       <p className="text-xs text-gray-500">Views this week</p>
                     </div>
                     <div className="bg-emerald-50 rounded-xl p-4">
-                      <p className="text-2xl font-bold text-dinver-green">+24%</p>
+                      <p className="text-2xl font-bold text-dinver-green">
+                        +24%
+                      </p>
                       <p className="text-xs text-gray-500">Engagement</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
@@ -171,15 +180,25 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                     <benefit.icon className="text-dinver-green" size={24} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{benefit.title}</h3>
-                    <p className="text-gray-600 text-sm mt-1">{benefit.description}</p>
+                    <h3 className="font-semibold text-gray-900">
+                      {benefit.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mt-1">
+                      {benefit.description}
+                    </p>
                   </div>
                 </motion.div>
               ))}
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <Button onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}>
+              <Button
+                onClick={() =>
+                  document
+                    .getElementById("contact")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
                 {messages.forRestaurants.cta}
               </Button>
               <Button variant="ghost">

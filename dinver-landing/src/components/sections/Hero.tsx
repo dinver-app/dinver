@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { MapPin, Star, Users } from 'lucide-react';
-import AppStoreButtons from '@/components/ui/AppStoreButtons';
-import { Messages } from '@/lib/i18n';
+import { motion } from "framer-motion";
+import { MapPin, Star, Users } from "lucide-react";
+import AppStoreButtons from "@/components/ui/AppStoreButtons";
+import { Messages } from "@/lib/i18n";
 
 interface HeroProps {
   messages: Messages;
@@ -11,13 +11,13 @@ interface HeroProps {
 
 export default function Hero({ messages }: HeroProps) {
   const stats = [
-    { value: '150+', label: messages.hero.stats.restaurants, icon: MapPin },
-    { value: '10K+', label: messages.hero.stats.users, icon: Users },
-    { value: '25K+', label: messages.hero.stats.experiences, icon: Star },
+    { value: "150+", label: messages.hero.stats.restaurants, icon: MapPin },
+    { value: "10K+", label: messages.hero.stats.users, icon: Users },
+    { value: "25K+", label: messages.hero.stats.experiences, icon: Star },
   ];
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-linear-to-br from-gray-50 via-white to-gray-100">
       {/* Subtle background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-dinver-green/5 rounded-full blur-3xl" />
@@ -47,16 +47,17 @@ export default function Hero({ messages }: HeroProps) {
               transition={{ delay: 0.3 }}
               className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight"
             >
-              {messages.hero.title.split(' ').map((word, i) => (
+              {messages.hero.title.split(" ").map((word, i) => (
                 <span
                   key={i}
                   className={
-                    word.toLowerCase() === 'great' || word.toLowerCase() === 'odličan'
-                      ? 'text-dinver-green'
-                      : ''
+                    word.toLowerCase() === "great" ||
+                    word.toLowerCase() === "odličan"
+                      ? "text-dinver-green"
+                      : ""
                   }
                 >
-                  {word}{' '}
+                  {word}{" "}
                 </span>
               ))}
             </motion.h1>
@@ -91,7 +92,9 @@ export default function Hero({ messages }: HeroProps) {
                 <div key={index} className="text-center sm:text-left">
                   <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                     <stat.icon size={18} className="text-dinver-green" />
-                    <span className="text-2xl font-bold text-gray-900">{stat.value}</span>
+                    <span className="text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </span>
                   </div>
                   <p className="text-sm text-gray-500">{stat.label}</p>
                 </div>
@@ -111,7 +114,7 @@ export default function Hero({ messages }: HeroProps) {
               <div className="relative z-10 w-64 sm:w-72 h-[520px] sm:h-[580px] bg-dinver-dark rounded-[3rem] p-2 shadow-2xl">
                 <div className="w-full h-full bg-gray-100 rounded-[2.5rem] overflow-hidden relative">
                   {/* Phone screen with Dinver branding */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-dinver-green/10 to-gray-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-linear-to-br from-dinver-green/10 to-gray-50 flex items-center justify-center">
                     <div className="text-center p-6">
                       <div className="w-20 h-20 bg-dinver-green rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                         {/* D Logo */}
@@ -127,8 +130,12 @@ export default function Hero({ messages }: HeroProps) {
                           />
                         </svg>
                       </div>
-                      <p className="text-gray-500 text-sm font-medium">Dinver App</p>
-                      <p className="text-gray-400 text-xs mt-1">Coming to your screen</p>
+                      <p className="text-gray-500 text-sm font-medium">
+                        Dinver App
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        Coming to your screen
+                      </p>
                     </div>
                   </div>
                   {/* Notch */}
@@ -139,7 +146,11 @@ export default function Hero({ messages }: HeroProps) {
               {/* Floating cards */}
               <motion.div
                 animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 className="absolute -left-16 top-20 bg-white rounded-2xl shadow-xl p-4 z-20 border border-gray-100"
               >
                 <div className="flex items-center gap-3">
@@ -155,7 +166,12 @@ export default function Hero({ messages }: HeroProps) {
 
               <motion.div
                 animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }}
                 className="absolute -right-8 bottom-32 bg-white rounded-2xl shadow-xl p-4 z-20 border border-gray-100"
               >
                 <div className="flex items-center gap-3">

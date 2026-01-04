@@ -1,30 +1,33 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { EffectCards, Autoplay } from 'swiper/modules';
-import { Sparkles } from 'lucide-react';
-import Image from 'next/image';
-import AnimatedSection from '@/components/ui/AnimatedSection';
-import { Messages } from '@/lib/i18n';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { EffectCards, Autoplay } from "swiper/modules";
+import { Sparkles } from "lucide-react";
+import Image from "next/image";
+import AnimatedSection from "@/components/ui/AnimatedSection";
+import { Messages } from "@/lib/i18n";
 
 // Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/effect-cards';
+import "swiper/css";
+import "swiper/css/effect-cards";
 
 interface ExperienceFeedNewProps {
   messages: Messages;
-  locale: 'en' | 'hr';
+  locale: "en" | "hr";
 }
 
-type TabType = 'experiences' | 'whatsNew';
+type TabType = "experiences" | "whatsNew";
 
-export default function ExperienceFeedNew({ messages, locale }: ExperienceFeedNewProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('experiences');
+export default function ExperienceFeedNew({
+  messages,
+  locale,
+}: ExperienceFeedNewProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("experiences");
 
   return (
-    <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-white to-gray-50 overflow-hidden">
+    <section className="py-16 sm:py-24 lg:py-32 bg-linear-to-b from-white to-gray-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
           {/* Content */}
@@ -33,7 +36,9 @@ export default function ExperienceFeedNew({ messages, locale }: ExperienceFeedNe
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-dinver-green/10 rounded-full mb-4 sm:mb-6">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-dinver-green" />
               <span className="text-dinver-green text-xs sm:text-sm font-semibold">
-                {locale === 'hr' ? 'Jedinstveno na tržištu' : 'Unique in the market'}
+                {locale === "hr"
+                  ? "Jedinstveno na tržištu"
+                  : "Unique in the market"}
               </span>
             </div>
 
@@ -50,24 +55,24 @@ export default function ExperienceFeedNew({ messages, locale }: ExperienceFeedNe
             {/* Tabs */}
             <div className="mt-6 sm:mt-8 flex gap-2 sm:gap-3">
               <button
-                onClick={() => setActiveTab('experiences')}
+                onClick={() => setActiveTab("experiences")}
                 className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
-                  activeTab === 'experiences'
-                    ? 'bg-dinver-green text-white shadow-lg shadow-dinver-green/25'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  activeTab === "experiences"
+                    ? "bg-dinver-green text-white shadow-lg shadow-dinver-green/25"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === 'hr' ? 'Doživljaji' : 'Experiences'}
+                {locale === "hr" ? "Doživljaji" : "Experiences"}
               </button>
               <button
-                onClick={() => setActiveTab('whatsNew')}
+                onClick={() => setActiveTab("whatsNew")}
                 className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
-                  activeTab === 'whatsNew'
-                    ? 'bg-dinver-green text-white shadow-lg shadow-dinver-green/25'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  activeTab === "whatsNew"
+                    ? "bg-dinver-green text-white shadow-lg shadow-dinver-green/25"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === 'hr' ? 'Što je novo' : "What's New"}
+                {locale === "hr" ? "Što je novo" : "What's New"}
               </button>
             </div>
 
@@ -78,25 +83,28 @@ export default function ExperienceFeedNew({ messages, locale }: ExperienceFeedNe
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 sm:mt-6 text-gray-500 text-xs sm:text-sm"
             >
-              {activeTab === 'experiences'
-                ? locale === 'hr'
-                  ? 'Pregledaj prave gastro doživljaje od naših korisnika'
-                  : 'Browse real dining experiences from our users'
-                : locale === 'hr'
-                ? 'Prati što je novo u tvojim omiljenim restoranima'
-                : 'Follow updates from your favorite restaurants'}
+              {activeTab === "experiences"
+                ? locale === "hr"
+                  ? "Pregledaj prave gastro doživljaje od naših korisnika"
+                  : "Browse real dining experiences from our users"
+                : locale === "hr"
+                ? "Prati što je novo u tvojim omiljenim restoranima"
+                : "Follow updates from your favorite restaurants"}
             </motion.p>
           </AnimatedSection>
 
           {/* Phone with Real Screenshots */}
-          <AnimatedSection direction="right" className="relative order-1 lg:order-2">
+          <AnimatedSection
+            direction="right"
+            className="relative order-1 lg:order-2"
+          >
             <div className="relative flex justify-center">
               {/* Phone frame */}
               <div className="relative w-[240px] sm:w-[280px] lg:w-[300px] h-[500px] sm:h-[580px] lg:h-[620px] bg-gray-900 rounded-[2.5rem] sm:rounded-[3rem] p-1.5 sm:p-2 shadow-2xl">
                 <div className="w-full h-full bg-white rounded-[2.25rem] sm:rounded-[2.5rem] overflow-hidden relative">
                   {/* Screenshot content with smooth transition */}
                   <AnimatePresence mode="wait">
-                    {activeTab === 'experiences' ? (
+                    {activeTab === "experiences" ? (
                       <motion.div
                         key="experiences"
                         initial={{ opacity: 0, scale: 0.95 }}

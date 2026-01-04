@@ -189,7 +189,7 @@ const Settings = () => {
           </h3>
 
           {/* QR Generator Link */}
-          <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+          <div className="mt-6 p-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
