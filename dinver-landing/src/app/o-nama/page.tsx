@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Utensils, Users, MapPin, Trophy, Heart, Target } from 'lucide-react';
+import { ArrowLeft, Utensils, Users, MapPin, Heart, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Locale, getMessages, defaultLocale } from '@/lib/i18n';
 import Header from '@/components/layout/Header';
@@ -182,7 +182,7 @@ export default function ONama() {
               <ul className="space-y-2 text-gray-600">
                 <li>• Povećajte vidljivost među pravim ljubiteljima hrane</li>
                 <li>• Predstavite svoj prostor s 360° virtualnom šetnjom</li>
-                <li>• Dijelite novosti i događaje putem "What&apos;s New"</li>
+                <li>• Dijelite novosti i događaje putem &quot;What&apos;s New&quot;</li>
                 <li>• Pratite analitiku i razumijte svoje goste</li>
               </ul>
             </motion.div>

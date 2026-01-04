@@ -79,7 +79,7 @@ export default function KontaktPage() {
         setFormStatus('error');
         setErrorMessage(response.message || 'Došlo je do greške');
       }
-    } catch (error) {
+    } catch {
       setFormStatus('error');
       setErrorMessage('Došlo je do greške. Molimo pokušajte ponovno.');
     }

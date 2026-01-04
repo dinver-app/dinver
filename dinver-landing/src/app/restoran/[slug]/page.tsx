@@ -18,10 +18,8 @@ import {
   Heart,
   Share2,
   ChevronLeft,
-  ChevronDown,
   Search,
   Utensils,
-  Wine,
   ExternalLink,
   Calendar,
   Instagram,
@@ -153,8 +151,8 @@ export default function RestaurantDetailsPage() {
         if (menuCategoriesData.length > 0) {
           setSelectedCategory(menuCategoriesData[0].id);
         }
-      } catch (err) {
-        console.error('Failed to fetch restaurant data:', err);
+      } catch (error) {
+        console.error('Failed to fetch restaurant data:', error);
         setError('Failed to load restaurant data');
       } finally {
         setIsLoading(false);
@@ -223,7 +221,7 @@ export default function RestaurantDetailsPage() {
           text: restaurant?.description?.hr || restaurant?.description?.en || '',
           url: window.location.href,
         });
-      } catch (err) {
+      } catch {
         // User cancelled or error
       }
     } else {

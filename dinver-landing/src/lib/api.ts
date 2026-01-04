@@ -3,6 +3,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/landing';
 const API_KEY = process.env.NEXT_PUBLIC_LANDING_API_KEY || '';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ApiResponse<T> {
   success?: boolean;
   message?: string;
@@ -171,7 +172,7 @@ export interface CustomWorkingDay {
   note?: string;
 }
 
-export interface RestaurantDetails extends Partner {
+export interface RestaurantDetails extends Omit<Partner, 'description' | 'foodTypes'> {
   userRatingsTotal?: number;
   priceLevel?: string;
   websiteUrl?: string;

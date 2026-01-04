@@ -65,6 +65,7 @@ export default function RestaurantMap({ messages, locale = 'hr' }: RestaurantMap
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
   const [restaurants, setRestaurants] = useState<Partner[]>(fallbackRestaurants);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MapComponent, setMapComponent] = useState<React.ComponentType<any> | null>(null);
 
   // Fetch partners from API
@@ -95,6 +96,7 @@ export default function RestaurantMap({ messages, locale = 'hr' }: RestaurantMap
   useEffect(() => {
     import('react-leaflet').then(({ MapContainer, TileLayer, Marker, Popup }) => {
       import('leaflet').then((L) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import AnimatedSection from '@/components/ui/AnimatedSection';
-import Button from '@/components/ui/Button';
 import { Messages } from '@/lib/i18n';
 
 interface PartnersSectionProps {

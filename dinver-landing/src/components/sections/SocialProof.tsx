@@ -45,7 +45,7 @@ export default function SocialProof({ locale }: SocialProofProps) {
   const [stats, setStats] = useState<LandingStatsResponse['stats'] | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [experiences, setExperiences] = useState<LandingExperience[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {

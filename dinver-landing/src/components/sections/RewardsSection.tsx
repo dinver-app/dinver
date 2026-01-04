@@ -21,7 +21,7 @@ interface RewardsSectionProps {
   locale: 'en' | 'hr';
 }
 
-export default function RewardsSection({ messages, locale }: RewardsSectionProps) {
+export default function RewardsSection({ locale }: RewardsSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: '-100px' });
 

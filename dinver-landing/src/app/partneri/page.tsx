@@ -8,7 +8,6 @@ import {
   MapPin,
   Star,
   Phone,
-  Globe,
   Search,
   Filter,
   ChevronDown,
