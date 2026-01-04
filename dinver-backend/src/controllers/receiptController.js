@@ -1940,6 +1940,7 @@ const approveReceipt = async (req, res) => {
           restaurantId: receipt.restaurantId,
           buddyCount: taggedBuddiesCount,
           receiptId: receipt.id,
+          visitId: visit?.id || null,
           totalPoints: pointsAwarded,
           sharedWith: taggedBuddiesCount,
           screen: 'visits',
