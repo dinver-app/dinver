@@ -960,6 +960,8 @@ const getUserVisits = async (req, res) => {
               overallRating: parseFloat(visit.experience.overallRating) || null,
               sharesCount: visit.experience.sharesCount || 0,
               likesCount: visit.experience.likesCount || 0,
+              status: visit.experience.status,
+              publishedAt: visit.experience.publishedAt,
             }
           : null,
       };
