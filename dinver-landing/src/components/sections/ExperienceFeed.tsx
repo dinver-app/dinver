@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Heart, MessageCircle, Share, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
-import AnimatedSection from '@/components/ui/AnimatedSection';
-import Button from '@/components/ui/Button';
-import { Messages } from '@/lib/i18n';
+import { motion } from "framer-motion";
+import {
+  Heart,
+  MessageCircle,
+  Share,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { useState } from "react";
+import AnimatedSection from "@/components/ui/AnimatedSection";
+import Button from "@/components/ui/Button";
+import { Messages } from "@/lib/i18n";
 
 interface ExperienceFeedProps {
   messages: Messages;
@@ -15,36 +21,37 @@ interface ExperienceFeedProps {
 const mockExperiences = [
   {
     id: 1,
-    user: { name: 'Ana M.', avatar: null },
-    restaurant: 'La Pergola',
+    user: { name: "Ana M.", avatar: null },
+    restaurant: "La Pergola",
     rating: 9.2,
-    description: 'Amazing pasta and incredible service! The truffle risotto was absolutely divine.',
+    description:
+      "Amazing pasta and incredible service! The truffle risotto was absolutely divine.",
     likes: 142,
     comments: 23,
-    images: ['/placeholder-food-1.jpg'],
-    mealType: 'dinner',
+    images: ["/placeholder-food-1.jpg"],
+    mealType: "dinner",
   },
   {
     id: 2,
-    user: { name: 'Marko K.', avatar: null },
-    restaurant: 'Mundoaka',
+    user: { name: "Marko K.", avatar: null },
+    restaurant: "Mundoaka",
     rating: 8.8,
-    description: 'Best brunch spot in town. The avocado toast is a must-try!',
+    description: "Best brunch spot in town. The avocado toast is a must-try!",
     likes: 98,
     comments: 15,
-    images: ['/placeholder-food-2.jpg'],
-    mealType: 'brunch',
+    images: ["/placeholder-food-2.jpg"],
+    mealType: "brunch",
   },
   {
     id: 3,
-    user: { name: 'Ivana P.', avatar: null },
-    restaurant: 'Noel',
+    user: { name: "Ivana P.", avatar: null },
+    restaurant: "Noel",
     rating: 9.5,
-    description: 'Fine dining at its best. Every dish was a work of art.',
+    description: "Fine dining at its best. Every dish was a work of art.",
     likes: 256,
     comments: 42,
-    images: ['/placeholder-food-3.jpg'],
-    mealType: 'dinner',
+    images: ["/placeholder-food-3.jpg"],
+    mealType: "dinner",
   },
 ];
 
@@ -56,7 +63,9 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + mockExperiences.length) % mockExperiences.length);
+    setCurrentIndex(
+      (prev) => (prev - 1 + mockExperiences.length) % mockExperiences.length
+    );
   };
 
   return (
@@ -66,13 +75,13 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
           {/* Content */}
           <AnimatedSection direction="left">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-              {messages.experienceFeed.title}
+              {messages.experienceFeed.experiences.title}
             </h2>
             <p className="mt-2 text-dinver-green font-medium">
-              {messages.experienceFeed.subtitle}
+              {messages.experienceFeed.experiences.subtitle}
             </p>
             <p className="mt-6 text-gray-300 text-lg leading-relaxed">
-              {messages.experienceFeed.description}
+              {messages.experienceFeed.experiences.description}
             </p>
             <div className="mt-8">
               <Button
@@ -102,7 +111,7 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
                     className="h-full flex flex-col"
                   >
                     {/* Image area */}
-                    <div className="relative h-2/3 bg-gradient-to-br from-gray-200 to-gray-300">
+                    <div className="relative h-2/3 bg-linear-to-br from-gray-200 to-gray-300">
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center text-gray-400">
                           <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-2" />
@@ -139,11 +148,15 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
                       <div className="flex items-center gap-6 mt-4">
                         <button className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors">
                           <Heart size={20} />
-                          <span className="text-sm">{mockExperiences[currentIndex].likes}</span>
+                          <span className="text-sm">
+                            {mockExperiences[currentIndex].likes}
+                          </span>
                         </button>
                         <button className="flex items-center gap-1 text-gray-500 hover:text-dinver-green transition-colors">
                           <MessageCircle size={20} />
-                          <span className="text-sm">{mockExperiences[currentIndex].comments}</span>
+                          <span className="text-sm">
+                            {mockExperiences[currentIndex].comments}
+                          </span>
                         </button>
                         <button className="text-gray-500 hover:text-dinver-green transition-colors">
                           <Share size={20} />
@@ -177,8 +190,8 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
                   onClick={() => setCurrentIndex(index)}
                   className={`w-2 h-2 rounded-full transition-all ${
                     index === currentIndex
-                      ? 'w-6 bg-dinver-green'
-                      : 'bg-white/30 hover:bg-white/50'
+                      ? "w-6 bg-dinver-green"
+                      : "bg-white/30 hover:bg-white/50"
                   }`}
                 />
               ))}

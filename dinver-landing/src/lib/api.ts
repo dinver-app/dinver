@@ -3,6 +3,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/landing';
 const API_KEY = process.env.NEXT_PUBLIC_LANDING_API_KEY || '';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ApiResponse<T> {
   success?: boolean;
   message?: string;
@@ -106,7 +107,72 @@ export async function getPartners(): Promise<PartnersResponse> {
 
 // ==================== RESTAURANT DETAILS ====================
 
-export interface RestaurantDetails extends Partner {
+export interface TypeItem {
+  id: string;
+  nameEn: string;
+  nameHr: string;
+  icon?: string;
+}
+
+export interface RestaurantImage {
+  url: string;
+  imageUrls?: {
+    thumbnail: string;
+    small: string;
+    medium: string;
+    large: string;
+  };
+}
+
+export interface HoursStatus {
+  restaurant: {
+    isOpen: boolean;
+    closesAt?: string;
+    opensAt?: string;
+    closingSoon?: boolean;
+    currentShift?: { open: string; close: string };
+  };
+  kitchen: {
+    isOpen: boolean;
+    closesAt?: string;
+    opensAt?: string;
+    closingSoon?: boolean;
+    currentShift?: { open: string; close: string };
+  };
+}
+
+export interface RestaurantReview {
+  id: string;
+  rating: number;
+  photos?: string[];
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface RestaurantRatings {
+  overall: number;
+  foodQuality: number;
+  service: number;
+  atmosphere: number;
+}
+
+export interface OpeningHoursPeriod {
+  open: { day: number; time: string };
+  close: { day: number; time: string };
+  shifts?: Array<{ open: string; close: string }>;
+}
+
+export interface CustomWorkingDay {
+  date: string;
+  isClosed?: boolean;
+  shifts?: Array<{ open: string; close: string }>;
+  note?: string;
+}
+
+export interface RestaurantDetails extends Omit<Partner, 'description' | 'foodTypes'> {
   userRatingsTotal?: number;
   priceLevel?: string;
   websiteUrl?: string;
@@ -114,15 +180,16 @@ export interface RestaurantDetails extends Partner {
   igUrl?: string;
   ttUrl?: string;
   email?: string;
-  images?: string[];
+  images?: RestaurantImage[];
   openingHours?: {
-    periods: Array<{
-      open: { day: number; time: string };
-      close: { day: number; time: string };
-    }>;
+    periods: OpeningHoursPeriod[];
   };
-  kitchenHours?: object;
-  customWorkingDays?: object;
+  kitchenHours?: {
+    periods: OpeningHoursPeriod[];
+  };
+  customWorkingDays?: {
+    customWorkingDays: CustomWorkingDay[];
+  };
   subdomain?: string;
   reservationEnabled?: boolean;
   priceCategory?: {
@@ -132,11 +199,24 @@ export interface RestaurantDetails extends Partner {
     icon?: string;
     level: number;
   };
+  description?: {
+    en: string;
+    hr: string;
+  };
   translations?: Array<{
     language: string;
     name: string;
     description?: string;
   }>;
+  foodTypes?: TypeItem[];
+  establishmentTypes?: TypeItem[];
+  establishmentPerks?: TypeItem[];
+  mealTypes?: TypeItem[];
+  dietaryTypes?: TypeItem[];
+  reviews?: RestaurantReview[];
+  totalReviews?: number;
+  ratings?: RestaurantRatings;
+  hoursStatus?: HoursStatus;
 }
 
 export async function getRestaurantDetails(
@@ -502,4 +582,55 @@ export async function submitContactForm(data: ContactFormRequest): Promise<Conta
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+// ==================== RESTAURANT EXPERIENCES ====================
+
+export interface RestaurantExperienceImage {
+  url: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  isRecommended?: boolean;
+}
+
+export interface RestaurantExperience {
+  id: string;
+  author: {
+    name: string;
+    username?: string | null;
+    avatarUrl?: string | null;
+  };
+  ratings: {
+    food: number;
+    ambience: number;
+    service: number;
+    overall: number;
+  };
+  description: string;
+  mealType?: string | null;
+  images: RestaurantExperienceImage[];
+  likesCount: number;
+  publishedAt: string;
+}
+
+export interface RestaurantExperiencesResponse {
+  experiences: RestaurantExperience[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getRestaurantExperiences(
+  restaurantId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<RestaurantExperiencesResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+  if (params?.offset) searchParams.set('offset', params.offset.toString());
+
+  const query = searchParams.toString();
+  return apiRequest<RestaurantExperiencesResponse>(
+    `/restaurants/${restaurantId}/experiences${query ? `?${query}` : ''}`
+  );
 }

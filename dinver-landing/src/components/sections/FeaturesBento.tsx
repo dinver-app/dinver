@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Users,
   Sparkles,
@@ -10,15 +10,18 @@ import {
   Search,
   View,
   Calendar,
-} from 'lucide-react';
-import { Messages } from '@/lib/i18n';
+} from "lucide-react";
+import { Messages } from "@/lib/i18n";
 
 interface FeaturesBentoProps {
   messages: Messages;
-  locale: 'en' | 'hr';
+  locale: "en" | "hr";
 }
 
-export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) {
+export default function FeaturesBento({
+  messages,
+  locale,
+}: FeaturesBentoProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Infinite scroll loop
@@ -40,12 +43,12 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
       }
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener("scroll", handleScroll);
 
     // Start in the middle (at first set of cards)
     container.scrollLeft = cardWidth;
 
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Smooth drag to scroll
@@ -128,22 +131,24 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
       }
     };
 
-    container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mouseleave', handleMouseLeave);
-    container.addEventListener('mouseup', handleMouseUp);
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener("mousedown", handleMouseDown);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    container.addEventListener("mouseup", handleMouseUp);
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener("touchmove", handleTouchMove, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd);
 
     return () => {
-      container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-      container.removeEventListener('mouseup', handleMouseUp);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener("mousedown", handleMouseDown);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+      container.removeEventListener("mouseup", handleMouseUp);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
       cancelAnimationFrame(momentumID);
     };
   }, []);
@@ -153,63 +158,63 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
       icon: Sparkles,
       title: messages.features.items.experiences.title,
       description: messages.features.items.experiences.description,
-      gradient: 'from-purple-100 to-pink-100',
-      iconColor: 'text-purple-600',
-      iconBg: 'bg-purple-200',
-      badge: locale === 'hr' ? 'Jedinstveno na tržištu' : 'Unique feature',
-      badgeColor: 'bg-purple-600',
+      gradient: "from-purple-100 to-pink-100",
+      iconColor: "text-purple-600",
+      iconBg: "bg-purple-200",
+      badge: locale === "hr" ? "Jedinstveno na tržištu" : "Unique feature",
+      badgeColor: "bg-purple-600",
     },
     {
       icon: Trophy,
       title: messages.features.items.rewards.title,
       description: messages.features.items.rewards.description,
-      gradient: 'from-amber-100 to-orange-100',
-      iconColor: 'text-amber-600',
-      iconBg: 'bg-amber-200',
-      badge: locale === 'hr' ? 'Mystery Box' : 'Mystery Box',
-      badgeColor: 'bg-amber-600',
+      gradient: "from-amber-100 to-orange-100",
+      iconColor: "text-amber-600",
+      iconBg: "bg-amber-200",
+      badge: locale === "hr" ? "Mystery Box" : "Mystery Box",
+      badgeColor: "bg-amber-600",
     },
     {
       icon: Users,
       title: messages.features.items.community.title,
       description: messages.features.items.community.description,
-      gradient: 'from-blue-100 to-cyan-100',
-      iconColor: 'text-blue-600',
-      iconBg: 'bg-blue-200',
+      gradient: "from-blue-100 to-cyan-100",
+      iconColor: "text-blue-600",
+      iconBg: "bg-blue-200",
     },
     {
       icon: Bookmark,
       title: messages.features.items.lists.title,
       description: messages.features.items.lists.description,
-      gradient: 'from-rose-100 to-pink-100',
-      iconColor: 'text-rose-600',
-      iconBg: 'bg-rose-200',
+      gradient: "from-rose-100 to-pink-100",
+      iconColor: "text-rose-600",
+      iconBg: "bg-rose-200",
     },
     {
       icon: Search,
       title: messages.features.items.search.title,
       description: messages.features.items.search.description,
-      gradient: 'from-emerald-100 to-teal-100',
-      iconColor: 'text-emerald-600',
-      iconBg: 'bg-emerald-200',
+      gradient: "from-emerald-100 to-teal-100",
+      iconColor: "text-emerald-600",
+      iconBg: "bg-emerald-200",
     },
     {
       icon: View,
       title: messages.features.items.details.title,
       description: messages.features.items.details.description,
-      gradient: 'from-cyan-100 to-sky-100',
-      iconColor: 'text-cyan-600',
-      iconBg: 'bg-cyan-200',
+      gradient: "from-cyan-100 to-sky-100",
+      iconColor: "text-cyan-600",
+      iconBg: "bg-cyan-200",
     },
     {
       icon: Calendar,
       title: messages.features.items.reservations.title,
       description: messages.features.items.reservations.description,
-      gradient: 'from-green-100 to-emerald-100',
-      iconColor: 'text-green-600',
-      iconBg: 'bg-green-200',
-      badge: locale === 'hr' ? 'Novo' : 'New',
-      badgeColor: 'bg-green-600',
+      gradient: "from-green-100 to-emerald-100",
+      iconColor: "text-green-600",
+      iconBg: "bg-green-200",
+      badge: locale === "hr" ? "Novo" : "New",
+      badgeColor: "bg-green-600",
     },
   ];
 
@@ -229,30 +234,32 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
             viewport={{ once: true }}
             className="inline-block px-4 py-2 bg-dinver-green/10 text-dinver-green rounded-full text-sm font-semibold mb-6"
           >
-            {locale === 'hr' ? 'Mogućnosti' : 'Features'}
+            {locale === "hr" ? "Mogućnosti" : "Features"}
           </motion.span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
             {messages.features.title}
           </h2>
-          <p className="mt-4 text-lg text-gray-600">{messages.features.subtitle}</p>
+          <p className="mt-4 text-lg text-gray-600">
+            {messages.features.subtitle}
+          </p>
         </motion.div>
       </div>
 
       {/* Horizontal scrolling cards */}
       <div className="relative">
         {/* Gradient fades on edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-white to-transparent z-10 pointer-events-none" />
 
         <div
           ref={scrollRef}
           className="flex gap-6 overflow-x-auto scrollbar-hide px-8 lg:px-16 pb-4 cursor-grab active:cursor-grabbing select-none"
           style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+            userSelect: "none",
+            WebkitUserSelect: "none",
           }}
         >
           {/* Triple the cards for infinite loop effect */}
@@ -263,10 +270,10 @@ export default function FeaturesBento({ messages, locale }: FeaturesBentoProps) 
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: (index % 7) * 0.05 }}
-              className="flex-shrink-0 w-[320px]"
+              className="shrink-0 w-[320px]"
             >
               <div
-                className={`relative bg-gradient-to-br ${feature.gradient} rounded-3xl p-6 h-full min-h-[280px] shadow-sm hover:shadow-lg transition-shadow duration-300`}
+                className={`relative bg-linear-to-br ${feature.gradient} rounded-3xl p-6 h-full min-h-[280px] shadow-sm hover:shadow-lg transition-shadow duration-300`}
               >
                 {/* Badge */}
                 {feature.badge && (

@@ -74,9 +74,16 @@
     }
   },
   "experienceFeed": {
-    "title": "The Experience Feed",
-    "subtitle": "Authentic moments from real food lovers",
-    "description": "Forget traditional reviews. Our Experience feed shows you real dining moments - the ambience, the food, the vibe. Swipe through like your favorite social app and discover your next meal.",
+    "experiences": {
+      "title": "Experience Feed",
+      "subtitle": "Social network for food lovers",
+      "description": "Scroll through authentic dining reviews like a social feed. Choose a city or search globally - discover restaurants through real photos and experiences from people. Like what you see? Click the restaurant and book a table!"
+    },
+    "whatsNew": {
+      "title": "What's New",
+      "subtitle": "Never miss a restaurant event",
+      "description": "Restaurants post announcements like stories - live music tonight, new dish on menu, special offer. Filter by categories (Live Music, Happy Hour...) and discover what's happening nearby. Posts last 1-7 days."
+    },
     "cta": "See More Experiences"
   },
   "forRestaurants": {

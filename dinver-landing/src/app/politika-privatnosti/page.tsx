@@ -51,7 +51,7 @@ export default function PolitikaPrivatnosti() {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Uvod</h2>
               <p className="text-gray-600 mb-4">
-                Dinver ("mi", "nas" ili "naš") posvećen je zaštiti vaše privatnosti.
+                Dinver (&quot;mi&quot;, &quot;nas&quot; ili &quot;naš&quot;) posvećen je zaštiti vaše privatnosti.
                 Ova Politika privatnosti objašnjava kako prikupljamo, koristimo i štitimo
                 vaše osobne podatke kada koristite našu aplikaciju i web stranicu.
               </p>
@@ -113,7 +113,7 @@ export default function PolitikaPrivatnosti() {
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
                 <li>Pristup vašim osobnim podacima</li>
                 <li>Ispravak netočnih podataka</li>
-                <li>Brisanje vaših podataka ("pravo na zaborav")</li>
+                <li>Brisanje vaših podataka (&quot;pravo na zaborav&quot;)</li>
                 <li>Ograničenje obrade</li>
                 <li>Prijenos podataka</li>
                 <li>Povlačenje privole</li>

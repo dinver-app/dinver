@@ -70,12 +70,6 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
     creator: "@dinver_app",
   },
-  icons: {
-    icon: "/favicon3.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
-  },
-  manifest: "/site.webmanifest",
   alternates: {
     canonical: "https://dinver.app",
     languages: {
@@ -93,6 +87,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"

@@ -196,7 +196,10 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       }));
       formDataToSend.append("translations", JSON.stringify(translationsToSend));
 
-      const updatedRestaurant = await updateRestaurant(restaurant.id || "", formDataToSend);
+      const updatedRestaurant = await updateRestaurant(
+        restaurant.id || "",
+        formDataToSend
+      );
 
       // Use response from backend for URLs (especially for uploaded images)
       const updatedFormData = {
@@ -399,7 +402,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </span>
               <button
                 type="button"
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   formData.showWifiCredentials ? "bg-blue-600" : "bg-gray-200"
                 }`}
                 role="switch"
@@ -513,7 +516,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </span>
               <button
                 type="button"
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   formData.reservationEnabled ? "bg-blue-600" : "bg-gray-200"
                 }`}
                 role="switch"

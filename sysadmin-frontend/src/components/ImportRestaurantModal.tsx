@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import toast from "react-hot-toast";
 import {
   importRestaurantFromUrl,
   searchGooglePlaces,
@@ -7,7 +7,7 @@ import {
   createRestaurantFromGoogle,
   GooglePlaceResult,
   RestaurantDataFromGoogle,
-} from '../services/googlePlacesService';
+} from "../services/googlePlacesService";
 
 interface ImportRestaurantModalProps {
   isOpen: boolean;
@@ -15,29 +15,30 @@ interface ImportRestaurantModalProps {
   onSuccess: () => void;
 }
 
-type ImportMode = 'url' | 'search';
+type ImportMode = "url" | "search";
 
 const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
 }) => {
-  const [mode, setMode] = useState<ImportMode>('url');
-  const [urlInput, setUrlInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [mode, setMode] = useState<ImportMode>("url");
+  const [urlInput, setUrlInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<GooglePlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [restaurantData, setRestaurantData] = useState<RestaurantDataFromGoogle | null>(null);
-  const [step, setStep] = useState<'input' | 'preview'>('input');
+  const [restaurantData, setRestaurantData] =
+    useState<RestaurantDataFromGoogle | null>(null);
+  const [step, setStep] = useState<"input" | "preview">("input");
 
   if (!isOpen) return null;
 
   const handleReset = () => {
-    setUrlInput('');
-    setSearchQuery('');
+    setUrlInput("");
+    setSearchQuery("");
     setSearchResults([]);
     setRestaurantData(null);
-    setStep('input');
+    setStep("input");
     setLoading(false);
   };
 
@@ -48,7 +49,7 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
 
   const handleImportFromUrl = async () => {
     if (!urlInput.trim()) {
-      toast.error('Please enter a Google Maps URL');
+      toast.error("Please enter a Google Maps URL");
       return;
     }
 
@@ -56,14 +57,16 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
     try {
       const data = await importRestaurantFromUrl(urlInput);
       setRestaurantData(data.restaurantData);
-      setStep('preview');
-      toast.success('Restaurant data fetched successfully!');
+      setStep("preview");
+      toast.success("Restaurant data fetched successfully!");
     } catch (error: any) {
-      console.error('Error importing from URL:', error);
+      console.error("Error importing from URL:", error);
       if (error.response?.status === 409) {
-        toast.error('This restaurant already exists in the database!');
+        toast.error("This restaurant already exists in the database!");
       } else {
-        toast.error(error.response?.data?.details || 'Failed to import restaurant');
+        toast.error(
+          error.response?.data?.details || "Failed to import restaurant"
+        );
       }
     } finally {
       setLoading(false);
@@ -72,7 +75,7 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      toast.error('Please enter a restaurant name');
+      toast.error("Please enter a restaurant name");
       return;
     }
 
@@ -81,11 +84,11 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
       const data = await searchGooglePlaces(searchQuery);
       setSearchResults(data.results);
       if (data.results.length === 0) {
-        toast.error('No restaurants found');
+        toast.error("No restaurants found");
       }
     } catch (error) {
-      console.error('Error searching:', error);
-      toast.error('Failed to search restaurants');
+      console.error("Error searching:", error);
+      toast.error("Failed to search restaurants");
     } finally {
       setLoading(false);
     }
@@ -96,14 +99,14 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
     try {
       const data = await getGooglePlaceDetails(placeId);
       setRestaurantData(data.restaurantData);
-      setStep('preview');
-      toast.success('Restaurant data fetched successfully!');
+      setStep("preview");
+      toast.success("Restaurant data fetched successfully!");
     } catch (error: any) {
-      console.error('Error getting place details:', error);
+      console.error("Error getting place details:", error);
       if (error.response?.status === 409) {
-        toast.error('This restaurant already exists in the database!');
+        toast.error("This restaurant already exists in the database!");
       } else {
-        toast.error('Failed to get restaurant details');
+        toast.error("Failed to get restaurant details");
       }
     } finally {
       setLoading(false);
@@ -116,15 +119,19 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
     setLoading(true);
     try {
       const result = await createRestaurantFromGoogle(restaurantData.placeId);
-      toast.success(`Restaurant "${result.restaurant.name}" created successfully!`);
+      toast.success(
+        `Restaurant "${result.restaurant.name}" created successfully!`
+      );
       handleClose();
       onSuccess();
     } catch (error: any) {
-      console.error('Error creating restaurant:', error);
+      console.error("Error creating restaurant:", error);
       if (error.response?.status === 409) {
-        toast.error('This restaurant already exists in the database!');
+        toast.error("This restaurant already exists in the database!");
       } else {
-        toast.error(error.response?.data?.details || 'Failed to create restaurant');
+        toast.error(
+          error.response?.data?.details || "Failed to create restaurant"
+        );
       }
     } finally {
       setLoading(false);
@@ -143,33 +150,43 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="p-6">
-          {step === 'input' ? (
+          {step === "input" ? (
             <>
               {/* Mode Tabs */}
               <div className="flex gap-2 mb-6 border-b border-gray-200">
                 <button
-                  onClick={() => setMode('url')}
+                  onClick={() => setMode("url")}
                   className={`px-4 py-2 font-medium transition ${
-                    mode === 'url'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                    mode === "url"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   Import from URL
                 </button>
                 <button
-                  onClick={() => setMode('search')}
+                  onClick={() => setMode("search")}
                   className={`px-4 py-2 font-medium transition ${
-                    mode === 'search'
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                    mode === "search"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   Search by Name
@@ -177,7 +194,7 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
               </div>
 
               {/* URL Import Mode */}
-              {mode === 'url' && (
+              {mode === "url" && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -189,10 +206,13 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder="https://maps.app.goo.gl/... or full Google Maps URL"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      onKeyPress={(e) => e.key === 'Enter' && handleImportFromUrl()}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" && handleImportFromUrl()
+                      }
                     />
                     <p className="mt-2 text-sm text-gray-500">
-                      Paste the Google Maps share link (goo.gl) or full restaurant URL
+                      Paste the Google Maps share link (goo.gl) or full
+                      restaurant URL
                     </p>
                   </div>
                   <button
@@ -200,13 +220,13 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                     disabled={loading || !urlInput.trim()}
                     className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
-                    {loading ? 'Importing...' : 'Import Restaurant'}
+                    {loading ? "Importing..." : "Import Restaurant"}
                   </button>
                 </div>
               )}
 
               {/* Search Mode */}
-              {mode === 'search' && (
+              {mode === "search" && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -219,14 +239,14 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="e.g. Pop's Pizza & Sport"
                         className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                       />
                       <button
                         onClick={handleSearch}
                         disabled={loading || !searchQuery.trim()}
                         className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                       >
-                        {loading ? 'Searching...' : 'Search'}
+                        {loading ? "Searching..." : "Search"}
                       </button>
                     </div>
                   </div>
@@ -238,21 +258,30 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                         <div
                           key={result.placeId}
                           className={`p-4 hover:bg-gray-50 transition ${
-                            result.existsInDatabase ? 'opacity-50' : 'cursor-pointer'
+                            result.existsInDatabase
+                              ? "opacity-50"
+                              : "cursor-pointer"
                           }`}
-                          onClick={() => !result.existsInDatabase && handleSelectPlace(result.placeId)}
+                          onClick={() =>
+                            !result.existsInDatabase &&
+                            handleSelectPlace(result.placeId)
+                          }
                         >
                           <div className="flex items-start gap-4">
                             {result.photoUrl && (
                               <img
                                 src={result.photoUrl}
                                 alt={result.name}
-                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                                className="w-20 h-20 object-cover rounded-lg shrink-0"
                               />
                             )}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-base">{result.name}</h3>
-                              <p className="text-sm text-gray-600 mt-0.5">{result.address}</p>
+                              <h3 className="font-semibold text-gray-900 text-base">
+                                {result.name}
+                              </h3>
+                              <p className="text-sm text-gray-600 mt-0.5">
+                                {result.address}
+                              </p>
                               {result.place && (
                                 <p className="text-sm font-medium text-blue-600 mt-0.5">
                                   📍 {result.place}
@@ -261,7 +290,9 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                               {result.rating && (
                                 <div className="flex items-center gap-1 mt-1.5">
                                   <span className="text-yellow-500">★</span>
-                                  <span className="text-sm font-medium">{result.rating.toFixed(1)}</span>
+                                  <span className="text-sm font-medium">
+                                    {result.rating.toFixed(1)}
+                                  </span>
                                   {result.userRatingsTotal && (
                                     <span className="text-sm text-gray-500">
                                       ({result.userRatingsTotal} reviews)
@@ -288,7 +319,9 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
             restaurantData && (
               <div className="space-y-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-2">Preview Restaurant Data</h3>
+                  <h3 className="font-semibold text-blue-900 mb-2">
+                    Preview Restaurant Data
+                  </h3>
                   <p className="text-sm text-blue-700">
                     Review the information below before creating the restaurant.
                   </p>
@@ -304,48 +337,77 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="text-sm font-medium text-gray-600">Name</label>
-                    <p className="text-base font-semibold text-gray-900">{restaurantData.name}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Name
+                    </label>
+                    <p className="text-base font-semibold text-gray-900">
+                      {restaurantData.name}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">City</label>
-                    <p className="text-base text-gray-900">{restaurantData.place || 'N/A'}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      City
+                    </label>
+                    <p className="text-base text-gray-900">
+                      {restaurantData.place || "N/A"}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Country</label>
-                    <p className="text-base text-gray-900">{restaurantData.country || 'N/A'}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Country
+                    </label>
+                    <p className="text-base text-gray-900">
+                      {restaurantData.country || "N/A"}
+                    </p>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-sm font-medium text-gray-600">Address</label>
-                    <p className="text-base text-gray-900">{restaurantData.address}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Address
+                    </label>
+                    <p className="text-base text-gray-900">
+                      {restaurantData.address}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Phone</label>
-                    <p className="text-base text-gray-900">{restaurantData.phone || 'N/A'}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Phone
+                    </label>
+                    <p className="text-base text-gray-900">
+                      {restaurantData.phone || "N/A"}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Website</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Website
+                    </label>
                     <p className="text-base text-gray-900 truncate">
-                      {restaurantData.websiteUrl || 'N/A'}
+                      {restaurantData.websiteUrl || "N/A"}
                     </p>
                   </div>
                   {restaurantData.priceLevel && (
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Price Level</label>
-                      <p className="text-base text-gray-900">{'€'.repeat(restaurantData.priceLevel)}</p>
+                      <label className="text-sm font-medium text-gray-600">
+                        Price Level
+                      </label>
+                      <p className="text-base text-gray-900">
+                        {"€".repeat(restaurantData.priceLevel)}
+                      </p>
                     </div>
                   )}
                   <div className="col-span-2">
-                    <label className="text-sm font-medium text-gray-600">Coordinates</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Coordinates
+                    </label>
                     <p className="text-base text-gray-900">
-                      {restaurantData.latitude.toFixed(6)}, {restaurantData.longitude.toFixed(6)}
+                      {restaurantData.latitude.toFixed(6)},{" "}
+                      {restaurantData.longitude.toFixed(6)}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t">
                   <button
-                    onClick={() => setStep('input')}
+                    onClick={() => setStep("input")}
                     className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-medium"
                   >
                     Back
@@ -355,7 +417,7 @@ const ImportRestaurantModal: React.FC<ImportRestaurantModalProps> = ({
                     disabled={loading}
                     className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
-                    {loading ? 'Creating...' : 'Create Restaurant'}
+                    {loading ? "Creating..." : "Create Restaurant"}
                   </button>
                 </div>
               </div>

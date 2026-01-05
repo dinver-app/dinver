@@ -1,52 +1,63 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, CheckCircle, AlertCircle, Building2, Mail, MapPin, Store } from 'lucide-react';
-import AnimatedSection from '@/components/ui/AnimatedSection';
-import Button from '@/components/ui/Button';
-import { Messages } from '@/lib/i18n';
-import { addRestaurantToWaitlist } from '@/lib/api';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Send,
+  CheckCircle,
+  AlertCircle,
+  Building2,
+  Mail,
+  MapPin,
+  Store,
+} from "lucide-react";
+import AnimatedSection from "@/components/ui/AnimatedSection";
+import Button from "@/components/ui/Button";
+import { Messages } from "@/lib/i18n";
+import { addRestaurantToWaitlist } from "@/lib/api";
 
 interface ContactProps {
   messages: Messages;
 }
 
 export default function Contact({ messages }: ContactProps) {
-  const [email, setEmail] = useState('');
-  const [city, setCity] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [city, setCity] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('loading');
-    setErrorMessage('');
+    setStatus("loading");
+    setErrorMessage("");
 
     try {
       await addRestaurantToWaitlist({ email, city, restaurantName });
 
-      setStatus('success');
-      setEmail('');
-      setCity('');
-      setRestaurantName('');
+      setStatus("success");
+      setEmail("");
+      setCity("");
+      setRestaurantName("");
 
-      setTimeout(() => setStatus('idle'), 5000);
+      setTimeout(() => setStatus("idle"), 5000);
     } catch (error) {
-      setStatus('error');
+      setStatus("error");
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : messages.contact.form.error
+        error instanceof Error ? error.message : messages.contact.form.error
       );
 
-      setTimeout(() => setStatus('idle'), 5000);
+      setTimeout(() => setStatus("idle"), 5000);
     }
   };
 
   return (
-    <section id="contact" className="py-24 lg:py-32 bg-gradient-to-b from-white to-gray-50">
+    <section
+      id="contact"
+      className="py-24 lg:py-32 bg-linear-to-b from-white to-gray-50"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedSection className="text-center max-w-3xl mx-auto mb-12">
           <span className="inline-flex items-center gap-2 px-4 py-2 bg-dinver-green/10 text-dinver-green rounded-full text-sm font-semibold mb-6">
@@ -68,7 +79,7 @@ export default function Contact({ messages }: ContactProps) {
               className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-gray-100"
             >
               <AnimatePresence mode="wait">
-                {status === 'success' ? (
+                {status === "success" ? (
                   <motion.div
                     key="success"
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -80,13 +91,14 @@ export default function Contact({ messages }: ContactProps) {
                       <CheckCircle className="text-dinver-green" size={32} />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {messages.contact.form.success.split('!')[0]}!
+                      {messages.contact.form.success.split("!")[0]}!
                     </h3>
                     <p className="text-gray-600">
-                      {messages.contact.form.success.split('!')[1] || "We'll be in touch soon."}
+                      {messages.contact.form.success.split("!")[1] ||
+                        "We'll be in touch soon."}
                     </p>
                   </motion.div>
-                ) : status === 'error' ? (
+                ) : status === "error" ? (
                   <motion.div
                     key="error"
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -101,10 +113,12 @@ export default function Contact({ messages }: ContactProps) {
                       {errorMessage || messages.contact.form.error}
                     </p>
                     <button
-                      onClick={() => setStatus('idle')}
+                      onClick={() => setStatus("idle")}
                       className="mt-4 text-dinver-green hover:underline text-sm font-medium"
                     >
-                      {messages.contact.form.submit.includes('Join') ? 'Try again' : 'Pokušaj ponovno'}
+                      {messages.contact.form.submit.includes("Join")
+                        ? "Try again"
+                        : "Pokušaj ponovno"}
                     </button>
                   </motion.div>
                 ) : (
@@ -117,16 +131,25 @@ export default function Contact({ messages }: ContactProps) {
                     className="space-y-5"
                   >
                     <div>
-                      <label htmlFor="restaurantName" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="restaurantName"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
                         <Store size={16} className="text-dinver-green" />
-                        {messages.contact.form.submit.includes('Join') ? 'Restaurant Name' : 'Naziv restorana'}
+                        {messages.contact.form.submit.includes("Join")
+                          ? "Restaurant Name"
+                          : "Naziv restorana"}
                       </label>
                       <input
                         type="text"
                         id="restaurantName"
                         value={restaurantName}
                         onChange={(e) => setRestaurantName(e.target.value)}
-                        placeholder={messages.contact.form.submit.includes('Join') ? 'Your restaurant name' : 'Naziv vašeg restorana'}
+                        placeholder={
+                          messages.contact.form.submit.includes("Join")
+                            ? "Your restaurant name"
+                            : "Naziv vašeg restorana"
+                        }
                         required
                         minLength={2}
                         maxLength={200}
@@ -135,7 +158,10 @@ export default function Contact({ messages }: ContactProps) {
                     </div>
 
                     <div>
-                      <label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="email"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
                         <Mail size={16} className="text-dinver-green" />
                         {messages.contact.form.email}
                       </label>
@@ -151,7 +177,10 @@ export default function Contact({ messages }: ContactProps) {
                     </div>
 
                     <div>
-                      <label htmlFor="city" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="city"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
                         <MapPin size={16} className="text-dinver-green" />
                         {messages.contact.form.city}
                       </label>
@@ -170,11 +199,11 @@ export default function Contact({ messages }: ContactProps) {
 
                     <Button
                       type="submit"
-                      disabled={status === 'loading'}
+                      disabled={status === "loading"}
                       className="w-full mt-6"
                       size="lg"
                     >
-                      {status === 'loading' ? (
+                      {status === "loading" ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                           {messages.contact.form.submitting}

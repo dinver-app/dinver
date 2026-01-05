@@ -74,9 +74,16 @@
     }
   },
   "experienceFeed": {
-    "title": "Feed doživljaja",
-    "subtitle": "Autentični trenuci od pravih ljubitelja hrane",
-    "description": "Zaboravi tradicionalne recenzije. Naš feed doživljaja ti pokazuje prave gastro trenutke - ambijent, hranu, atmosferu. Listaj kao na omiljenoj društvenoj mreži i otkrij svoj sljedeći obrok.",
+    "experiences": {
+      "title": "Feed doživljaja",
+      "subtitle": "Društvena mreža za ljubitelje hrane",
+      "description": "Listaj kroz autentične gastro recenzije kao na društvenoj mreži. Odaberi grad ili pretraži globalno - otkrij restorane kroz prave slike i doživljaje ljudi. Sviđa ti se jelo na slici? Klikni na restoran i rezerviraj stol!"
+    },
+    "whatsNew": {
+      "title": "Što je novo",
+      "subtitle": "Nikad ne propusti događaj u restoranu",
+      "description": "Restorani objavljuju najave poput storija - live glazba večeras, novo jelo u meniju, posebna ponuda. Filtriraj po kategorijama (Live Music, Happy Hour...) i otkrij gdje blizu tebe se događa nešto zanimljivo. Objave traju 1-7 dana."
+    },
     "cta": "Pogledaj više doživljaja"
   },
   "forRestaurants": {

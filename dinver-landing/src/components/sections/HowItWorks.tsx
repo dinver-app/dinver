@@ -126,8 +126,8 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
                       transition={{ duration: 0.5, delay: 0.5 + index * 0.3 }}
                       className={`h-full origin-left ${
                         index === 0
-                          ? "bg-gradient-to-r from-emerald-500 to-dinver-green"
-                          : "bg-gradient-to-r from-dinver-green to-amber-500"
+                          ? "bg-linear-to-r from-emerald-500 to-dinver-green"
+                          : "bg-linear-to-r from-dinver-green to-amber-500"
                       }`}
                     />
                   </div>
