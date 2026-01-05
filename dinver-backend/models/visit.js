@@ -81,6 +81,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false,
       },
+      hasReservationBonus: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       visitDate: {
         type: DataTypes.DATE,
         allowNull: true,

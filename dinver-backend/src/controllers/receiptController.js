@@ -1852,6 +1852,7 @@ const approveReceipt = async (req, res) => {
           reviewedAt: new Date(),
           reviewedBy: req.user.id,
           wasInMustVisit: wasInMustVisit,
+          hasReservationBonus: hasReservationBonus || false,
         };
 
         await visit.update(updateData);
@@ -1882,6 +1883,7 @@ const approveReceipt = async (req, res) => {
           receiptImageUrl: receipt.originalUrl || receipt.imageUrl,
           status: 'APPROVED',
           wasInMustVisit: false,
+          hasReservationBonus: hasReservationBonus || false,
           visitDate: new Date(issueDate),
           submittedAt: receipt.submittedAt,
           reviewedAt: new Date(),
@@ -1931,6 +1933,7 @@ const approveReceipt = async (req, res) => {
                 reviewedAt: new Date(),
                 reviewedBy: req.user.id,
                 wasInMustVisit: buddyWasInMustVisit,
+                hasReservationBonus: hasReservationBonus || false,
               };
               await buddyVisit.update(buddyUpdateData);
 

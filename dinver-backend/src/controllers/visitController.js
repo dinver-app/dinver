@@ -774,7 +774,13 @@ const getUserVisits = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded', 'reservationId'],
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
         },
         {
           model: User,
@@ -792,6 +798,7 @@ const getUserVisits = async (req, res) => {
             'serviceRating',
             'overallRating',
             'status',
+            'publishedAt',
           ],
         },
       ],
@@ -949,6 +956,22 @@ const getUserVisits = async (req, res) => {
           .filter((user) => user !== undefined),
         totalAmount: visit.receipt?.totalAmount || null,
         pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        reservationBonusPoints:
+          visit.receipt?.hasReservationBonus &&
+          visit.receipt?.pointsAwarded &&
+          visit.receipt?.totalAmount
+            ? (() => {
+                // Calculate number of participants (main user + tagged buddies)
+                const totalParticipants = 1 + (participantIds?.length || 0);
+                // Calculate base points per person (without bonus)
+                const basePointsPerPerson =
+                  visit.receipt.totalAmount / totalParticipants / 10;
+                // Bonus is the difference between awarded points and base points
+                const bonus = visit.receipt.pointsAwarded - basePointsPerPerson;
+                return parseFloat(bonus.toFixed(2));
+              })()
+            : null,
         // Experience rating for this visit
         experience: visit.experience
           ? {
@@ -2404,7 +2427,13 @@ const getVisitsByRestaurant = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded', 'reservationId'],
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
         },
         {
           model: User,
@@ -2645,6 +2674,22 @@ const getVisitsByRestaurant = async (req, res) => {
           .filter((user) => user !== undefined),
         totalAmount: visit.receipt?.totalAmount || null,
         pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        reservationBonusPoints:
+          visit.receipt?.hasReservationBonus &&
+          visit.receipt?.pointsAwarded &&
+          visit.receipt?.totalAmount
+            ? (() => {
+                // Calculate number of participants (main user + tagged buddies)
+                const totalParticipants = 1 + (participantIds?.length || 0);
+                // Calculate base points per person (without bonus)
+                const basePointsPerPerson =
+                  visit.receipt.totalAmount / totalParticipants / 10;
+                // Bonus is the difference between awarded points and base points
+                const bonus = visit.receipt.pointsAwarded - basePointsPerPerson;
+                return parseFloat(bonus.toFixed(2));
+              })()
+            : null,
         experience: visit.experience
           ? {
               id: visit.experience.id,
@@ -2974,6 +3019,7 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
         reviewedAt: visit.reviewedAt,
         visitDate: visit.visitDate,
         wasInMustVisit: visit.wasInMustVisit || false,
+        hasReservationBonus: visit.hasReservationBonus || false,
         taggedBy: visit.tagger
           ? {
               id: visit.tagger.id,
