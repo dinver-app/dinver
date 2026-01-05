@@ -42,18 +42,8 @@ export default function ExperienceFeedNew({
               </span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
-              {messages.experienceFeed.title}
-            </h2>
-            <p className="mt-2 text-dinver-green font-medium text-base sm:text-lg">
-              {messages.experienceFeed.subtitle}
-            </p>
-            <p className="mt-4 sm:mt-6 text-gray-600 text-base sm:text-lg leading-relaxed">
-              {messages.experienceFeed.description}
-            </p>
-
             {/* Tabs */}
-            <div className="mt-6 sm:mt-8 flex gap-2 sm:gap-3">
+            <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6">
               <button
                 onClick={() => setActiveTab("experiences")}
                 className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
@@ -76,21 +66,32 @@ export default function ExperienceFeedNew({
               </button>
             </div>
 
-            {/* Tab description */}
-            <motion.p
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 sm:mt-6 text-gray-500 text-xs sm:text-sm"
-            >
-              {activeTab === "experiences"
-                ? locale === "hr"
-                  ? "Pregledaj prave gastro doživljaje od naših korisnika"
-                  : "Browse real dining experiences from our users"
-                : locale === "hr"
-                ? "Prati što je novo u tvojim omiljenim restoranima"
-                : "Follow updates from your favorite restaurants"}
-            </motion.p>
+            {/* Dynamic content based on active tab */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                  {activeTab === "experiences"
+                    ? messages.experienceFeed.experiences.title
+                    : messages.experienceFeed.whatsNew.title}
+                </h2>
+                <p className="mt-2 text-dinver-green font-medium text-base sm:text-lg">
+                  {activeTab === "experiences"
+                    ? messages.experienceFeed.experiences.subtitle
+                    : messages.experienceFeed.whatsNew.subtitle}
+                </p>
+                <p className="mt-4 sm:mt-6 text-gray-600 text-base sm:text-lg leading-relaxed">
+                  {activeTab === "experiences"
+                    ? messages.experienceFeed.experiences.description
+                    : messages.experienceFeed.whatsNew.description}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </AnimatedSection>
 
           {/* Phone with Real Screenshots */}

@@ -75,13 +75,13 @@ export default function ExperienceFeed({ messages }: ExperienceFeedProps) {
           {/* Content */}
           <AnimatedSection direction="left">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-              {messages.experienceFeed.title}
+              {messages.experienceFeed.experiences.title}
             </h2>
             <p className="mt-2 text-dinver-green font-medium">
-              {messages.experienceFeed.subtitle}
+              {messages.experienceFeed.experiences.subtitle}
             </p>
             <p className="mt-6 text-gray-300 text-lg leading-relaxed">
-              {messages.experienceFeed.description}
+              {messages.experienceFeed.experiences.description}
             </p>
             <div className="mt-8">
               <Button
