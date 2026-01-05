@@ -120,14 +120,6 @@ export default function KontaktPage() {
 
       <div className="pt-24 pb-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-dinver-green hover:text-dinver-green-dark mb-8 transition-colors"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            {locale === "hr" ? "Natrag na početnu" : "Back to home"}
-          </Link>
-
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left - Contact Info */}
             <motion.div

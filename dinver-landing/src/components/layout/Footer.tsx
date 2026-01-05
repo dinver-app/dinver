@@ -68,18 +68,28 @@ export default function Footer({ messages }: FooterProps) {
             </div>
           </div>
 
-          {/* Company Links */}
+          {/* Navigation Links */}
           <div>
-            <h3 className="font-semibold text-white mb-4">{messages.footer.links.company}</h3>
+            <h3 className="font-semibold text-white mb-4">{messages.footer.links.navigation}</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/o-nama" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link href="/" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                  {messages.footer.links.home}
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
                   {messages.footer.links.about}
                 </Link>
               </li>
               <li>
-                <Link href="/kontakt" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
-                  Kontakt
+                <Link href="/partners" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                  {messages.footer.links.partners}
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                  {messages.footer.links.contact}
                 </Link>
               </li>
             </ul>
@@ -90,12 +100,12 @@ export default function Footer({ messages }: FooterProps) {
             <h3 className="font-semibold text-white mb-4">{messages.footer.links.legal}</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/politika-privatnosti" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link href="/privacy-policy" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
                   {messages.footer.links.privacy}
                 </Link>
               </li>
               <li>
-                <Link href="/uvjeti-koristenja" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link href="/terms-of-service" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
                   {messages.footer.links.terms}
                 </Link>
               </li>

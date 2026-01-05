@@ -135,12 +135,12 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
 
                 {/* Mobile connector */}
                 {index < steps.length - 1 && (
-                  <div className="lg:hidden flex justify-center my-6">
+                  <div className="lg:hidden flex justify-center my-4">
                     <motion.div
-                      initial={{ height: 0 }}
-                      animate={isInView ? { height: 40 } : {}}
-                      transition={{ duration: 0.3, delay: 0.5 + index * 0.2 }}
-                      className={`w-[2px] ${step.color}`}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={isInView ? { height: 48, opacity: 1 } : {}}
+                      transition={{ duration: 0.5, delay: 0.5 + index * 0.2 }}
+                      className="w-[2px] border-l-2 border-dashed border-white/20"
                     />
                   </div>
                 )}

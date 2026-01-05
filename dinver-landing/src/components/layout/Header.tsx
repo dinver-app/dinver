@@ -6,8 +6,9 @@ import { Menu, X, Globe, Download } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/ui/Logo";
 import Button from "@/components/ui/Button";
-import AppStoreButtons from "@/components/ui/AppStoreButtons";
 import { Messages, Locale } from "@/lib/i18n";
+
+import { usePathname } from "next/navigation";
 
 interface HeaderProps {
   messages: Messages;
@@ -22,24 +23,30 @@ export default function Header({
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+
+    // On non-home pages, set initial scrolled state
+    if (!isHomePage) {
+      setIsScrolled(false);
+    }
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isHomePage]);
 
   const navItems = [
-    { href: "/#features", label: messages.nav.features },
-    { href: "/#how-it-works", label: messages.nav.howItWorks },
-    { href: "/#restaurants", label: messages.nav.restaurants },
-    { href: "/partneri", label: locale === "hr" ? "Partneri" : "Partners" },
-    { href: "/#faq", label: "FAQ" },
-    { href: "/kontakt", label: locale === "hr" ? "Kontakt" : "Contact" },
+    { href: "/", label: locale === "hr" ? "Početna" : "Home" },
+    { href: "/about", label: locale === "hr" ? "O nama" : "About" },
+    { href: "/partners", label: locale === "hr" ? "Partneri" : "Partners" },
+    { href: "/contact", label: locale === "hr" ? "Kontakt" : "Contact" },
   ];
+
 
   const toggleLocale = () => {
     onLocaleChange(locale === "en" ? "hr" : "en");
@@ -52,26 +59,30 @@ export default function Header({
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
+          isHomePage && isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-sm"
-            : "bg-dinver-dark/80 backdrop-blur-sm"
+            : isHomePage
+            ? "bg-dinver-dark/80 backdrop-blur-sm"
+            : "bg-dinver-dark shadow-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center h-16 lg:h-20">
             {/* Logo */}
-            <Link href="/" className="shrink-0">
-              <Logo variant={isScrolled ? "dark" : "light"} />
-            </Link>
+            <div className="flex-1">
+              <Link href="/" className="inline-block">
+                <Logo variant={(isHomePage && isScrolled) ? "dark" : "light"} />
+              </Link>
+            </div>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation - Centered */}
             <nav className="hidden lg:flex items-center gap-8">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`transition-colors font-medium ${
-                    isScrolled
+                  className={`transition-colors font-medium whitespace-nowrap ${
+                    (isHomePage && isScrolled)
                       ? "text-gray-700 hover:text-dinver-green"
                       : "text-white/80 hover:text-white"
                   }`}
@@ -82,11 +93,11 @@ export default function Header({
             </nav>
 
             {/* Desktop Actions */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="flex-1 flex items-center gap-4 justify-end">
               <button
                 onClick={toggleLocale}
-                className={`flex items-center gap-1.5 transition-colors ${
-                  isScrolled
+                className={`hidden lg:flex items-center gap-1.5 transition-colors ${
+                  (isHomePage && isScrolled)
                     ? "text-gray-600 hover:text-dinver-green"
                     : "text-white/80 hover:text-white"
                 }`}
@@ -95,50 +106,29 @@ export default function Header({
                 <span className="font-medium">{messages.nav.language}</span>
               </button>
 
-              {/* Download Button with Dropdown */}
-              <div className="relative">
+              {/* Download Button */}
+              <Link href="/download" className="hidden lg:block">
                 <Button
                   size="sm"
-                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
                   className="flex items-center gap-2"
                 >
                   <Download size={16} />
                   {messages.nav.downloadApp}
                 </Button>
+              </Link>
 
-                <AnimatePresence>
-                  {showDownloadMenu && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setShowDownloadMenu(false)}
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4"
-                      >
-                        <AppStoreButtons variant="dark" layout="vertical" />
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className={`lg:hidden p-2 transition-colors ${
+                  (isHomePage && isScrolled)
+                    ? "text-gray-700 hover:text-dinver-green"
+                    : "text-white hover:text-dinver-cream"
+                }`}
+              >
+                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
             </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`lg:hidden p-2 transition-colors ${
-                isScrolled
-                  ? "text-gray-700 hover:text-dinver-green"
-                  : "text-white hover:text-dinver-cream"
-              }`}
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
           </div>
         </div>
       </motion.header>
@@ -186,10 +176,15 @@ export default function Header({
                     <span className="font-medium">{messages.nav.language}</span>
                   </button>
                   <div className="pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-500 mb-3">
-                      {messages.nav.downloadApp}
-                    </p>
-                    <AppStoreButtons variant="dark" layout="vertical" />
+                    <Link
+                      href="/download"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Button className="w-full flex items-center justify-center gap-2">
+                        <Download size={18} />
+                        {messages.nav.downloadApp}
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>

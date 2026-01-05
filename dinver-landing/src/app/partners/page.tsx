@@ -96,14 +96,6 @@ export default function PartneriPage() {
       {/* Hero Section */}
       <div className="pt-24 pb-12 sm:pt-32 sm:pb-16 bg-linear-to-br from-dinver-green to-dinver-green-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            {locale === "hr" ? "Natrag na početnu" : "Back to home"}
-          </Link>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

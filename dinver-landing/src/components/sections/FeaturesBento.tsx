@@ -24,10 +24,14 @@ export default function FeaturesBento({
 }: FeaturesBentoProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Infinite scroll loop
+  // Infinite scroll loop - Desktop only logic
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
+
+    // Only run this logic if we are on desktop (roughly check, but the Ref will only be attached to desktop view)
+    // Actually, since we will render this container only on lg screens via CSS, 
+    // we can keep the logic as is, ensuring we check if container exists.
 
     const cardWidth = 320 + 24; // card width + gap
     const totalWidth = cardWidth * 7; // 7 original cards
@@ -51,7 +55,7 @@ export default function FeaturesBento({
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Smooth drag to scroll
+  // Smooth drag to scroll - Desktop only
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -106,49 +110,16 @@ export default function FeaturesBento({
       momentum();
     };
 
-    // Touch events for mobile
-    const handleTouchStart = (e: TouchEvent) => {
-      isDown = true;
-      startX = e.touches[0].pageX;
-      scrollLeft = container.scrollLeft;
-      cancelAnimationFrame(momentumID);
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDown) return;
-      const x = e.touches[0].pageX;
-      const walk = (startX - x) * 1.2;
-      velX = startX - x;
-      startX = x;
-      container.scrollLeft = scrollLeft + walk;
-      scrollLeft = container.scrollLeft;
-    };
-
-    const handleTouchEnd = () => {
-      if (isDown) {
-        isDown = false;
-        beginMomentum();
-      }
-    };
-
     container.addEventListener("mousedown", handleMouseDown);
     container.addEventListener("mouseleave", handleMouseLeave);
     container.addEventListener("mouseup", handleMouseUp);
     container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("touchstart", handleTouchStart, {
-      passive: true,
-    });
-    container.addEventListener("touchmove", handleTouchMove, { passive: true });
-    container.addEventListener("touchend", handleTouchEnd);
 
     return () => {
       container.removeEventListener("mousedown", handleMouseDown);
       container.removeEventListener("mouseleave", handleMouseLeave);
       container.removeEventListener("mouseup", handleMouseUp);
       container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("touchstart", handleTouchStart);
-      container.removeEventListener("touchmove", handleTouchMove);
-      container.removeEventListener("touchend", handleTouchEnd);
       cancelAnimationFrame(momentumID);
     };
   }, []);
@@ -245,8 +216,45 @@ export default function FeaturesBento({
         </motion.div>
       </div>
 
-      {/* Horizontal scrolling cards */}
-      <div className="relative">
+      {/* Mobile View: Vertical Stack */}
+      <div className="lg:hidden px-4 sm:px-6">
+        <div className="flex flex-col gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className={`relative bg-linear-to-br ${feature.gradient} rounded-3xl p-6 shadow-sm`}
+            >
+              {feature.badge && (
+                <span
+                  className={`absolute top-4 right-4 ${feature.badgeColor} text-white text-xs font-semibold px-3 py-1 rounded-full`}
+                >
+                  {feature.badge}
+                </span>
+              )}
+
+              <div
+                className={`w-14 h-14 ${feature.iconBg} rounded-2xl flex items-center justify-center mb-5`}
+              >
+                <feature.icon className={feature.iconColor} size={28} />
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {feature.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop View: Horizontal Scrolling Bento */}
+      <div className="hidden lg:block relative">
         {/* Gradient fades on edges */}
         <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-white to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-white to-transparent z-10 pointer-events-none" />

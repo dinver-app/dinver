@@ -139,8 +139,13 @@
   "footer": {
     "tagline": "Discover your next favorite restaurant",
     "links": {
+      "navigation": "Pages",
       "company": "Company",
+      "home": "Home",
       "about": "About Us",
+      "contact": "Contact",
+      "partners": "Partners",
+      "downloadApp": "Download App",
       "careers": "Careers",
       "press": "Press",
       "legal": "Legal",
@@ -261,5 +266,11 @@
     "availableOn": "Available on",
     "appStore": "App Store",
     "googlePlay": "Google Play"
+  },
+  "download": {
+    "title": "Download Dinver App",
+    "subtitle": "Book tables, earn points, and discover the best spots in town - all in one place.",
+    "scanQr": "Scan to download",
+    "available": "Available for iOS and Android"
   }
 }

@@ -2,7 +2,7 @@
   "nav": {
     "features": "Mogućnosti",
     "howItWorks": "Kako radi",
-    "restaurants": "Za Restorane",
+    "restaurants": "Za restorane",
     "explore": "Istraži",
     "contact": "Partneri",
     "downloadApp": "Preuzmi aplikaciju",
@@ -139,8 +139,13 @@
   "footer": {
     "tagline": "Otkrij svoj sljedeći omiljeni restoran",
     "links": {
+      "navigation": "Stranice",
       "company": "Tvrtka",
+      "home": "Početna",
       "about": "O nama",
+      "contact": "Kontakt",
+      "partners": "Partneri",
+      "downloadApp": "Preuzmi aplikaciju",
       "careers": "Karijere",
       "press": "Za medije",
       "legal": "Pravno",
@@ -261,5 +266,11 @@
     "availableOn": "Dostupno na",
     "appStore": "App Store",
     "googlePlay": "Google Play"
+  },
+  "download": {
+    "title": "Preuzmi Dinver aplikaciju",
+    "subtitle": "Rezerviraj stol, skupljaj bodove i otkrij najbolja mjesta u gradu - sve na jednom mjestu.",
+    "scanQr": "Skeniraj za preuzimanje",
+    "available": "Dostupno za iOS i Android"
   }
 }

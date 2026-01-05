@@ -31,7 +31,7 @@ export default function ExperienceFeedNew({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
           {/* Content */}
-          <AnimatedSection direction="left" className="order-2 lg:order-1">
+          <AnimatedSection direction="left" className="order-1">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-dinver-green/10 rounded-full mb-4 sm:mb-6">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-dinver-green" />
@@ -42,8 +42,8 @@ export default function ExperienceFeedNew({
               </span>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6">
+            {/* Desktop Tabs */}
+            <div className="hidden lg:flex gap-2 sm:gap-3 mb-4 sm:mb-6">
               <button
                 onClick={() => setActiveTab("experiences")}
                 className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
@@ -92,12 +92,36 @@ export default function ExperienceFeedNew({
                 </p>
               </motion.div>
             </AnimatePresence>
+
+            {/* Mobile Tabs (Visible only on mobile/tablet) - Moved to bottom of text */}
+            <div className="flex lg:hidden gap-2 mt-8 mb-4 w-full justify-center">
+              <button
+                onClick={() => setActiveTab("experiences")}
+                className={`flex-1 max-w-[140px] px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 text-center ${
+                  activeTab === "experiences"
+                    ? "bg-dinver-green text-white shadow-lg shadow-dinver-green/25"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {locale === "hr" ? "Doživljaji" : "Experiences"}
+              </button>
+              <button
+                onClick={() => setActiveTab("whatsNew")}
+                className={`flex-1 max-w-[140px] px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 text-center ${
+                  activeTab === "whatsNew"
+                    ? "bg-dinver-green text-white shadow-lg shadow-dinver-green/25"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {locale === "hr" ? "Što je novo" : "What's New"}
+              </button>
+            </div>
           </AnimatedSection>
 
           {/* Phone with Real Screenshots */}
           <AnimatedSection
             direction="right"
-            className="relative order-1 lg:order-2"
+            className="relative order-2 flex flex-col items-center"
           >
             <div className="relative flex justify-center">
               {/* Phone frame */}
