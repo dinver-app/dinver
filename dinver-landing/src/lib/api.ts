@@ -584,6 +584,26 @@ export async function submitContactForm(data: ContactFormRequest): Promise<Conta
   });
 }
 
+// ==================== PARTNERSHIP ====================
+
+export interface PartnershipInquiryRequest {
+  restaurantName: string;
+  email: string;
+  city: string;
+}
+
+export interface PartnershipInquiryResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function submitPartnershipInquiry(data: PartnershipInquiryRequest): Promise<PartnershipInquiryResponse> {
+  return apiRequest<PartnershipInquiryResponse>('/partnership', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // ==================== RESTAURANT EXPERIENCES ====================
 
 export interface RestaurantExperienceImage {

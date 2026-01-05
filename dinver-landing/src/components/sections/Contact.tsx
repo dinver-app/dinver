@@ -14,7 +14,7 @@ import {
 import AnimatedSection from "@/components/ui/AnimatedSection";
 import Button from "@/components/ui/Button";
 import { Messages } from "@/lib/i18n";
-import { addRestaurantToWaitlist } from "@/lib/api";
+import { submitPartnershipInquiry } from "@/lib/api";
 
 interface ContactProps {
   messages: Messages;
@@ -35,7 +35,7 @@ export default function Contact({ messages }: ContactProps) {
     setErrorMessage("");
 
     try {
-      await addRestaurantToWaitlist({ email, city, restaurantName });
+      await submitPartnershipInquiry({ email, city, restaurantName });
 
       setStatus("success");
       setEmail("");
@@ -95,7 +95,7 @@ export default function Contact({ messages }: ContactProps) {
                     </h3>
                     <p className="text-gray-600">
                       {messages.contact.form.success.split("!")[1] ||
-                        "We'll be in touch soon."}
+                        messages.contact.form.successMessage}
                     </p>
                   </motion.div>
                 ) : status === "error" ? (

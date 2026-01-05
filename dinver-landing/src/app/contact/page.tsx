@@ -363,12 +363,17 @@ export default function KontaktPage() {
                         id="message"
                         name="message"
                         required
+                        minLength={10}
+                        maxLength={5000}
                         rows={5}
                         value={formData.message}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-dinver-green focus:border-transparent resize-none"
                         placeholder={messages.contact.form.messagePlaceholder}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.message.length}/5000 {locale === 'hr' ? 'znakova (min. 10)' : 'characters (min. 10)'}
+                      </p>
                     </div>
 
                     {formStatus === "error" && (
