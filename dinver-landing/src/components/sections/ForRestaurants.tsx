@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Eye, BarChart3, Bell, Users, Calendar } from "lucide-react";
+import { Compass, UtensilsCrossed, Bell, FileText, BarChart3, Clock, Calendar } from "lucide-react";
 import Image from "next/image";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 import Button from "@/components/ui/Button";
@@ -14,9 +14,24 @@ interface ForRestaurantsProps {
 export default function ForRestaurants({ messages }: ForRestaurantsProps) {
   const benefits = [
     {
-      icon: Eye,
-      title: messages.forRestaurants.benefits.visibility.title,
-      description: messages.forRestaurants.benefits.visibility.description,
+      icon: Compass,
+      title: messages.forRestaurants.benefits.virtualTour.title,
+      description: messages.forRestaurants.benefits.virtualTour.description,
+    },
+    {
+      icon: UtensilsCrossed,
+      title: messages.forRestaurants.benefits.menu.title,
+      description: messages.forRestaurants.benefits.menu.description,
+    },
+    {
+      icon: Bell,
+      title: messages.forRestaurants.benefits.whatsNew.title,
+      description: messages.forRestaurants.benefits.whatsNew.description,
+    },
+    {
+      icon: FileText,
+      title: messages.forRestaurants.benefits.profile.title,
+      description: messages.forRestaurants.benefits.profile.description,
     },
     {
       icon: BarChart3,
@@ -24,14 +39,9 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
       description: messages.forRestaurants.benefits.analytics.description,
     },
     {
-      icon: Bell,
-      title: messages.forRestaurants.benefits.updates.title,
-      description: messages.forRestaurants.benefits.updates.description,
-    },
-    {
-      icon: Users,
-      title: messages.forRestaurants.benefits.community.title,
-      description: messages.forRestaurants.benefits.community.description,
+      icon: Clock,
+      title: messages.forRestaurants.benefits.workingHours.title,
+      description: messages.forRestaurants.benefits.workingHours.description,
     },
     {
       icon: Calendar,

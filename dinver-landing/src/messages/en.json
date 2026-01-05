@@ -1,7 +1,7 @@
 {
   "nav": {
-    "features": "Features",
-    "howItWorks": "How It Works",
+    "features": "For Users",
+    "howItWorks": "Steps",
     "restaurants": "For Restaurants",
     "explore": "Explore",
     "contact": "Partner",
@@ -9,10 +9,10 @@
     "language": "HR"
   },
   "hero": {
-    "badge": "New Food Discovery Platform",
+    "badge": "New Restaurant Discovery Platform",
     "tagline": "Discover. Share. Get Rewarded.",
     "title": "Discover Where Everyone Eats",
-    "subtitle": "Real experiences from real people. Follow foodies, discover hidden gems, and share your own finds. Earn rewards for every visit and climb the leaderboard.",
+    "subtitle": "Real experiences from real people. Follow other users, discover new restaurants and share your favorite places. Earn rewards and have fun while exploring.",
     "cta": "Download Now",
     "ctaSecondary": "Explore Restaurants",
     "stats": {
@@ -22,54 +22,54 @@
     }
   },
   "features": {
-    "title": "Why Dinver?",
-    "subtitle": "Everything you need to discover your next favorite restaurant",
+    "title": "Why do you need Dinver?",
+    "subtitle": "Because it enables you to find your next favorite restaurant in a simple and fun way.",
     "items": {
       "community": {
-        "title": "Community First",
-        "description": "Follow friends, see where they've been, and discover restaurants through trusted recommendations."
+        "title": "Connect with others",
+        "description": "Follow friends and discover new restaurants through their visits and recommendations."
       },
       "experiences": {
-        "title": "Experience Feed",
-        "description": "Scroll through authentic dining experiences like a social feed. Real photos, real reviews, real people."
+        "title": "User Experience Feed",
+        "description": "Scroll through authentic user experiences at different restaurants like a social feed and save restaurants that attract you the most."
       },
       "rewards": {
-        "title": "Earn Rewards",
-        "description": "Scan your receipt, log your visit, and compete on the leaderboard. Top explorers win prizes every two weeks."
+        "title": "Earn rewards",
+        "description": "Visit a restaurant, scan your receipt to log your visit and compete on the leaderboard based on points. Users with the most points win prizes every two weeks."
       },
       "lists": {
-        "title": "Must Visit & Visited",
-        "description": "Keep track of places you want to try and create a personal diary of everywhere you've been."
+        "title": "Visited & Planning to visit",
+        "description": "A comprehensive list of all restaurants you've been to and track the ones you want to visit."
       },
       "search": {
-        "title": "Search by Dish",
-        "description": "Craving lasagna? Search for dishes and find which restaurants serve exactly what you want."
+        "title": "Search by dish name",
+        "description": "Craving a specific dish? Enter the dish name in our search and find restaurants that serve exactly what you want."
       },
       "details": {
-        "title": "Complete Info",
-        "description": "360° virtual tours, interactive menus, working hours, photos, and everything you need to choose."
+        "title": "Complete information",
+        "description": "360 virtual tours through restaurants, interactive menus, updated working hours, ambient photos… Everything you need to know about a restaurant in one place."
       },
       "reservations": {
-        "title": "Easy Reservations",
-        "description": "Book a table in seconds. Pick your date, time, and number of guests - all within the app."
+        "title": "Easy reservation method",
+        "description": "Reserve a table in just a few steps. Choose the date, time, and number of guests, and wait for restaurant confirmation - all within our app."
       }
     }
   },
   "howItWorks": {
-    "title": "How It Works",
-    "subtitle": "From discovery to dining in three simple steps",
+    "title": "Dinver works according to the following principle:",
+    "subtitle": "3 simple steps",
     "steps": {
       "discover": {
-        "title": "Discover",
-        "description": "Browse the Experience feed, search by dish or location, or check what's new at your favorite spots."
+        "title": "Discover a restaurant",
+        "description": "Browse the experience feed, search restaurants by dish or location, or check what's new at your favorite spots."
       },
       "visit": {
-        "title": "Visit & Snap",
-        "description": "Dine at any restaurant and snap a photo of your receipt. We'll verify your visit and add it to your history."
+        "title": "Visit it and leave an experience",
+        "description": "Dine at any restaurant and snap a photo of your receipt. After we verify your visit, you'll be able to leave your authentic experience from the restaurant."
       },
       "share": {
-        "title": "Share & Earn",
-        "description": "Create an Experience post with photos and ratings. Climb the leaderboard and unlock exclusive rewards."
+        "title": "Compete and earn rewards",
+        "description": "Collect points by scanning receipts, creating experiences, inviting friends, and climb the leaderboard to win rewards."
       }
     }
   },
@@ -77,62 +77,94 @@
     "experiences": {
       "title": "Experience Feed",
       "subtitle": "Social network for food lovers",
-      "description": "Scroll through authentic dining reviews like a social feed. Choose a city or search globally - discover restaurants through real photos and experiences from people. Like what you see? Click the restaurant and book a table!"
+      "description": "Scroll through authentic user experiences at different restaurants like a social feed. Like what you see in the photo? Click the restaurant, save it, or book a table right away!"
     },
     "whatsNew": {
-      "title": "What's New",
-      "subtitle": "Never miss a restaurant event",
-      "description": "Restaurants post announcements like stories - live music tonight, new dish on menu, special offer. Filter by categories (Live Music, Happy Hour...) and discover what's happening nearby. Posts last 1-7 days."
+      "title": "What's New?",
+      "subtitle": "Don't miss cool restaurant events",
+      "description": "Restaurants post announcements like status updates - live music tonight, new dish on the menu, special offer. Filter by categories and discover what's happening nearby. Posts last up to 7 days."
     },
     "cta": "See More Experiences"
   },
   "forRestaurants": {
-    "title": "For Restaurants",
+    "title": "Become a Dinver partner",
     "subtitle": "Join the Dinver partner network",
     "benefits": {
-      "visibility": {
-        "title": "Enhanced Visibility",
-        "description": "Stand out with featured placement, virtual tours, and interactive menus."
+      "virtualTour": {
+        "title": "360 Virtual Tour",
+        "description": "Let guests explore your ambiance before they visit"
+      },
+      "menu": {
+        "title": "Interactive Menu",
+        "description": "Showcase your delicious dishes with photos and descriptions"
+      },
+      "whatsNew": {
+        "title": "What's New?",
+        "description": "Announce events, promotions, and new dishes"
+      },
+      "profile": {
+        "title": "Restaurant Profile",
+        "description": "Display all information about your restaurant in one place"
       },
       "analytics": {
-        "title": "Real Analytics",
-        "description": "Track views, clicks, reservations, and understand your customers better."
+        "title": "Analytics and Statistics",
+        "description": "Track what interests your guests the most"
       },
-      "updates": {
-        "title": "What's New Posts",
-        "description": "Share live music nights, new dishes, or special events directly with nearby food lovers."
-      },
-      "community": {
-        "title": "Engaged Community",
-        "description": "Connect with a community that loves discovering new dining experiences."
+      "workingHours": {
+        "title": "Working Hours",
+        "description": "Manage working hours and keep them regularly updated"
       },
       "reservations": {
-        "title": "Built-in Reservations",
-        "description": "Accept table reservations directly through the app. No extra tools needed."
+        "title": "Reservations",
+        "description": "Accept table reservations directly through the app"
       }
     },
     "cta": "Become a Partner",
     "ctaSecondary": "Learn More"
   },
   "map": {
-    "title": "Explore Partner Restaurants",
-    "subtitle": "Discover verified dining experiences near you",
+    "title": "Our Partner Restaurants",
+    "subtitle": "Discover top restaurants that are already part of the Dinver community",
     "cta": "View All Restaurants"
   },
   "contact": {
-    "title": "Become a Partner",
-    "subtitle": "Join our partner network and reach food lovers actively looking for their next great meal",
+    "title": "Contact us",
+    "subtitle": "Have a question, suggestion, or want to work with us? We'd love to hear from you!",
+    "info": {
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "followUs": "Follow us"
+    },
     "form": {
-      "email": "Your email",
+      "inquiryType": "Inquiry type",
+      "inquiryTypes": {
+        "general": "General inquiry",
+        "partnership": "Partnership",
+        "support": "Support",
+        "press": "Press",
+        "other": "Other"
+      },
+      "name": "Full name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "phone": "Phone (optional)",
       "city": "Your city",
-      "submit": "Submit",
-      "submitting": "Submitting...",
-      "success": "Application received! We'll be in touch soon.",
-      "error": "Something went wrong. Please try again."
+      "subject": "Subject",
+      "subjectPlaceholder": "What is this about?",
+      "message": "Message",
+      "messagePlaceholder": "Your message...",
+      "submit": "Send message",
+      "submitting": "Sending...",
+      "success": "Message sent!",
+      "successMessage": "Thank you for your message. We'll get back to you soon.",
+      "sendAnother": "Send another message",
+      "error": "An error occurred. Please try again.",
+      "required": "*"
     },
     "restaurant": {
-      "title": "Are you a restaurant?",
-      "description": "Join our partner network and reach food lovers who are actively looking for their next great meal.",
+      "title": "Are you a restaurant owner?",
+      "description": "Become a Dinver partner! Join our partner community and attract guests who are actively looking for their next excellent meal.",
       "cta": "Register Your Restaurant"
     }
   },
@@ -168,9 +200,9 @@
     }
   },
   "rewards": {
-    "title": "Climb the Leaderboard",
-    "subtitle": "Earn points, compete with friends, and win real prizes",
-    "description": "Every restaurant visit counts. Scan your receipt, earn points, and compete to be the top explorer. Top 3 winners every two weeks get a mystery box delivered to their door!",
+    "title": "Earn points for every visit",
+    "subtitle": "Collect points, compete on the leaderboard and win a Dinver Mystery Box!",
+    "description": "Every restaurant visit counts. Scan your receipt, earn points, and compete to be the top explorer. Top 1 user and a randomly selected participant win prizes!",
     "howToEarn": "How to Earn Points",
     "earnMethods": {
       "visit": {
@@ -197,7 +229,7 @@
     },
     "mysteryBox": {
       "title": "Mystery Box",
-      "description": "Top 3 explorers every 2 weeks win a mystery box with exclusive restaurant vouchers and Dinver merch!",
+      "description": "Top 1 user and a randomly selected participant win prizes",
       "countdown": "Next prize cycle ends in"
     },
     "cta": "Start Earning Points"
@@ -238,7 +270,8 @@
       }
     },
     "comparison": {
-      "title": "Basic vs Partner",
+      "title": "Basic profile vs. Partner profile",
+      "feature": "Feature",
       "basic": "Basic Listing",
       "partner": "Partner",
       "features": {
@@ -247,8 +280,9 @@
         "featured": "Featured placement",
         "virtualTour": "360° virtual tour",
         "menu": "Interactive menu",
-        "whatsNew": "What's New posts",
-        "analytics": "Analytics dashboard"
+        "whatsNew": "\"What's New?\" posts",
+        "analytics": "Analytics dashboard",
+        "reservations": "Reservations"
       }
     },
     "cta": "Become a Partner",
@@ -272,5 +306,93 @@
     "subtitle": "Book tables, earn points, and discover the best spots in town - all in one place.",
     "scanQr": "Scan to download",
     "available": "Available for iOS and Android"
+  },
+  "faq": {
+    "title": "Everything you need to know about Dinver",
+    "cta": "Have more questions? Contact us!",
+    "items": [
+      {
+        "question": "What is Dinver?",
+        "answer": "Dinver is an app that combines a social network with a restaurant guide. It enables guests to discover new restaurants through authentic experiences from other users and earn rewards, while allowing restaurants to showcase everything they offer in one place in an engaging way."
+      },
+      {
+        "question": "Is Dinver free?",
+        "answer": "Yes! Dinver is completely free for users. Download the app, create a profile, and start exploring restaurants in your desired city."
+      },
+      {
+        "question": "How do I earn points and rewards?",
+        "answer": "You earn points in several ways: by scanning receipts after restaurant visits, posting experiences with photos, and inviting friends. Every two weeks, the Top 1 user and one randomly selected user on the leaderboard win a Dinver Mystery Box with prizes!"
+      },
+      {
+        "question": "How can I become a partner restaurant?",
+        "answer": "Simple! Contact us through the form on our website or directly via info@dinver.eu. Our team will help you set up your profile, shoot a virtual tour, and explain all the tools we offer."
+      },
+      {
+        "question": "What do partner restaurants get?",
+        "answer": "Partner restaurants get featured placement, a 360° virtual tour, an interactive menu, the ability to post \"What's New?\" announcements about their restaurant, and detailed analytics about visits and guests."
+      },
+      {
+        "question": "Is Dinver available in my city?",
+        "answer": "We're currently focused on Croatia, with an emphasis on larger cities. If there are no available restaurants in your city, you can help us - write an experience for one of your favorite restaurants, and we'll turn it into our partner!"
+      }
+    ]
+  },
+  "about": {
+    "hero": {
+      "title": "About us",
+      "subtitle": "Dinver is a platform that connects food lovers with the best gastronomic experiences in Croatia."
+    },
+    "story": {
+      "title": "Our story",
+      "paragraphs": [
+        "Dinver was born from a simple idea: to make it easier for people to find their next favorite restaurant. In a world full of generic reviews and paid recommendations, we wanted to create a place where real experiences come from real people.",
+        "Our platform combines a social network with a restaurant guide, allowing users to follow friends, share their culinary moments, and discover hidden gems they wouldn't find elsewhere.",
+        "Today, Dinver brings together a community of passionate food lovers who actively explore, share, and get rewarded for every new gastronomic experience."
+      ]
+    },
+    "mission": {
+      "title": "Our mission",
+      "subtitle": "To connect every food lover with authentic gastronomic experiences and help restaurants reach the right guests."
+    },
+    "values": {
+      "authenticity": {
+        "title": "Authenticity",
+        "description": "We believe in real experiences from real people. No fake reviews, just honest recommendations."
+      },
+      "community": {
+        "title": "Community",
+        "description": "We're building a community of food lovers who share a passion for discovering new gastronomic experiences."
+      },
+      "quality": {
+        "title": "Quality",
+        "description": "We only work with restaurants that share our passion for quality and excellence."
+      }
+    },
+    "offerings": {
+      "title": "What we offer",
+      "forUsers": {
+        "title": "For users",
+        "items": [
+          "Discover new restaurants through authentic reviews",
+          "Follow friends and see where they've dined",
+          "Earn points and rewards for every visit",
+          "Search by dish, not just by restaurant"
+        ]
+      },
+      "forRestaurants": {
+        "title": "For restaurants",
+        "items": [
+          "Increase visibility among real food lovers",
+          "Showcase your space with a 360° virtual tour",
+          "Share news and events via \"What's New\"",
+          "Track analytics and understand your guests"
+        ]
+      }
+    },
+    "cta": {
+      "title": "Want to work with us?",
+      "subtitle": "Whether you're a restaurant looking to become a partner or have any questions, we'd love to hear from you.",
+      "button": "Contact us"
+    }
   }
 }

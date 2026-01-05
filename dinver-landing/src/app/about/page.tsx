@@ -36,21 +36,18 @@ export default function ONama() {
   const values = [
     {
       icon: Heart,
-      title: "Autentičnost",
-      description:
-        "Vjerujemo u prava iskustva od pravih ljudi. Bez lažnih recenzija, samo iskrene preporuke.",
+      title: messages.about.values.authenticity.title,
+      description: messages.about.values.authenticity.description,
     },
     {
       icon: Users,
-      title: "Zajednica",
-      description:
-        "Gradimo zajednicu ljubitelja hrane koji dijele strast prema otkrivanju novih gastro doživljaja.",
+      title: messages.about.values.community.title,
+      description: messages.about.values.community.description,
     },
     {
       icon: Target,
-      title: "Kvaliteta",
-      description:
-        "Surađujemo samo s restoranima koji dijele našu strast prema kvaliteti i izvrsnosti.",
+      title: messages.about.values.quality.title,
+      description: messages.about.values.quality.description,
     },
   ];
 
@@ -70,10 +67,9 @@ export default function ONama() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-4xl sm:text-5xl font-bold mb-6">O nama</h1>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-6">{messages.about.hero.title}</h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Dinver je platforma koja povezuje ljubitelje hrane s najboljim
-              gastronomskim iskustvima u Hrvatskoj.
+              {messages.about.hero.subtitle}
             </p>
           </motion.div>
         </div>
@@ -88,26 +84,12 @@ export default function ONama() {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Naša priča
+              {messages.about.story.title}
             </h2>
             <div className="prose prose-gray max-w-none text-gray-600 space-y-4">
-              <p>
-                Dinver je nastao iz jednostavne ideje: olakšati ljudima
-                pronalazak njihovog sljedećeg omiljenog restorana. U svijetu
-                prepunom generickih recenzija i plaćenih preporuka, željeli smo
-                stvoriti mjesto gdje prava iskustva dolaze od pravih ljudi.
-              </p>
-              <p>
-                Naša platforma kombinira društvenu mrežu s vodičem za restorane,
-                omogućujući korisnicima da prate prijatelje, dijele svoje gastro
-                trenutke i otkrivaju skrivene dragulje koje ne biste pronašli
-                drugdje.
-              </p>
-              <p>
-                Danas Dinver okuplja zajednicu strastvenih ljubitelja hrane koji
-                aktivno istražuju, dijele i nagrađuju se za svaki novi gastro
-                doživljaj.
-              </p>
+              {messages.about.story.paragraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
             </div>
           </motion.div>
         </div>
@@ -123,11 +105,10 @@ export default function ONama() {
             className="text-center mb-12"
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Naša misija
+              {messages.about.mission.title}
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Povezati svakog ljubitelja hrane s autentičnim gastronomskim
-              iskustvima i pomoći restoranima da dopru do pravih gostiju.
+              {messages.about.mission.subtitle}
             </p>
           </motion.div>
 
@@ -164,7 +145,7 @@ export default function ONama() {
             className="text-center mb-12"
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Što nudimo
+              {messages.about.offerings.title}
             </h2>
           </motion.div>
 
@@ -176,12 +157,11 @@ export default function ONama() {
               className="bg-dinver-dark text-white rounded-2xl p-8"
             >
               <Utensils className="text-dinver-cream mb-4" size={32} />
-              <h3 className="text-xl font-bold mb-3">Za korisnike</h3>
+              <h3 className="text-xl font-bold mb-3">{messages.about.offerings.forUsers.title}</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>• Otkrijte nove restorane kroz autentične recenzije</li>
-                <li>• Pratite prijatelje i vidite gdje su večerali</li>
-                <li>• Zarađujte bodove i nagrade za svaki posjet</li>
-                <li>• Pretražujte po jelu, ne samo po restoranu</li>
+                {messages.about.offerings.forUsers.items.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
               </ul>
             </motion.div>
 
@@ -193,16 +173,12 @@ export default function ONama() {
             >
               <MapPin className="text-dinver-green mb-4" size={32} />
               <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Za restorane
+                {messages.about.offerings.forRestaurants.title}
               </h3>
               <ul className="space-y-2 text-gray-600">
-                <li>• Povećajte vidljivost među pravim ljubiteljima hrane</li>
-                <li>• Predstavite svoj prostor s 360° virtualnom šetnjom</li>
-                <li>
-                  • Dijelite novosti i događaje putem &quot;What&apos;s
-                  New&quot;
-                </li>
-                <li>• Pratite analitiku i razumijte svoje goste</li>
+                {messages.about.offerings.forRestaurants.items.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
               </ul>
             </motion.div>
           </div>
@@ -218,17 +194,16 @@ export default function ONama() {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl font-bold text-dinver-dark mb-4">
-              Želite surađivati s nama?
+              {messages.about.cta.title}
             </h2>
             <p className="text-dinver-dark/70 mb-6">
-              Bilo da ste restoran koji želi postati partner ili imate bilo
-              kakvo pitanje, rado ćemo čuti od vas.
+              {messages.about.cta.subtitle}
             </p>
             <Link
               href="/contact"
               className="inline-flex items-center bg-dinver-dark text-white px-6 py-3 rounded-lg font-medium hover:bg-dinver-green-dark transition-colors"
             >
-              Kontaktirajte nas
+              {messages.about.cta.button}
             </Link>
           </motion.div>
         </div>

@@ -63,7 +63,7 @@ export default function Home() {
       <SocialProof locale={locale} />
 
       {/* FAQ Section */}
-      <FAQ locale={locale} />
+      <FAQ messages={messages} />
 
       {/* Contact form - kept from original */}
       <Contact messages={messages} />

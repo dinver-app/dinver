@@ -77,11 +77,11 @@ export default function KontaktPage() {
         });
       } else {
         setFormStatus("error");
-        setErrorMessage(response.message || "Došlo je do greške");
+        setErrorMessage(response.message || messages.contact.form.error);
       }
     } catch {
       setFormStatus("error");
-      setErrorMessage("Došlo je do greške. Molimo pokušajte ponovno.");
+      setErrorMessage(messages.contact.form.error);
     }
   };
 
@@ -99,15 +99,15 @@ export default function KontaktPage() {
   const inquiryTypes = [
     {
       value: "general",
-      label: locale === "hr" ? "Općeniti upit" : "General inquiry",
+      label: messages.contact.form.inquiryTypes.general,
     },
     {
       value: "partnership",
-      label: locale === "hr" ? "Partnerstvo" : "Partnership",
+      label: messages.contact.form.inquiryTypes.partnership,
     },
-    { value: "support", label: locale === "hr" ? "Podrška" : "Support" },
-    { value: "press", label: locale === "hr" ? "Za medije" : "Press" },
-    { value: "other", label: locale === "hr" ? "Ostalo" : "Other" },
+    { value: "support", label: messages.contact.form.inquiryTypes.support },
+    { value: "press", label: messages.contact.form.inquiryTypes.press },
+    { value: "other", label: messages.contact.form.inquiryTypes.other },
   ];
 
   return (
@@ -127,12 +127,10 @@ export default function KontaktPage() {
               animate={{ opacity: 1, x: 0 }}
             >
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                {locale === "hr" ? "Kontaktirajte nas" : "Contact us"}
+                {messages.contact.title}
               </h1>
               <p className="text-lg text-gray-600 mb-8">
-                {locale === "hr"
-                  ? "Imate pitanje, prijedlog ili želite surađivati s nama? Rado ćemo čuti od vas!"
-                  : "Have a question, suggestion, or want to work with us? We'd love to hear from you!"}
+                {messages.contact.subtitle}
               </p>
 
               {/* Contact Details */}
@@ -142,7 +140,7 @@ export default function KontaktPage() {
                     <Mail className="text-dinver-green" size={22} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">{messages.contact.info.email}</h3>
                     <a
                       href="mailto:info@dinver.eu"
                       className="text-dinver-green hover:text-dinver-green-dark transition-colors"
@@ -158,7 +156,7 @@ export default function KontaktPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">
-                      {locale === "hr" ? "Telefon" : "Phone"}
+                      {messages.contact.info.phone}
                     </h3>
                     <a
                       href="tel:+385955493071"
@@ -175,7 +173,7 @@ export default function KontaktPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">
-                      {locale === "hr" ? "Lokacija" : "Location"}
+                      {messages.contact.info.location}
                     </h3>
                     <p className="text-gray-600">Zagreb, Hrvatska</p>
                   </div>
@@ -185,7 +183,7 @@ export default function KontaktPage() {
               {/* Social Links */}
               <div>
                 <h3 className="font-semibold text-gray-900 mb-4">
-                  {locale === "hr" ? "Pratite nas" : "Follow us"}
+                  {messages.contact.info.followUs}
                 </h3>
                 <div className="flex items-center gap-4">
                   <a
@@ -241,20 +239,16 @@ export default function KontaktPage() {
                       <CheckCircle className="text-green-600" size={32} />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {locale === "hr" ? "Poruka poslana!" : "Message sent!"}
+                      {messages.contact.form.success}
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      {locale === "hr"
-                        ? "Hvala na poruci. Javit ćemo vam se uskoro."
-                        : "Thank you for your message. We'll get back to you soon."}
+                      {messages.contact.form.successMessage}
                     </p>
                     <button
                       onClick={() => setFormStatus("idle")}
                       className="text-dinver-green hover:text-dinver-green-dark font-medium"
                     >
-                      {locale === "hr"
-                        ? "Pošalji još jednu poruku"
-                        : "Send another message"}
+                      {messages.contact.form.sendAnother}
                     </button>
                   </motion.div>
                 ) : (
@@ -264,7 +258,7 @@ export default function KontaktPage() {
                         htmlFor="type"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {locale === "hr" ? "Tip upita" : "Inquiry type"}
+                        {messages.contact.form.inquiryType}
                       </label>
                       <select
                         id="type"
@@ -287,7 +281,7 @@ export default function KontaktPage() {
                           htmlFor="name"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          {locale === "hr" ? "Ime i prezime" : "Full name"} *
+                          {messages.contact.form.name} {messages.contact.form.required}
                         </label>
                         <input
                           type="text"
@@ -297,9 +291,7 @@ export default function KontaktPage() {
                           value={formData.name}
                           onChange={handleChange}
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-dinver-green focus:border-transparent"
-                          placeholder={
-                            locale === "hr" ? "Vaše ime" : "Your name"
-                          }
+                          placeholder={messages.contact.form.namePlaceholder}
                         />
                       </div>
 
@@ -308,7 +300,7 @@ export default function KontaktPage() {
                           htmlFor="email"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Email *
+                          {messages.contact.form.email} {messages.contact.form.required}
                         </label>
                         <input
                           type="email"
@@ -328,9 +320,7 @@ export default function KontaktPage() {
                         htmlFor="phone"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {locale === "hr"
-                          ? "Telefon (opcionalno)"
-                          : "Phone (optional)"}
+                        {messages.contact.form.phone}
                       </label>
                       <input
                         type="tel"
@@ -348,7 +338,7 @@ export default function KontaktPage() {
                         htmlFor="subject"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {locale === "hr" ? "Predmet" : "Subject"} *
+                        {messages.contact.form.subject} {messages.contact.form.required}
                       </label>
                       <input
                         type="text"
@@ -358,11 +348,7 @@ export default function KontaktPage() {
                         value={formData.subject}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-dinver-green focus:border-transparent"
-                        placeholder={
-                          locale === "hr"
-                            ? "O čemu se radi?"
-                            : "What is this about?"
-                        }
+                        placeholder={messages.contact.form.subjectPlaceholder}
                       />
                     </div>
 
@@ -371,7 +357,7 @@ export default function KontaktPage() {
                         htmlFor="message"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {locale === "hr" ? "Poruka" : "Message"} *
+                        {messages.contact.form.message} {messages.contact.form.required}
                       </label>
                       <textarea
                         id="message"
@@ -381,9 +367,7 @@ export default function KontaktPage() {
                         value={formData.message}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-dinver-green focus:border-transparent resize-none"
-                        placeholder={
-                          locale === "hr" ? "Vaša poruka..." : "Your message..."
-                        }
+                        placeholder={messages.contact.form.messagePlaceholder}
                       />
                     </div>
 
@@ -402,12 +386,12 @@ export default function KontaktPage() {
                       {formStatus === "loading" ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          {locale === "hr" ? "Šaljem..." : "Sending..."}
+                          {messages.contact.form.submitting}
                         </>
                       ) : (
                         <>
                           <Send size={18} />
-                          {locale === "hr" ? "Pošalji poruku" : "Send message"}
+                          {messages.contact.form.submit}
                         </>
                       )}
                     </button>

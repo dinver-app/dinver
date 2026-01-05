@@ -46,115 +46,94 @@ export default function PartnersSection({
     {
       id: 0,
       icon: Camera,
-      title: locale === "hr" ? "Virtualna šetnja 360°" : "360° Virtual Tour",
+      title: messages.partners.benefits.virtualTour.title,
       shortTitle: locale === "hr" ? "360° šetnja" : "360° Tour",
-      description:
-        locale === "hr"
-          ? "Omogući gostima da istraže tvoj prostor prije dolaska"
-          : "Let guests explore your space before visiting",
+      description: messages.partners.benefits.virtualTour.description,
       screenshot: "/screenshots/virtual-tour.PNG",
     },
     {
       id: 1,
       icon: Menu,
-      title: locale === "hr" ? "Interaktivni meni" : "Interactive Menu",
+      title: messages.partners.benefits.menu.title,
       shortTitle: locale === "hr" ? "Meni" : "Menu",
-      description:
-        locale === "hr"
-          ? "Prikaži jela sa slikama i opisima"
-          : "Showcase dishes with photos and descriptions",
+      description: messages.partners.benefits.menu.description,
       screenshot: "/screenshots/meni.PNG",
     },
     {
       id: 2,
       icon: Bell,
-      title: locale === "hr" ? "What's New objave" : "What's New Posts",
-      shortTitle: "What's New",
-      description:
-        locale === "hr"
-          ? "Najavi događaje, promocije i nova jela"
-          : "Announce events, specials, and new dishes",
+      title: messages.partners.benefits.whatsNew.title,
+      shortTitle: messages.partners.benefits.whatsNew.title,
+      description: messages.partners.benefits.whatsNew.description,
       screenshot: "/screenshots/whats-new.PNG",
     },
     {
       id: 3,
       icon: MapPin,
-      title: locale === "hr" ? "Profil restorana" : "Restaurant Profile",
+      title: messages.forRestaurants.benefits.profile.title,
       shortTitle: locale === "hr" ? "Profil" : "Profile",
-      description:
-        locale === "hr"
-          ? "Sve informacije na jednom mjestu"
-          : "All information in one place",
+      description: messages.forRestaurants.benefits.profile.description,
       screenshot: "/screenshots/restaurant-profile.PNG",
     },
     {
       id: 4,
       icon: BarChart3,
-      title: locale === "hr" ? "Analitika i statistike" : "Analytics & Stats",
+      title: messages.partners.benefits.analytics.title,
       shortTitle: locale === "hr" ? "Analitika" : "Analytics",
-      description:
-        locale === "hr"
-          ? "Prati performanse i razumij svoje goste"
-          : "Track performance and understand your guests",
+      description: messages.partners.benefits.analytics.description,
       screenshot: "/screenshots/analytics.PNG",
     },
     {
       id: 5,
       icon: Clock,
-      title: locale === "hr" ? "Radno vrijeme" : "Working Hours",
+      title: messages.forRestaurants.benefits.workingHours.title,
       shortTitle: locale === "hr" ? "Radno vrijeme" : "Hours",
-      description:
-        locale === "hr"
-          ? "Upravljaj radnim vremenom jednostavno"
-          : "Manage your working hours easily",
+      description: messages.forRestaurants.benefits.workingHours.description,
       screenshot: "/screenshots/working-hours.PNG",
     },
     {
       id: 6,
       icon: Calendar,
-      title: locale === "hr" ? "Rezervacije" : "Reservations",
+      title: messages.forRestaurants.benefits.reservations.title,
       shortTitle: locale === "hr" ? "Rezervacije" : "Reservations",
-      description:
-        locale === "hr"
-          ? "Primaj rezervacije stolova direktno kroz aplikaciju"
-          : "Accept table reservations directly through the app",
+      description: messages.forRestaurants.benefits.reservations.description,
       screenshot: "/screenshots/reservation.PNG",
     },
   ];
 
   const comparisonFeatures = [
     {
-      feature: locale === "hr" ? "Osnovne informacije" : "Basic info",
+      feature: messages.partners.comparison.features.listing,
       basic: true,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "Experience recenzije" : "Experience reviews",
+      feature: messages.partners.comparison.features.experiences,
       basic: true,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "Virtualna šetnja" : "Virtual tour",
+      feature: messages.partners.comparison.features.virtualTour,
       basic: false,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "Interaktivni meni" : "Interactive menu",
+      feature: messages.partners.comparison.features.menu,
       basic: false,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "What's New objave" : "What's New posts",
+      feature: messages.partners.comparison.features.whatsNew,
       basic: false,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "Analitika" : "Analytics",
+      feature: messages.partners.comparison.features.analytics,
       basic: false,
       partner: true,
     },
     {
-      feature: locale === "hr" ? "Rezervacije" : "Reservations",
+      feature: messages.partners.comparison.features.reservations,
       basic: false,
       partner: true,
     },
@@ -237,7 +216,7 @@ export default function PartnersSection({
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 text-dinver-cream rounded-full text-sm font-semibold mb-4 sm:mb-6"
           >
             <Sparkles size={16} />
-            {locale === "hr" ? "Za restorane" : "For Restaurants"}
+            {messages.nav.restaurants}
           </motion.span>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
             {messages.forRestaurants.title}
@@ -404,22 +383,20 @@ export default function PartnersSection({
           className="mt-16 sm:mt-24"
         >
           <h3 className="text-xl sm:text-2xl font-bold text-white text-center mb-6 sm:mb-8">
-            {locale === "hr"
-              ? "Usporedba: Obični profil vs Partner"
-              : "Comparison: Basic vs Partner"}
+            {messages.partners.comparison.title}
           </h3>
 
           <div className="max-w-2xl mx-auto bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
             {/* Header */}
             <div className="grid grid-cols-3 bg-white/5 p-3 sm:p-4 border-b border-white/10">
               <div className="font-medium text-gray-400 text-xs sm:text-sm">
-                {locale === "hr" ? "Mogućnost" : "Feature"}
+                {messages.partners.comparison.feature}
               </div>
               <div className="text-center font-medium text-gray-400 text-xs sm:text-sm">
-                {locale === "hr" ? "Obični" : "Basic"}
+                {messages.partners.comparison.basic}
               </div>
               <div className="text-center font-medium text-dinver-cream text-xs sm:text-sm">
-                Partner
+                {messages.partners.comparison.partner}
               </div>
             </div>
 
