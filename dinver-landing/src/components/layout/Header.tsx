@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Globe, Download } from 'lucide-react';
-import Link from 'next/link';
-import Logo from '@/components/ui/Logo';
-import Button from '@/components/ui/Button';
-import AppStoreButtons from '@/components/ui/AppStoreButtons';
-import { Messages, Locale } from '@/lib/i18n';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X, Globe, Download } from "lucide-react";
+import Link from "next/link";
+import Logo from "@/components/ui/Logo";
+import Button from "@/components/ui/Button";
+import AppStoreButtons from "@/components/ui/AppStoreButtons";
+import { Messages, Locale } from "@/lib/i18n";
 
 interface HeaderProps {
   messages: Messages;
@@ -15,7 +15,11 @@ interface HeaderProps {
   onLocaleChange: (locale: Locale) => void;
 }
 
-export default function Header({ messages, locale, onLocaleChange }: HeaderProps) {
+export default function Header({
+  messages,
+  locale,
+  onLocaleChange,
+}: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -24,21 +28,21 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const navItems = [
-    { href: '/#features', label: messages.nav.features },
-    { href: '/#how-it-works', label: messages.nav.howItWorks },
-    { href: '/#restaurants', label: messages.nav.restaurants },
-    { href: '/partneri', label: locale === 'hr' ? 'Partneri' : 'Partners' },
-    { href: '/#faq', label: 'FAQ' },
-    { href: '/kontakt', label: locale === 'hr' ? 'Kontakt' : 'Contact' },
+    { href: "/#features", label: messages.nav.features },
+    { href: "/#how-it-works", label: messages.nav.howItWorks },
+    { href: "/#restaurants", label: messages.nav.restaurants },
+    { href: "/partneri", label: locale === "hr" ? "Partneri" : "Partners" },
+    { href: "/#faq", label: "FAQ" },
+    { href: "/kontakt", label: locale === "hr" ? "Kontakt" : "Contact" },
   ];
 
   const toggleLocale = () => {
-    onLocaleChange(locale === 'en' ? 'hr' : 'en');
+    onLocaleChange(locale === "en" ? "hr" : "en");
   };
 
   return (
@@ -49,15 +53,15 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
         transition={{ duration: 0.5 }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm'
-            : 'bg-dinver-dark/80 backdrop-blur-sm'
+            ? "bg-white/95 backdrop-blur-md shadow-sm"
+            : "bg-dinver-dark/80 backdrop-blur-sm"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <Link href="/" className="flex-shrink-0">
-              <Logo variant={isScrolled ? 'dark' : 'light'} />
+            <Link href="/" className="shrink-0">
+              <Logo variant={isScrolled ? "dark" : "light"} />
             </Link>
 
             {/* Desktop Navigation */}
@@ -68,8 +72,8 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                   href={item.href}
                   className={`transition-colors font-medium ${
                     isScrolled
-                      ? 'text-gray-700 hover:text-dinver-green'
-                      : 'text-white/80 hover:text-white'
+                      ? "text-gray-700 hover:text-dinver-green"
+                      : "text-white/80 hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -83,8 +87,8 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                 onClick={toggleLocale}
                 className={`flex items-center gap-1.5 transition-colors ${
                   isScrolled
-                    ? 'text-gray-600 hover:text-dinver-green'
-                    : 'text-white/80 hover:text-white'
+                    ? "text-gray-600 hover:text-dinver-green"
+                    : "text-white/80 hover:text-white"
                 }`}
               >
                 <Globe size={18} />
@@ -129,8 +133,8 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`lg:hidden p-2 transition-colors ${
                 isScrolled
-                  ? 'text-gray-700 hover:text-dinver-green'
-                  : 'text-white hover:text-dinver-cream'
+                  ? "text-gray-700 hover:text-dinver-green"
+                  : "text-white hover:text-dinver-cream"
               }`}
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -149,11 +153,14 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-40 lg:hidden"
           >
-            <div className="absolute inset-0 bg-black/20" onClick={() => setIsMobileMenuOpen(false)} />
+            <div
+              className="absolute inset-0 bg-black/20"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
             <motion.nav
-              initial={{ x: '100%' }}
+              initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              exit={{ x: "100%" }}
               transition={{ duration: 0.3 }}
               className="absolute top-0 right-0 bottom-0 w-full max-w-sm bg-white shadow-xl"
             >
@@ -179,7 +186,9 @@ export default function Header({ messages, locale, onLocaleChange }: HeaderProps
                     <span className="font-medium">{messages.nav.language}</span>
                   </button>
                   <div className="pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-500 mb-3">{messages.nav.downloadApp}</p>
+                    <p className="text-sm text-gray-500 mb-3">
+                      {messages.nav.downloadApp}
+                    </p>
                     <AppStoreButtons variant="dark" layout="vertical" />
                   </div>
                 </div>

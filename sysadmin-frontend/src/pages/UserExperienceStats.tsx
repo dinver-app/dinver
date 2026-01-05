@@ -363,7 +363,7 @@ const UserExperienceStats: React.FC = () => {
                 className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => navigate(`/experiences/${exp.id}`)}
               >
-                <div className="flex-shrink-0 w-20 h-28 bg-gray-200 rounded-lg overflow-hidden">
+                <div className="shrink-0 w-20 h-28 bg-gray-200 rounded-lg overflow-hidden">
                   {exp.media?.[0]?.cdnUrl ? (
                     <img
                       src={exp.media[0].cdnUrl}

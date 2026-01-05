@@ -713,7 +713,7 @@ const Analytics = () => {
                     type="button"
                     aria-pressed={showUniqueData}
                     onClick={() => setShowUniqueData((v) => !v)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-0 ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-0 ${
                       showUniqueData ? "bg-blue-600" : "bg-gray-200"
                     }`}
                   >
@@ -1221,7 +1221,7 @@ const Analytics = () => {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold text-sm overflow-hidden">
                           {index + 1}
                         </div>
                         <h4

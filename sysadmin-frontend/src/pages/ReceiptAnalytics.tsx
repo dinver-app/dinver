@@ -170,7 +170,7 @@ const ReceiptAnalytics = () => {
                   ? selectedRestaurant.name
                   : "Choose a restaurant"}
               </span>
-              <ChevronDownIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <ChevronDownIcon className="w-4 h-4 text-gray-500 shrink-0" />
             </button>
             {showRestaurantDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">

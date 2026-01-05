@@ -386,10 +386,7 @@ export default function RestaurantDetailsPage() {
           {/* Address & Status */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div className="flex items-start gap-3">
-              <MapPin
-                size={20}
-                className="text-dinver-green flex-shrink-0 mt-0.5"
-              />
+              <MapPin size={20} className="text-dinver-green shrink-0 mt-0.5" />
               <div>
                 <p className="text-gray-900 font-medium">
                   {restaurant.address}
@@ -870,7 +867,7 @@ export default function RestaurantDetailsPage() {
                       className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
                     >
                       {imageUrl && (
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden shrink-0">
                           <Image
                             src={imageUrl}
                             alt={itemName}
@@ -928,7 +925,7 @@ export default function RestaurantDetailsPage() {
                     <button
                       key={index}
                       onClick={() => setGalleryIndex(index)}
-                      className="relative w-32 h-24 sm:w-40 sm:h-32 rounded-xl overflow-hidden flex-shrink-0"
+                      className="relative w-32 h-24 sm:w-40 sm:h-32 rounded-xl overflow-hidden shrink-0"
                     >
                       <Image
                         src={img.url}

@@ -124,8 +124,8 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                 transition={{ delay: 0.3, duration: 0.6 }}
                 className="absolute -right-8 sm:-right-12 lg:-right-16 top-1/2 -translate-y-1/2"
               >
-                <div className="relative w-[120px] sm:w-[140px] lg:w-[160px] h-[240px] sm:h-[280px] lg:h-[320px] bg-gray-900 rounded-[1.5rem] sm:rounded-[2rem] p-1 sm:p-1.5 shadow-2xl">
-                  <div className="w-full h-full bg-white rounded-[1.25rem] sm:rounded-[1.5rem] overflow-hidden relative">
+                <div className="relative w-[120px] sm:w-[140px] lg:w-[160px] h-[240px] sm:h-[280px] lg:h-[320px] bg-gray-900 rounded-3xl sm:rounded-4xl p-1 sm:p-1.5 shadow-2xl">
+                  <div className="w-full h-full bg-white rounded-[1.25rem] sm:rounded-3xl overflow-hidden relative">
                     <Image
                       src="/screenshots/reservation.PNG"
                       alt="Reservation screen"
@@ -176,7 +176,7 @@ export default function ForRestaurants({ messages }: ForRestaurantsProps) {
                   transition={{ delay: index * 0.1 }}
                   className="flex gap-4"
                 >
-                  <div className="flex-shrink-0 w-12 h-12 bg-dinver-green/10 rounded-xl flex items-center justify-center">
+                  <div className="shrink-0 w-12 h-12 bg-dinver-green/10 rounded-xl flex items-center justify-center">
                     <benefit.icon className="text-dinver-green" size={24} />
                   </div>
                   <div>

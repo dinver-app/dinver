@@ -144,9 +144,7 @@ const Experiences: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Experiences</h1>
-        <p className="text-gray-600 mt-1">
-          Manage and review user experiences
-        </p>
+        <p className="text-gray-600 mt-1">Manage and review user experiences</p>
       </div>
 
       {/* Stats Cards */}
@@ -427,7 +425,7 @@ const Experiences: React.FC = () => {
                 <div className="space-y-2 mb-3">
                   {experience.restaurant && (
                     <div className="flex items-start gap-2">
-                      <MapPinIcon className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <MapPinIcon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
                       <div className="text-sm">
                         <div className="font-medium text-gray-900">
                           {experience.restaurant.name}
@@ -441,7 +439,7 @@ const Experiences: React.FC = () => {
 
                   {experience.author && (
                     <div className="flex items-center gap-2">
-                      <UserIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <UserIcon className="h-4 w-4 text-gray-400 shrink-0" />
                       <span className="text-sm text-gray-600">
                         {experience.author.name}
                       </span>

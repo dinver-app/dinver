@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { MapPin, Star, ChevronRight } from "lucide-react";
 import { useRef } from "react";
@@ -119,9 +120,8 @@ export default function RestaurantMap({
   const isInView = useInView(containerRef, { once: true, margin: "-100px" });
   const [restaurants, setRestaurants] =
     useState<Partner[]>(fallbackRestaurants);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MapComponent, setMapComponent] =
-    useState<React.ComponentType<any> | null>(null);
+    useState<React.ComponentType<{ data: Partner[]; center: [number, number] }> | null>(null);
 
   // Fetch partners from API
   useEffect(() => {
@@ -284,7 +284,7 @@ export default function RestaurantMap({
             )}
 
             {/* Partner count badge */}
-            <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg">
+            <div className="absolute top-4 left-4 z-1000 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-dinver-green rounded-full animate-pulse" />
                 <span className="font-bold text-gray-900">
@@ -312,16 +312,17 @@ export default function RestaurantMap({
               <motion.div
                 key={`${restaurant.id}-${index}`}
                 whileHover={{ scale: 1.02 }}
-                className="flex-shrink-0 w-[280px] p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-dinver-green/30 hover:shadow-lg transition-all cursor-pointer group"
+                className="shrink-0 w-[280px] p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-dinver-green/30 hover:shadow-lg transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   {/* Avatar/Icon */}
-                  <div className="w-12 h-12 bg-dinver-green/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="relative w-12 h-12 bg-dinver-green/10 rounded-xl flex items-center justify-center shrink-0">
                     {restaurant.thumbnailUrl ? (
-                      <img
+                      <Image
                         src={restaurant.thumbnailUrl}
                         alt={restaurant.name}
-                        className="w-full h-full object-cover rounded-xl"
+                        fill
+                        className="object-cover rounded-xl"
                       />
                     ) : (
                       <span className="text-dinver-green font-bold text-lg">
@@ -336,7 +337,7 @@ export default function RestaurantMap({
                         {restaurant.name}
                       </h4>
                       {getDisplayRating(restaurant) && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Star
                             className="text-amber-500"
                             size={14}
@@ -355,7 +356,7 @@ export default function RestaurantMap({
 
                   <ChevronRight
                     size={18}
-                    className="text-gray-300 group-hover:text-dinver-green group-hover:translate-x-1 transition-all flex-shrink-0"
+                    className="text-gray-300 group-hover:text-dinver-green group-hover:translate-x-1 transition-all shrink-0"
                   />
                 </div>
               </motion.div>

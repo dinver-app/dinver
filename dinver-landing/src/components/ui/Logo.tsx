@@ -32,7 +32,7 @@ export default function Logo({
         alt="Dinver"
         width={currentSize.logo}
         height={currentSize.logo}
-        className="flex-shrink-0 rounded-xl"
+        className="shrink-0 rounded-xl"
         priority
       />
       {showText && (

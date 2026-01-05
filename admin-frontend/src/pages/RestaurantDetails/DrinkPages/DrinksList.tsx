@@ -199,7 +199,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                     >
                       <div className="flex items-start space-x-4">
                         {item.imageUrl ? (
-                          <div className="w-32 h-20 rounded-md overflow-hidden flex-shrink-0">
+                          <div className="w-32 h-20 rounded-md overflow-hidden shrink-0">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
@@ -207,7 +207,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                             />
                           </div>
                         ) : (
-                          <div className="w-32 h-20 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <div className="w-32 h-20 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
                             <svg
                               className="h-10 w-10 text-gray-400"
                               xmlns="http://www.w3.org/2000/svg"
@@ -336,7 +336,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                     >
                       <div className="flex items-start space-x-4">
                         {item.imageUrl ? (
-                          <div className="w-24 h-16 rounded-md overflow-hidden flex-shrink-0">
+                          <div className="w-24 h-16 rounded-md overflow-hidden shrink-0">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
@@ -344,7 +344,7 @@ const DrinksList: React.FC<DrinksListProps> = memo(
                             />
                           </div>
                         ) : (
-                          <div className="w-24 h-16 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <div className="w-24 h-16 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
                             <svg
                               className="h-8 w-8 text-gray-400"
                               xmlns="http://www.w3.org/2000/svg"

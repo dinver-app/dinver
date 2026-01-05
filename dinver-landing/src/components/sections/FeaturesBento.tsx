@@ -270,7 +270,7 @@ export default function FeaturesBento({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: (index % 7) * 0.05 }}
-              className="flex-shrink-0 w-[320px]"
+              className="shrink-0 w-[320px]"
             >
               <div
                 className={`relative bg-linear-to-br ${feature.gradient} rounded-3xl p-6 h-full min-h-[280px] shadow-sm hover:shadow-lg transition-shadow duration-300`}

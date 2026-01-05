@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -218,10 +219,11 @@ export default function PartneriPage() {
                     {/* Image */}
                     <div className="relative h-48 bg-linear-to-br from-dinver-green/10 to-dinver-green/5 overflow-hidden">
                       {partner.thumbnailUrl ? (
-                        <img
+                        <Image
                           src={partner.thumbnailUrl}
                           alt={partner.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -240,7 +242,7 @@ export default function PartneriPage() {
 
                       {/* Location */}
                       <div className="flex items-center gap-2 text-gray-600 mb-3">
-                        <MapPin size={16} className="flex-shrink-0" />
+                        <MapPin size={16} className="shrink-0" />
                         <span className="text-sm">
                           {partner.address && partner.place
                             ? `${partner.address}, ${partner.place}`

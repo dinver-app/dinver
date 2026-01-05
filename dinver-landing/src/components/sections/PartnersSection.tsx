@@ -301,7 +301,7 @@ export default function PartnersSection({
                       initial={{ opacity: 0, y: 10 }}
                       animate={isInView ? { opacity: 1, y: 0 } : {}}
                       transition={{ delay: 0.3 + index * 0.05 }}
-                      className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 ${
+                      className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 ${
                         isActive
                           ? "bg-dinver-cream text-dinver-dark shadow-lg"
                           : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
@@ -362,7 +362,7 @@ export default function PartnersSection({
                       }`}
                     >
                       {/* Screen */}
-                      <div className="w-full h-full bg-white rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden relative">
+                      <div className="w-full h-full bg-white rounded-[1.75rem] sm:rounded-4xl overflow-hidden relative">
                         <Image
                           src={feature.screenshot}
                           alt={feature.title}
