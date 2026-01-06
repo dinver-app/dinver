@@ -297,7 +297,6 @@ export default function PartnersSection({
               {/* Scroll hint gradient for mobile */}
               <div className="absolute right-0 top-0 bottom-2 w-8 bg-linear-to-l from-dinver-dark to-transparent pointer-events-none sm:hidden" />
             </div>
-
           </AnimatedSection>
 
           {/* Stacked phone cards - SECOND on mobile */}
@@ -323,7 +322,7 @@ export default function PartnersSection({
                     className="absolute cursor-pointer"
                   >
                     <div
-                      className={`relative w-[180px] sm:w-[200px] lg:w-[220px] h-[360px] sm:h-[400px] lg:h-[440px] bg-gray-900 rounded-[2rem] sm:rounded-[2.5rem] p-1 sm:p-1.5 shadow-2xl transition-shadow ${
+                      className={`relative w-[180px] sm:w-[200px] lg:w-[220px] h-[360px] sm:h-[400px] lg:h-[440px] bg-gray-900 rounded-4xl sm:rounded-[2.5rem] p-1 sm:p-1.5 shadow-2xl transition-shadow ${
                         index === activeFeature ? "shadow-dinver-cream/20" : ""
                       }`}
                     >

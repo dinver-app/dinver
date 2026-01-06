@@ -357,12 +357,12 @@ export default function RestaurantDetailsPage() {
                   {restaurant.address}
                   {restaurant.place && `, ${restaurant.place}`}
                 </p>
-                {restaurant.hoursStatus?.restaurant?.today?.message && (
+                {restaurant.hoursStatus?.today?.message && (
                   <div className="flex items-center gap-1 mt-1 text-sm">
                     {(() => {
                       const message = locale === "hr"
-                        ? restaurant.hoursStatus.restaurant.today.message.hr
-                        : restaurant.hoursStatus.restaurant.today.message.en;
+                        ? restaurant.hoursStatus.today.message.hr
+                        : restaurant.hoursStatus.today.message.en;
                       const parts = message.split('⋅');
                       const firstWord = parts[0].trim();
                       const rest = parts.slice(1).join('⋅').trim();
@@ -371,7 +371,7 @@ export default function RestaurantDetailsPage() {
                         <>
                           <span
                             className={`font-medium ${
-                              restaurant.hoursStatus.restaurant.today.isOpen
+                              restaurant.hoursStatus.today.isOpen
                                 ? "text-green-600"
                                 : "text-red-600"
                             }`}
@@ -379,9 +379,10 @@ export default function RestaurantDetailsPage() {
                             {firstWord}
                           </span>
                           {rest && (
-                            <span className="text-gray-500">
-                              ⋅ {rest}
-                            </span>
+                            <>
+                              <span className="text-gray-500">⋅</span>
+                              <span className="text-gray-500">{rest}</span>
+                            </>
                           )}
                         </>
                       );

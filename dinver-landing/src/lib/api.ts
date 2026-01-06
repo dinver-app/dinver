@@ -125,14 +125,21 @@ export interface RestaurantImage {
 }
 
 export interface HoursStatus {
-  restaurant: {
+  restaurant?: {
     isOpen: boolean;
     closesAt?: string;
     opensAt?: string;
     closingSoon?: boolean;
     currentShift?: { open: string; close: string };
   };
-  kitchen: {
+  today?: {
+    isOpen: boolean;
+    message?: {
+      en: string;
+      hr: string;
+    };
+  };
+  kitchen?: {
     isOpen: boolean;
     closesAt?: string;
     opensAt?: string;
