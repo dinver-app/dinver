@@ -206,16 +206,18 @@ export default function PartneriPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 h-full"
+                    className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 h-full flex flex-col"
                   >
                     {/* Image */}
-                    <div className="relative h-48 bg-linear-to-br from-dinver-green/10 to-dinver-green/5 overflow-hidden">
+                    <div className="relative h-48 bg-linear-to-br from-dinver-green/10 to-dinver-green/5 overflow-hidden shrink-0">
                       {partner.thumbnailUrl ? (
                         <Image
                           src={partner.thumbnailUrl}
                           alt={partner.name}
                           fill
                           className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          priority={index < 6}
+                          loading={index < 6 ? "eager" : "lazy"}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -227,15 +229,15 @@ export default function PartneriPage() {
                     </div>
 
                     {/* Content */}
-                    <div className="p-5">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-dinver-green transition-colors">
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-dinver-green transition-colors line-clamp-2">
                         {partner.name}
                       </h3>
 
                       {/* Location */}
                       <div className="flex items-center gap-2 text-gray-600 mb-3">
                         <MapPin size={16} className="shrink-0" />
-                        <span className="text-sm">
+                        <span className="text-sm line-clamp-1">
                           {partner.address && partner.place
                             ? `${partner.address}, ${partner.place}`
                             : partner.place ||
@@ -245,25 +247,24 @@ export default function PartneriPage() {
                       </div>
 
                       {/* Rating */}
-                      {(partner.dinverRating || partner.rating) && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg">
-                            <Star
-                              size={14}
-                              className="text-amber-500 fill-amber-500"
-                            />
-                            <span className="text-sm font-semibold text-gray-900">
-                              {partner.dinverRating || partner.rating}
-                            </span>
-                          </div>
-                          {partner.dinverReviewsCount && (
-                            <span className="text-xs text-gray-500">
-                              ({partner.dinverReviewsCount}{" "}
-                              {locale === "hr" ? "recenzija" : "reviews"})
-                            </span>
-                          )}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg">
+                          <Star
+                            size={14}
+                            className="text-amber-500 fill-amber-500"
+                          />
+                          <span className="text-sm font-semibold text-gray-900">
+                            {partner.dinverRating
+                              ? typeof partner.dinverRating === "string"
+                                ? parseFloat(partner.dinverRating).toFixed(1)
+                                : partner.dinverRating.toFixed(1)
+                              : "0.0"}
+                          </span>
                         </div>
-                      )}
+                        <span className="text-xs text-gray-500">
+                          ({partner.dinverReviewsCount || 0})
+                        </span>
+                      </div>
 
                       {/* Food Types */}
                       {partner.foodTypes && partner.foodTypes.length > 0 && (
@@ -279,8 +280,11 @@ export default function PartneriPage() {
                         </div>
                       )}
 
+                      {/* Spacer to push actions to bottom */}
+                      <div className="flex-1" />
+
                       {/* Actions */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100 mt-auto">
                         {partner.phone && (
                           <span
                             onClick={(e) => {

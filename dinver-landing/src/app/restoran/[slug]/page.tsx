@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,14 +18,12 @@ import {
   Heart,
   Share2,
   ChevronLeft,
-  Search,
   Utensils,
   ExternalLink,
   Calendar,
-  Instagram,
-  Facebook,
   Mail,
 } from "lucide-react";
+import { Instagram, Facebook } from "lucide-react";
 import { Locale, getMessages, defaultLocale } from "@/lib/i18n";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -102,14 +100,9 @@ export default function RestaurantDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // UI States
-  const [activeTab, setActiveTab] = useState<"food" | "drinks">("food");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [menuSearchQuery, setMenuSearchQuery] = useState("");
   const [showVirtualTour, setShowVirtualTour] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [showAllHours, setShowAllHours] = useState(false);
-
-  const menuSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedLocale = localStorage.getItem("dinver-locale") as Locale | null;
@@ -169,11 +162,6 @@ export default function RestaurantDetailsPage() {
         setDrinkCategories(drinkCategoriesData);
         setDrinkItems(drinkItemsData);
         setExperiences(experiencesData.experiences);
-
-        // Set default selected category
-        if (menuCategoriesData.length > 0) {
-          setSelectedCategory(menuCategoriesData[0].id);
-        }
       } catch (error) {
         console.error("Failed to fetch restaurant data:", error);
         setError("Failed to load restaurant data");
@@ -193,29 +181,6 @@ export default function RestaurantDetailsPage() {
 
   // Get current day (0 = Sunday)
   const today = new Date().getDay();
-
-  // Filter menu items by category and search
-  const filteredMenuItems = menuItems.filter((item) => {
-    const matchesCategory =
-      !selectedCategory || item.categoryId === selectedCategory;
-    const itemName =
-      item.translations?.find((t) => t.language === locale)?.name || item.name;
-    const matchesSearch =
-      !menuSearchQuery ||
-      itemName.toLowerCase().includes(menuSearchQuery.toLowerCase());
-    return matchesCategory && matchesSearch && item.isActive;
-  });
-
-  const filteredDrinkItems = drinkItems.filter((item) => {
-    const matchesCategory =
-      !selectedCategory || item.categoryId === selectedCategory;
-    const itemName =
-      item.translations?.find((t) => t.language === locale)?.name || item.name;
-    const matchesSearch =
-      !menuSearchQuery ||
-      itemName.toLowerCase().includes(menuSearchQuery.toLowerCase());
-    return matchesCategory && matchesSearch && item.isActive;
-  });
 
   // Get working hours for display
   const getWorkingHoursDisplay = () => {
@@ -304,7 +269,7 @@ export default function RestaurantDetailsPage() {
                 : "Restaurant not found"}
             </h1>
             <Link
-              href="/partneri"
+              href="/partners"
               className="text-dinver-green hover:underline"
             >
               {locale === "hr" ? "Pregledaj sve partnere" : "View all partners"}
@@ -347,7 +312,7 @@ export default function RestaurantDetailsPage() {
 
           {/* Back button */}
           <Link
-            href="/partneri"
+            href="/partners"
             className="absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
           >
             <ArrowLeft size={20} className="text-gray-900" />
@@ -392,64 +357,58 @@ export default function RestaurantDetailsPage() {
                   {restaurant.address}
                   {restaurant.place && `, ${restaurant.place}`}
                 </p>
-                {restaurant.hoursStatus && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className={`text-sm font-medium ${
-                        restaurant.hoursStatus.restaurant.isOpen
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {restaurant.hoursStatus.restaurant.isOpen
-                        ? locale === "hr"
-                          ? "Otvoreno"
-                          : "Open"
-                        : locale === "hr"
-                        ? "Zatvoreno"
-                        : "Closed"}
-                    </span>
-                    {restaurant.hoursStatus.restaurant.isOpen &&
-                      restaurant.hoursStatus.restaurant.closesAt && (
-                        <span className="text-sm text-gray-500">
-                          {locale === "hr" ? "Zatvara se u" : "Closes at"}{" "}
-                          {restaurant.hoursStatus.restaurant.closesAt}
-                        </span>
-                      )}
-                    {!restaurant.hoursStatus.restaurant.isOpen &&
-                      restaurant.hoursStatus.restaurant.opensAt && (
-                        <span className="text-sm text-gray-500">
-                          {locale === "hr" ? "Otvara se u" : "Opens at"}{" "}
-                          {restaurant.hoursStatus.restaurant.opensAt}
-                        </span>
-                      )}
+                {restaurant.hoursStatus?.restaurant?.today?.message && (
+                  <div className="flex items-center gap-1 mt-1 text-sm">
+                    {(() => {
+                      const message = locale === "hr"
+                        ? restaurant.hoursStatus.restaurant.today.message.hr
+                        : restaurant.hoursStatus.restaurant.today.message.en;
+                      const parts = message.split('⋅');
+                      const firstWord = parts[0].trim();
+                      const rest = parts.slice(1).join('⋅').trim();
+
+                      return (
+                        <>
+                          <span
+                            className={`font-medium ${
+                              restaurant.hoursStatus.restaurant.today.isOpen
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {firstWord}
+                          </span>
+                          {rest && (
+                            <span className="text-gray-500">
+                              ⋅ {rest}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Rating Badge */}
-            {(restaurant.dinverRating || restaurant.rating) && (
-              <div className="flex items-center gap-2 bg-amber-50 px-3 py-2 rounded-xl">
-                <Star size={18} className="text-amber-500 fill-amber-500" />
-                <span className="font-bold text-gray-900">
-                  {typeof restaurant.dinverRating === "string"
+            <div className="flex items-center gap-1.5">
+              <Star size={16} className="text-amber-400 fill-amber-400" />
+              <span className="font-semibold text-gray-900 text-sm">
+                {restaurant.dinverRating
+                  ? typeof restaurant.dinverRating === "string"
                     ? parseFloat(restaurant.dinverRating).toFixed(1)
-                    : (restaurant.dinverRating || restaurant.rating)?.toFixed(
-                        1
-                      )}
-                </span>
-                {restaurant.dinverReviewsCount && (
-                  <span className="text-sm text-gray-500">
-                    ({restaurant.dinverReviewsCount})
-                  </span>
-                )}
-              </div>
-            )}
+                    : restaurant.dinverRating.toFixed(1)
+                  : "0.0"}
+              </span>
+              <span className="text-xs text-gray-400">
+                {restaurant.dinverReviewsCount || 0}
+              </span>
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="flex flex-wrap gap-2">
             {/* Map Button */}
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -457,126 +416,48 @@ export default function RestaurantDetailsPage() {
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-dinver-green/5 rounded-xl transition-colors group"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-300"
             >
-              <MapPin size={22} className="text-dinver-green" />
-              <span className="text-sm font-medium text-gray-700 group-hover:text-dinver-green">
-                {locale === "hr" ? "Na karti" : "Map"}
-              </span>
+              <MapPin size={16} className="text-gray-500" />
+              {locale === "hr" ? "Karta" : "Map"}
             </a>
 
             {/* Menu Button */}
-            <button
-              onClick={() =>
-                menuSectionRef.current?.scrollIntoView({ behavior: "smooth" })
-              }
-              className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-dinver-green/5 rounded-xl transition-colors group"
+            <Link
+              href={`/restoran/${slug}/meni`}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-300"
             >
-              <Utensils size={22} className="text-dinver-green" />
-              <span className="text-sm font-medium text-gray-700 group-hover:text-dinver-green">
-                {locale === "hr" ? "Meni" : "Menu"}
-              </span>
-            </button>
+              <Utensils size={16} className="text-gray-500" />
+              {locale === "hr" ? "Meni" : "Menu"}
+            </Link>
 
             {/* Virtual Tour Button */}
             {restaurant.virtualTourUrl && (
               <button
                 onClick={() => setShowVirtualTour(true)}
-                className="flex flex-col items-center gap-2 p-4 bg-gray-50 hover:bg-dinver-green/5 rounded-xl transition-colors group"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-300"
               >
-                <Play size={22} className="text-dinver-green" />
-                <span className="text-sm font-medium text-gray-700 group-hover:text-dinver-green">
-                  {locale === "hr" ? "Virtualna šetnja" : "Virtual Tour"}
-                </span>
+                <Play size={15} className="text-gray-500 ml-0.5" />
+                {locale === "hr" ? "Tura" : "Tour"}
               </button>
             )}
 
             {/* Reserve / Download App Button */}
             <Link
-              href="/#download"
-              className="flex flex-col items-center gap-2 p-4 bg-dinver-green/10 hover:bg-dinver-green/20 rounded-xl transition-colors group"
+              href="/download"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-dinver-green text-white hover:bg-green-700 rounded-full transition-all text-sm font-semibold shadow-sm hover:shadow"
             >
-              <Calendar size={22} className="text-dinver-green" />
-              <span className="text-sm font-medium text-dinver-green">
-                {locale === "hr" ? "Rezervacija" : "Reserve"}
-              </span>
+              <Calendar size={16} />
+              {locale === "hr" ? "Rezerviraj" : "Reserve"}
             </Link>
           </div>
         </div>
 
         {/* Two Column Layout for Desktop */}
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Working Hours */}
-            {workingHours && workingHours.some((h) => h.shifts.length > 0) && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock size={20} className="text-dinver-green" />
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      {locale === "hr" ? "Radno vrijeme" : "Working Hours"}
-                    </h2>
-                  </div>
-                  <button
-                    onClick={() => setShowAllHours(!showAllHours)}
-                    className="text-sm text-dinver-green hover:underline"
-                  >
-                    {showAllHours
-                      ? locale === "hr"
-                        ? "Sakrij"
-                        : "Hide"
-                      : locale === "hr"
-                      ? "Vidi sve"
-                      : "See all"}
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {workingHours
-                    .slice(0, showAllHours ? 7 : 3)
-                    .map((dayHours, index) => {
-                      // Adjust index for Monday-first display
-                      const actualDay = index < 6 ? index + 1 : 0;
-                      const isToday = actualDay === today;
-
-                      return (
-                        <div
-                          key={index}
-                          className={`flex justify-between py-2 px-3 rounded-lg ${
-                            isToday ? "bg-dinver-green/5" : ""
-                          }`}
-                        >
-                          <span
-                            className={`${
-                              isToday
-                                ? "font-semibold text-dinver-green"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {DAY_NAMES[locale][actualDay]}
-                          </span>
-                          <span
-                            className={`${
-                              isToday
-                                ? "font-semibold text-gray-900"
-                                : "text-gray-900"
-                            }`}
-                          >
-                            {dayHours.shifts.length > 0
-                              ? dayHours.shifts.join(", ")
-                              : locale === "hr"
-                              ? "Zatvoreno"
-                              : "Closed"}
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Characteristics / Amenities */}
+            {/* Characteristics / Amenities - Moved to top for mobile visibility */}
             {(restaurant.foodTypes?.length ||
               restaurant.mealTypes?.length ||
               restaurant.dietaryTypes?.length ||
@@ -674,6 +555,74 @@ export default function RestaurantDetailsPage() {
               </div>
             )}
 
+            {/* Working Hours */}
+            {workingHours && workingHours.some((h) => h.shifts.length > 0) && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Clock size={20} className="text-dinver-green" />
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {locale === "hr" ? "Radno vrijeme" : "Working Hours"}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAllHours(!showAllHours)}
+                    className="text-sm text-dinver-green hover:underline"
+                  >
+                    {showAllHours
+                      ? locale === "hr"
+                        ? "Sakrij"
+                        : "Hide"
+                      : locale === "hr"
+                      ? "Vidi sve"
+                      : "See all"}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {workingHours
+                    .slice(0, showAllHours ? 7 : 3)
+                    .map((dayHours, index) => {
+                      // Adjust index for Monday-first display
+                      const actualDay = index < 6 ? index + 1 : 0;
+                      const isToday = actualDay === today;
+
+                      return (
+                        <div
+                          key={index}
+                          className={`flex justify-between py-2 px-3 rounded-lg ${
+                            isToday ? "bg-dinver-green/5" : ""
+                          }`}
+                        >
+                          <span
+                            className={`${
+                              isToday
+                                ? "font-semibold text-dinver-green"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {DAY_NAMES[locale][actualDay]}
+                          </span>
+                          <span
+                            className={`${
+                              isToday
+                                ? "font-semibold text-gray-900"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            {dayHours.shifts.length > 0
+                              ? dayHours.shifts.join(", ")
+                              : locale === "hr"
+                              ? "Zatvoreno"
+                              : "Closed"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
             {/* Experiences / Reviews */}
             {experiences.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
@@ -760,172 +709,88 @@ export default function RestaurantDetailsPage() {
               </div>
             )}
 
-            {/* Menu Section */}
-            <div
-              ref={menuSectionRef}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {locale === "hr" ? "Meni" : "Menu"}
-              </h2>
-
-              {/* Tabs */}
-              <div className="flex border-b border-gray-200 mb-4">
-                <button
-                  onClick={() => {
-                    setActiveTab("food");
-                    if (menuCategories.length > 0)
-                      setSelectedCategory(menuCategories[0].id);
-                  }}
-                  className={`flex-1 py-3 text-center font-medium transition-colors ${
-                    activeTab === "food"
-                      ? "text-dinver-green border-b-2 border-dinver-green"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {locale === "hr" ? "Hrana" : "Food"}
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("drinks");
-                    if (drinkCategories.length > 0)
-                      setSelectedCategory(drinkCategories[0].id);
-                  }}
-                  className={`flex-1 py-3 text-center font-medium transition-colors ${
-                    activeTab === "drinks"
-                      ? "text-dinver-green border-b-2 border-dinver-green"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {locale === "hr" ? "Pića" : "Drinks"}
-                </button>
-              </div>
-
-              {/* Search */}
-              <div className="relative mb-4">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <input
-                  type="text"
-                  placeholder={
-                    locale === "hr"
-                      ? "Pretraži stavke menija..."
-                      : "Search menu items..."
-                  }
-                  value={menuSearchQuery}
-                  onChange={(e) => setMenuSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-dinver-green"
-                />
-              </div>
-
-              {/* Categories */}
-              <div className="flex overflow-x-auto gap-2 pb-4 mb-4 -mx-4 px-4 no-scrollbar">
-                {(activeTab === "food" ? menuCategories : drinkCategories).map(
-                  (cat) => {
-                    const catName =
-                      cat.translations?.find((t) => t.language === locale)
-                        ?.name || cat.name;
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                          selectedCategory === cat.id
-                            ? "bg-dinver-green text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {catName}
-                      </button>
-                    );
-                  }
-                )}
-              </div>
-
-              {/* Menu Items */}
-              <div className="space-y-4">
-                {(activeTab === "food"
-                  ? filteredMenuItems
-                  : filteredDrinkItems
-                ).map((item) => {
-                  const itemName =
-                    item.translations?.find((t) => t.language === locale)
-                      ?.name || item.name;
-                  const itemDesc =
-                    item.translations?.find((t) => t.language === locale)
-                      ?.description || item.description;
-                  const imageUrl =
-                    "imageUrls" in item && item.imageUrls?.medium
-                      ? item.imageUrls.medium
-                      : item.imageUrl;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                      {imageUrl && (
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden shrink-0">
-                          <Image
-                            src={imageUrl}
-                            alt={itemName}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900">
-                          {itemName}
-                        </h3>
-                        {itemDesc && (
-                          <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                            {itemDesc}
-                          </p>
-                        )}
-                        <p className="text-dinver-green font-semibold mt-2">
-                          {typeof item.price === "number"
-                            ? `${item.price.toFixed(2)} €`
-                            : `${item.price} €`}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {(activeTab === "food" ? filteredMenuItems : filteredDrinkItems)
-                  .length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">
-                      {locale === "hr"
-                        ? "Nema stavki menija"
-                        : "No menu items available"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Gallery */}
-            {restaurant.images && restaurant.images.length > 0 && (
+            {/* Menu Section - Preview */}
+            {(menuItems.length > 0 || drinkItems.length > 0) && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">
+                    {locale === "hr" ? "Meni" : "Menu"}
+                  </h2>
+                </div>
+
+                {/* Preview of first few items */}
+                <div className="space-y-3">
+                  {menuItems
+                    .filter((item) => item.isActive)
+                    .slice(0, 3)
+                    .map((item) => {
+                      const itemName =
+                        item.translations?.find((t) => t.language === locale)
+                          ?.name || item.name;
+                      const imageUrl = item.imageUrl;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                          {imageUrl && (
+                            <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0">
+                              <Image
+                                src={imageUrl}
+                                alt={itemName}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 text-sm truncate">
+                              {itemName}
+                            </h3>
+                            <p className="text-dinver-green font-semibold text-sm">
+                              {typeof item.price === "number"
+                                ? `${item.price.toFixed(2)} €`
+                                : `${item.price} €`}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* CTA Button */}
+                <Link
+                  href={`/restoran/${slug}/meni`}
+                  className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-dinver-green/10 hover:bg-dinver-green/20 text-dinver-green font-semibold py-3 rounded-xl transition-colors"
+                >
+                  <Utensils size={18} />
+                  {locale === "hr" ? "Pogledaj cijeli meni" : "View full menu"}
+                </Link>
+              </div>
+            )}
+
+            {/* Gallery */}
+            {restaurant.images && restaurant.images.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between p-4 sm:p-6 pb-0 sm:pb-0">
+                  <h2 className="text-lg font-semibold text-gray-900">
                     {locale === "hr" ? "Galerija" : "Gallery"}
                   </h2>
-                  <button className="text-sm text-dinver-green hover:underline">
+                  <button
+                    onClick={() => setGalleryIndex(0)}
+                    className="text-sm text-dinver-green hover:underline"
+                  >
                     {locale === "hr" ? "Vidi sve" : "See all"}
                   </button>
                 </div>
 
-                <div className="flex overflow-x-auto gap-3 -mx-4 px-4 pb-2 no-scrollbar">
+                <div className="flex overflow-x-auto gap-2 sm:gap-3 p-4 sm:p-6 pt-4 no-scrollbar snap-x snap-mandatory">
                   {restaurant.images.slice(0, 8).map((img, index) => (
                     <button
                       key={index}
                       onClick={() => setGalleryIndex(index)}
-                      className="relative w-32 h-24 sm:w-40 sm:h-32 rounded-xl overflow-hidden shrink-0"
+                      className="relative w-28 h-28 sm:w-40 sm:h-32 rounded-xl overflow-hidden shrink-0 snap-start"
                     >
                       <Image
                         src={img.url}
@@ -1040,7 +905,7 @@ export default function RestaurantDetailsPage() {
                   : "Reserve tables, share experiences, and discover new restaurants!"}
               </p>
               <Link
-                href="/#download"
+                href="/download"
                 className="inline-flex items-center gap-2 bg-white text-dinver-green px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 {locale === "hr" ? "Preuzmi aplikaciju" : "Download App"}
