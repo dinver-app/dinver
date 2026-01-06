@@ -104,6 +104,9 @@ redisClient.on('error', (err) =>
 redisClient.on('connect', () => console.log('[Redis Session] Connected'));
 redisClient.on('ready', () => console.log('[Redis Session] Ready'));
 
+// Trust proxy for rate limiting behind reverse proxy (nginx, Railway, etc.)
+app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
