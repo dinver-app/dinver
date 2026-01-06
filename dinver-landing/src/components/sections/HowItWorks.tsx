@@ -58,14 +58,11 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
           className="text-center max-w-3xl mx-auto mb-20"
         >
           <span className="inline-block px-4 py-2 bg-white/10 text-dinver-cream rounded-full text-sm font-medium mb-6">
-            {locale === "hr" ? "3 Jednostavna koraka" : "3 Simple Steps"}
+            {locale === "hr" ? "3 jednostavna koraka" : "3 Simple Steps"}
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
             {messages.howItWorks.title}
           </h2>
-          <p className="mt-4 text-lg text-gray-400">
-            {messages.howItWorks.subtitle}
-          </p>
         </motion.div>
 
         {/* Steps - Clean horizontal layout */}
@@ -160,8 +157,8 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
             <Gift size={18} className="text-dinver-cream" />
             <p className="text-gray-400 text-sm">
               {locale === "hr"
-                ? "Top 2 istraživača osvajaju Mystery Box svakih 2 tjedna!"
-                : "Top 2 explorers win a Mystery Box every 2 weeks!"}
+                ? "Najbolji i jedan nasumično odabran sudionik osvajaju nagrade!"
+                : "The best and one random participant win prizes!"}
             </p>
           </div>
         </motion.div>

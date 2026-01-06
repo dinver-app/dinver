@@ -148,7 +148,7 @@ export default function Contact({ messages }: ContactProps) {
                         placeholder={
                           messages.contact.form.submit.includes("Join")
                             ? "Your restaurant name"
-                            : "Naziv vašeg restorana"
+                            : "Naziv tvojeg restorana"
                         }
                         required
                         minLength={2}

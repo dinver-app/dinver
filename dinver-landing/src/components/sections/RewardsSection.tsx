@@ -29,29 +29,35 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
   const pointsActions = [
     {
       icon: Receipt,
+
+      action: locale === "hr" ? "Uslikaj račun" : "Take a photo of the receipt",
+      points: "1/10€",
+      description:
+        locale === "hr" ? "Potrošenih 10€ = 1 bod" : "Spent €10 = 1 point",
+    },
+    {
+      icon: Star,
       action: locale === "hr" ? "Objavi doživljaj" : "Post an experience",
       points: "+3",
       description:
         locale === "hr" ? "Sa slikama i ocjenom" : "With photos and rating",
     },
     {
-      icon: Star,
-      action: locale === "hr" ? "Odobren račun" : "Approved receipt",
-      points: "1/10€",
-      description: locale === "hr" ? "10€ = 1 bod" : "10€ = 1 point",
-    },
-    {
       icon: UserPlus,
       action: locale === "hr" ? "Pozovi prijatelja" : "Invite a friend",
       points: "+2",
-      description: locale === "hr" ? "Kad se verificira" : "When they verify",
+      description:
+        locale === "hr"
+          ? "+2 boda kada se prijatelj verificira"
+          : "+2 points when your friend is verified",
     },
     {
       icon: Share2,
       action:
         locale === "hr" ? "Prvi račun prijatelja" : "Friend's first receipt",
       points: "+2",
-      description: locale === "hr" ? "Bonus za tebe" : "Bonus for you",
+      description:
+        locale === "hr" ? "Bonus bodovi za tebe" : "Bonus points for you",
     },
   ];
 
@@ -85,17 +91,17 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
             className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-100 text-amber-700 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-6"
           >
             <Trophy size={14} className="sm:w-4 sm:h-4" />
-            {locale === "hr" ? "Nagrade & Bodovi" : "Rewards & Points"}
+            {locale === "hr" ? "Nagrade & bodovi" : "Rewards & points"}
           </motion.span>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900">
             {locale === "hr"
-              ? "Osvoji nagrade za svaki posjet"
-              : "Earn rewards for every visit"}
+              ? "Osvajaj bodove za svaki posjet"
+              : "Earn points for every visit"}
           </h2>
           <p className="mt-3 sm:mt-4 text-base sm:text-lg text-gray-600">
             {locale === "hr"
-              ? "Skupljaj bodove, natječi se na ljestvici i osvoji Mystery Box nagrade svakih 2 tjedna!"
-              : "Collect points, compete on the leaderboard and win Mystery Box prizes every 2 weeks!"}
+              ? "Sakupljaj bodove, natječi se na ljestvici i osvoji Dinver Mystery Box!"
+              : "Collect points, compete on the leaderboard and win Dinver Mystery Box!"}
           </p>
         </AnimatedSection>
 
@@ -132,7 +138,7 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
                         </span>
                       </div>
                     </div>
-                    <span className="text-sm sm:text-lg font-bold text-dinver-green bg-dinver-green/10 px-2 sm:px-3 py-1 rounded-lg shrink-0 ml-2">
+                    <span className="text-sm sm:text-base font-bold text-dinver-green bg-dinver-green/10 px-2 sm:px-3 py-1 rounded-lg shrink-0 ml-2">
                       {action.points}
                     </span>
                   </motion.div>
@@ -156,8 +162,8 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
                     </p>
                     <p className="text-xs sm:text-sm text-gray-600">
                       {locale === "hr"
-                        ? "Top korisnik i random sudionik osvajaju nagrade"
-                        : "Top user and random participant win prizes"}
+                        ? "Najbolji i jedan nasumično odabran sudionik osvajaju nagrade!"
+                        : "The best and one random participant win prizes!"}
                     </p>
                   </div>
                 </div>
@@ -240,7 +246,7 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
 
               <p className="text-center text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 relative z-10">
                 {locale === "hr"
-                  ? "Preuzmi app da vidiš cijelu ljestvicu"
+                  ? "Preuzmi app da vidiš potpunu ljestvicu"
                   : "Download the app to see full leaderboard"}
               </p>
             </div>

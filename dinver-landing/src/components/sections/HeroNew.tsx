@@ -96,28 +96,12 @@ export default function HeroNew({ messages }: HeroNewProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
           {/* Center content */}
           <div className="text-center max-w-4xl mx-auto">
-            {/* NEW Platform Badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-dinver-cream/20 backdrop-blur-sm rounded-full mb-8 border border-dinver-cream/30"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dinver-cream opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-dinver-cream"></span>
-              </span>
-              <span className="text-dinver-cream text-sm font-semibold uppercase tracking-wider">
-                {messages.hero.badge}
-              </span>
-            </motion.div>
-
             {/* Main title - solid color, no gradient */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6"
+              className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-6"
             >
               {messages.hero.title}
             </motion.h1>

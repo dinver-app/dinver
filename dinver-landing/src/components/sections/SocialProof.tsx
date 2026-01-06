@@ -221,7 +221,9 @@ export default function SocialProof({ locale }: SocialProofProps) {
                 value: stats?.activeUpdates || 0,
                 suffix: "",
                 label:
-                  locale === "hr" ? "What's New objava" : "What's New Posts",
+                  locale === "hr"
+                    ? '"Što je novo?" objava'
+                    : '"What\'s New?" Posts',
                 color: "text-purple-600",
                 bgColor: "bg-purple-100",
               },

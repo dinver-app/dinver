@@ -103,13 +103,13 @@ export default function PartneriPage() {
           >
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
               {locale === "hr"
-                ? "Naši Partner Restorani"
-                : "Our Partner Restaurants"}
+                ? "Naši partner restorani"
+                : "Our partner restaurants"}
             </h1>
             <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto">
               {locale === "hr"
-                ? "Otkrijte vrhunske restorane koji su dio Dinver zajednice"
-                : "Discover top restaurants that are part of the Dinver community"}
+                ? "Otkrij vrhunske restorane koji su već dijelom Dinver zajednice"
+                : "Discover top restaurants that are already part of the Dinver community"}
             </p>
           </motion.div>
         </div>

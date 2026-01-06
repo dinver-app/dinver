@@ -107,7 +107,6 @@ export default function KontaktPage() {
     },
     { value: "support", label: messages.contact.form.inquiryTypes.support },
     { value: "press", label: messages.contact.form.inquiryTypes.press },
-    { value: "other", label: messages.contact.form.inquiryTypes.other },
   ];
 
   return (
@@ -140,7 +139,9 @@ export default function KontaktPage() {
                     <Mail className="text-dinver-green" size={22} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{messages.contact.info.email}</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {messages.contact.info.email}
+                    </h3>
                     <a
                       href="mailto:info@dinver.eu"
                       className="text-dinver-green hover:text-dinver-green-dark transition-colors"
@@ -281,7 +282,8 @@ export default function KontaktPage() {
                           htmlFor="name"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          {messages.contact.form.name} {messages.contact.form.required}
+                          {messages.contact.form.name}{" "}
+                          {messages.contact.form.required}
                         </label>
                         <input
                           type="text"
@@ -300,7 +302,8 @@ export default function KontaktPage() {
                           htmlFor="email"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          {messages.contact.form.email} {messages.contact.form.required}
+                          {messages.contact.form.email}{" "}
+                          {messages.contact.form.required}
                         </label>
                         <input
                           type="email"
@@ -338,7 +341,8 @@ export default function KontaktPage() {
                         htmlFor="subject"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {messages.contact.form.subject} {messages.contact.form.required}
+                        {messages.contact.form.subject}{" "}
+                        {messages.contact.form.required}
                       </label>
                       <input
                         type="text"
@@ -357,7 +361,8 @@ export default function KontaktPage() {
                         htmlFor="message"
                         className="block text-sm font-medium text-gray-700 mb-1"
                       >
-                        {messages.contact.form.message} {messages.contact.form.required}
+                        {messages.contact.form.message}{" "}
+                        {messages.contact.form.required}
                       </label>
                       <textarea
                         id="message"
@@ -372,7 +377,10 @@ export default function KontaktPage() {
                         placeholder={messages.contact.form.messagePlaceholder}
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {formData.message.length}/5000 {locale === 'hr' ? 'znakova (min. 10)' : 'characters (min. 10)'}
+                        {formData.message.length}/5000{" "}
+                        {locale === "hr"
+                          ? "znakova (min. 10)"
+                          : "characters (min. 10)"}
                       </p>
                     </div>
 

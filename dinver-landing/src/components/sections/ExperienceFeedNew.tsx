@@ -62,7 +62,7 @@ export default function ExperienceFeedNew({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === "hr" ? "Što je novo" : "What's New"}
+                {locale === "hr" ? "Što je novo?" : "What's New"}
               </button>
             </div>
 
@@ -113,7 +113,7 @@ export default function ExperienceFeedNew({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === "hr" ? "Što je novo" : "What's New"}
+                {locale === "hr" ? "Što je novo?" : "What's New"}
               </button>
             </div>
           </AnimatedSection>

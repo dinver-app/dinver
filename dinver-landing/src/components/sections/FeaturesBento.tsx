@@ -30,7 +30,7 @@ export default function FeaturesBento({
     if (!container) return;
 
     // Only run this logic if we are on desktop (roughly check, but the Ref will only be attached to desktop view)
-    // Actually, since we will render this container only on lg screens via CSS, 
+    // Actually, since we will render this container only on lg screens via CSS,
     // we can keep the logic as is, ensuring we check if container exists.
 
     const cardWidth = 320 + 24; // card width + gap
@@ -184,7 +184,6 @@ export default function FeaturesBento({
       gradient: "from-green-100 to-emerald-100",
       iconColor: "text-green-600",
       iconBg: "bg-green-200",
-      badge: locale === "hr" ? "Novo" : "New",
       badgeColor: "bg-green-600",
     },
   ];
@@ -205,7 +204,7 @@ export default function FeaturesBento({
             viewport={{ once: true }}
             className="inline-block px-4 py-2 bg-dinver-green/10 text-dinver-green rounded-full text-sm font-semibold mb-6"
           >
-            {locale === "hr" ? "Mogućnosti" : "Features"}
+            {locale === "hr" ? "Za korisnike" : "For users"}
           </motion.span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
             {messages.features.title}

@@ -11,7 +11,7 @@
   "hero": {
     "badge": "Nova platforma za pronalazak restorana",
     "tagline": "Otkrij. Podijeli. Osvoji nagrade.",
-    "title": "Otkrij gdje svi jedu",
+    "title": "Platforma za pronalazak restorana",
     "subtitle": "Prava iskustva od pravih ljudi. Prati druge korisnike, otkrivaj nove restorane i dijeli svoja omiljena mjesta. Osvajaj nagrade i zabavljaj se dok istražuješ.",
     "cta": "Preuzmi sada",
     "ctaSecondary": "Istraži restorane",
@@ -35,7 +35,7 @@
       },
       "rewards": {
         "title": "Osvajaj nagrade",
-        "description": "Posjeti restoran, skeniraj račun i na taj način zabilježi posjet te se na temelju bodova natječi na ljestvici. Korisnici s najviše bodova osvajaju nagrade svaka dva tjedna."
+        "description": "Posjeti restoran, slikaj račun i na taj način zabilježi posjet te se na temelju bodova natječi na ljestvici. Korisnici s najviše bodova osvajaju nagrade svaka dva tjedna."
       },
       "lists": {
         "title": "Posjećeno & Planiram posjetiti",
@@ -47,7 +47,7 @@
       },
       "details": {
         "title": "Potpune informacije",
-        "description": "360 virtualne šetnje kroz restorane, interaktivni meniji, ažurirano radno vrijeme, fotografije ambijenta… Sve što trebaš znati o restoranu nalazi se na jednom mjestu."
+        "description": "360° virtualne šetnje kroz restorane, interaktivni meniji, ažurirano radno vrijeme, fotografije ambijenta… Sve što trebaš znati o restoranu nalazi se na jednom mjestu."
       },
       "reservations": {
         "title": "Jednostavan način rezerviranja",
@@ -61,7 +61,7 @@
     "steps": {
       "discover": {
         "title": "Otkrij restoran",
-        "description": "Pregledaj feed s doživljajima, pretraži restorane po jelu ili lokaciji ili provjeri što je novo u tvojim omiljenim restoranima."
+        "description": "Pregledaj feed s doživljajima, pretraži restorane po jelu i lokaciji ili provjeri što je novo u tvojim omiljenim restoranima."
       },
       "visit": {
         "title": "Posjeti ga i ostavi doživljaj",
@@ -69,7 +69,7 @@
       },
       "share": {
         "title": "Natječi se i osvajaj nagrade",
-        "description": "Skupljaj bodove slikanjem računa, kreiranjem doživljaja, pozivanjem prijatelja i penji se na ljestvici za osvajanje nagrada."
+        "description": "Sakupljaj bodove slikanjem računa, kreiranjem doživljaja, pozivanjem prijatelja i penji se na ljestvici za osvajanje nagrada."
       }
     }
   },
@@ -80,7 +80,7 @@
       "description": "Listaj kroz autentična iskustva korisnika u različitim restoranima kao na društvenoj mreži. Sviđa ti se jelo na slici? Klikni na restoran, spremi ga ili odmah rezerviraj stol!"
     },
     "whatsNew": {
-      "title": "Što je novo",
+      "title": "Što je novo?",
       "subtitle": "Nemoj propuštati fora događaje u restoranima",
       "description": "Restorani objavljuju najave poput statusa - glazba uživo večeras, novo jelo u jelovniku, posebna ponuda. Filtriraj po kategorijama i otkrij gdje se u tvojoj blizini odvija nešto zanimljivo. Objave traju do 7 dana."
     },
@@ -88,18 +88,18 @@
   },
   "forRestaurants": {
     "title": "Postani Dinver partner",
-    "subtitle": "Pridruži se Dinver partnerskoj mreži",
+    "subtitle": "Neka tvoj restoran postane dijelom naše platforme",
     "benefits": {
       "virtualTour": {
         "title": "Virtualna šetnja 360",
         "description": "Omogući gostima da istraže tvoj ambijent prije dolaska"
       },
       "menu": {
-        "title": "Interaktivni jelovnik",
+        "title": "Interaktivni meni",
         "description": "Prikaži svoja ukusna jela sa slikama i opisima"
       },
       "whatsNew": {
-        "title": "Što je novo",
+        "title": "Što je novo?",
         "description": "Najavi događaje, promocije i nova jela"
       },
       "profile": {
@@ -128,13 +128,13 @@
     "cta": "Pogledaj sve restorane"
   },
   "contact": {
-    "title": "Kontaktirajte nas",
-    "subtitle": "Imate pitanje, prijedlog ili želite surađivati s nama? Rado ćemo čuti od vas!",
+    "title": "Kontaktiraj nas",
+    "subtitle": "Imaš pitanje, prijedlog ili želiš surađivati s nama? Veselimo se tvojoj poruci!",
     "info": {
       "email": "Email",
       "phone": "Telefon",
       "location": "Lokacija",
-      "followUs": "Pratite nas"
+      "followUs": "Prati nas"
     },
     "form": {
       "inquiryType": "Tip upita",
@@ -189,7 +189,7 @@
     "copyright": "© 2024 Dinver. Sva prava pridržana."
   },
   "whatsNew": {
-    "title": "Što je novo",
+    "title": "Što je novo?",
     "subtitle": "Svježe novosti od tvojih omiljenih restorana",
     "tags": {
       "liveMusic": "Glazba uživo",
@@ -225,7 +225,7 @@
       "title": "Trenutna ljestvica",
       "you": "Ti",
       "points": "bod",
-      "blurText": "Preuzmi app da vidiš cijelu ljestvicu"
+      "blurText": "Preuzmi app da vidiš potpunu ljestvicu"
     },
     "mysteryBox": {
       "title": "Mystery Box",
@@ -250,14 +250,14 @@
       },
       "virtualTour": {
         "title": "360° virtualna šetnja",
-        "description": "Omogući gostima da istraže tvoj prostor prije dolaska"
+        "description": "Omogući gostima da istraže tvoj ambijent prije dolaska"
       },
       "menu": {
         "title": "Interaktivni meni",
-        "description": "Prikaži jela sa slikama i opisima"
+        "description": "Prikaži hranu i pića sa slikama i opisima"
       },
       "whatsNew": {
-        "title": "Što je novo objave",
+        "title": "\"Što je novo?\" objave",
         "description": "Najavi događaje, promocije i nova jela"
       },
       "analytics": {
@@ -271,7 +271,7 @@
     },
     "comparison": {
       "title": "Obični profil vs. Partner profil",
-      "feature": "Mogućnost",
+      "feature": "Za korisnike",
       "basic": "Osnovni prikaz",
       "partner": "Partner",
       "features": {
@@ -280,8 +280,8 @@
         "featured": "Istaknuto pozicioniranje",
         "virtualTour": "360° virtualna šetnja",
         "menu": "Interaktivni meni",
-        "whatsNew": "\"Što je novo\" objave",
-        "analytics": "Analitička nadzorna ploča",
+        "whatsNew": "\"Što je novo?\" objave",
+        "analytics": "Analitika i statistike",
         "reservations": "Rezervacije"
       }
     },
@@ -294,7 +294,7 @@
       "partners": "Partner restorana",
       "users": "Aktivnih korisnika",
       "experiences": "Objavljenih iskustava",
-      "updates": "Aktivnih Što je novo"
+      "updates": "Aktivnih \"Što je novo?\" objava"
     },
     "marqueeCaption": "Stvarna iskustva korisnika - osvježava se uživo",
     "availableOn": "Dostupno na",
@@ -303,7 +303,7 @@
   },
   "download": {
     "title": "Preuzmi Dinver aplikaciju",
-    "subtitle": "Rezerviraj stol, skupljaj bodove i otkrij najbolja mjesta u gradu - sve na jednom mjestu.",
+    "subtitle": "Rezerviraj stol, sakupljaj bodove i otkrij najbolja mjesta u gradu - sve na jednom mjestu.",
     "scanQr": "Skeniraj za preuzimanje",
     "available": "Dostupno za iOS i Android"
   },
@@ -329,7 +329,7 @@
       },
       {
         "question": "Što partner restorani dobivaju?",
-        "answer": "Partner restorani dobivaju istaknuto pozicioniranje, 360° virtualnu šetnju, interaktivni meni, mogućnost objavljivanja \"Što je novo\" obavijesti o svom restoranu te detaljnu analitiku o posjetima i gostima."
+        "answer": "Partner restorani dobivaju istaknuto pozicioniranje, 360° virtualnu šetnju, interaktivni meni, mogućnost objavljivanja \"Što je novo?\" obavijesti o svom restoranu te detaljnu analitiku o posjetima i gostima."
       },
       {
         "question": "Je li Dinver dostupan u mom gradu?",
@@ -384,7 +384,7 @@
         "items": [
           "Povećajte vidljivost među pravim ljubiteljima hrane",
           "Predstavite svoj prostor s 360° virtualnom šetnjom",
-          "Dijelite novosti i događaje putem \"Što je novo\"",
+          "Dijelite novosti i događaje putem \"Što je novo?\"",
           "Pratite analitiku i razumijte svoje goste"
         ]
       }
