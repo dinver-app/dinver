@@ -9,19 +9,24 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 const rateLimit = require('express-rate-limit');
-const mailgun = require('mailgun-js');
-const { createEmailTemplate } = require('../../../utils/emailService');
+const FormData = require('form-data');
+const Mailgun = require('mailgun.js');
+const {
+  createInternalEmailTemplate,
+} = require('../../../utils/emailService');
 
 const router = express.Router();
 
-// Initialize Mailgun
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
+// Initialize Mailgun with new API
+let mg = null;
+if (process.env.MAILGUN_API_KEY) {
+  const mailgun = new Mailgun(FormData);
+  mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY,
+    url: 'https://api.eu.mailgun.net', // EU region
+  });
+}
 
 // Rate limiter: max 5 requests per minute per IP
 const contactLimiter = rateLimit({
@@ -78,7 +83,14 @@ router.post(
         });
       }
 
-      const { name, email, subject, message, type = 'general', phone } = req.body;
+      const {
+        name,
+        email,
+        subject,
+        message,
+        type = 'general',
+        phone,
+      } = req.body;
 
       // Map type to Croatian label
       const typeLabels = {
@@ -90,16 +102,25 @@ router.post(
       };
 
       const htmlContent = `
-        <h2>Nova poruka s kontakt forme</h2>
-        <div class="contact-details">
-          <p><strong>Tip upita:</strong> ${typeLabels[type] || type}</p>
-          <p><strong>Ime:</strong> ${name}</p>
-          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-          ${phone ? `<p><strong>Telefon:</strong> ${phone}</p>` : ''}
-          <p><strong>Predmet:</strong> ${subject}</p>
-          <hr />
-          <p><strong>Poruka:</strong></p>
-          <p style="white-space: pre-wrap;">${message}</p>
+        <h2>📧 Nova poruka s kontakt forme</h2>
+        <div class="card">
+          <div class="detail-row">
+            <strong>Tip upita:</strong> ${typeLabels[type] || type}
+          </div>
+          <div class="detail-row">
+            <strong>Ime:</strong> ${name}
+          </div>
+          <div class="detail-row">
+            <strong>Email:</strong> <a href="mailto:${email}">${email}</a>
+          </div>
+          ${phone ? `<div class="detail-row"><strong>Telefon:</strong> ${phone}</div>` : ''}
+          <div class="detail-row">
+            <strong>Predmet:</strong> ${subject}
+          </div>
+        </div>
+        <div class="card">
+          <h3>Poruka</h3>
+          <p style="white-space: pre-wrap; margin: 0;">${message}</p>
         </div>
       `;
 
@@ -117,12 +138,12 @@ ${message}
       `.trim();
 
       const data = {
-        from: 'Dinver Kontakt <noreply@dinver.eu>',
-        to: 'info@dinver.eu',
+        from: 'Dinver <noreply@dinver.eu>',
+        to: ['info@dinver.eu'],
         'h:Reply-To': email,
         subject: `[Kontakt] ${subject}`,
         text: textContent,
-        html: createEmailTemplate(htmlContent),
+        html: createInternalEmailTemplate(htmlContent),
       };
 
       if (process.env.NODE_ENV === 'development' || !mg) {
@@ -134,7 +155,7 @@ ${message}
         });
       }
 
-      await mg.messages().send(data);
+      await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
 
       return res.status(200).json({
         success: true,
@@ -147,7 +168,7 @@ ${message}
         message: 'Greška pri slanju poruke. Molimo pokušajte ponovno.',
       });
     }
-  }
+  },
 );
 
 // Validation for partnership inquiry
@@ -190,24 +211,20 @@ router.post(
       const { restaurantName, email, city } = req.body;
 
       const htmlContent = `
-        <h2>Nova prijava restorana za partnerstvo</h2>
+        <h2>🤝 Nova prijava restorana za partnerstvo</h2>
         <div class="card">
           <h3>Detalji restorana</h3>
           <div class="detail-row">
-            <span class="detail-label">Naziv restorana:</span>
-            <span class="detail-value">${restaurantName}</span>
+            <strong>Naziv restorana:</strong> ${restaurantName}
           </div>
           <div class="detail-row">
-            <span class="detail-label">Email:</span>
-            <span class="detail-value"><a href="mailto:${email}">${email}</a></span>
+            <strong>Email:</strong> <a href="mailto:${email}">${email}</a>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Grad:</span>
-            <span class="detail-value">${city}</span>
+            <strong>Grad:</strong> ${city}
           </div>
           <div class="detail-row">
-            <span class="detail-label">Datum prijave:</span>
-            <span class="detail-value">${new Date().toLocaleString('hr-HR')}</span>
+            <strong>Datum prijave:</strong> ${new Date().toLocaleString('hr-HR')}
           </div>
         </div>
       `;
@@ -222,12 +239,12 @@ Datum prijave: ${new Date().toLocaleString('hr-HR')}
       `.trim();
 
       const data = {
-        from: 'Dinver Partnerstva <noreply@dinver.eu>',
-        to: ['info@dinver.eu', 'ivankikic49@gmail.com'].join(', '),
+        from: 'Dinver <noreply@dinver.eu>',
+        to: ['info@dinver.eu', 'ivankikic49@gmail.com'],
         'h:Reply-To': email,
         subject: `[Postani Partner] Nova prijava: ${restaurantName}`,
         text: textContent,
-        html: createEmailTemplate(htmlContent),
+        html: createInternalEmailTemplate(htmlContent),
       };
 
       if (process.env.NODE_ENV === 'development' || !mg) {
@@ -239,11 +256,12 @@ Datum prijave: ${new Date().toLocaleString('hr-HR')}
         });
       }
 
-      await mg.messages().send(data);
+      await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
 
       return res.status(200).json({
         success: true,
-        message: 'Zahtjev za partnerstvo uspješno poslan. Javit ćemo vam se uskoro!',
+        message:
+          'Zahtjev za partnerstvo uspješno poslan. Javit ćemo vam se uskoro!',
       });
     } catch (error) {
       console.error('Error sending partnership email:', error);
@@ -252,7 +270,7 @@ Datum prijave: ${new Date().toLocaleString('hr-HR')}
         message: 'Greška pri slanju zahtjeva. Molimo pokušajte ponovno.',
       });
     }
-  }
+  },
 );
 
 module.exports = router;

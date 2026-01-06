@@ -1,16 +1,9 @@
 const { WaitList } = require('../../models');
 const { validationResult } = require('express-validator');
-const mailgun = require('mailgun-js');
+const { sendEmail } = require('../../utils/emailService');
 const { createEmailTemplate } = require('../../utils/emailService');
 
-// Initialize Mailgun
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
+
 
 const waitListController = {
   // Prijava korisnika na wait list
@@ -144,7 +137,7 @@ Datum prijave: ${new Date(waitListEntry.createdAt).toLocaleString('hr-HR')}
         };
 
         if (process.env.NODE_ENV !== 'development' && mg) {
-          await mg.messages().send(data);
+          await sendEmail(data);
           console.log('Partner signup email sent successfully');
         } else {
           console.log('Development mode: Email would be sent');

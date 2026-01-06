@@ -1,15 +1,18 @@
-const mailgun = require('mailgun-js');
+const FormData = require('form-data');
+const Mailgun = require('mailgun.js');
 const { format } = require('date-fns');
 const crypto = require('crypto');
 
-// Mailgun konfiguracija
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
+// Mailgun konfiguracija with new API
+let mg = null;
+if (process.env.MAILGUN_API_KEY) {
+  const mailgun = new Mailgun(FormData);
+  mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY,
+    url: 'https://api.eu.mailgun.net', // EU region
+  });
+}
 
 const formatDate = (dateStr) => {
   return format(new Date(dateStr), 'dd.MM.yyyy.');
@@ -378,6 +381,108 @@ const createPremiumEmailTemplate = (content) => {
   `;
 };
 
+// Internal/Admin email template (no unsubscribe, simpler footer)
+const createInternalEmailTemplate = (content) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="hr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Dinver</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          line-height: 1.6;
+          color: #1a1a1a;
+          margin: 0;
+          padding: 20px;
+          background-color: #f5f5f5;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+          background-color: #0C5A48;
+          color: #ffffff;
+          padding: 24px;
+          text-align: center;
+        }
+        .logo {
+          font-size: 28px;
+          font-weight: 700;
+          margin: 0;
+        }
+        .content {
+          padding: 32px 24px;
+        }
+        .card {
+          background-color: #f9fafb;
+          border-radius: 6px;
+          padding: 20px;
+          margin: 16px 0;
+          border: 1px solid #e5e7eb;
+        }
+        .detail-row {
+          margin: 12px 0;
+          padding: 8px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+          border-bottom: none;
+        }
+        strong {
+          color: #374151;
+          font-weight: 600;
+        }
+        h2, h3 {
+          color: #1a1a1a;
+          margin-top: 0;
+        }
+        hr {
+          border: none;
+          border-top: 2px solid #e5e7eb;
+          margin: 20px 0;
+        }
+        a {
+          color: #0C5A48;
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
+        .footer {
+          background-color: #f9fafb;
+          padding: 20px 24px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 13px;
+          border-top: 1px solid #e5e7eb;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">Dinver</div>
+        </div>
+        <div class="content">
+          ${content}
+        </div>
+        <div class="footer">
+          <p style="margin: 0;">&copy; ${new Date().getFullYear()} Dinver · <a href="mailto:support@dinver.eu">support@dinver.eu</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 // Legacy template for backward compatibility
 const createEmailTemplate = (content) => {
   return createPremiumEmailTemplate(content);
@@ -430,7 +535,7 @@ const sendVerificationEmail = async (email, verificationLink) => {
   }
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Verification email sent successfully');
   } catch (error) {
     console.error('Error sending verification email:', error);
@@ -895,7 +1000,7 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
   });
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Reservation email sent successfully');
   } catch (error) {
     console.error('Error sending reservation email:', error);
@@ -953,7 +1058,7 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   data = addAntiSpamHeaders(data, { refId: `pwd-reset-${Date.now()}` });
 
   try {
-    await mg.messages().send(data);
+    await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
     console.log('Password reset email sent successfully');
   } catch (error) {
     console.error('Error sending password reset email:', error);
@@ -961,9 +1066,34 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   }
 };
 
+// Helper function to send email using Mailgun
+const sendEmail = async (data) => {
+  if (process.env.NODE_ENV === 'development' || !mg) {
+    console.log('Development mode: Email would be sent');
+    console.log('To:', data.to);
+    console.log('Subject:', data.subject);
+    return;
+  }
+
+  try {
+    const result = await mg.messages.create(process.env.MAILGUN_DOMAIN, data);
+    console.log('Email sent successfully:', result.id);
+    return result;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
+  }
+};
+
+// Get Mailgun client instance (for advanced usage)
+const getMailgunClient = () => mg;
+
 module.exports = {
   sendVerificationEmail,
   sendReservationEmail,
   sendPasswordResetEmail,
   createEmailTemplate,
+  createInternalEmailTemplate,
+  sendEmail,
+  getMailgunClient,
 };
