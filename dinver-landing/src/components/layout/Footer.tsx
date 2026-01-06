@@ -1,21 +1,22 @@
-import { Instagram, Facebook, Linkedin } from 'lucide-react';
-import Link from 'next/link';
-import Logo from '@/components/ui/Logo';
-import AppStoreButtons from '@/components/ui/AppStoreButtons';
-import { Messages } from '@/lib/i18n';
+import { Instagram, Facebook, Linkedin } from "lucide-react";
+import Link from "next/link";
+import Logo from "@/components/ui/Logo";
+import AppStoreButtons from "@/components/ui/AppStoreButtons";
+import { Messages } from "@/lib/i18n";
 
 // TikTok icon (not available in lucide-react)
 const TikTokIcon = ({ size = 22 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
   </svg>
 );
 
 interface FooterProps {
   messages: Messages;
+  locale?: string;
 }
 
-export default function Footer({ messages }: FooterProps) {
+export default function Footer({ messages, locale = "hr" }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -70,25 +71,39 @@ export default function Footer({ messages }: FooterProps) {
 
           {/* Navigation Links */}
           <div>
-            <h3 className="font-semibold text-white mb-4">{messages.footer.links.navigation}</h3>
+            <h3 className="font-semibold text-white mb-4">
+              {messages.footer.links.navigation}
+            </h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.home}
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/about"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.about}
                 </Link>
               </li>
               <li>
-                <Link href="/partners" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/partners"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.partners}
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/contact"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.contact}
                 </Link>
               </li>
@@ -97,15 +112,23 @@ export default function Footer({ messages }: FooterProps) {
 
           {/* Legal Links */}
           <div>
-            <h3 className="font-semibold text-white mb-4">{messages.footer.links.legal}</h3>
+            <h3 className="font-semibold text-white mb-4">
+              {messages.footer.links.legal}
+            </h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/privacy-policy" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/privacy-policy"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.privacy}
                 </Link>
               </li>
               <li>
-                <Link href="/terms-of-service" className="text-gray-300 hover:text-dinver-cream transition-colors text-sm">
+                <Link
+                  href="/terms-of-service"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
                   {messages.footer.links.terms}
                 </Link>
               </li>
@@ -122,7 +145,8 @@ export default function Footer({ messages }: FooterProps) {
         {/* Copyright */}
         <div className="mt-12 pt-8 border-t border-white/10">
           <p className="text-center text-gray-400 text-sm">
-            © {currentYear} Dinver. Sva prava pridržana.
+            © {currentYear} Dinver.{" "}
+            {locale === "en" ? "All rights reserved." : "Sva prava pridržana."}
           </p>
         </div>
       </div>

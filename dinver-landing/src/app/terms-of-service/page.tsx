@@ -135,7 +135,7 @@ export default function UvjetiKoristenja() {
         </div>
       </div>
 
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

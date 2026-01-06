@@ -16,7 +16,6 @@ import FAQ from '@/components/sections/FAQ';
 
 // Keep original sections that work well
 import HowItWorks from '@/components/sections/HowItWorks';
-import Contact from '@/components/sections/Contact';
 
 export default function Home() {
   const [locale, setLocale] = useState<Locale>(defaultLocale);
@@ -65,10 +64,7 @@ export default function Home() {
       {/* FAQ Section */}
       <FAQ messages={messages} />
 
-      {/* Contact form - kept from original */}
-      <Contact messages={messages} />
-
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

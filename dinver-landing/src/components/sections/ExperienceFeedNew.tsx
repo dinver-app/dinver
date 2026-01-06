@@ -36,9 +36,7 @@ export default function ExperienceFeedNew({
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-dinver-green/10 rounded-full mb-4 sm:mb-6">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-dinver-green" />
               <span className="text-dinver-green text-xs sm:text-sm font-semibold">
-                {locale === "hr"
-                  ? "Jedinstveno na tržištu"
-                  : "Unique in the market"}
+                {locale === "hr" ? "Jedinstveno na tržištu" : "Unique feature"}
               </span>
             </div>
 
@@ -62,7 +60,7 @@ export default function ExperienceFeedNew({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === "hr" ? "Što je novo?" : "What's New"}
+                {locale === "hr" ? "Što je novo?" : "What's New?"}
               </button>
             </div>
 
@@ -113,7 +111,7 @@ export default function ExperienceFeedNew({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {locale === "hr" ? "Što je novo?" : "What's New"}
+                {locale === "hr" ? "Što je novo?" : "What's New?"}
               </button>
             </div>
           </AnimatedSection>

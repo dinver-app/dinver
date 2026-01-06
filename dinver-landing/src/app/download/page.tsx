@@ -1,50 +1,57 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
-import { Locale, getMessages, defaultLocale } from '@/lib/i18n';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import AppStoreButtons from '@/components/ui/AppStoreButtons';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { Locale, getMessages, defaultLocale } from "@/lib/i18n";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import AppStoreButtons from "@/components/ui/AppStoreButtons";
 
 export default function DownloadPage() {
   const [locale, setLocale] = useState<Locale>(defaultLocale);
   const [messages, setMessages] = useState(getMessages(defaultLocale));
 
   useEffect(() => {
-    const savedLocale = localStorage.getItem('dinver-locale') as Locale | null;
-    if (savedLocale && (savedLocale === 'en' || savedLocale === 'hr')) {
+    const savedLocale = localStorage.getItem("dinver-locale") as Locale | null;
+    if (savedLocale && (savedLocale === "en" || savedLocale === "hr")) {
       setLocale(savedLocale);
       setMessages(getMessages(savedLocale));
     }
 
     // Mobile detection and auto-redirect
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+    const userAgent =
+      navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
     const isAndroid = /android/i.test(userAgent);
 
     // Only redirect on mobile devices
     if (isIOS) {
       // Redirect to App Store for iOS devices
-      window.location.href = 'https://apps.apple.com/app/dinver/id6738697175';
+      window.location.href = "https://apps.apple.com/app/dinver/id6738697175";
     } else if (isAndroid) {
       // Redirect to Google Play Store for Android devices
-      window.location.href = 'https://play.google.com/store/apps/details?id=com.dinver';
+      window.location.href =
+        "https://play.google.com/store/apps/details?id=com.dinver";
     }
   }, []);
 
   const handleLocaleChange = (newLocale: Locale) => {
     setLocale(newLocale);
     setMessages(getMessages(newLocale));
-    localStorage.setItem('dinver-locale', newLocale);
+    localStorage.setItem("dinver-locale", newLocale);
   };
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
-      <Header messages={messages} locale={locale} onLocaleChange={handleLocaleChange} />
+      <Header
+        messages={messages}
+        locale={locale}
+        onLocaleChange={handleLocaleChange}
+      />
 
-      <div className="pt-24 pb-16">
+      <div className="pt-36 pb-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left - Download Info */}
@@ -61,7 +68,11 @@ export default function DownloadPage() {
 
               {/* Download Buttons */}
               <div className="mb-8">
-                <AppStoreButtons variant="dark" layout="vertical" size="small" />
+                <AppStoreButtons
+                  variant="dark"
+                  layout="vertical"
+                  size="small"
+                />
               </div>
 
               <p className="text-sm text-gray-500">
@@ -95,18 +106,18 @@ export default function DownloadPage() {
                 <div
                   className="absolute inset-0 will-change-transform"
                   style={{
-                    animation: 'spin-slow 40s linear infinite',
+                    animation: "spin-slow 40s linear infinite",
                   }}
                 >
                   {[
-                    { src: '/experiences/IMG_5367.jpg', rotation: 0 },
-                    { src: '/experiences/IMG_5371.jpg', rotation: 45 },
-                    { src: '/experiences/IMG_5372.jpg', rotation: 90 },
-                    { src: '/experiences/IMG_5373.jpg', rotation: 135 },
-                    { src: '/experiences/IMG_5374.jpg', rotation: 180 },
-                    { src: '/experiences/IMG_5375.jpg', rotation: 225 },
-                    { src: '/experiences/IMG_5376.jpg', rotation: 270 },
-                    { src: '/experiences/IMG_5377.jpg', rotation: 315 },
+                    { src: "/experiences/IMG_5367.jpg", rotation: 0 },
+                    { src: "/experiences/IMG_5371.jpg", rotation: 45 },
+                    { src: "/experiences/IMG_5372.jpg", rotation: 90 },
+                    { src: "/experiences/IMG_5373.jpg", rotation: 135 },
+                    { src: "/experiences/IMG_5374.jpg", rotation: 180 },
+                    { src: "/experiences/IMG_5375.jpg", rotation: 225 },
+                    { src: "/experiences/IMG_5376.jpg", rotation: 270 },
+                    { src: "/experiences/IMG_5377.jpg", rotation: 315 },
                   ].map((item, index) => (
                     <div
                       key={index}
@@ -133,7 +144,7 @@ export default function DownloadPage() {
         </div>
       </div>
 
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

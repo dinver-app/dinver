@@ -2,7 +2,7 @@
   "nav": {
     "features": "For Users",
     "howItWorks": "Steps",
-    "restaurants": "For Restaurants",
+    "restaurants": "For restaurants",
     "explore": "Explore",
     "contact": "Partner",
     "downloadApp": "Download App",
@@ -30,24 +30,24 @@
         "description": "Follow friends and discover new restaurants through their visits and recommendations."
       },
       "experiences": {
-        "title": "User Experience Feed",
-        "description": "Scroll through authentic user experiences at different restaurants like a social feed and save restaurants that attract you the most."
+        "title": "Feed with user experiences",
+        "description": "Scroll through authentic user experiences at different restaurants and save restaurants that you would like to visit."
       },
       "rewards": {
         "title": "Earn rewards",
         "description": "Visit a restaurant, scan your receipt to log your visit and compete on the leaderboard based on points. Users with the most points win prizes every two weeks."
       },
       "lists": {
-        "title": "Visited & Planning to visit",
-        "description": "A comprehensive list of all restaurants you've been to and track the ones you want to visit."
+        "title": "Visited & Must visit",
+        "description": "A comprehensive list of all restaurants you've been to and the ones you want to visit."
       },
       "search": {
-        "title": "Search by dish name",
-        "description": "Craving a specific dish? Enter the dish name in our search and find restaurants that serve exactly what you want."
+        "title": "Search by dish",
+        "description": "Craving a specific dish? Enter the dish name in our search bar and find restaurants that serve exactly what you want."
       },
       "details": {
         "title": "Complete information",
-        "description": "360 virtual tours through restaurants, interactive menus, updated working hours, ambient photos… Everything you need to know about a restaurant in one place."
+        "description": "360° virtual tours through restaurants, interactive menus, updated working hours, ambience photos... Everything you need to know about a restaurant in one place."
       },
       "reservations": {
         "title": "Easy reservation method",
@@ -56,7 +56,7 @@
     }
   },
   "howItWorks": {
-    "title": "Dinver works according to the following principle:",
+    "title": "This is how Dinver works:",
     "subtitle": "3 simple steps",
     "steps": {
       "discover": {
@@ -64,7 +64,7 @@
         "description": "Browse the experience feed, search restaurants by dish or location, or check what's new at your favorite spots."
       },
       "visit": {
-        "title": "Visit it and leave an experience",
+        "title": "Visit and leave an experience",
         "description": "Dine at any restaurant and snap a photo of your receipt. After we verify your visit, you'll be able to leave your authentic experience from the restaurant."
       },
       "share": {
@@ -77,18 +77,18 @@
     "experiences": {
       "title": "Experience Feed",
       "subtitle": "Social network for food lovers",
-      "description": "Scroll through authentic user experiences at different restaurants like a social feed. Like what you see in the photo? Click the restaurant, save it, or book a table right away!"
+      "description": "Scroll through authentic user experiences at different restaurants. Like what you see in the photo? Click on the restaurant, save it, or book a table right away!"
     },
     "whatsNew": {
-      "title": "What's New?",
+      "title": "\"What's New?\" Posts",
       "subtitle": "Don't miss cool restaurant events",
       "description": "Restaurants post announcements like status updates - live music tonight, new dish on the menu, special offer. Filter by categories and discover what's happening nearby. Posts last up to 7 days."
     },
     "cta": "See More Experiences"
   },
   "forRestaurants": {
-    "title": "Become a Dinver partner",
-    "subtitle": "Join the Dinver partner network",
+    "title": "Partner with us",
+    "subtitle": "Partner with us",
     "benefits": {
       "virtualTour": {
         "title": "360 Virtual Tour",
@@ -100,7 +100,7 @@
       },
       "whatsNew": {
         "title": "What's New?",
-        "description": "Announce events, promotions, and new dishes"
+        "description": "Announce events, special offers, and new dishes"
       },
       "profile": {
         "title": "Restaurant Profile",
@@ -119,7 +119,7 @@
         "description": "Accept table reservations directly through the app"
       }
     },
-    "cta": "Become a Partner",
+    "cta": "Partner with us",
     "ctaSecondary": "Learn More"
   },
   "map": {
@@ -129,7 +129,7 @@
   },
   "contact": {
     "title": "Contact us",
-    "subtitle": "Have a question, suggestion, or want to work with us? We'd love to hear from you!",
+    "subtitle": "Got a question, suggestion, or want to work with us? We'd love to hear from you!",
     "info": {
       "email": "Email",
       "phone": "Phone",
@@ -149,7 +149,7 @@
       "namePlaceholder": "Your name",
       "email": "Email",
       "phone": "Phone (optional)",
-      "city": "Your city",
+      "city": "City",
       "subject": "Subject",
       "subjectPlaceholder": "What is this about?",
       "message": "Message",
@@ -164,7 +164,7 @@
     },
     "restaurant": {
       "title": "Are you a restaurant owner?",
-      "description": "Become a Dinver partner! Join our partner community and attract guests who are actively looking for their next excellent meal.",
+      "description": "Join our partner community and attract guests who are actively looking for their next excellent meal.",
       "cta": "Register Your Restaurant"
     }
   },
@@ -189,7 +189,7 @@
     "copyright": "© 2024 Dinver. All rights reserved."
   },
   "whatsNew": {
-    "title": "What's New",
+    "title": "What's New?",
     "subtitle": "Fresh updates from your favorite restaurants",
     "tags": {
       "liveMusic": "Live Music",
@@ -250,15 +250,15 @@
       },
       "virtualTour": {
         "title": "360° Virtual Tour",
-        "description": "Let guests explore your space before they visit"
+        "description": "Let guests explore your restaurant before they visit"
       },
       "menu": {
         "title": "Interactive Menu",
         "description": "Showcase dishes with photos and descriptions"
       },
       "whatsNew": {
-        "title": "What's New Posts",
-        "description": "Announce events, specials, and new dishes"
+        "title": "\"What's New?\" Posts",
+        "description": "Announce events, special offers, and new dishes"
       },
       "analytics": {
         "title": "Real Analytics",
@@ -272,10 +272,10 @@
     "comparison": {
       "title": "Basic profile vs. Partner profile",
       "feature": "Feature",
-      "basic": "Basic Listing",
+      "basic": "Basic",
       "partner": "Partner",
       "features": {
-        "listing": "Restaurant listing",
+        "listing": "Restaurant visibility",
         "experiences": "User experiences",
         "featured": "Featured placement",
         "virtualTour": "360° virtual tour",
@@ -285,7 +285,7 @@
         "reservations": "Reservations"
       }
     },
-    "cta": "Become a Partner",
+    "cta": "Partner with us",
     "ctaSecondary": "Learn More"
   },
   "socialProof": {
@@ -302,8 +302,8 @@
     "googlePlay": "Google Play"
   },
   "download": {
-    "title": "Download Dinver App",
-    "subtitle": "Book tables, earn points, and discover the best spots in town - all in one place.",
+    "title": "Download Dinver",
+    "subtitle": "Discover the best restaurant spots in town, earn points, and book tables - all in one place.",
     "scanQr": "Scan to download",
     "available": "Available for iOS and Android"
   },

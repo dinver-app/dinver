@@ -163,7 +163,7 @@ export default function PolitikaPrivatnosti() {
         </div>
       </div>
 
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

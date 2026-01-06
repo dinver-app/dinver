@@ -6,7 +6,6 @@ import {
   Send,
   CheckCircle,
   AlertCircle,
-  Building2,
   Mail,
   MapPin,
   Store,
@@ -18,9 +17,10 @@ import { submitPartnershipInquiry } from "@/lib/api";
 
 interface ContactProps {
   messages: Messages;
+  locale?: string;
 }
 
-export default function Contact({ messages }: ContactProps) {
+export default function Contact({ messages, locale = "hr" }: ContactProps) {
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
@@ -60,10 +60,6 @@ export default function Contact({ messages }: ContactProps) {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedSection className="text-center max-w-3xl mx-auto mb-12">
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-dinver-green/10 text-dinver-green rounded-full text-sm font-semibold mb-6">
-            <Building2 size={16} />
-            {messages.contact.restaurant.title}
-          </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
             {messages.forRestaurants.subtitle}
           </h2>
@@ -116,9 +112,7 @@ export default function Contact({ messages }: ContactProps) {
                       onClick={() => setStatus("idle")}
                       className="mt-4 text-dinver-green hover:underline text-sm font-medium"
                     >
-                      {messages.contact.form.submit.includes("Join")
-                        ? "Try again"
-                        : "Pokušaj ponovno"}
+                      {locale === "en" ? "Try again" : "Pokušaj ponovno"}
                     </button>
                   </motion.div>
                 ) : (
@@ -136,8 +130,8 @@ export default function Contact({ messages }: ContactProps) {
                         className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
                       >
                         <Store size={16} className="text-dinver-green" />
-                        {messages.contact.form.submit.includes("Join")
-                          ? "Restaurant Name"
+                        {locale === "en"
+                          ? "Restaurant name"
                           : "Naziv restorana"}
                       </label>
                       <input
@@ -146,8 +140,8 @@ export default function Contact({ messages }: ContactProps) {
                         value={restaurantName}
                         onChange={(e) => setRestaurantName(e.target.value)}
                         placeholder={
-                          messages.contact.form.submit.includes("Join")
-                            ? "Your restaurant name"
+                          locale === "en"
+                            ? "The name of your restaurant"
                             : "Naziv tvojeg restorana"
                         }
                         required
@@ -189,7 +183,11 @@ export default function Contact({ messages }: ContactProps) {
                         id="city"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="Zagreb, Split, Rijeka..."
+                        placeholder={
+                          locale === "en"
+                            ? "Zagreb, London, Paris.."
+                            : "Zagreb, Split, Rijeka..."
+                        }
                         required
                         minLength={2}
                         maxLength={100}

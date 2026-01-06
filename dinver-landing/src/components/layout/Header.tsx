@@ -42,11 +42,10 @@ export default function Header({
 
   const navItems = [
     { href: "/", label: locale === "hr" ? "Početna" : "Home" },
-    { href: "/about", label: locale === "hr" ? "O nama" : "About" },
+    { href: "/about", label: locale === "hr" ? "O nama" : "About us" },
     { href: "/partners", label: locale === "hr" ? "Partneri" : "Partners" },
     { href: "/contact", label: locale === "hr" ? "Kontakt" : "Contact" },
   ];
-
 
   const toggleLocale = () => {
     onLocaleChange(locale === "en" ? "hr" : "en");
@@ -71,7 +70,7 @@ export default function Header({
             {/* Logo */}
             <div className="flex-1">
               <Link href="/" className="inline-block">
-                <Logo variant={(isHomePage && isScrolled) ? "dark" : "light"} />
+                <Logo variant={isHomePage && isScrolled ? "dark" : "light"} />
               </Link>
             </div>
 
@@ -82,7 +81,7 @@ export default function Header({
                   key={item.href}
                   href={item.href}
                   className={`transition-colors font-medium whitespace-nowrap ${
-                    (isHomePage && isScrolled)
+                    isHomePage && isScrolled
                       ? "text-gray-700 hover:text-dinver-green"
                       : "text-white/80 hover:text-white"
                   }`}
@@ -97,7 +96,7 @@ export default function Header({
               <button
                 onClick={toggleLocale}
                 className={`hidden lg:flex items-center gap-1.5 transition-colors ${
-                  (isHomePage && isScrolled)
+                  isHomePage && isScrolled
                     ? "text-gray-600 hover:text-dinver-green"
                     : "text-white/80 hover:text-white"
                 }`}
@@ -108,10 +107,7 @@ export default function Header({
 
               {/* Download Button */}
               <Link href="/download" className="hidden lg:block">
-                <Button
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
+                <Button size="sm" className="flex items-center gap-2">
                   <Download size={16} />
                   {messages.nav.downloadApp}
                 </Button>
@@ -121,7 +117,7 @@ export default function Header({
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className={`lg:hidden p-2 transition-colors ${
-                  (isHomePage && isScrolled)
+                  isHomePage && isScrolled
                     ? "text-gray-700 hover:text-dinver-green"
                     : "text-white hover:text-dinver-cream"
                 }`}

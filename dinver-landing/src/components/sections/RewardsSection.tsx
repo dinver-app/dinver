@@ -163,7 +163,7 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
                     <p className="text-xs sm:text-sm text-gray-600">
                       {locale === "hr"
                         ? "Najbolji i jedan nasumično odabran sudionik osvajaju nagrade!"
-                        : "The best and one random participant win prizes!"}
+                        : "The best and one randomly chosen participant win prizes!"}
                     </p>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ export default function RewardsSection({ locale }: RewardsSectionProps) {
                     <p className="text-white/70 text-xs sm:text-sm">
                       {locale === "hr"
                         ? "Iznenađenje za pobjednike svakog ciklusa"
-                        : "Surprise for cycle winners"}
+                        : "A surprise for cycle winners"}
                     </p>
                   </div>
                 </div>

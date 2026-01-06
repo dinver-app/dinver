@@ -58,7 +58,7 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
           className="text-center max-w-3xl mx-auto mb-20"
         >
           <span className="inline-block px-4 py-2 bg-white/10 text-dinver-cream rounded-full text-sm font-medium mb-6">
-            {locale === "hr" ? "3 jednostavna koraka" : "3 Simple Steps"}
+            {locale === "hr" ? "3 jednostavna koraka" : "3 simple steps"}
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
             {messages.howItWorks.title}
@@ -158,7 +158,7 @@ export default function HowItWorks({ messages, locale }: HowItWorksProps) {
             <p className="text-gray-400 text-sm">
               {locale === "hr"
                 ? "Najbolji i jedan nasumično odabran sudionik osvajaju nagrade!"
-                : "The best and one random participant win prizes!"}
+                : "The best and one randomly chosen participant win prizes!"}
             </p>
           </div>
         </motion.div>

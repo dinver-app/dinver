@@ -270,9 +270,9 @@
       }
     },
     "comparison": {
-      "title": "Obični profil vs. Partner profil",
-      "feature": "Za korisnike",
-      "basic": "Osnovni prikaz",
+      "title": "Osnovni profil vs. Partner profil",
+      "feature": "Značajka",
+      "basic": "Osnovni",
       "partner": "Partner",
       "features": {
         "listing": "Prikaz restorana",

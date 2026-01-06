@@ -163,7 +163,7 @@ export default function KontaktPage() {
                       href="tel:+385955493071"
                       className="text-dinver-green hover:text-dinver-green-dark transition-colors"
                     >
-                      095 549 3071
+                      +385 95 549 3071
                     </a>
                   </div>
                 </div>
@@ -313,7 +313,11 @@ export default function KontaktPage() {
                           value={formData.email}
                           onChange={handleChange}
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-dinver-green focus:border-transparent"
-                          placeholder="email@primjer.com"
+                          placeholder={
+                            locale === "hr"
+                              ? "email@primjer.com"
+                              : "email@example.com"
+                          }
                         />
                       </div>
                     </div>
@@ -416,7 +420,7 @@ export default function KontaktPage() {
         </div>
       </div>
 
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

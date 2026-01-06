@@ -209,7 +209,7 @@ export default function ONama() {
         </div>
       </section>
 
-      <Footer messages={messages} />
+      <Footer messages={messages} locale={locale} />
     </main>
   );
 }

@@ -16,6 +16,7 @@ import {
   Calendar,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 import { Messages } from "@/lib/i18n";
 
@@ -297,20 +298,6 @@ export default function PartnersSection({
               <div className="absolute right-0 top-0 bottom-2 w-8 bg-linear-to-l from-dinver-dark to-transparent pointer-events-none sm:hidden" />
             </div>
 
-            {/* CTA */}
-            <div className="pt-4 sm:pt-6">
-              <button
-                onClick={() =>
-                  document
-                    .getElementById("contact")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="inline-flex items-center bg-white text-dinver-dark font-medium px-4 sm:px-5 py-2 text-sm rounded-md"
-              >
-                {messages.forRestaurants.cta}
-                <ChevronRight size={16} className="ml-1" />
-              </button>
-            </div>
           </AnimatedSection>
 
           {/* Stacked phone cards - SECOND on mobile */}
@@ -431,6 +418,22 @@ export default function PartnersSection({
               </motion.div>
             ))}
           </div>
+
+          {/* CTA Button - centered below table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 1.2 }}
+            className="mt-10 sm:mt-12 text-center"
+          >
+            <Link
+              href="/partner"
+              className="inline-flex items-center justify-center bg-dinver-cream text-dinver-dark font-semibold px-8 sm:px-10 py-4 text-base sm:text-lg rounded-xl hover:bg-white transition-colors shadow-lg hover:shadow-xl"
+            >
+              {messages.forRestaurants.cta}
+              <ChevronRight size={20} className="ml-2" />
+            </Link>
+          </motion.div>
         </motion.div>
       </div>
     </section>
