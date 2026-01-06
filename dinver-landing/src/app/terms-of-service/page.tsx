@@ -36,99 +36,146 @@ export default function UvjetiKoristenja() {
             className="inline-flex items-center text-dinver-green hover:text-dinver-green-dark mb-8 transition-colors"
           >
             <ArrowLeft size={20} className="mr-2" />
-            Natrag na početnu
+            {messages.termsOfService.backToHome}
           </Link>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
-            Uvjeti korištenja
+            {messages.termsOfService.title}
           </h1>
 
           <div className="prose prose-gray max-w-none">
             <p className="text-gray-600 mb-6">
-              Zadnje ažuriranje: Siječanj 2025.
+              {messages.termsOfService.lastUpdated}
             </p>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Prihvaćanje uvjeta</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.acceptance.title}</h2>
               <p className="text-gray-600 mb-4">
-                Korištenjem Dinver aplikacije i web stranice pristajete na ove Uvjete korištenja.
-                Ako se ne slažete s bilo kojim dijelom ovih uvjeta, molimo vas da ne koristite naše usluge.
+                {messages.termsOfService.acceptance.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Opis usluge</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.serviceDescription.title}</h2>
               <p className="text-gray-600 mb-4">
-                Dinver je platforma koja povezuje ljubitelje hrane s restoranima. Korisnicima omogućujemo:
+                {messages.termsOfService.serviceDescription.intro}
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Otkrivanje novih restorana i gastronomskih iskustava</li>
-                <li>Dijeljenje svojih doživljaja s hranom i restoranima</li>
-                <li>Praćenje posjeta restoranima i zarađivanje bodova</li>
-                <li>Pristup informacijama o restoranima, menijima i radnom vremenu</li>
+                {messages.termsOfService.serviceDescription.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Korisnički račun</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.userAccount.title}</h2>
               <p className="text-gray-600 mb-4">
-                Za korištenje određenih funkcionalnosti potrebno je kreirati korisnički račun.
-                Vi ste odgovorni za čuvanje povjerljivosti svojih pristupnih podataka i za sve
-                aktivnosti koje se odvijaju pod vašim računom.
+                {messages.termsOfService.userAccount.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Korisnički sadržaj</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.userContent.title}</h2>
               <p className="text-gray-600 mb-4">
-                Objavljujući sadržaj na Dinveru (fotografije, recenzije, komentare), zadržavate
-                vlasništvo nad tim sadržajem, ali nam dajete neekskluzivnu, besplatnu licencu za
-                korištenje, prikazivanje i distribuciju tog sadržaja na platformi.
+                {messages.termsOfService.userContent.intro}
               </p>
               <p className="text-gray-600 mb-4">
-                Zabranjeno je objavljivanje sadržaja koji je:
+                {messages.termsOfService.userContent.prohibited}
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Uvredljiv, prijeteći ili diskriminirajući</li>
-                <li>Lažan ili obmanjujući</li>
-                <li>Krši autorska prava ili prava intelektualnog vlasništva</li>
-                <li>Sadrži nezakonit sadržaj</li>
+                {messages.termsOfService.userContent.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Sustav nagrada</h2>
               <p className="text-gray-600 mb-4">
-                Dinver nudi sustav bodova i nagrada za aktivne korisnike. Zadržavamo pravo
-                izmjene pravila sustava nagrada u bilo kojem trenutku. Bodovi nemaju novčanu
-                vrijednost i ne mogu se zamijeniti za novac.
+                {messages.termsOfService.userContent.removal}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Ograničenje odgovornosti</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.rewardSystem.title}</h2>
               <p className="text-gray-600 mb-4">
-                Dinver pruža informacije o restoranima na temelju javno dostupnih podataka i
-                korisničkih doprinosa. Ne garantiramo točnost, potpunost ili ažurnost tih
-                informacija. Nismo odgovorni za kvalitetu usluge u restoranima.
+                {messages.termsOfService.rewardSystem.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Izmjene uvjeta</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.limitationOfLiability.title}</h2>
               <p className="text-gray-600 mb-4">
-                Zadržavamo pravo izmjene ovih Uvjeta korištenja u bilo kojem trenutku.
-                O značajnim izmjenama ćemo vas obavijestiti putem aplikacije ili e-maila.
+                {messages.termsOfService.limitationOfLiability.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Kontakt</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.termsChanges.title}</h2>
               <p className="text-gray-600 mb-4">
-                Za sva pitanja u vezi s ovim Uvjetima korištenja, kontaktirajte nas na:
+                {messages.termsOfService.termsChanges.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.contact.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.contact.intro}
               </p>
               <p className="text-gray-600">
-                <strong>Email:</strong> info@dinver.eu
+                <strong>{messages.termsOfService.contact.email}</strong> info@dinver.eu
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.accountTermination.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.accountTermination.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.restaurantDisclaimer.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.restaurantDisclaimer.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.receiptVerification.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.receiptVerification.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.intellectualProperty.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.intellectualProperty.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.indemnification.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.indemnification.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.disputeResolution.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.disputeResolution.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.forceMajeure.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.forceMajeure.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.termsOfService.severability.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.termsOfService.severability.content}
               </p>
             </section>
           </div>

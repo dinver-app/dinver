@@ -394,5 +394,202 @@
       "subtitle": "Whether you're a restaurant looking to become a partner or have any questions, we'd love to hear from you.",
       "button": "Contact us"
     }
+  },
+  "privacyPolicy": {
+    "backToHome": "Back to home",
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: January 2025.",
+    "intro": {
+      "title": "1. Introduction",
+      "content": "Dinver (\"we\", \"us\" or \"our\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use and protect your personal data when you use our application and website."
+    },
+    "dataCollection": {
+      "title": "2. Data we collect",
+      "intro": "We collect the following types of data:",
+      "provided": {
+        "title": "Data you provide:",
+        "items": [
+          "First and last name",
+          "Email address",
+          "Profile photo",
+          "Content you post (photos, reviews, comments)",
+          "Data about visited restaurants"
+        ]
+      },
+      "automatic": {
+        "title": "Data we collect automatically:",
+        "items": [
+          "Device information (model, operating system)",
+          "IP address",
+          "App usage data",
+          "Location (only with your permission)"
+        ]
+      }
+    },
+    "dataUsage": {
+      "title": "3. How we use your data",
+      "intro": "We use your data to:",
+      "items": [
+        "Provide and improve our services",
+        "Personalize your experience",
+        "Communicate with you (notifications, updates, marketing)",
+        "Analyze platform usage",
+        "Prevent fraud and protect security"
+      ]
+    },
+    "dataSharing": {
+      "title": "4. Data sharing",
+      "intro": "We do not sell your personal data to third parties. We may share data with:",
+      "items": [
+        "Partner restaurants (only aggregated, anonymized statistics)",
+        "Service providers who help us operate",
+        "Government authorities when legally required"
+      ]
+    },
+    "yourRights": {
+      "title": "5. Your rights",
+      "intro": "You have the right to:",
+      "items": [
+        "Access your personal data",
+        "Correct inaccurate data",
+        "Delete your data (\"right to be forgotten\")",
+        "Restrict processing",
+        "Data portability",
+        "Withdraw consent"
+      ],
+      "contact": "To exercise these rights, contact us at info@dinver.eu."
+    },
+    "dataSecurity": {
+      "title": "6. Data security",
+      "content": "We implement technical and organizational measures to protect your data from unauthorized access, loss or destruction. However, no method of data transmission over the Internet is 100% secure."
+    },
+    "cookies": {
+      "title": "7. Cookies",
+      "content": "We use cookies and similar technologies to improve functionality and personalize content. You can manage cookie settings through your browser settings."
+    },
+    "dataRetention": {
+      "title": "8. Data retention",
+      "content": "We retain your data as long as you have an active account or as needed to provide services. After deleting your account, your data will be deleted or anonymized within a reasonable time."
+    },
+    "contact": {
+      "title": "9. Contact",
+      "intro": "For all privacy questions, contact us at:",
+      "email": "Email:"
+    },
+    "minorRestriction": {
+      "title": "10. Age restriction",
+      "content": "You must be at least 13 years old to use Dinver. If you are under 18, you must have permission from your parent or legal guardian to use our services."
+    },
+    "internationalTransfers": {
+      "title": "11. International data transfers",
+      "content": "Your data is stored on secure servers provided by Hetzner in the European Union and AWS S3 in EU regions. We ensure that all data transfers comply with GDPR requirements and use appropriate safeguards to protect your information."
+    },
+    "thirdPartyServices": {
+      "title": "12. Third-party services",
+      "intro": "We use the following third-party services to operate our platform:",
+      "items": [
+        "Hetzner (Germany) - Server hosting",
+        "AWS S3 (EU regions) - File storage for photos and media",
+        "Mailgun - Email delivery service",
+        "Expo Push Notifications - Mobile push notification delivery"
+      ],
+      "outro": "Each of these services has their own privacy policies and data protection measures. We only share the minimum necessary data to provide our services."
+    },
+    "receiptData": {
+      "title": "13. Receipt scanning and verification",
+      "content": "When you scan a receipt to verify your restaurant visit, we collect the JIR and ZKI numbers, restaurant name, and address from the receipt. This data is used solely for verification purposes and fraud prevention. We retain this data for a reasonable period to prevent duplicate submissions and detect fraudulent activity."
+    },
+    "automatedDecisions": {
+      "title": "14. Automated decision making",
+      "content": "We do not use automated decision-making or profiling that produces legal effects or similarly significantly affects you. Restaurant recommendations and content in your feed are based on simple algorithms using your preferences and activity, but you always have control over what you see and interact with."
+    },
+    "responseTime": {
+      "title": "15. Response to your requests",
+      "content": "We will respond to your data access, correction, or deletion requests within 30 days as required by GDPR. In complex cases, we may extend this period by an additional 60 days and will notify you of any delay."
+    }
+  },
+  "termsOfService": {
+    "backToHome": "Back to home",
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: January 2025.",
+    "acceptance": {
+      "title": "1. Acceptance of terms",
+      "content": "By using the Dinver application and website, you agree to these Terms of Service. If you do not agree with any part of these terms, please do not use our services."
+    },
+    "serviceDescription": {
+      "title": "2. Service description",
+      "intro": "Dinver is a platform that connects food lovers with restaurants. We enable users to:",
+      "items": [
+        "Discover new restaurants and gastronomic experiences",
+        "Share their food and restaurant experiences",
+        "Track restaurant visits and earn points",
+        "Access information about restaurants, menus and opening hours"
+      ]
+    },
+    "userAccount": {
+      "title": "3. User account",
+      "content": "To use certain features, you need to create a user account. You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account."
+    },
+    "userContent": {
+      "title": "4. User content",
+      "intro": "By posting content on Dinver (photos, reviews, comments), you retain ownership of that content, but grant us a worldwide, perpetual, irrevocable, royalty-free, non-exclusive license to use, reproduce, modify, adapt, publish, translate, distribute, and display that content on our platform and in our marketing materials.",
+      "prohibited": "It is forbidden to post content that is:",
+      "items": [
+        "Offensive, threatening or discriminatory",
+        "False or misleading",
+        "Violates copyrights or intellectual property rights",
+        "Contains illegal content"
+      ],
+      "removal": "We reserve the right to remove any content that violates these terms without prior notice."
+    },
+    "rewardSystem": {
+      "title": "5. Reward system",
+      "content": "Dinver offers a points and rewards system for active users. We reserve the right to change the reward system rules at any time. Points have no monetary value and cannot be exchanged for money."
+    },
+    "limitationOfLiability": {
+      "title": "6. Limitation of liability",
+      "content": "Dinver provides information about restaurants based on publicly available data and user contributions. We do not guarantee the accuracy, completeness or timeliness of this information. We are not responsible for the quality of service in restaurants."
+    },
+    "termsChanges": {
+      "title": "7. Changes to terms",
+      "content": "We reserve the right to change these Terms of Service at any time. We will notify you of significant changes via the app or email."
+    },
+    "contact": {
+      "title": "8. Contact",
+      "intro": "For all questions regarding these Terms of Service, contact us at:",
+      "email": "Email:"
+    },
+    "accountTermination": {
+      "title": "9. Account suspension and termination",
+      "content": "We reserve the right to suspend, restrict, or terminate your account and access to our services at any time, without prior notice, if we believe you have violated these Terms of Service, engaged in fraudulent activity, or for any other reason we deem necessary to protect our platform, users, or partners. Upon termination, your right to use the services will immediately cease."
+    },
+    "restaurantDisclaimer": {
+      "title": "10. Restaurant information disclaimer",
+      "content": "Dinver is a platform for discovering and sharing restaurant experiences. We are not responsible for the quality of food, service, hygiene, accuracy of menu information, allergens, food safety, or any injuries, illnesses, or damages that may occur during your visit to any restaurant. Restaurant information is provided by the restaurants themselves or by users and may not always be accurate or up-to-date. Always verify important information (allergens, opening hours, prices) directly with the restaurant."
+    },
+    "receiptVerification": {
+      "title": "11. Receipt verification and fraud prevention",
+      "content": "By scanning receipts to verify your visits, you confirm that each receipt is authentic, represents an actual purchase you made, and has not been previously submitted. We employ fraud detection measures and reserve the right to reject receipts, remove points, suspend accounts, or take legal action against users who submit fraudulent, duplicate, or manipulated receipts."
+    },
+    "intellectualProperty": {
+      "title": "12. Intellectual property",
+      "content": "The Dinver name, logo, design, and all original content on our platform are protected by intellectual property laws. You may not copy, reproduce, distribute, or create derivative works from our platform content without our express written permission. Automated scraping or data extraction from our platform is strictly prohibited."
+    },
+    "indemnification": {
+      "title": "13. Indemnification",
+      "content": "You agree to indemnify, defend, and hold harmless Dinver, its owners, employees, and partners from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from: (a) your use of our services, (b) your violation of these Terms, (c) your violation of any rights of another party, or (d) content you post on our platform."
+    },
+    "disputeResolution": {
+      "title": "14. Dispute resolution and governing law",
+      "content": "These Terms of Service are governed by the laws of the Republic of Croatia. Any disputes arising from these terms or your use of our services shall be resolved in the competent courts of Zagreb, Croatia. Before initiating any legal proceedings, we encourage you to contact us to try to resolve the matter informally."
+    },
+    "forceMajeure": {
+      "title": "15. Force majeure",
+      "content": "Dinver shall not be liable for any failure or delay in performance due to circumstances beyond our reasonable control, including but not limited to acts of God, war, terrorism, riots, embargoes, acts of civil or military authorities, fire, floods, accidents, pandemics, strikes, or shortages of transportation, facilities, fuel, energy, labor, or materials."
+    },
+    "severability": {
+      "title": "16. Severability",
+      "content": "If any provision of these Terms is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary so that these Terms will otherwise remain in full force and effect."
+    }
   }
 }

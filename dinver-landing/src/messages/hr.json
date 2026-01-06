@@ -394,5 +394,202 @@
       "subtitle": "Bilo da ste restoran koji želi postati partner ili imate bilo kakvo pitanje, rado ćemo čuti od vas.",
       "button": "Kontaktirajte nas"
     }
+  },
+  "privacyPolicy": {
+    "backToHome": "Natrag na početnu",
+    "title": "Politika privatnosti",
+    "lastUpdated": "Zadnje ažuriranje: Siječanj 2025.",
+    "intro": {
+      "title": "1. Uvod",
+      "content": "Dinver (\"mi\", \"nas\" ili \"naš\") posvećen je zaštiti vaše privatnosti. Ova Politika privatnosti objašnjava kako prikupljamo, koristimo i štitimo vaše osobne podatke kada koristite našu aplikaciju i web stranicu."
+    },
+    "dataCollection": {
+      "title": "2. Podaci koje prikupljamo",
+      "intro": "Prikupljamo sljedeće vrste podataka:",
+      "provided": {
+        "title": "Podaci koje vi pružate:",
+        "items": [
+          "Ime i prezime",
+          "Email adresa",
+          "Profilna fotografija",
+          "Sadržaj koji objavljujete (fotografije, recenzije, komentari)",
+          "Podaci o posjećenim restoranima"
+        ]
+      },
+      "automatic": {
+        "title": "Podaci koje automatski prikupljamo:",
+        "items": [
+          "Podaci o uređaju (model, operativni sustav)",
+          "IP adresa",
+          "Podaci o korištenju aplikacije",
+          "Lokacija (samo uz vašu dozvolu)"
+        ]
+      }
+    },
+    "dataUsage": {
+      "title": "3. Kako koristimo vaše podatke",
+      "intro": "Vaše podatke koristimo za:",
+      "items": [
+        "Pružanje i poboljšanje naših usluga",
+        "Personalizaciju vašeg iskustva",
+        "Komunikaciju s vama (obavijesti, ažuriranja, marketing)",
+        "Analizu korištenja platforme",
+        "Sprječavanje prijevara i zaštitu sigurnosti"
+      ]
+    },
+    "dataSharing": {
+      "title": "4. Dijeljenje podataka",
+      "intro": "Vaše osobne podatke ne prodajemo trećim stranama. Podatke možemo dijeliti sa:",
+      "items": [
+        "Partnerskim restoranima (samo agregirana, anonimizirana statistika)",
+        "Pružateljima usluga koji nam pomažu u poslovanju",
+        "Državnim tijelima kada je to zakonski obvezno"
+      ]
+    },
+    "yourRights": {
+      "title": "5. Vaša prava",
+      "intro": "Imate pravo na:",
+      "items": [
+        "Pristup vašim osobnim podacima",
+        "Ispravak netočnih podataka",
+        "Brisanje vaših podataka (\"pravo na zaborav\")",
+        "Ograničenje obrade",
+        "Prijenos podataka",
+        "Povlačenje privole"
+      ],
+      "contact": "Za ostvarivanje ovih prava, kontaktirajte nas na info@dinver.eu."
+    },
+    "dataSecurity": {
+      "title": "6. Sigurnost podataka",
+      "content": "Primjenjujemo tehničke i organizacijske mjere za zaštitu vaših podataka od neovlaštenog pristupa, gubitka ili uništenja. Međutim, nijedna metoda prijenosa podataka putem interneta nije 100% sigurna."
+    },
+    "cookies": {
+      "title": "7. Kolačići",
+      "content": "Koristimo kolačiće i slične tehnologije za poboljšanje funkcionalnosti i personalizaciju sadržaja. Možete upravljati postavkama kolačića putem postavki vašeg preglednika."
+    },
+    "dataRetention": {
+      "title": "8. Zadržavanje podataka",
+      "content": "Vaše podatke čuvamo dok god imate aktivan račun ili dok je potrebno za pružanje usluga. Nakon brisanja računa, vaši podaci će biti obrisani ili anonimizirani u razumnom roku."
+    },
+    "contact": {
+      "title": "9. Kontakt",
+      "intro": "Za sva pitanja o privatnosti, kontaktirajte nas na:",
+      "email": "Email:"
+    },
+    "minorRestriction": {
+      "title": "10. Dobno ograničenje",
+      "content": "Morate imati najmanje 13 godina da biste koristili Dinver. Ako ste maloljetni (ispod 18 godina), morate imati dozvolu roditelja ili zakonskog skrbnika za korištenje naših usluga."
+    },
+    "internationalTransfers": {
+      "title": "11. Međunarodni prijenosi podataka",
+      "content": "Vaši podaci se pohranjuju na sigurnim serverima tvrtke Hetzner u Europskoj uniji i AWS S3 u EU regijama. Osiguravamo da svi prijenosi podataka budu u skladu s GDPR zahtjevima i koristimo odgovarajuće zaštitne mjere za zaštitu vaših informacija."
+    },
+    "thirdPartyServices": {
+      "title": "12. Usluge trećih strana",
+      "intro": "Koristimo sljedeće usluge trećih strana za rad naše platforme:",
+      "items": [
+        "Hetzner (Njemačka) - Hosting servera",
+        "AWS S3 (EU regije) - Pohranjivanje fotografija i medijskih sadržaja",
+        "Mailgun - Usluga dostave e-pošte",
+        "Expo Push Notifications - Dostava push obavijesti na mobilne uređaje"
+      ],
+      "outro": "Svaka od ovih usluga ima vlastite politike privatnosti i mjere zaštite podataka. Dijelimo samo minimalno potrebne podatke za pružanje naših usluga."
+    },
+    "receiptData": {
+      "title": "13. Skeniranje i provjera računa",
+      "content": "Kada skenirate račun kako biste potvrdili svoj posjet restoranu, prikupljamo JIR i ZKI brojeve, naziv restorana i adresu s računa. Ovi podaci koriste se isključivo u svrhu provjere i sprječavanja prijevara. Čuvamo ove podatke razumno razdoblje kako bismo spriječili duple prijave i otkrili lažne aktivnosti."
+    },
+    "automatedDecisions": {
+      "title": "14. Automatizirano donošenje odluka",
+      "content": "Ne koristimo automatizirano donošenje odluka ili profiliranje koje proizvodi pravne učinke ili vas na sličan način značajno pogađa. Preporuke restorana i sadržaj u vašem feedu temelje se na jednostavnim algoritmima koji koriste vaše preferencije i aktivnost, ali uvijek imate kontrolu nad onim što vidite i s čime komunicirate."
+    },
+    "responseTime": {
+      "title": "15. Odgovor na vaše zahtjeve",
+      "content": "Odgovorit ćemo na vaše zahtjeve za pristup, ispravak ili brisanje podataka u roku od 30 dana kako to zahtijeva GDPR. U složenim slučajevima možemo produžiti ovo razdoblje za dodatnih 60 dana i obavijestit ćemo vas o bilo kakvom kašnjenju."
+    }
+  },
+  "termsOfService": {
+    "backToHome": "Natrag na početnu",
+    "title": "Uvjeti korištenja",
+    "lastUpdated": "Zadnje ažuriranje: Siječanj 2025.",
+    "acceptance": {
+      "title": "1. Prihvaćanje uvjeta",
+      "content": "Korištenjem Dinver aplikacije i web stranice pristajete na ove Uvjete korištenja. Ako se ne slažete s bilo kojim dijelom ovih uvjeta, molimo vas da ne koristite naše usluge."
+    },
+    "serviceDescription": {
+      "title": "2. Opis usluge",
+      "intro": "Dinver je platforma koja povezuje ljubitelje hrane s restoranima. Korisnicima omogućujemo:",
+      "items": [
+        "Otkrivanje novih restorana i gastronomskih iskustava",
+        "Dijeljenje svojih doživljaja s hranom i restoranima",
+        "Praćenje posjeta restoranima i zarađivanje bodova",
+        "Pristup informacijama o restoranima, menijima i radnom vremenu"
+      ]
+    },
+    "userAccount": {
+      "title": "3. Korisnički račun",
+      "content": "Za korištenje određenih funkcionalnosti potrebno je kreirati korisnički račun. Vi ste odgovorni za čuvanje povjerljivosti svojih pristupnih podataka i za sve aktivnosti koje se odvijaju pod vašim računom."
+    },
+    "userContent": {
+      "title": "4. Korisnički sadržaj",
+      "intro": "Objavljujući sadržaj na Dinveru (fotografije, recenzije, komentare), zadržavate vlasništvo nad tim sadržajem, ali nam dajete globalnu, trajnu, neopoziv nu, besplatnu, neekskluzivnu licencu za korištenje, reprodukciju, izmjenu, prilagodbu, objavljivanje, prijevod, distribuciju i prikazivanje tog sadržaja na našoj platformi i u našim marketinškim materijalima.",
+      "prohibited": "Zabranjeno je objavljivanje sadržaja koji je:",
+      "items": [
+        "Uvredljiv, prijeteći ili diskriminirajući",
+        "Lažan ili obmanjujući",
+        "Krši autorska prava ili prava intelektualnog vlasništva",
+        "Sadrži nezakonit sadržaj"
+      ],
+      "removal": "Zadržavamo pravo uklanjanja bilo kojeg sadržaja koji krši ove uvjete bez prethodne najave."
+    },
+    "rewardSystem": {
+      "title": "5. Sustav nagrada",
+      "content": "Dinver nudi sustav bodova i nagrada za aktivne korisnike. Zadržavamo pravo izmjene pravila sustava nagrada u bilo kojem trenutku. Bodovi nemaju novčanu vrijednost i ne mogu se zamijeniti za novac."
+    },
+    "limitationOfLiability": {
+      "title": "6. Ograničenje odgovornosti",
+      "content": "Dinver pruža informacije o restoranima na temelju javno dostupnih podataka i korisničkih doprinosa. Ne garantiramo točnost, potpunost ili ažurnost tih informacija. Nismo odgovorni za kvalitetu usluge u restoranima."
+    },
+    "termsChanges": {
+      "title": "7. Izmjene uvjeta",
+      "content": "Zadržavamo pravo izmjene ovih Uvjeta korištenja u bilo kojem trenutku. O značajnim izmjenama ćemo vas obavijestiti putem aplikacije ili e-maila."
+    },
+    "contact": {
+      "title": "8. Kontakt",
+      "intro": "Za sva pitanja u vezi s ovim Uvjetima korištenja, kontaktirajte nas na:",
+      "email": "Email:"
+    },
+    "accountTermination": {
+      "title": "9. Suspenzija i ukidanje računa",
+      "content": "Zadržavamo pravo suspendirati, ograničiti ili ukinuti vaš račun i pristup našim uslugama u bilo kojem trenutku, bez prethodne najave, ako smatramo da ste prekršili ove Uvjete korištenja, sudjelovali u lažnim aktivnostima ili iz bilo kojeg drugog razloga koji smatramo potrebnim za zaštitu naše platforme, korisnika ili partnera. Nakon ukidanja računa, vaše pravo na korištenje usluga odmah prestaje."
+    },
+    "restaurantDisclaimer": {
+      "title": "10. Odricanje odgovornosti za restorane",
+      "content": "Dinver je platforma za otkrivanje i dijeljenje iskustava u restoranima. Nismo odgovorni za kvalitetu hrane, usluge, higijenu, točnost informacija o jelovniku, alergene, sigurnost hrane ili bilo kakve ozljede, bolesti ili štete koje mogu nastati tijekom vašeg posjeta restoranu. Informacije o restoranima pružaju sami restorani ili korisnici i možda nisu uvijek točne ili ažurirane. Uvijek provjerite važne informacije (alergeni, radno vrijeme, cijene) izravno s restoranom."
+    },
+    "receiptVerification": {
+      "title": "11. Provjera računa i sprječavanje prijevara",
+      "content": "Skeniranjem računa za potvrdu vaših posjeta potvrđujete da je svaki račun autentičan, da predstavlja stvarnu kupnju koju ste obavili i da nije prethodno poslan. Koristimo mjere za otkrivanje prijevara i zadržavamo pravo odbijanja računa, uklanjanja bodova, suspenzije računa ili poduzimanja pravnih radnji protiv korisnika koji šalju lažne, duple ili manipulirane račune."
+    },
+    "intellectualProperty": {
+      "title": "12. Intelektualno vlasništvo",
+      "content": "Naziv Dinver, logo, dizajn i sav originalni sadržaj na našoj platformi zaštićeni su zakonima o intelektualnom vlasništvu. Ne smijete kopirati, reproduc irati, distribuirati ili stvarati izvedene radove iz sadržaja naše platforme bez našeg izričitog pisanog odobrenja. Automatizirano prikupljanje podataka ili ekstrakcija podataka s naše platforme strogo je zabranjena."
+    },
+    "indemnification": {
+      "title": "13. Obeštećenje",
+      "content": "Slažete se obeštetiti, braniti i zaštititi Dinver, njegove vlasnike, zaposlenike i partnere od bilo kakvih zahtjeva, šteta, gubitaka, obveza i troškova (uključujući odvjetničke troškove) koji proizlaze iz: (a) vašeg korištenja naših usluga, (b) vašeg kršenja ovih Uvjeta, (c) vašeg kršenja bilo kojih prava druge strane, ili (d) sadržaja koji objavljujete na našoj platformi."
+    },
+    "disputeResolution": {
+      "title": "14. Rješavanje sporova i mjerodavno pravo",
+      "content": "Ovi Uvjeti korištenja regulirani su zakonima Republike Hrvatske. Svi sporovi koji proizlaze iz ovih uvjeta ili vašeg korištenja naših usluga rješavat će se pred nadležnim sudovima u Zagrebu, Hrvatska. Prije pokretanja bilo kakvih pravnih postupaka, potičemo vas da nas kontaktirate kako bismo pokušali riješiti stvar neformalnim putem."
+    },
+    "forceMajeure": {
+      "title": "15. Viša sila",
+      "content": "Dinver neće biti odgovoran za bilo kakvo neispunjenje ili kašnjenje u izvršenju zbog okolnosti izvan naše razumne kontrole, uključujući ali ne ograničavajući se na Božje djelo, rat, terorizam, nemire, embargo, akte građanskih ili vojnih vlasti, požar, poplave, nesreće, pandemije, štrajkove ili nestašice prijevoza, objekata, goriva, energije, radne snage ili materijala."
+    },
+    "severability": {
+      "title": "16. Odvojivost odredbi",
+      "content": "Ako se bilo koja odredba ovih Uvjeta utvrdi neprovedivom ili nevažećom, ta će odredba biti ograničena ili uklonjena u minimalnoj mjeri potrebnoj tako da ovi Uvjeti u ostalim dijelovima ostanu na punoj snazi."
+    }
   }
 }

@@ -36,127 +36,161 @@ export default function PolitikaPrivatnosti() {
             className="inline-flex items-center text-dinver-green hover:text-dinver-green-dark mb-8 transition-colors"
           >
             <ArrowLeft size={20} className="mr-2" />
-            Natrag na početnu
+            {messages.privacyPolicy.backToHome}
           </Link>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
-            Politika privatnosti
+            {messages.privacyPolicy.title}
           </h1>
 
           <div className="prose prose-gray max-w-none">
             <p className="text-gray-600 mb-6">
-              Zadnje ažuriranje: Siječanj 2025.
+              {messages.privacyPolicy.lastUpdated}
             </p>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Uvod</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.intro.title}</h2>
               <p className="text-gray-600 mb-4">
-                Dinver (&quot;mi&quot;, &quot;nas&quot; ili &quot;naš&quot;) posvećen je zaštiti vaše privatnosti.
-                Ova Politika privatnosti objašnjava kako prikupljamo, koristimo i štitimo
-                vaše osobne podatke kada koristite našu aplikaciju i web stranicu.
+                {messages.privacyPolicy.intro.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Podaci koje prikupljamo</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataCollection.title}</h2>
               <p className="text-gray-600 mb-4">
-                Prikupljamo sljedeće vrste podataka:
+                {messages.privacyPolicy.dataCollection.intro}
               </p>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Podaci koje vi pružate:</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{messages.privacyPolicy.dataCollection.provided.title}</h3>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Ime i prezime</li>
-                <li>Email adresa</li>
-                <li>Profilna fotografija</li>
-                <li>Sadržaj koji objavljujete (fotografije, recenzije, komentari)</li>
-                <li>Podaci o posjećenim restoranima</li>
+                {messages.privacyPolicy.dataCollection.provided.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Podaci koje automatski prikupljamo:</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{messages.privacyPolicy.dataCollection.automatic.title}</h3>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Podaci o uređaju (model, operativni sustav)</li>
-                <li>IP adresa</li>
-                <li>Podaci o korištenju aplikacije</li>
-                <li>Lokacija (samo uz vašu dozvolu)</li>
+                {messages.privacyPolicy.dataCollection.automatic.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Kako koristimo vaše podatke</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataUsage.title}</h2>
               <p className="text-gray-600 mb-4">
-                Vaše podatke koristimo za:
+                {messages.privacyPolicy.dataUsage.intro}
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Pružanje i poboljšanje naših usluga</li>
-                <li>Personalizaciju vašeg iskustva</li>
-                <li>Komunikaciju s vama (obavijesti, ažuriranja, marketing)</li>
-                <li>Analizu korištenja platforme</li>
-                <li>Sprječavanje prijevara i zaštitu sigurnosti</li>
+                {messages.privacyPolicy.dataUsage.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Dijeljenje podataka</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataSharing.title}</h2>
               <p className="text-gray-600 mb-4">
-                Vaše osobne podatke ne prodajemo trećim stranama. Podatke možemo dijeliti sa:
+                {messages.privacyPolicy.dataSharing.intro}
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Partnerskim restoranima (samo agregirana, anonimizirana statistika)</li>
-                <li>Pružateljima usluga koji nam pomažu u poslovanju</li>
-                <li>Državnim tijelima kada je to zakonski obvezno</li>
+                {messages.privacyPolicy.dataSharing.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Vaša prava</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.yourRights.title}</h2>
               <p className="text-gray-600 mb-4">
-                Imate pravo na:
+                {messages.privacyPolicy.yourRights.intro}
               </p>
               <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                <li>Pristup vašim osobnim podacima</li>
-                <li>Ispravak netočnih podataka</li>
-                <li>Brisanje vaših podataka (&quot;pravo na zaborav&quot;)</li>
-                <li>Ograničenje obrade</li>
-                <li>Prijenos podataka</li>
-                <li>Povlačenje privole</li>
+                {messages.privacyPolicy.yourRights.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
               <p className="text-gray-600 mb-4">
-                Za ostvarivanje ovih prava, kontaktirajte nas na info@dinver.eu.
+                {messages.privacyPolicy.yourRights.contact}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Sigurnost podataka</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataSecurity.title}</h2>
               <p className="text-gray-600 mb-4">
-                Primjenjujemo tehničke i organizacijske mjere za zaštitu vaših podataka od
-                neovlaštenog pristupa, gubitka ili uništenja. Međutim, nijedna metoda prijenosa
-                podataka putem interneta nije 100% sigurna.
+                {messages.privacyPolicy.dataSecurity.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Kolačići</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.cookies.title}</h2>
               <p className="text-gray-600 mb-4">
-                Koristimo kolačiće i slične tehnologije za poboljšanje funkcionalnosti i
-                personalizaciju sadržaja. Možete upravljati postavkama kolačića putem
-                postavki vašeg preglednika.
+                {messages.privacyPolicy.cookies.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Zadržavanje podataka</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataRetention.title}</h2>
               <p className="text-gray-600 mb-4">
-                Vaše podatke čuvamo dok god imate aktivan račun ili dok je potrebno za
-                pružanje usluga. Nakon brisanja računa, vaši podaci će biti obrisani ili
-                anonimizirani u razumnom roku.
+                {messages.privacyPolicy.dataRetention.content}
               </p>
             </section>
 
             <section className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">9. Kontakt</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.contact.title}</h2>
               <p className="text-gray-600 mb-4">
-                Za sva pitanja o privatnosti, kontaktirajte nas na:
+                {messages.privacyPolicy.contact.intro}
               </p>
               <p className="text-gray-600">
-                <strong>Email:</strong> info@dinver.eu
+                <strong>{messages.privacyPolicy.contact.email}</strong> info@dinver.eu
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.minorRestriction.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.minorRestriction.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.internationalTransfers.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.internationalTransfers.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.thirdPartyServices.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.thirdPartyServices.intro}
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.thirdPartyServices.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.thirdPartyServices.outro}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.receiptData.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.receiptData.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.automatedDecisions.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.automatedDecisions.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.responseTime.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.responseTime.content}
               </p>
             </section>
           </div>
