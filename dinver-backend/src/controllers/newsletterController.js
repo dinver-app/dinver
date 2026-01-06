@@ -1,13 +1,5 @@
 const { NewsletterSubscriber } = require('../../models');
-const mailgun = require('mailgun-js');
-const { format } = require('date-fns');
-const { hr } = require('date-fns/locale');
-
-const mg = mailgun({
-  apiKey: process.env.MAILGUN_API_KEY,
-  domain: process.env.MAILGUN_DOMAIN,
-  host: 'api.eu.mailgun.net', // EU region
-});
+const { sendEmail } = require('../../utils/mailgunClient');
 
 const LOGO_URL =
   'https://dinver-restaurant-thumbnails.s3.eu-north-1.amazonaws.com/static_images/logo_long.png';
@@ -146,15 +138,13 @@ const sendNewsletterEmail = async (to, template) => {
     },
   };
 
-  const emailData = {
-    from: 'Dinver <newsletter@dinver.eu>',
-    to: to,
-    subject: templates[template].subject,
-    html: templates[template].html,
-  };
-
   try {
-    await mg.messages().send(emailData);
+    await sendEmail({
+      from: 'Dinver <newsletter@dinver.eu>',
+      to: to,
+      subject: templates[template].subject,
+      html: templates[template].html,
+    });
     console.log(`Newsletter ${template} email sent successfully to ${to}`);
   } catch (error) {
     console.error('Error sending newsletter email:', error);

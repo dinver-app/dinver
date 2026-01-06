@@ -1,14 +1,6 @@
-const mailgun = require('mailgun-js');
+const { sendEmail } = require('../../utils/mailgunClient');
 const { createEmailTemplate } = require('../../utils/emailService');
 const { User } = require('../../models');
-
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
 
 const handleClaimRequest = async (req, res) => {
   try {
@@ -61,25 +53,16 @@ Poruka: ${message}
 ${userId ? `\nKorisnik postoji u sustavu (ID: ${userId})` : ''}
     `.trim();
 
-    const data = {
+    await sendEmail({
       from: 'Dinver <noreply@dinver.eu>',
-      to: ['info@dinver.eu', 'ivankikic49@gmail.com'].join(', '),
+      to: ['info@dinver.eu', 'ivankikic49@gmail.com'],
       subject: restaurantName
         ? `Novi zahtjev za preuzimanje restorana: ${restaurantName}`
         : 'Novi zahtjev za preuzimanje restorana',
       text: textContent,
       html: createEmailTemplate(htmlContent),
-    };
+    });
 
-    if (process.env.NODE_ENV === 'development' || !mg) {
-      console.log('Development mode: Email would be sent');
-      console.log('Data:', data);
-      return res
-        .status(200)
-        .json({ message: 'Zahtjev uspješno poslan (dev mode)' });
-    }
-
-    await mg.messages().send(data);
     return res.status(200).json({ message: 'Zahtjev uspješno poslan' });
   } catch (error) {
     console.error('Error sending claim request email:', error);

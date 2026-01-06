@@ -4577,13 +4577,8 @@ ${new Date().toLocaleString('hr-HR', {
 ═══════════════════════════════════════════════════════════════
     `.trim();
 
-    // Send email using the same mailgun setup as in claimLogController
-    const mailgun = require('mailgun-js');
-    const mg = mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    });
+    // Send email notification
+    const { sendEmail } = require('../../utils/mailgunClient');
 
     const claimNotificationRecipients = process.env
       .CLAIM_NOTIFICATION_RECIPIENTS
@@ -4592,14 +4587,12 @@ ${new Date().toLocaleString('hr-HR', {
           .filter(Boolean)
       : ['ivankikic49@gmail.com', 'mbaric25@gmail.com'];
 
-    const emailData = {
+    await sendEmail({
       from: 'Dinver <info@dinverapp.com>',
       to: claimNotificationRecipients,
       subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
       text: emailContent,
-    };
-
-    await mg.messages().send(emailData);
+    });
 
     res.json({
       message: 'Claim form submitted successfully',

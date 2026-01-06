@@ -1,26 +1,18 @@
 const { ClaimLog, Restaurant } = require('../../models');
-const mailgun = require('mailgun-js');
 const { format } = require('date-fns');
 const {
   createAndSendNotificationToLoggedInUsers,
 } = require('../../utils/pushNotificationService');
-
-const mg = mailgun({
-  apiKey: process.env.MAILGUN_API_KEY,
-  domain: process.env.MAILGUN_DOMAIN,
-  host: 'api.eu.mailgun.net', // EU region
-});
+const { sendEmail } = require('../../utils/mailgunClient');
 
 const sendEmailNotification = async (emails, subject, text) => {
-  const data = {
-    from: 'Dinver <info@dinverapp.com>',
-    to: emails.join(', '),
-    subject: subject,
-    text: text,
-  };
-
   try {
-    await mg.messages().send(data);
+    await sendEmail({
+      from: 'Dinver <info@dinverapp.com>',
+      to: emails,
+      subject: subject,
+      text: text,
+    });
     console.log('Email sent successfully to multiple recipients');
   } catch (error) {
     console.error('Error sending email:', error);

@@ -9,19 +9,10 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 const rateLimit = require('express-rate-limit');
-const mailgun = require('mailgun-js');
+const { sendEmail } = require('../../../utils/mailgunClient');
 const { createEmailTemplate } = require('../../../utils/emailService');
 
 const router = express.Router();
-
-// Initialize Mailgun
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
 
 // Rate limiter: max 5 requests per minute per IP
 const contactLimiter = rateLimit({
@@ -116,25 +107,14 @@ Poruka:
 ${message}
       `.trim();
 
-      const data = {
+      await sendEmail({
         from: 'Dinver Kontakt <noreply@dinver.eu>',
         to: 'info@dinver.eu',
-        'h:Reply-To': email,
+        replyTo: email,
         subject: `[Kontakt] ${subject}`,
         text: textContent,
         html: createEmailTemplate(htmlContent),
-      };
-
-      if (process.env.NODE_ENV === 'development' || !mg) {
-        console.log('Development mode: Email would be sent');
-        console.log('Data:', data);
-        return res.status(200).json({
-          success: true,
-          message: 'Poruka uspješno poslana',
-        });
-      }
-
-      await mg.messages().send(data);
+      });
 
       return res.status(200).json({
         success: true,
@@ -221,25 +201,14 @@ Grad: ${city}
 Datum prijave: ${new Date().toLocaleString('hr-HR')}
       `.trim();
 
-      const data = {
+      await sendEmail({
         from: 'Dinver Partnerstva <noreply@dinver.eu>',
-        to: ['info@dinver.eu', 'ivankikic49@gmail.com'].join(', '),
-        'h:Reply-To': email,
+        to: ['info@dinver.eu', 'ivankikic49@gmail.com'],
+        replyTo: email,
         subject: `[Postani Partner] Nova prijava: ${restaurantName}`,
         text: textContent,
         html: createEmailTemplate(htmlContent),
-      };
-
-      if (process.env.NODE_ENV === 'development' || !mg) {
-        console.log('Development mode: Email would be sent');
-        console.log('Data:', data);
-        return res.status(200).json({
-          success: true,
-          message: 'Zahtjev za partnerstvo uspješno poslan',
-        });
-      }
-
-      await mg.messages().send(data);
+      });
 
       return res.status(200).json({
         success: true,
