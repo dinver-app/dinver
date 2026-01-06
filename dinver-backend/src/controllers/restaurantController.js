@@ -4578,4 +4578,355 @@ ${new Date().toLocaleString('hr-HR', {
     `.trim();
 
     // Send email using the same mailgun setup as in claimLogController
-    const { sendEmail } = require('../../utils/emailService');
+    const mailgun = require('mailgun-js');
+    const mg = mailgun({
+      apiKey: process.env.MAILGUN_API_KEY,
+      domain: process.env.MAILGUN_DOMAIN,
+      host: 'api.eu.mailgun.net', // EU region
+    });
+
+    const claimNotificationRecipients = process.env
+      .CLAIM_NOTIFICATION_RECIPIENTS
+      ? process.env.CLAIM_NOTIFICATION_RECIPIENTS.split(',')
+          .map((email) => email.trim())
+          .filter(Boolean)
+      : ['ivankikic49@gmail.com', 'mbaric25@gmail.com'];
+
+    const emailData = {
+      from: 'Dinver <info@dinverapp.com>',
+      to: claimNotificationRecipients,
+      subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
+      text: emailContent,
+    };
+
+    await mg.messages().send(emailData);
+
+    res.json({
+      message: 'Claim form submitted successfully',
+      restaurantId,
+      restaurantName,
+    });
+  } catch (error) {
+    console.error('Error submitting claim form:', error);
+    res.status(500).json({ error: 'Failed to submit claim form' });
+  }
+};
+
+/**
+ * Import restaurant from Google Maps URL
+ * POST /api/sysadmin/restaurants/import-from-url
+ */
+const importRestaurantFromUrl = async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const {
+      extractPlaceIdFromUrl,
+      getPlaceDetails,
+      transformToRestaurantData,
+      checkRestaurantExists,
+      getPhotoUrl,
+    } = require('../services/googlePlacesService');
+
+    // Extract Place ID from URL
+    console.log('Extracting Place ID from URL:', url);
+    const placeId = await extractPlaceIdFromUrl(url);
+
+    // Check if restaurant already exists
+    const existing = await checkRestaurantExists(placeId);
+    if (existing) {
+      return res.status(409).json({
+        error: 'Restaurant already exists',
+        restaurant: {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+        },
+      });
+    }
+
+    // Fetch place details from Google
+    console.log('Fetching place details for:', placeId);
+    const placeDetails = await getPlaceDetails(placeId);
+
+    // Transform to restaurant data format
+    const restaurantData = transformToRestaurantData(placeDetails);
+
+    // Add photo URL for preview
+    if (restaurantData.photoReference) {
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
+    }
+
+    res.json({
+      message: 'Restaurant data fetched successfully',
+      placeId,
+      restaurantData,
+      rawPlaceDetails: placeDetails, // For debugging
+    });
+  } catch (error) {
+    console.error('Error importing restaurant from URL:', error);
+    res.status(500).json({
+      error: 'Failed to import restaurant from URL',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Search restaurants on Google Places
+ * GET /api/sysadmin/restaurants/search-places?query=...
+ */
+const searchGooglePlaces = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query is required' });
+    }
+
+    const {
+      searchPlacesByText,
+      checkRestaurantExists,
+      getPhotoUrl,
+    } = require('../services/googlePlacesService');
+
+    // Search on Google Places
+    console.log('Searching Google Places for:', query);
+    const results = await searchPlacesByText(query);
+
+    // Check which restaurants already exist in our database
+    const resultsWithStatus = await Promise.all(
+      results.map(async (result) => {
+        const existing = await checkRestaurantExists(result.placeId);
+        return {
+          ...result,
+          existsInDatabase: !!existing,
+          databaseId: existing?.id,
+          photoUrl: result.photoReference
+            ? getPhotoUrl(result.photoReference, 400)
+            : null,
+        };
+      }),
+    );
+
+    res.json({
+      query,
+      count: resultsWithStatus.length,
+      results: resultsWithStatus,
+    });
+  } catch (error) {
+    console.error('Error searching Google Places:', error);
+    res.status(500).json({
+      error: 'Failed to search Google Places',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Get restaurant details from Google Place ID
+ * GET /api/sysadmin/restaurants/place-details/:placeId
+ */
+const getGooglePlaceDetails = async (req, res) => {
+  try {
+    const { placeId } = req.params;
+
+    if (!placeId) {
+      return res.status(400).json({ error: 'Place ID is required' });
+    }
+
+    const {
+      getPlaceDetails,
+      transformToRestaurantData,
+      checkRestaurantExists,
+      getPhotoUrl,
+    } = require('../services/googlePlacesService');
+
+    // Check if restaurant already exists
+    const existing = await checkRestaurantExists(placeId);
+    if (existing) {
+      return res.status(409).json({
+        error: 'Restaurant already exists',
+        restaurant: {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+        },
+      });
+    }
+
+    // Fetch place details
+    console.log('Fetching place details for:', placeId);
+    const placeDetails = await getPlaceDetails(placeId);
+
+    // Transform to restaurant data format
+    const restaurantData = transformToRestaurantData(placeDetails);
+
+    // Add photo URL for preview
+    if (restaurantData.photoReference) {
+      restaurantData.previewPhotoUrl = getPhotoUrl(
+        restaurantData.photoReference,
+        800,
+      );
+    }
+
+    res.json({
+      message: 'Restaurant data fetched successfully',
+      placeId,
+      restaurantData,
+    });
+  } catch (error) {
+    console.error('Error getting place details:', error);
+    res.status(500).json({
+      error: 'Failed to get place details',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Create restaurant from Google Places data
+ * POST /api/sysadmin/restaurants/create-from-google
+ */
+const createRestaurantFromGoogle = async (req, res) => {
+  try {
+    const { placeId, overrides } = req.body;
+
+    if (!placeId) {
+      return res.status(400).json({ error: 'Place ID is required' });
+    }
+
+    const {
+      getPlaceDetails,
+      transformToRestaurantData,
+      checkRestaurantExists,
+    } = require('../services/googlePlacesService');
+    const slugify = require('slugify');
+
+    // Check if restaurant already exists
+    const existing = await checkRestaurantExists(placeId);
+    if (existing) {
+      return res.status(409).json({
+        error: 'Restaurant already exists',
+        restaurant: {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+        },
+      });
+    }
+
+    // Fetch place details
+    console.log('Fetching place details for:', placeId);
+    const placeDetails = await getPlaceDetails(placeId);
+
+    // Transform to restaurant data format
+    let restaurantData = transformToRestaurantData(placeDetails);
+
+    // Apply overrides if provided
+    if (overrides) {
+      restaurantData = { ...restaurantData, ...overrides };
+    }
+
+    // Generate slug
+    restaurantData.slug = slugify(restaurantData.name, {
+      lower: true,
+      strict: true,
+    });
+
+    // Ensure slug is unique
+    let slugCounter = 1;
+    let finalSlug = restaurantData.slug;
+    while (await Restaurant.findOne({ where: { slug: finalSlug } })) {
+      finalSlug = `${restaurantData.slug}-${slugCounter}`;
+      slugCounter++;
+    }
+    restaurantData.slug = finalSlug;
+
+    // Create restaurant
+    const restaurant = await Restaurant.create(restaurantData);
+
+    // Log audit
+    await logAudit(
+      req.user.id,
+      ActionTypes.CREATE,
+      Entities.RESTAURANT,
+      restaurant.id,
+      {
+        name: restaurant.name,
+        placeId: restaurant.placeId,
+        source: 'google_places',
+      },
+    );
+
+    res.status(201).json({
+      message: 'Restaurant created successfully from Google Places',
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.name,
+        slug: restaurant.slug,
+        placeId: restaurant.placeId,
+        address: restaurant.address,
+        place: restaurant.place,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating restaurant from Google:', error);
+    res.status(500).json({
+      error: 'Failed to create restaurant',
+      details: error.message,
+    });
+  }
+};
+
+module.exports = {
+  getAllRestaurants,
+  getRestaurants,
+  getRestaurantDetails,
+  getRestaurantsList,
+  viewRestaurant,
+  updateRestaurant,
+  addRestaurant,
+  updateWorkingHours,
+  updateFilters,
+  deleteRestaurant,
+  addRestaurantImages,
+  deleteRestaurantImage,
+  deleteRestaurantThumbnail,
+  deleteRestaurantProfilePicture,
+  updateImageOrder,
+  getRestaurantById,
+  getCustomWorkingDays,
+  getUpcomingCustomWorkingDays,
+  addCustomWorkingDay,
+  updateCustomWorkingDay,
+  deleteCustomWorkingDay,
+  getAllRestaurantsWithDetails,
+  getSampleRestaurants,
+  getNewRestaurants,
+  getAllNewRestaurants,
+  nearYou,
+  getPartners,
+  getFullRestaurantDetails,
+  getRestaurantMenu,
+  getRestaurantBySubdomain,
+  getClaimFilters,
+  getClaimRestaurantInfo,
+  getClaimRestaurantWorkingHours,
+  submitClaimForm,
+  getRestaurantsMap,
+  getRestaurantsByIdsPost,
+  getRestaurantCities,
+  // Google Places import functions
+  importRestaurantFromUrl,
+  searchGooglePlaces,
+  getGooglePlaceDetails,
+  createRestaurantFromGoogle,
+};
