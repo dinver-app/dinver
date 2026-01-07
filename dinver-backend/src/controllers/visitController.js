@@ -3301,7 +3301,7 @@ const getUserVisitsForMap = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'latitude', 'longitude'],
+          attributes: ['id', 'latitude', 'longitude', 'place', 'country'],
           where: {
             latitude: { [Op.not]: null },
             longitude: { [Op.not]: null },
@@ -3320,10 +3320,24 @@ const getUserVisitsForMap = async (req, res) => {
     }));
 
     const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+    
+    const uniqueCities = new Set(
+      visits
+        .map((v) => v['restaurant.place'])
+        .filter((place) => place && place.trim() !== '')
+    );
+    
+    const uniqueCountries = new Set(
+      visits
+        .map((v) => v['restaurant.country'])
+        .filter((country) => country && country.trim() !== '')
+    );
 
     res.status(200).json({
       visits: mapVisits,
       total: uniqueRestaurants.size,
+      cityCount: uniqueCities.size,
+      countries: Array.from(uniqueCountries),
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -3363,7 +3377,7 @@ const getOtherUserVisitsForMap = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'latitude', 'longitude'],
+          attributes: ['id', 'latitude', 'longitude', 'place', 'country'],
           where: {
             latitude: { [Op.not]: null },
             longitude: { [Op.not]: null },
@@ -3382,10 +3396,24 @@ const getOtherUserVisitsForMap = async (req, res) => {
     }));
 
     const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+    
+    const uniqueCities = new Set(
+      visits
+        .map((v) => v['restaurant.place'])
+        .filter((place) => place && place.trim() !== '')
+    );
+    
+    const uniqueCountries = new Set(
+      visits
+        .map((v) => v['restaurant.country'])
+        .filter((country) => country && country.trim() !== '')
+    );
 
     res.status(200).json({
       visits: mapVisits,
       total: uniqueRestaurants.size,
+      cityCount: uniqueCities.size,
+      countries: Array.from(uniqueCountries),
     });
   } catch (error) {
     console.error('Error fetching user visits for map:', error);
