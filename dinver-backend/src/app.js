@@ -17,6 +17,7 @@ const notificationRoutes = require('./routes/appRoutes/notificationRoutes');
 
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
+const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
 const cron = require('node-cron');
@@ -107,6 +108,7 @@ redisClient.on('ready', () => console.log('[Redis Session] Ready'));
 // Trust proxy for rate limiting behind reverse proxy (nginx, Railway, etc.)
 app.set('trust proxy', 1);
 
+app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
