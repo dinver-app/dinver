@@ -34,6 +34,8 @@ import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 import SupportTickets from "./pages/SupportTickets";
 import SupportTicketDetails from "./pages/SupportTicketDetails";
 import GoogleApiLogs from "./pages/GoogleApiLogs";
+import { BlogGenerationPage } from "./pages/BlogGeneration";
+import BlogTopicPreviewPage from "./pages/BlogGeneration/BlogTopicPreviewPage";
 
 function App() {
   return (
@@ -60,6 +62,8 @@ function App() {
             <Route path="/claim" element={<Claim />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog-generation" element={<BlogGenerationPage />} />
+            <Route path="/blog-generation/topic/:id" element={<BlogTopicPreviewPage />} />
             <Route path="/coupons" element={<Coupons />} />
             <Route path="/referrals" element={<Referrals />} />
             <Route path="/qr-print-requests" element={<QRPrintRequests />} />

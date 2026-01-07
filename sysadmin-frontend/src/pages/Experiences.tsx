@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   PhotoIcon,
@@ -19,7 +18,6 @@ import experienceService, { Experience } from "../services/experienceService";
 import toast from "react-hot-toast";
 
 const Experiences: React.FC = () => {
-  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);

@@ -78,3 +78,46 @@ export const toggleBlogUserActive = async (id: string) => {
   );
   return response.data;
 };
+
+// Blog Statistics
+export interface BlogStats {
+  total: number;
+  published: number;
+  draft: number;
+  totalViews: number;
+  totalLikes: number;
+  totalDislikes: number;
+  avgViewsPerBlog: number;
+  engagementRate: number;
+}
+
+export interface BlogStatsDetail {
+  id: string;
+  title: string;
+  slug: string;
+  viewCount: number;
+  likesCount: number;
+  dislikesCount: number;
+  likeRatio: number;
+  engagementRate: number;
+  publishedAt: string;
+  language: string;
+  category: string | null;
+  author: string;
+}
+
+export const getBlogStats = async (): Promise<BlogStats> => {
+  const response = await apiClient.get("api/sysadmin/blogs/stats");
+  return response.data;
+};
+
+export const getBlogStatsDetailed = async (
+  sortBy: string = "viewCount",
+  sortOrder: string = "DESC",
+  limit: number = 20
+): Promise<{ blogs: BlogStatsDetail[] }> => {
+  const response = await apiClient.get("api/sysadmin/blogs/stats/detailed", {
+    params: { sortBy, sortOrder, limit },
+  });
+  return response.data;
+};

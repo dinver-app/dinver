@@ -25,6 +25,14 @@ router.get(
   blogController.getBlogStats,
 );
 
+// Get detailed blog statistics (per-blog breakdown)
+router.get(
+  '/blogs/stats/detailed',
+  sysadminAuthenticateToken,
+  checkSysadmin,
+  blogController.getBlogStatsDetailed,
+);
+
 // Get single blog
 router.get(
   '/blogs/:id',
