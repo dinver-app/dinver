@@ -1,6 +1,6 @@
 'use strict';
 
-const { BlogTopic, Blog, BlogUser, BlogGenerationLog } = require('../../../models');
+const { BlogTopic, Blog, BlogUser, BlogGenerationLog, BlogTranslation } = require('../../../models');
 const {
   ResearchAgent,
   OutlineAgent,
@@ -32,20 +32,43 @@ class PipelineManager {
   /**
    * Process a blog topic through the entire pipeline
    * @param {string} blogTopicId - Blog topic ID
+   * @param {Object} options - Processing options
+   * @param {boolean} options.resume - Resume from checkpoint (default: true)
+   * @param {boolean} options.fullReset - Ignore checkpoints and start from scratch
    * @returns {Promise<Object>} - Final context with all generated content
    */
-  async processTopic(blogTopicId) {
+  async processTopic(blogTopicId, options = { resume: true, fullReset: false }) {
     const topic = await BlogTopic.findByPk(blogTopicId);
     if (!topic) {
       throw new Error(`BlogTopic not found: ${blogTopicId}`);
     }
 
     console.log(`[PipelineManager] Starting pipeline for: ${topic.title}`);
+    if (options.fullReset) {
+      console.log(`[PipelineManager] Full reset - clearing all checkpoints`);
+    } else if (options.resume && topic.completedStages?.length > 0) {
+      console.log(`[PipelineManager] Resuming from checkpoint - ${topic.completedStages.length} stages already completed`);
+    }
 
     // Initialize context with topic data
     let context = {
       topic: topic.toJSON(),
     };
+
+    // Load checkpoint data if resuming and not doing full reset
+    if (options.resume && !options.fullReset && topic.checkpointData) {
+      context = { ...context, ...topic.checkpointData };
+      console.log(`[PipelineManager] Loaded checkpoint data for stages: ${Object.keys(topic.checkpointData).join(', ')}`);
+    }
+
+    // Clear checkpoints if full reset
+    if (options.fullReset) {
+      await topic.update({
+        checkpointData: {},
+        completedStages: [],
+        lastCheckpointAt: null,
+      });
+    }
 
     try {
       // Update status to processing
@@ -201,19 +224,73 @@ class PipelineManager {
       throw new Error(`Unknown stage: ${stageName}`);
     }
 
+    // Check if stage is already completed (from checkpoint)
+    const completedStages = topic.completedStages || [];
+    if (completedStages.includes(stageName) && context[stageName]) {
+      console.log(`[PipelineManager] ✓ Skipping stage ${stageName} - already completed from checkpoint`);
+      return context;
+    }
+
     console.log(`[PipelineManager] Running stage: ${stageName}`);
     await topic.update({ status: stage.status, currentStage: stageName });
 
     const result = await executor();
     context[stageName] = result;
 
+    // Save checkpoint after successful stage completion
+    await this.saveCheckpoint(topic, stageName, result);
+
     return context;
   }
 
   /**
-   * Create draft blog posts from generated content
+   * Save checkpoint after successful stage completion
+   */
+  async saveCheckpoint(topic, stageName, stageResult) {
+    const currentCheckpoint = topic.checkpointData || {};
+    const currentCompleted = topic.completedStages || [];
+
+    await topic.update({
+      checkpointData: {
+        ...currentCheckpoint,
+        [stageName]: stageResult,
+      },
+      completedStages: currentCompleted.includes(stageName)
+        ? currentCompleted
+        : [...currentCompleted, stageName],
+      lastCheckpointAt: new Date(),
+    });
+
+    console.log(`[PipelineManager] ✓ Checkpoint saved for stage: ${stageName}`);
+  }
+
+  /**
+   * Truncate string to max length
+   */
+  truncateString(str, maxLength) {
+    if (!str || str.length <= maxLength) return str;
+    return str.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
+   * Create draft blog with translations from generated content
+   * NEW: Creates ONE Blog with multiple BlogTranslation records
    */
   async createDraftBlogs(topic, context) {
+    // Check if blog already exists for this topic (from previous retry attempts)
+    const existingBlog = await Blog.findOne({ where: { blogTopicId: topic.id } });
+    if (existingBlog) {
+      console.log(`[PipelineManager] Blog already exists for topic, skipping creation`);
+      console.log(`[PipelineManager] Blog ID: ${existingBlog.id}`);
+      return;
+    }
+
+    // Also check legacy fields for backward compatibility
+    if (topic.blogIdHr || topic.blogIdEn) {
+      console.log(`[PipelineManager] Legacy blogs already exist for topic, skipping creation`);
+      return;
+    }
+
     // Get or create "Dinver" author
     const [dinverAuthor] = await BlogUser.findOrCreate({
       where: { name: 'Dinver' },
@@ -225,52 +302,69 @@ class PipelineManager {
     const seoHr = context.seo?.hr || {};
     const seoEn = context.seo?.en || {};
 
-    // Create Croatian blog
-    const blogHr = await Blog.create({
+    // Create ONE Blog record (shared data across all translations)
+    const blog = await Blog.create({
+      authorId: dinverAuthor.id,
+      featuredImage: context.image?.s3Key || null,
+      status: 'draft',
+      category: seoHr.category || seoEn.category || topic.topicType,
+      blogTopicId: topic.id,
+      // Legacy fields - set to HR version for backward compatibility
       title: editedHr.title || context.draft_hr?.title || topic.title,
       slug: this.generateSlug(editedHr.title || context.draft_hr?.slug || topic.title),
       content: editedHr.content || context.draft_hr?.content,
       excerpt: editedHr.excerpt || context.draft_hr?.excerpt,
-      featuredImage: context.image?.s3Key || null,
-      status: 'draft',
-      authorId: dinverAuthor.id,
-      metaTitle: seoHr.metaTitle || null,
-      metaDescription: seoHr.metaDescription || null,
+      language: 'hr-HR',
+    });
+
+    console.log(`[PipelineManager] Created Blog: ${blog.id}`);
+
+    // Create HR translation
+    const metaTitleHr = this.truncateString(seoHr.metaTitle, 60);
+    const metaDescHr = this.truncateString(seoHr.metaDescription, 160);
+
+    await BlogTranslation.create({
+      blogId: blog.id,
+      language: 'hr-HR',
+      title: editedHr.title || context.draft_hr?.title || topic.title,
+      slug: this.generateSlug(editedHr.title || context.draft_hr?.slug || topic.title, 'hr'),
+      content: editedHr.content || context.draft_hr?.content,
+      excerpt: editedHr.excerpt || context.draft_hr?.excerpt,
+      metaTitle: metaTitleHr || null,
+      metaDescription: metaDescHr || null,
       keywords: seoHr.keywords || [],
       tags: seoHr.tags || [],
-      category: seoHr.category || topic.topicType,
-      language: 'hr-HR',
       readingTimeMinutes: context.draft_hr?.readingTimeMinutes || 5,
     });
 
-    console.log(`[PipelineManager] Created HR blog: ${blogHr.id}`);
+    console.log(`[PipelineManager] Created HR translation for blog: ${blog.id}`);
 
-    let blogEn = null;
+    // Create EN translation if enabled
     if (topic.generateBothLanguages && context.draft_en) {
-      blogEn = await Blog.create({
+      const metaTitleEn = this.truncateString(seoEn.metaTitle, 60);
+      const metaDescEn = this.truncateString(seoEn.metaDescription, 160);
+
+      await BlogTranslation.create({
+        blogId: blog.id,
+        language: 'en-US',
         title: editedEn.title || context.draft_en?.title || topic.title,
         slug: this.generateSlug(editedEn.title || context.draft_en?.slug || topic.title, 'en'),
         content: editedEn.content || context.draft_en?.content,
         excerpt: editedEn.excerpt || context.draft_en?.excerpt,
-        featuredImage: context.image?.s3Key || null,
-        status: 'draft',
-        authorId: dinverAuthor.id,
-        metaTitle: seoEn.metaTitle || null,
-        metaDescription: seoEn.metaDescription || null,
+        metaTitle: metaTitleEn || null,
+        metaDescription: metaDescEn || null,
         keywords: seoEn.keywords || [],
         tags: seoEn.tags || [],
-        category: seoEn.category || topic.topicType,
-        language: 'en-US',
         readingTimeMinutes: context.draft_en?.readingTimeMinutes || 5,
       });
 
-      console.log(`[PipelineManager] Created EN blog: ${blogEn.id}`);
+      console.log(`[PipelineManager] Created EN translation for blog: ${blog.id}`);
     }
 
-    // Update topic with blog references
+    // Legacy: Also update old FK fields for backward compatibility
     await topic.update({
-      blogIdHr: blogHr.id,
-      blogIdEn: blogEn?.id || null,
+      blogIdHr: blog.id,
+      blogIdEn: topic.generateBothLanguages ? blog.id : null,
     });
   }
 

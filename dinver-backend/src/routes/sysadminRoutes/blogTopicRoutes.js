@@ -16,6 +16,9 @@ router.use(checkSysadmin);
 router.get('/stats', blogTopicController.getStats);
 router.get('/token-usage', blogTopicController.getTokenUsage);
 
+// AI topic generation
+router.post('/generate-from-prompt', blogTopicController.generateTopicFromPrompt);
+
 // CRUD operations
 router.get('/', blogTopicController.getTopics);
 router.get('/:id', blogTopicController.getTopic);
@@ -25,7 +28,8 @@ router.delete('/:id', blogTopicController.deleteTopic);
 
 // Pipeline control
 router.post('/:id/process', blogTopicController.processTopic);
-router.post('/:id/retry', blogTopicController.retryTopic);
+router.post('/:id/retry', blogTopicController.retryTopic); // Resume from checkpoint
+router.post('/:id/full-reset', blogTopicController.fullResetTopic); // Clear all checkpoints and restart
 
 // Approval workflow
 router.post('/:id/approve', blogTopicController.approveTopic);

@@ -1,52 +1,77 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   getBlogStats,
-  getBlogStatsDetailed,
   BlogStats,
-  BlogStatsDetail,
+  deleteBlog,
 } from "../../services/blogService";
+import { getTopics, BlogTopic } from "../../services/blogTopicService";
 import {
-  Eye,
-  ThumbsUp,
-  ThumbsDown,
-  FileText,
-  BarChart3,
-  TrendingUp,
-  ExternalLink,
-} from "lucide-react";
+  EyeIcon,
+  HandThumbUpIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  ArrowTrendingUpIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 
 const StatsTab = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<BlogStats | null>(null);
-  const [detailedStats, setDetailedStats] = useState<BlogStatsDetail[]>([]);
+  const [topics, setTopics] = useState<BlogTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sortBy, setSortBy] = useState("viewCount");
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [statsData, topicsData] = await Promise.all([
+        getBlogStats(),
+        getTopics({ limit: 100 }),
+      ]);
+      setStats(statsData);
+      // Filter topics that have at least one blog
+      const topicsWithBlogs = topicsData.topics.filter(
+        (t) => t.blogHr || t.blogEn
+      );
+      setTopics(topicsWithBlogs);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true);
-        const [statsData, detailedData] = await Promise.all([
-          getBlogStats(),
-          getBlogStatsDetailed(sortBy, "DESC", 20),
-        ]);
-        setStats(statsData);
-        setDetailedStats(detailedData.blogs);
-      } catch (error) {
-        console.error("Failed to fetch stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    fetchData();
+  }, []);
 
-    fetchStats();
-  }, [sortBy]);
+  const handleDeleteBlog = async (
+    e: React.MouseEvent,
+    blogId: string
+  ) => {
+    e.stopPropagation();
+    if (!window.confirm("Sigurno želiš obrisati ovaj blog?")) return;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("hr-HR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    setIsDeleting(blogId);
+    try {
+      await deleteBlog(blogId);
+      toast.success("Blog obrisan");
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete blog:", error);
+      toast.error("Greška pri brisanju bloga");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // Helper to truncate text
+  const truncateText = (text: string | undefined, maxLength: number) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   if (isLoading) {
@@ -66,143 +91,95 @@ const StatsTab = () => {
             title="Ukupno blogova"
             value={stats.total}
             subtext={`${stats.published} objavljeno, ${stats.draft} skica`}
-            icon={<FileText className="w-5 h-5" />}
+            icon={<DocumentTextIcon className="w-5 h-5" />}
           />
           <StatCard
             title="Ukupno pregleda"
             value={stats.totalViews.toLocaleString()}
             subtext={`Prosjek: ${stats.avgViewsPerBlog}/blog`}
-            icon={<Eye className="w-5 h-5" />}
+            icon={<EyeIcon className="w-5 h-5" />}
           />
           <StatCard
             title="Ukupno reakcija"
             value={(stats.totalLikes + stats.totalDislikes).toLocaleString()}
             subtext={`${stats.totalLikes} 👍 / ${stats.totalDislikes} 👎`}
-            icon={<ThumbsUp className="w-5 h-5" />}
+            icon={<HandThumbUpIcon className="w-5 h-5" />}
           />
           <StatCard
             title="Engagement Rate"
             value={`${stats.engagementRate}%`}
             subtext="Reakcije / Pregledi"
-            icon={<TrendingUp className="w-5 h-5" />}
+            icon={<ArrowTrendingUpIcon className="w-5 h-5" />}
           />
         </div>
       )}
 
-      {/* Detailed Blog Stats Table */}
+      {/* Blogs List */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
-            Statistike po blogu
+            <ChartBarIcon className="w-5 h-5" />
+            Svi blogovi
           </h3>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-          >
-            <option value="viewCount">Najviše pregleda</option>
-            <option value="likesCount">Najviše lajkova</option>
-            <option value="dislikesCount">Najviše dislajkova</option>
-            <option value="publishedAt">Najnoviji</option>
-          </select>
         </div>
 
-        {detailedStats.length === 0 ? (
+        {topics.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            Nema objavljenih blogova za prikaz statistike.
+            Nema generiranih blogova.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Blog
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pregledi
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    👍
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    👎
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Like Ratio
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Engagement
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Objavljeno
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Link
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {detailedStats.map((blog) => (
-                  <tr key={blog.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4">
-                      <div className="max-w-xs">
-                        <p className="font-medium text-gray-900 truncate">
-                          {blog.title}
+          <div className="divide-y divide-gray-200">
+            {topics.map((topic) => {
+              const blogId = topic.blogHr?.id || topic.blogEn?.id;
+              const hrTitle = topic.blogHr?.title || topic.title;
+              const excerpt = topic.blogHr?.excerpt || topic.blogEn?.excerpt || topic.description;
+
+              return (
+                <div
+                  key={topic.id}
+                  onClick={() => navigate(`/blog-generation/topic/${topic.id}`)}
+                  className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900">
+                        {hrTitle}
+                      </h4>
+                      {excerpt && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {truncateText(excerpt, 100)}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {blog.author} •{" "}
-                          {blog.language === "hr-HR" ? "HR" : "EN"}
-                          {blog.category && ` • ${blog.category}`}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="inline-flex items-center gap-1.5 text-gray-700">
-                        <Eye className="w-4 h-4 text-gray-400" />
-                        {blog.viewCount.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center text-green-600 font-medium">
-                      {blog.likesCount}
-                    </td>
-                    <td className="px-4 py-4 text-center text-red-500 font-medium">
-                      {blog.dislikesCount}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <LikeRatioBar ratio={blog.likeRatio} />
-                    </td>
-                    <td className="px-4 py-4 text-center">
+                      )}
+                    </div>
+
+                    {/* Delete button */}
+                    <div className="ml-4 flex items-center gap-3">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
-                          blog.engagementRate >= 5
+                          topic.status === "published"
                             ? "bg-green-100 text-green-700"
-                            : blog.engagementRate >= 2
+                            : topic.status === "review_ready"
                             ? "bg-yellow-100 text-yellow-700"
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {blog.engagementRate}%
+                        {topic.status}
                       </span>
-                    </td>
-                    <td className="px-4 py-4 text-center text-sm text-gray-500">
-                      {formatDate(blog.publishedAt)}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <a
-                        href={`https://dinver.app/blog/${blog.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-black transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      {blogId && (
+                        <button
+                          onClick={(e) => handleDeleteBlog(e, blogId)}
+                          disabled={isDeleting === blogId}
+                          className="text-red-400 hover:text-red-600 disabled:opacity-50 p-1"
+                          title="Obriši blog"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -227,33 +204,5 @@ const StatCard = ({ title, value, subtext, icon }: StatCardProps) => (
     <p className="text-xs text-gray-500 mt-1">{subtext}</p>
   </div>
 );
-
-interface LikeRatioBarProps {
-  ratio: number;
-}
-
-const LikeRatioBar = ({ ratio }: LikeRatioBarProps) => {
-  const hasReactions = ratio > 0;
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${
-            ratio >= 70
-              ? "bg-green-500"
-              : ratio >= 50
-              ? "bg-yellow-500"
-              : "bg-red-500"
-          }`}
-          style={{ width: hasReactions ? `${ratio}%` : "0%" }}
-        />
-      </div>
-      <span className="text-xs text-gray-500 w-10">
-        {hasReactions ? `${ratio}%` : "-"}
-      </span>
-    </div>
-  );
-};
 
 export default StatsTab;

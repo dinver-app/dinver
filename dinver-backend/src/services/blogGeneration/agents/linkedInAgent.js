@@ -10,6 +10,7 @@ class LinkedInAgent extends BaseAgent {
     const isHr = language === 'hr-HR';
     super(`LinkedInAgent_${language}`, {
       stage: isHr ? 'linkedin_hr' : 'linkedin_en',
+      model: 'claude-3-5-haiku-20241022', // Cheaper model for LinkedIn posts
       maxTokens: 1024,
       temperature: 0.6,
     });
@@ -58,6 +59,14 @@ Return a JSON object:
   "callToAction": "Link to read the full article on Dinver blog",
   "targetAudience": "Who this post targets"
 }
+
+**CRITICAL JSON RULES:**
+- Use ONLY double quotes (") for JSON strings
+- For line breaks in the "post" field, use \\n (escaped newline), NOT actual newlines
+- Example: "post": "First paragraph\\n\\nSecond paragraph"
+- NO unescaped newlines inside JSON strings
+- Ensure all braces and brackets are properly closed
+- Valid JSON format only, no extra text outside the JSON object
 
 **Important:**
 - Focus on value for the reader

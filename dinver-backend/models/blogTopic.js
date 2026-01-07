@@ -4,7 +4,13 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class BlogTopic extends Model {
     static associate(models) {
-      // Generated blogs
+      // Generated blog (one blog with multiple translations)
+      BlogTopic.hasOne(models.Blog, {
+        foreignKey: 'blogTopicId',
+        as: 'blog',
+      });
+
+      // LEGACY: Keep old associations for backward compatibility during migration
       BlogTopic.belongsTo(models.Blog, {
         foreignKey: 'blogIdHr',
         as: 'blogHr',
@@ -180,6 +186,24 @@ module.exports = (sequelize, DataTypes) => {
       approvedAt: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      // Checkpoint data - stores results from completed stages
+      checkpointData: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+        comment: 'Stores results from each completed stage: research, outline, drafts, etc.',
+      },
+      completedStages: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+        defaultValue: [],
+        comment: 'List of successfully completed stages',
+      },
+      lastCheckpointAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'When was the last checkpoint saved',
       },
     },
     {

@@ -12,6 +12,7 @@ class ImageAgent extends BaseAgent {
   constructor() {
     super('ImageAgent', {
       stage: 'image',
+      model: 'claude-3-5-haiku-20241022', // Cheaper model for prompt generation
       maxTokens: 1024,
       temperature: 0.6,
     });
@@ -101,15 +102,35 @@ class ImageAgent extends BaseAgent {
     });
 
     const textContent = response.content.find((block) => block.type === 'text');
+    if (!textContent) {
+      throw new Error('No text content in Claude response');
+    }
+
     let content = textContent.text.trim();
 
+    // Remove markdown code blocks if present
     if (content.startsWith('```json')) {
       content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (content.startsWith('```')) {
       content = content.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    return JSON.parse(content);
+    // Try to parse JSON
+    try {
+      return JSON.parse(content);
+    } catch (parseError) {
+      console.error(`[${this.name}] JSON parse error:`, parseError.message);
+      console.error(`[${this.name}] Content that failed to parse:`, content.substring(0, 500));
+
+      // Try to extract JSON object using inherited method
+      const jsonMatch = this.extractJsonObject(content);
+      if (jsonMatch) {
+        console.log(`[${this.name}] Extracted JSON successfully using fallback method`);
+        return JSON.parse(jsonMatch);
+      }
+
+      throw new Error(`Invalid JSON response: ${parseError.message}`);
+    }
   }
 
   /**
@@ -179,6 +200,12 @@ Return a JSON object:
   },
   "imageDescription": "Brief description of what the image will show"
 }
+
+**CRITICAL JSON RULES:**
+- Use ONLY double quotes (") for JSON strings
+- NO unescaped newlines inside strings
+- Ensure all braces and brackets are properly closed
+- Valid JSON format only, no extra text outside the JSON object
 
 **Important:**
 - Keep prompt focused and specific

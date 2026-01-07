@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import ConfirmModal from "../../components/ConfirmModal";
 import TopicForm from "./components/TopicForm";
@@ -13,6 +14,7 @@ import {
   updateTopic,
   processTopic,
   retryTopic,
+  fullResetTopic,
   approveTopic,
   rejectTopic,
   STATUS_COLORS,
@@ -20,6 +22,7 @@ import {
 } from "../../services/blogTopicService";
 
 const TopicsTab = () => {
+  const navigate = useNavigate();
   const [topics, setTopics] = useState<BlogTopic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -74,6 +77,10 @@ const TopicsTab = () => {
     setShowLinkedIn(true);
   };
 
+  const handleViewPreview = (topic: BlogTopic) => {
+    navigate(`/blog-generation/topic/${topic.id}`);
+  };
+
   const confirmDelete = async () => {
     if (!topicToDelete) return;
     try {
@@ -121,11 +128,26 @@ const TopicsTab = () => {
   const handleRetry = async (topic: BlogTopic) => {
     try {
       await retryTopic(topic.id);
-      toast.success("Ponovni pokušaj pokrenut");
+      toast.success("Nastavak od checkpointa pokrenut");
       fetchTopics();
     } catch (error: unknown) {
       console.error("Failed to retry topic:", error);
-      const errorMessage = error instanceof Error ? error.message : "Greška pri ponovnom pokušaju";
+      const errorMessage = error instanceof Error ? error.message : "Greška pri nastavku";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleFullReset = async (topic: BlogTopic) => {
+    if (!window.confirm("Sigurno želiš obrisati sve checkpointe i krenuti od početka? Sve dosad generirano će se izgubiti.")) {
+      return;
+    }
+    try {
+      await fullResetTopic(topic.id);
+      toast.success("Full reset pokrenut - sve checkpointe obrisano");
+      fetchTopics();
+    } catch (error: unknown) {
+      console.error("Failed to full reset topic:", error);
+      const errorMessage = error instanceof Error ? error.message : "Greška pri full resetu";
       toast.error(errorMessage);
     }
   };
@@ -237,26 +259,17 @@ const TopicsTab = () => {
                     </div>
                   )}
 
+                  {/* Checkpoint info - only show if not published */}
+                  {topic.status !== "published" && topic.completedStages && topic.completedStages.length > 0 && (
+                    <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      ✓ Checkpoint: {topic.completedStages.length} faza spremljeno ({topic.completedStages.join(', ')})
+                    </div>
+                  )}
+
                   {/* Error display */}
                   {topic.status === "failed" && topic.lastError && (
                     <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
                       Greška: {topic.lastError}
-                    </div>
-                  )}
-
-                  {/* Generated blogs info */}
-                  {(topic.blogHr || topic.blogEn) && (
-                    <div className="mt-2 flex gap-2">
-                      {topic.blogHr && (
-                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                          HR: {topic.blogHr.title} ({topic.blogHr.status})
-                        </span>
-                      )}
-                      {topic.blogEn && (
-                        <span className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
-                          EN: {topic.blogEn.title} ({topic.blogEn.status})
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -281,11 +294,31 @@ const TopicsTab = () => {
                   )}
 
                   {topic.status === "failed" && (
+                    <>
+                      <button
+                        onClick={() => handleRetry(topic)}
+                        className="text-white bg-orange-600 hover:bg-orange-700 rounded px-3 py-1 text-xs transition-colors"
+                        title="Nastavi od checkpointa - koristi sve dosad generirane rezultate"
+                      >
+                        Nastavi
+                      </button>
+                      <button
+                        onClick={() => handleFullReset(topic)}
+                        className="text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1 text-xs transition-colors"
+                        title="Obriši sve checkpointe i kreni ispočetka"
+                      >
+                        Full Reset
+                      </button>
+                    </>
+                  )}
+
+                  {/* Preview button - visible for all topics that have a blog */}
+                  {(topic.blogHr || topic.blogEn) && (
                     <button
-                      onClick={() => handleRetry(topic)}
-                      className="text-white bg-orange-600 hover:bg-orange-700 rounded px-3 py-1 text-xs transition-colors"
+                      onClick={() => handleViewPreview(topic)}
+                      className="text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 text-xs transition-colors"
                     >
-                      Ponovi
+                      Preview
                     </button>
                   )}
 

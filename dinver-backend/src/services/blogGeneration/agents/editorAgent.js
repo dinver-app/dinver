@@ -9,7 +9,8 @@ class EditorAgent extends BaseAgent {
   constructor() {
     super('EditorAgent', {
       stage: 'edit',
-      maxTokens: 8192,
+      model: 'claude-sonnet-4-5-20250929', // Use latest Sonnet for quality editing
+      maxTokens: 16384, // Same as WriterAgent to handle full content
       temperature: 0.4, // More conservative for editing
     });
   }

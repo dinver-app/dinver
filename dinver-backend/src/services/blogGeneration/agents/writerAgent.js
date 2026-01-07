@@ -11,7 +11,7 @@ class WriterAgent extends BaseAgent {
     const isHr = language === 'hr-HR';
     super(`WriterAgent_${language}`, {
       stage: isHr ? 'draft_hr' : 'draft_en',
-      maxTokens: 8192, // Larger for full article
+      maxTokens: 16384, // Large for full ~1500 word article with JSON wrapper
       temperature: 0.7, // Creative but coherent
     });
     this.language = language;
@@ -63,6 +63,13 @@ Return a JSON object:
   "excerpt": "150-200 character summary for preview",
   "readingTimeMinutes": 5
 }
+
+**CRITICAL JSON RULES:**
+- Use ONLY double quotes (") for JSON strings
+- Inside "content" field, use single quotes (') for HTML attributes
+- If you must use quotes inside text, escape them: \"
+- NO unescaped line breaks inside JSON strings
+- Ensure all braces and brackets are properly closed
 
 **HTML Guidelines:**
 - Use <h2> for main sections

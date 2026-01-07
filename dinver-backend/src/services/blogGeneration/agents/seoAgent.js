@@ -9,6 +9,7 @@ class SEOAgent extends BaseAgent {
   constructor() {
     super('SEOAgent', {
       stage: 'seo',
+      model: 'claude-3-5-haiku-20241022', // Cheaper model for SEO metadata
       maxTokens: 2048,
       temperature: 0.3, // Very focused, less creative
     });
@@ -71,8 +72,14 @@ Return a JSON object:
   }
 }
 
+**CRITICAL CHARACTER LIMITS:**
+- metaTitle: MUST be 60 characters or less (strict limit!)
+- metaDescription: MUST be 160 characters or less (strict limit!)
+- If title is too long, abbreviate or rephrase to fit
+- Count characters carefully, including spaces
+
 **Important:**
-- Respect character limits strictly
+- Respect character limits strictly - they will cause validation errors if exceeded
 - Optimize for Google Search
 - Consider mobile search patterns
 - Include location-based keywords where relevant (Croatia, Zagreb, etc.)`;

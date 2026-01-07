@@ -1,4 +1,4 @@
-const { Blog, BlogUser, BlogReaction, sequelize } = require('../../models');
+const { Blog, BlogUser, BlogReaction, BlogTranslation, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const slugify = require('slugify');
@@ -65,6 +65,10 @@ const getBlogs = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+        },
       ],
       order: [[sortBy, sortOrder]],
       limit: parseInt(limit),
@@ -103,7 +107,8 @@ const getBlog = async (req, res) => {
       where.slug = identifier;
     }
 
-    const blog = await Blog.findOne({
+    // First try to find by Blog.id or Blog.slug
+    let blog = await Blog.findOne({
       where,
       include: [
         {
@@ -111,8 +116,28 @@ const getBlog = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+        },
       ],
     });
+
+    // If not found by Blog slug, try to find by translation slug
+    if (!blog && !where.id) {
+      const translation = await BlogTranslation.findOne({
+        where: { slug: where.slug },
+        include: [{
+          model: Blog,
+          as: 'blog',
+          include: [
+            { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+            { model: BlogTranslation, as: 'translations' },
+          ],
+        }],
+      });
+      blog = translation?.blog;
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
@@ -468,14 +493,12 @@ const getPublicBlogs = async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * limit;
-    const where = {
-      status: 'published', // Only return published blogs
-      language,
-    };
 
-    // Apply filters
+    // Find blogs with translations in the requested language
+    const where = {
+      status: 'published',
+    };
     if (category) where.category = category;
-    if (tag) where.tags = { [Op.contains]: [tag] };
 
     const { count, rows: blogs } = await Blog.findAndCountAll({
       where,
@@ -485,47 +508,42 @@ const getPublicBlogs = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+          where: { language },
+          required: true, // Inner join - only blogs with this translation
+        },
       ],
-      order: [['publishedAt', 'DESC']], // Most recent first
+      order: [['publishedAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      attributes: [
-        'id',
-        'title',
-        'slug',
-        'excerpt',
-        'content',
-        'featuredImage',
-        'category',
-        'tags',
-        'publishedAt',
-        'readingTimeMinutes',
-        'viewCount',
-        'likesCount',
-        'dislikesCount',
-      ],
     });
 
-    // Format the response
-    const formattedBlogs = blogs.map((blog) => ({
-      id: blog.id,
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt,
-      content: blog.content,
-      featuredImage: blog.featuredImage,
-      category: blog.category,
-      tags: blog.tags,
-      publishedAt: blog.publishedAt,
-      readingTimeMinutes: blog.readingTimeMinutes,
-      viewCount: blog.viewCount,
-      likesCount: blog.likesCount,
-      dislikesCount: blog.dislikesCount,
-      author: {
-        name: blog.author?.name || 'Unknown',
-        profileImage: blog.author?.profileImage,
-      },
-    }));
+    // Format the response using translation data
+    const formattedBlogs = blogs.map((blog) => {
+      const translation = blog.translations[0]; // We filtered by language, so there's one
+      return {
+        id: blog.id,
+        title: translation?.title || blog.title,
+        slug: translation?.slug || blog.slug,
+        excerpt: translation?.excerpt || blog.excerpt,
+        content: translation?.content || blog.content,
+        featuredImage: blog.featuredImage,
+        category: blog.category,
+        tags: translation?.tags || blog.tags || [],
+        publishedAt: blog.publishedAt,
+        readingTimeMinutes: translation?.readingTimeMinutes || blog.readingTimeMinutes,
+        viewCount: blog.viewCount,
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        language: translation?.language || language,
+        author: {
+          name: blog.author?.name || 'Unknown',
+          profileImage: blog.author?.profileImage,
+        },
+      };
+    });
 
     res.json({
       blogs: formattedBlogs,
@@ -542,43 +560,41 @@ const getPublicBlogs = async (req, res) => {
   }
 };
 
-// Get single public blog
+// Get single public blog by slug (checks both Blog.slug and BlogTranslation.slug)
 const getPublicBlog = async (req, res) => {
   try {
     const slug = req.params.slug;
     const sessionId = req.headers['x-session-id'] || null;
 
-    const blog = await Blog.findOne({
-      where: {
-        slug,
-        status: 'published',
-      },
-      include: [
-        {
-          model: BlogUser,
-          as: 'author',
-          attributes: ['id', 'name', 'profileImage'],
-        },
-      ],
-      attributes: [
-        'id',
-        'title',
-        'slug',
-        'excerpt',
-        'content',
-        'featuredImage',
-        'category',
-        'tags',
-        'publishedAt',
-        'readingTimeMinutes',
-        'viewCount',
-        'likesCount',
-        'dislikesCount',
-        'metaTitle',
-        'metaDescription',
-        'keywords',
-      ],
+    // First try to find by translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{
+        model: Blog,
+        as: 'blog',
+        where: { status: 'published' },
+        include: [
+          { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+          { model: BlogTranslation, as: 'translations' },
+        ],
+      }],
     });
+
+    let blog = translation?.blog;
+    let activeTranslation = translation;
+
+    // If not found, try legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+        include: [
+          { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+          { model: BlogTranslation, as: 'translations' },
+        ],
+      });
+      // Use first available translation or legacy fields
+      activeTranslation = blog?.translations?.[0];
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
@@ -593,25 +609,31 @@ const getPublicBlog = async (req, res) => {
       userReaction = reaction ? reaction.reactionType : null;
     }
 
-    // Format the response
+    // Format the response using translation data
     const formattedBlog = {
       id: blog.id,
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt,
-      content: blog.content,
+      title: activeTranslation?.title || blog.title,
+      slug: activeTranslation?.slug || blog.slug,
+      excerpt: activeTranslation?.excerpt || blog.excerpt,
+      content: activeTranslation?.content || blog.content,
       featuredImage: blog.featuredImage,
       category: blog.category,
-      tags: blog.tags,
+      tags: activeTranslation?.tags || blog.tags || [],
       publishedAt: blog.publishedAt,
-      readingTimeMinutes: blog.readingTimeMinutes,
+      readingTimeMinutes: activeTranslation?.readingTimeMinutes || blog.readingTimeMinutes,
       viewCount: blog.viewCount,
       likesCount: blog.likesCount,
       dislikesCount: blog.dislikesCount,
       userReaction,
-      metaTitle: blog.metaTitle,
-      metaDescription: blog.metaDescription,
-      keywords: blog.keywords,
+      metaTitle: activeTranslation?.metaTitle || blog.metaTitle,
+      metaDescription: activeTranslation?.metaDescription || blog.metaDescription,
+      keywords: activeTranslation?.keywords || blog.keywords || [],
+      language: activeTranslation?.language || blog.language,
+      // Include all available translations for language switching
+      availableLanguages: blog.translations?.map(t => ({
+        language: t.language,
+        slug: t.slug,
+      })) || [],
       author: {
         name: blog.author?.name || 'Unknown',
         profileImage: blog.author?.profileImage,
@@ -630,12 +652,20 @@ const incrementBlogView = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const blog = await Blog.findOne({
-      where: {
-        slug,
-        status: 'published',
-      },
+    // First try translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{ model: Blog, as: 'blog', where: { status: 'published' } }],
     });
+
+    let blog = translation?.blog;
+
+    // Fallback to legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+      });
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
@@ -666,9 +696,20 @@ const reactToBlog = async (req, res) => {
       return res.status(400).json({ error: 'Invalid reaction type' });
     }
 
-    const blog = await Blog.findOne({
-      where: { slug, status: 'published' },
+    // First try translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{ model: Blog, as: 'blog', where: { status: 'published' } }],
     });
+
+    let blog = translation?.blog;
+
+    // Fallback to legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+      });
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });

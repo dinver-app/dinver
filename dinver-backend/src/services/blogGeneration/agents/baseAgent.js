@@ -115,8 +115,30 @@ class BaseAgent {
     try {
       output = JSON.parse(content);
     } catch (parseError) {
-      console.error(`[${this.name}] Failed to parse JSON response:`, content.substring(0, 500));
-      throw new Error(`Invalid JSON response from Claude: ${parseError.message}`);
+      // Try to extract JSON object from the response if there's extra text
+      console.log(`[${this.name}] Initial JSON parse failed, attempting extraction...`);
+
+      // Find the first { and match to its closing }
+      const jsonMatch = this.extractJsonObject(content);
+      if (jsonMatch) {
+        try {
+          output = JSON.parse(jsonMatch);
+          console.log(`[${this.name}] Successfully extracted JSON from response`);
+        } catch (extractError) {
+          // Log the problematic area for debugging
+          const errorPos = extractError.message.match(/position (\d+)/)?.[1];
+          if (errorPos) {
+            const pos = parseInt(errorPos);
+            const context = jsonMatch.substring(Math.max(0, pos - 100), Math.min(jsonMatch.length, pos + 100));
+            console.error(`[${this.name}] JSON error at position ${pos}:`, context);
+          }
+          console.error(`[${this.name}] Failed to parse extracted JSON:`, jsonMatch.substring(0, 500));
+          throw new Error(`Invalid JSON response from Claude: ${extractError.message}`);
+        }
+      } else {
+        console.error(`[${this.name}] Failed to parse JSON response:`, content.substring(0, 500));
+        throw new Error(`Invalid JSON response from Claude: ${parseError.message}`);
+      }
     }
 
     return {
@@ -142,6 +164,52 @@ class BaseAgent {
    */
   buildUserPrompt(input) {
     throw new Error('buildUserPrompt must be implemented by subclass');
+  }
+
+  /**
+   * Extract JSON object from text that may contain extra content
+   * @param {string} text - Text that may contain a JSON object
+   * @returns {string|null} - Extracted JSON string or null
+   */
+  extractJsonObject(text) {
+    const startIndex = text.indexOf('{');
+    if (startIndex === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = startIndex; i < text.length; i++) {
+      const char = text[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') {
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          if (depth === 0) {
+            return text.substring(startIndex, i + 1);
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   /**

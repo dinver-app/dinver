@@ -1,8 +1,89 @@
 'use strict';
 
-const { BlogTopic, BlogGenerationLog, Blog, sequelize } = require('../../models');
+const { BlogTopic, BlogGenerationLog, Blog, BlogTranslation, sequelize } = require('../../models');
 const { PipelineManager } = require('../services/blogGeneration');
+const TopicGeneratorAgent = require('../services/blogGeneration/agents/topicGeneratorAgent');
 const { Op } = require('sequelize');
+const { getMediaUrl } = require('../../config/cdn');
+
+/**
+ * Transform blog objects to include CDN URLs for images
+ */
+const transformBlogWithCDN = (blog) => {
+  if (!blog) return null;
+  const blogData = blog.toJSON ? blog.toJSON() : blog;
+  if (blogData.featuredImage) {
+    blogData.featuredImageUrl = getMediaUrl(blogData.featuredImage, 'image', 'fullscreen');
+  }
+  return blogData;
+};
+
+/**
+ * Transform topic with blog CDN URLs
+ * Supports both new (blog with translations) and legacy (blogHr/blogEn) structure
+ */
+const transformTopicWithCDN = (topic) => {
+  const topicData = topic.toJSON ? topic.toJSON() : topic;
+
+  // NEW: Transform blog with translations
+  if (topicData.blog) {
+    topicData.blog = transformBlogWithCDN(topicData.blog);
+
+    // Extract translations into easy-to-use format
+    if (topicData.blog.translations) {
+      const hrTranslation = topicData.blog.translations.find(t => t.language === 'hr-HR');
+      const enTranslation = topicData.blog.translations.find(t => t.language === 'en-US');
+
+      // Create virtual blogHr and blogEn for frontend compatibility
+      if (hrTranslation) {
+        topicData.blogHr = {
+          id: topicData.blog.id,
+          title: hrTranslation.title,
+          slug: hrTranslation.slug,
+          status: topicData.blog.status,
+          content: hrTranslation.content,
+          excerpt: hrTranslation.excerpt,
+          featuredImage: topicData.blog.featuredImage,
+          featuredImageUrl: topicData.blog.featuredImageUrl,
+          metaTitle: hrTranslation.metaTitle,
+          metaDescription: hrTranslation.metaDescription,
+          keywords: hrTranslation.keywords,
+          tags: hrTranslation.tags,
+          category: topicData.blog.category,
+          language: 'hr-HR',
+        };
+      }
+      if (enTranslation) {
+        topicData.blogEn = {
+          id: topicData.blog.id,
+          title: enTranslation.title,
+          slug: enTranslation.slug,
+          status: topicData.blog.status,
+          content: enTranslation.content,
+          excerpt: enTranslation.excerpt,
+          featuredImage: topicData.blog.featuredImage,
+          featuredImageUrl: topicData.blog.featuredImageUrl,
+          metaTitle: enTranslation.metaTitle,
+          metaDescription: enTranslation.metaDescription,
+          keywords: enTranslation.keywords,
+          tags: enTranslation.tags,
+          category: topicData.blog.category,
+          language: 'en-US',
+        };
+      }
+    }
+  }
+
+  // LEGACY: Keep old blogHr/blogEn support
+  if (topicData.blogHr && !topicData.blog) {
+    topicData.blogHr = transformBlogWithCDN(topicData.blogHr);
+  }
+  if (topicData.blogEn && !topicData.blog) {
+    topicData.blogEn = transformBlogWithCDN(topicData.blogEn);
+  }
+
+  return topicData;
+};
 
 /**
  * Get all blog topics with pagination and filters
@@ -40,13 +121,28 @@ const getTopics = async (req, res) => {
           attributes: ['id', 'userId'],
           include: [{ association: 'user', attributes: ['id', 'email', 'name'] }],
         },
-        { association: 'blogHr', attributes: ['id', 'title', 'slug', 'status'] },
-        { association: 'blogEn', attributes: ['id', 'title', 'slug', 'status'] },
+        // NEW: Include blog with translations
+        {
+          association: 'blog',
+          include: [{ model: BlogTranslation, as: 'translations' }],
+        },
+        // LEGACY: Keep old associations for backward compatibility
+        {
+          association: 'blogHr',
+          attributes: ['id', 'title', 'slug', 'status', 'content', 'excerpt', 'featuredImage', 'metaTitle', 'metaDescription', 'keywords', 'tags', 'category']
+        },
+        {
+          association: 'blogEn',
+          attributes: ['id', 'title', 'slug', 'status', 'content', 'excerpt', 'featuredImage', 'metaTitle', 'metaDescription', 'keywords', 'tags', 'category']
+        },
       ],
     });
 
+    // Transform topics to include CDN URLs
+    const transformedTopics = topics.map(transformTopicWithCDN);
+
     res.json({
-      topics,
+      topics: transformedTopics,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -79,6 +175,12 @@ const getTopic = async (req, res) => {
           attributes: ['id', 'userId'],
           include: [{ association: 'user', attributes: ['id', 'email', 'name'] }],
         },
+        // NEW: Include blog with translations
+        {
+          association: 'blog',
+          include: [{ model: BlogTranslation, as: 'translations' }],
+        },
+        // LEGACY: Keep old associations
         { association: 'blogHr' },
         { association: 'blogEn' },
         {
@@ -92,7 +194,10 @@ const getTopic = async (req, res) => {
       return res.status(404).json({ error: 'Blog topic not found' });
     }
 
-    res.json(topic);
+    // Transform topic to include CDN URLs
+    const transformedTopic = transformTopicWithCDN(topic);
+
+    res.json(transformedTopic);
   } catch (error) {
     console.error('[BlogTopicController] getTopic error:', error);
     res.status(500).json({ error: 'Failed to fetch blog topic' });
@@ -240,7 +345,7 @@ const processTopic = async (req, res) => {
 };
 
 /**
- * Retry a failed topic
+ * Retry a failed topic - RESUME FROM CHECKPOINT (default)
  */
 const retryTopic = async (req, res) => {
   try {
@@ -255,11 +360,9 @@ const retryTopic = async (req, res) => {
       return res.status(400).json({ error: 'Can only retry failed topics' });
     }
 
-    if (topic.retryCount >= topic.maxRetries) {
-      return res.status(400).json({ error: `Maximum retries (${topic.maxRetries}) exceeded` });
-    }
+    // No retry limit - allow unlimited manual retries
 
-    // Reset and start processing
+    // Reset and start processing WITH CHECKPOINT RESUME
     await topic.update({
       status: 'queued',
       lastError: null,
@@ -267,14 +370,54 @@ const retryTopic = async (req, res) => {
     });
 
     const pipelineManager = new PipelineManager();
-    pipelineManager.processTopic(topic.id).catch((err) => {
+    // Resume: true (default) - will use checkpoints
+    pipelineManager.processTopic(topic.id, { resume: true }).catch((err) => {
       console.error('[BlogTopicController] Retry processing failed:', err);
     });
 
-    res.json({ message: 'Retry started', topic });
+    res.json({ message: 'Retry started (resuming from checkpoint)', topic });
   } catch (error) {
     console.error('[BlogTopicController] retryTopic error:', error);
     res.status(500).json({ error: 'Failed to retry topic' });
+  }
+};
+
+/**
+ * Full reset - clear all checkpoints and restart from beginning
+ */
+const fullResetTopic = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const topic = await BlogTopic.findByPk(id);
+
+    if (!topic) {
+      return res.status(404).json({ error: 'Blog topic not found' });
+    }
+
+    if (topic.status !== 'failed') {
+      return res.status(400).json({ error: 'Can only reset failed topics' });
+    }
+
+    // Reset everything including checkpoints
+    await topic.update({
+      status: 'queued',
+      lastError: null,
+      currentStage: null,
+      checkpointData: {},
+      completedStages: [],
+      lastCheckpointAt: null,
+    });
+
+    const pipelineManager = new PipelineManager();
+    // fullReset: true - ignore all checkpoints
+    pipelineManager.processTopic(topic.id, { resume: false, fullReset: true }).catch((err) => {
+      console.error('[BlogTopicController] Full reset processing failed:', err);
+    });
+
+    res.json({ message: 'Full reset started (all checkpoints cleared)', topic });
+  } catch (error) {
+    console.error('[BlogTopicController] fullResetTopic error:', error);
+    res.status(500).json({ error: 'Failed to reset topic' });
   }
 };
 
@@ -394,6 +537,30 @@ const getStats = async (req, res) => {
 /**
  * Get token usage report
  */
+/**
+ * Generate topic details from a simple prompt using AI
+ */
+const generateTopicFromPrompt = async (req, res) => {
+  try {
+    const { prompt } = req.body;
+
+    if (!prompt || prompt.trim().length < 10) {
+      return res.status(400).json({ error: 'Please provide a more detailed prompt (at least 10 characters)' });
+    }
+
+    const agent = new TopicGeneratorAgent();
+    const generatedTopic = await agent.generate(prompt.trim());
+
+    res.json({
+      success: true,
+      topic: generatedTopic,
+    });
+  } catch (error) {
+    console.error('[BlogTopicController] generateTopicFromPrompt error:', error);
+    res.status(500).json({ error: 'Failed to generate topic from prompt' });
+  }
+};
+
 const getTokenUsage = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -448,9 +615,11 @@ module.exports = {
   deleteTopic,
   processTopic,
   retryTopic,
+  fullResetTopic,
   approveTopic,
   rejectTopic,
   getTopicLogs,
   getStats,
   getTokenUsage,
+  generateTopicFromPrompt,
 };

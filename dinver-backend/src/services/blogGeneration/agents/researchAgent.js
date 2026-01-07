@@ -9,6 +9,7 @@ class ResearchAgent extends BaseAgent {
   constructor() {
     super('ResearchAgent', {
       stage: 'research',
+      model: 'claude-3-5-haiku-20241022', // Cheaper model for research
       maxTokens: 4096,
       temperature: 0.5, // More factual, less creative
     });

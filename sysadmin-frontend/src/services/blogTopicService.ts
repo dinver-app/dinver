@@ -1,6 +1,62 @@
 import { apiClient } from "./authService";
 
 // Blog Topic interfaces
+// Blog translation interface (for multi-language support)
+export interface BlogTranslation {
+  id: string;
+  blogId: string;
+  language: "hr-HR" | "en-US";
+  title: string;
+  slug: string;
+  content?: string;
+  excerpt?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  tags?: string[];
+  readingTimeMinutes?: number;
+}
+
+// Blog interface (shared data across all translations)
+export interface Blog {
+  id: string;
+  authorId: string;
+  featuredImage?: string;
+  featuredImageUrl?: string;
+  status: string;
+  publishedAt?: string;
+  category?: string;
+  viewCount: number;
+  likesCount: number;
+  dislikesCount: number;
+  blogTopicId?: string;
+  translations?: BlogTranslation[];
+  // Legacy fields
+  title?: string;
+  slug?: string;
+  content?: string;
+  excerpt?: string;
+  language?: string;
+}
+
+// Blog version for UI (HR or EN version with all data flattened)
+export interface BlogVersion {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  content?: string;
+  excerpt?: string;
+  featuredImage?: string;
+  featuredImageUrl?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  tags?: string[];
+  category?: string;
+  language?: string;
+}
+
 export interface BlogTopic {
   id: string;
   title: string;
@@ -36,19 +92,16 @@ export interface BlogTopic {
     firstName?: string;
     lastName?: string;
   };
-  blogHr?: {
-    id: string;
-    title: string;
-    slug: string;
-    status: string;
-  };
-  blogEn?: {
-    id: string;
-    title: string;
-    slug: string;
-    status: string;
-  };
+  // NEW: Single blog with multiple translations
+  blog?: Blog;
+  // Generated from blog.translations for backward compatibility
+  blogHr?: BlogVersion;
+  blogEn?: BlogVersion;
+  readingTimeMinutes?: number;
   generationLogs?: BlogGenerationLog[];
+  checkpointData?: Record<string, unknown>;
+  completedStages?: string[];
+  lastCheckpointAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,6 +192,11 @@ export const retryTopic = async (id: string): Promise<{ message: string; topic: 
   return response.data;
 };
 
+export const fullResetTopic = async (id: string): Promise<{ message: string; topic: BlogTopic }> => {
+  const response = await apiClient.post(`/api/sysadmin/blog-topics/${id}/full-reset`);
+  return response.data;
+};
+
 export const approveTopic = async (id: string): Promise<{ message: string; topic: BlogTopic }> => {
   const response = await apiClient.post(`/api/sysadmin/blog-topics/${id}/approve`);
   return response.data;
@@ -163,6 +221,26 @@ export const getTokenUsage = async (startDate?: string, endDate?: string): Promi
   const response = await apiClient.get("/api/sysadmin/blog-topics/token-usage", {
     params: { startDate, endDate },
   });
+  return response.data;
+};
+
+// AI-generated topic interface
+export interface GeneratedTopicDetails {
+  title: string;
+  titleEn?: string;
+  topicType: string;
+  description: string;
+  targetKeywords: string[];
+  targetAudience: string;
+  primaryLanguage: "hr-HR" | "en-US";
+  generateBothLanguages: boolean;
+  priority: number;
+  suggestedAngle?: string;
+  estimatedValue?: string;
+}
+
+export const generateTopicFromPrompt = async (prompt: string): Promise<{ success: boolean; topic: GeneratedTopicDetails }> => {
+  const response = await apiClient.post("/api/sysadmin/blog-topics/generate-from-prompt", { prompt });
   return response.data;
 };
 

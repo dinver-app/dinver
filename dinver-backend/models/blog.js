@@ -12,6 +12,14 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'blogId',
         as: 'reactions',
       });
+      Blog.hasMany(models.BlogTranslation, {
+        foreignKey: 'blogId',
+        as: 'translations',
+      });
+      Blog.belongsTo(models.BlogTopic, {
+        foreignKey: 'blogTopicId',
+        as: 'topic',
+      });
     }
   }
 
@@ -22,37 +30,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-          len: [3, 255],
-        },
-      },
-      slug: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-        validate: {
-          notEmpty: true,
-          is: /^[a-z0-9-]+$/,
-        },
-      },
-      content: {
-        type: DataTypes.TEXT('long'),
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-        },
-      },
-      excerpt: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        validate: {
-          len: [0, 500],
-        },
-      },
+      // Shared fields across all translations
       authorId: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -64,9 +42,6 @@ module.exports = (sequelize, DataTypes) => {
       featuredImage: {
         type: DataTypes.STRING,
         allowNull: true,
-        validate: {
-          isUrl: true,
-        },
       },
       status: {
         type: DataTypes.ENUM('draft', 'published', 'archived'),
@@ -77,73 +52,9 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      metaTitle: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        validate: {
-          len: [0, 60],
-        },
-      },
-      metaDescription: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        validate: {
-          len: [0, 160],
-        },
-      },
-      keywords: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: [],
-        validate: {
-          isValidKeywordsArray(value) {
-            if (!Array.isArray(value)) {
-              throw new Error('Keywords must be an array');
-            }
-            if (value.length > 10) {
-              throw new Error('Maximum 10 keywords allowed');
-            }
-            value.forEach((keyword) => {
-              if (typeof keyword !== 'string' || keyword.length > 50) {
-                throw new Error(
-                  'Each keyword must be a string of maximum 50 characters',
-                );
-              }
-            });
-          },
-        },
-      },
       category: {
         type: DataTypes.STRING,
         allowNull: true,
-      },
-      tags: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: [],
-        validate: {
-          isValidTagsArray(value) {
-            if (!Array.isArray(value)) {
-              throw new Error('Tags must be an array');
-            }
-            if (value.length > 15) {
-              throw new Error('Maximum 15 tags allowed');
-            }
-            value.forEach((tag) => {
-              if (typeof tag !== 'string' || tag.length > 30) {
-                throw new Error(
-                  'Each tag must be a string of maximum 30 characters',
-                );
-              }
-            });
-          },
-        },
-      },
-      readingTimeMinutes: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        validate: {
-          min: 1,
-          max: 60,
-        },
       },
       shareCount: {
         type: DataTypes.INTEGER,
@@ -173,26 +84,72 @@ module.exports = (sequelize, DataTypes) => {
           min: 0,
         },
       },
+      // Link to blog topic (for AI-generated blogs)
+      blogTopicId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'BlogTopics',
+          key: 'id',
+        },
+      },
+      // ============================================
+      // LEGACY FIELDS - kept for backward compatibility
+      // Will be migrated to BlogTranslation table
+      // ============================================
+      title: {
+        type: DataTypes.STRING,
+        allowNull: true, // Now nullable - use translations
+      },
+      slug: {
+        type: DataTypes.STRING,
+        allowNull: true, // Now nullable - use translations
+        unique: true,
+      },
+      content: {
+        type: DataTypes.TEXT('long'),
+        allowNull: true, // Now nullable - use translations
+      },
+      excerpt: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      metaTitle: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      metaDescription: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      keywords: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [],
+      },
+      tags: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [],
+      },
+      readingTimeMinutes: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
       language: {
         type: DataTypes.STRING(5),
-        defaultValue: 'en-US',
-        allowNull: false,
-        validate: {
-          isIn: [['en-US', 'hr-HR']], // Add more languages as needed
-        },
+        defaultValue: 'hr-HR',
+        allowNull: true, // Now nullable - use translations
       },
     },
     {
       sequelize,
       modelName: 'Blog',
       tableName: 'Blogs',
-      paranoid: true, // Enables soft deletes
+      paranoid: true,
       indexes: [
         { fields: ['authorId'] },
         { fields: ['status', 'publishedAt'] },
         { fields: ['category'] },
-        { fields: ['language'] },
-        { fields: ['slug'], unique: true },
+        { fields: ['blogTopicId'] },
       ],
     },
   );

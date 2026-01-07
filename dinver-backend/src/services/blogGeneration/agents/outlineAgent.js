@@ -9,6 +9,7 @@ class OutlineAgent extends BaseAgent {
   constructor() {
     super('OutlineAgent', {
       stage: 'outline',
+      model: 'claude-3-5-haiku-20241022', // Cheaper model for outlines
       maxTokens: 8192,
       temperature: 0.6,
     });
