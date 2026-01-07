@@ -1,4 +1,4 @@
-const { Blog, BlogUser, sequelize } = require('../../models');
+const { Blog, BlogUser, BlogReaction, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const slugify = require('slugify');
@@ -358,27 +358,101 @@ const getBlogStats = async (req, res) => {
     const publishedBlogs = await Blog.count({ where: { status: 'published' } });
     const draftBlogs = await Blog.count({ where: { status: 'draft' } });
 
-    // Calculate total views across all blogs
+    // Calculate totals across all published blogs
     const result = await Blog.findAll({
       where: { status: 'published' },
-      attributes: [[sequelize.literal('SUM("viewCount")'), 'totalViews']],
+      attributes: [
+        [sequelize.literal('SUM("viewCount")'), 'totalViews'],
+        [sequelize.literal('SUM("likesCount")'), 'totalLikes'],
+        [sequelize.literal('SUM("dislikesCount")'), 'totalDislikes'],
+      ],
       raw: true,
     });
 
     const totalViews = parseInt(result[0]?.totalViews) || 0;
+    const totalLikes = parseInt(result[0]?.totalLikes) || 0;
+    const totalDislikes = parseInt(result[0]?.totalDislikes) || 0;
     const avgViewsPerBlog =
       publishedBlogs > 0 ? Math.round(totalViews / publishedBlogs) : 0;
+
+    // Calculate engagement rate
+    const totalEngagement = totalLikes + totalDislikes;
+    const engagementRate = totalViews > 0 ? ((totalEngagement / totalViews) * 100).toFixed(2) : 0;
 
     res.json({
       total: totalBlogs,
       published: publishedBlogs,
       draft: draftBlogs,
       totalViews,
+      totalLikes,
+      totalDislikes,
       avgViewsPerBlog,
+      engagementRate: parseFloat(engagementRate),
     });
   } catch (error) {
     console.error('Error fetching blog stats:', error);
     res.status(500).json({ error: 'Failed to fetch blog statistics' });
+  }
+};
+
+// Get detailed blog statistics with per-blog breakdown
+const getBlogStatsDetailed = async (req, res) => {
+  try {
+    const { sortBy = 'viewCount', sortOrder = 'DESC', limit = 20 } = req.query;
+
+    const validSortFields = ['viewCount', 'likesCount', 'dislikesCount', 'publishedAt', 'title'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'viewCount';
+
+    const blogs = await Blog.findAll({
+      where: { status: 'published' },
+      include: [
+        {
+          model: BlogUser,
+          as: 'author',
+          attributes: ['id', 'name'],
+        },
+      ],
+      attributes: [
+        'id',
+        'title',
+        'slug',
+        'viewCount',
+        'likesCount',
+        'dislikesCount',
+        'publishedAt',
+        'language',
+        'category',
+      ],
+      order: [[sortField, sortOrder]],
+      limit: parseInt(limit),
+    });
+
+    // Format response with engagement metrics
+    const formattedBlogs = blogs.map((blog) => {
+      const totalReactions = blog.likesCount + blog.dislikesCount;
+      const likeRatio = totalReactions > 0 ? ((blog.likesCount / totalReactions) * 100).toFixed(1) : 0;
+      const engagementRate = blog.viewCount > 0 ? ((totalReactions / blog.viewCount) * 100).toFixed(2) : 0;
+
+      return {
+        id: blog.id,
+        title: blog.title,
+        slug: blog.slug,
+        viewCount: blog.viewCount,
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        likeRatio: parseFloat(likeRatio),
+        engagementRate: parseFloat(engagementRate),
+        publishedAt: blog.publishedAt,
+        language: blog.language,
+        category: blog.category,
+        author: blog.author?.name || 'Unknown',
+      };
+    });
+
+    res.json({ blogs: formattedBlogs });
+  } catch (error) {
+    console.error('Error fetching detailed blog stats:', error);
+    res.status(500).json({ error: 'Failed to fetch detailed blog statistics' });
   }
 };
 
@@ -427,6 +501,8 @@ const getPublicBlogs = async (req, res) => {
         'publishedAt',
         'readingTimeMinutes',
         'viewCount',
+        'likesCount',
+        'dislikesCount',
       ],
     });
 
@@ -443,6 +519,8 @@ const getPublicBlogs = async (req, res) => {
       publishedAt: blog.publishedAt,
       readingTimeMinutes: blog.readingTimeMinutes,
       viewCount: blog.viewCount,
+      likesCount: blog.likesCount,
+      dislikesCount: blog.dislikesCount,
       author: {
         name: blog.author?.name || 'Unknown',
         profileImage: blog.author?.profileImage,
@@ -468,6 +546,7 @@ const getPublicBlogs = async (req, res) => {
 const getPublicBlog = async (req, res) => {
   try {
     const slug = req.params.slug;
+    const sessionId = req.headers['x-session-id'] || null;
 
     const blog = await Blog.findOne({
       where: {
@@ -493,6 +572,8 @@ const getPublicBlog = async (req, res) => {
         'publishedAt',
         'readingTimeMinutes',
         'viewCount',
+        'likesCount',
+        'dislikesCount',
         'metaTitle',
         'metaDescription',
         'keywords',
@@ -501,6 +582,15 @@ const getPublicBlog = async (req, res) => {
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    // Check user's reaction if sessionId provided
+    let userReaction = null;
+    if (sessionId) {
+      const reaction = await BlogReaction.findOne({
+        where: { blogId: blog.id, sessionId },
+      });
+      userReaction = reaction ? reaction.reactionType : null;
     }
 
     // Format the response
@@ -516,6 +606,9 @@ const getPublicBlog = async (req, res) => {
       publishedAt: blog.publishedAt,
       readingTimeMinutes: blog.readingTimeMinutes,
       viewCount: blog.viewCount,
+      likesCount: blog.likesCount,
+      dislikesCount: blog.dislikesCount,
+      userReaction,
       metaTitle: blog.metaTitle,
       metaDescription: blog.metaDescription,
       keywords: blog.keywords,
@@ -558,6 +651,94 @@ const incrementBlogView = async (req, res) => {
   }
 };
 
+// React to blog (like/dislike)
+const reactToBlog = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { reaction } = req.body; // 'like', 'dislike', or null (to remove)
+    const sessionId = req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    if (reaction && !['like', 'dislike'].includes(reaction)) {
+      return res.status(400).json({ error: 'Invalid reaction type' });
+    }
+
+    const blog = await Blog.findOne({
+      where: { slug, status: 'published' },
+    });
+
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    // Find existing reaction
+    const existingReaction = await BlogReaction.findOne({
+      where: { blogId: blog.id, sessionId },
+    });
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      if (reaction === null) {
+        // Remove reaction
+        if (existingReaction) {
+          if (existingReaction.reactionType === 'like') {
+            await blog.decrement('likesCount', { transaction });
+          } else {
+            await blog.decrement('dislikesCount', { transaction });
+          }
+          await existingReaction.destroy({ transaction });
+        }
+      } else if (existingReaction) {
+        // Update existing reaction
+        if (existingReaction.reactionType !== reaction) {
+          // Switch reaction type
+          if (existingReaction.reactionType === 'like') {
+            await blog.decrement('likesCount', { transaction });
+            await blog.increment('dislikesCount', { transaction });
+          } else {
+            await blog.decrement('dislikesCount', { transaction });
+            await blog.increment('likesCount', { transaction });
+          }
+          await existingReaction.update({ reactionType: reaction }, { transaction });
+        }
+        // If same reaction, do nothing
+      } else {
+        // Create new reaction
+        await BlogReaction.create(
+          { blogId: blog.id, sessionId, reactionType: reaction },
+          { transaction },
+        );
+        if (reaction === 'like') {
+          await blog.increment('likesCount', { transaction });
+        } else {
+          await blog.increment('dislikesCount', { transaction });
+        }
+      }
+
+      await transaction.commit();
+
+      // Refresh blog data
+      await blog.reload();
+
+      res.json({
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        userReaction: reaction,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error reacting to blog:', error);
+    res.status(500).json({ error: 'Failed to react to blog' });
+  }
+};
+
 module.exports = {
   getBlogs,
   getBlog,
@@ -565,7 +746,9 @@ module.exports = {
   updateBlog,
   deleteBlog,
   getBlogStats,
+  getBlogStatsDetailed,
   getPublicBlogs,
   getPublicBlog,
   incrementBlogView,
+  reactToBlog,
 };

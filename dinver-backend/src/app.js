@@ -28,6 +28,7 @@ const { runDataHealthChecks } = require('./cron/dataHealthCron');
 const { cleanupExpiredVisits } = require('./cron/cleanupExpiredVisits');
 const { cleanupOldNotifications } = require('./cron/cleanupNotifications');
 const { expireUpdates } = require('./cron/expireUpdates');
+const { processQueuedTopics } = require('./cron/blogGenerationCron');
 dotenv.config();
 
 const app = express();
@@ -64,6 +65,9 @@ cron.schedule('0 2 * * *', cleanupOldNotifications);
 
 // Expire old restaurant updates (svaki sat) - markira ACTIVE updateove kao EXPIRED ako je expiresAt prošao
 cron.schedule('0 * * * *', expireUpdates);
+
+// Blog generation - procesira queued blog teme (svaka 2 dana u 9:00 ujutro, Europe/Zagreb timezone)
+cron.schedule('0 9 */2 * *', processQueuedTopics, { timezone: 'Europe/Zagreb' });
 
 // Initialize Redis client with ioredis
 // Support both full Redis URL and separate host/port config

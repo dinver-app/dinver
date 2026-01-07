@@ -107,6 +107,14 @@ export default function Footer({ messages, locale = "hr" }: FooterProps) {
                   {messages.footer.links.contact}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-gray-300 hover:text-dinver-cream transition-colors text-sm"
+                >
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -27,6 +27,7 @@ const cacheRoutes = require('./sysadminRoutes/cacheRoutes'); // Google Places Ca
 const supportTicketRoutes = require('./sysadminRoutes/supportTicketRoutes'); // Support Tickets
 const googleApiLogsRoutes = require('./sysadminRoutes/googleApiLogsRoutes'); // Google API Logs & Cost Tracking
 const experienceRoutes = require('./sysadminRoutes/experienceRoutes'); // Experience Management
+const blogTopicRoutes = require('./sysadminRoutes/blogTopicRoutes'); // Blog Topic Generation & Automation
 const router = express.Router();
 
 router.use(sysadminRoutes);
@@ -58,5 +59,6 @@ router.use(cacheRoutes); // Google Places Cache Stats & Management
 router.use(supportTicketRoutes); // Support Tickets
 router.use(googleApiLogsRoutes); // Google API Logs & Cost Tracking
 router.use(experienceRoutes); // Experience Management
+router.use('/blog-topics', blogTopicRoutes); // Blog Topic Generation & Automation
 
 module.exports = router;

@@ -43,6 +43,7 @@ export default function Header({
   const navItems = [
     { href: "/", label: locale === "hr" ? "Početna" : "Home" },
     { href: "/partners", label: locale === "hr" ? "Partneri" : "Partners" },
+    { href: "/blog", label: "Blog" },
     { href: "/contact", label: locale === "hr" ? "Kontakt" : "Contact" },
   ];
 

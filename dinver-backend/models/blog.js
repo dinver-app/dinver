@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'authorId',
         as: 'author',
       });
+      Blog.hasMany(models.BlogReaction, {
+        foreignKey: 'blogId',
+        as: 'reactions',
+      });
     }
   }
 
@@ -149,6 +153,20 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       viewCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        validate: {
+          min: 0,
+        },
+      },
+      likesCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        validate: {
+          min: 0,
+        },
+      },
+      dislikesCount: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         validate: {
