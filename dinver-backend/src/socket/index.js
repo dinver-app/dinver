@@ -26,7 +26,9 @@ function initializeSocket(httpServer) {
       credentials: true,
       methods: ['GET', 'POST'],
     },
-    transports: ['websocket', 'polling'],
+    // when using cluster module or multiple nodes, 'polling' transport requires sticky sessions
+    // defaulting to 'websocket' only avoids this complexity at the cost of supporting very old clients
+    transports: ['websocket'],
     pingTimeout: 60000,
     pingInterval: 25000,
   });

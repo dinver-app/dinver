@@ -170,27 +170,18 @@ const getAllRestaurants = async (req, res) => {
       order: [['name', 'ASC']],
     });
 
-    const restaurantsWithStatus = await Promise.all(
-      restaurants.map(async (restaurant) => {
-        const reviews = await Review.findAll({
-          where: { restaurantId: restaurant.id },
-          attributes: ['rating'],
-        });
+    const restaurantsWithStatus = restaurants.map((restaurant) => {
+      // Use cached dinverRating if available, otherwise fallback to Google rating
+      const reviewRating = restaurant.dinverRating 
+        ? parseFloat(restaurant.dinverRating) 
+        : (restaurant.rating ? parseFloat(restaurant.rating) : null);
 
-        const totalRatings = reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0,
-        );
-        const reviewRating =
-          reviews.length > 0 ? totalRatings / reviews.length : null;
-
-        return {
-          ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.openingHours),
-          reviewRating,
-        };
-      }),
-    );
+      return {
+        ...restaurant.get(),
+        isOpen: isRestaurantOpen(restaurant.openingHours),
+        reviewRating,
+      };
+    });
 
     res.json({
       totalRestaurants: count,
@@ -302,39 +293,30 @@ const getRestaurants = async (req, res) => {
       userFavorites = new Set(favorites.map((f) => f.restaurantId));
     }
 
-    const restaurantsWithStatus = await Promise.all(
-      restaurants.map(async (restaurant) => {
-        const reviews = await Review.findAll({
-          where: { restaurantId: restaurant.id },
-          attributes: ['rating'],
-        });
+    const restaurantsWithStatus = restaurants.map((restaurant) => {
+      // Use cached dinverRating if available, otherwise fallback to Google rating
+      const reviewRating = restaurant.dinverRating 
+        ? parseFloat(restaurant.dinverRating) 
+        : (restaurant.rating ? parseFloat(restaurant.rating) : null);
 
-        const totalRatings = reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0,
-        );
-        const reviewRating =
-          reviews.length > 0 ? totalRatings / reviews.length : null;
+      // Calculate distance if user coordinates are provided
+      const distance = hasCoordinates
+        ? calculateDistance(
+            parseFloat(userLat),
+            parseFloat(userLon),
+            restaurant.latitude,
+            restaurant.longitude,
+          )
+        : null;
 
-        // Calculate distance if user coordinates are provided
-        const distance = hasCoordinates
-          ? calculateDistance(
-              parseFloat(userLat),
-              parseFloat(userLon),
-              restaurant.latitude,
-              restaurant.longitude,
-            )
-          : null;
-
-        return {
-          ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.openingHours),
-          reviewRating,
-          distance,
-          isFavorite: userFavorites.has(restaurant.id),
-        };
-      }),
-    );
+      return {
+        ...restaurant.get(),
+        isOpen: isRestaurantOpen(restaurant.openingHours),
+        reviewRating,
+        distance,
+        isFavorite: userFavorites.has(restaurant.id),
+      };
+    });
 
     // If coordinates are provided, sort by distance
     if (hasCoordinates) {
