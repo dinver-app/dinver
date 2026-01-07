@@ -11,8 +11,11 @@ export interface Experience {
   foodRating?: number;
   serviceRating?: number;
   atmosphereRating?: number;
+  ambienceRating?: number;
   priceRating?: number;
   engagementScore: number;
+  mealType?: string;
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
   author?: {
@@ -371,9 +374,15 @@ const experienceService = {
     search?: string,
     page = 1,
     limit = 20
-  ): Promise<
-    PaginatedResponse<{ experiences: Experience[] }>
-  > {
+  ): Promise<{
+    experiences: Experience[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
     const params = new URLSearchParams();
     if (status) params.append("status", status);
     if (city) params.append("city", city);
