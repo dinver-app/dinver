@@ -8,7 +8,7 @@ const {
   UserAdmin,
 } = require('../../models');
 const { sequelize } = require('../../models');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
 const { getMediaUrl } = require('../../config/cdn');

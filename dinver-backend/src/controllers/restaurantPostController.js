@@ -1,5 +1,5 @@
 const { RestaurantPost, Restaurant, User, UserAdmin } = require('../../models');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const AWS = require('aws-sdk');
 const ffmpeg = require('fluent-ffmpeg');

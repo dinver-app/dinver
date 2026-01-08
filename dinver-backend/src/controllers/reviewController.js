@@ -8,7 +8,7 @@ const {
 const { handleError } = require('../../utils/errorHandler');
 const { ValidationError, Op } = require('sequelize');
 const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { calculateAverageRating } = require('../utils/ratingUtils');
 const PointsService = require('../utils/pointsService');
 const { getMediaUrl } = require('../../config/cdn');

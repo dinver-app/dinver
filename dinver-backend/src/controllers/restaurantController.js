@@ -27,7 +27,7 @@ const {
 } = require('./achievementController');
 const { Op, Sequelize } = require('sequelize');
 const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 const { getCitiesCoordinates } = require('../../utils/geocoding');

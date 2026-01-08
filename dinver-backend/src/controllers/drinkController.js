@@ -5,7 +5,7 @@ const {
   DrinkCategoryTranslation,
 } = require('../../models');
 const { uploadToS3, getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { autoTranslate } = require('../../utils/translate');
 const { getMediaUrl, getMediaUrlVariants } = require('../../config/cdn');

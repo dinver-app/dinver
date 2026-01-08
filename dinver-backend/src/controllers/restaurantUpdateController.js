@@ -10,7 +10,7 @@ const {
   uploadImageExperience,
   getImageUrls,
 } = require('../../services/imageUploadService');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
 
 // Category labels for display

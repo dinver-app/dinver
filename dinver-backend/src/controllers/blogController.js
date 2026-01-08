@@ -1,6 +1,6 @@
 const { Blog, BlogUser, BlogReaction, BlogTranslation, BlogView, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
