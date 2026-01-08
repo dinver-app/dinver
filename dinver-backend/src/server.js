@@ -33,7 +33,12 @@ const db = require('../models'); // Import single DB instance
 
 const PORT = process.env.PORT || 3000;
 
-db.sequelize.sync().then(() => {
+// Only sync in development - use migrations in production/staging
+const syncPromise = env === 'development'
+  ? db.sequelize.sync()
+  : Promise.resolve();
+
+syncPromise.then(() => {
   if (cluster.isPrimary) {
     const numCPUs = os.cpus().length;
     console.log(`Primary ${process.pid} is running`);
