@@ -1,4 +1,4 @@
-const { Blog, BlogUser, BlogReaction, BlogTranslation, sequelize } = require('../../models');
+const { Blog, BlogUser, BlogReaction, BlogTranslation, BlogView, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
 const { deleteFromS3 } = require('../../utils/s3Delete');
 const slugify = require('slugify');
@@ -647,10 +647,11 @@ const getPublicBlog = async (req, res) => {
   }
 };
 
-// Increment blog view count
+// Increment blog view count (with session-based deduplication)
 const incrementBlogView = async (req, res) => {
   try {
     const { slug } = req.params;
+    const sessionId = req.headers['x-session-id'];
 
     // First try translation slug
     let translation = await BlogTranslation.findOne({
@@ -671,10 +672,38 @@ const incrementBlogView = async (req, res) => {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
+    // If session ID provided, check for duplicate views
+    if (sessionId) {
+      const existingView = await BlogView.findOne({
+        where: { blogId: blog.id, sessionId },
+      });
+
+      if (existingView) {
+        // Already viewed by this session, don't increment
+        return res.json({
+          success: true,
+          viewCount: blog.viewCount,
+          alreadyViewed: true
+        });
+      }
+
+      // Record the view
+      await BlogView.create({
+        blogId: blog.id,
+        sessionId,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent']?.substring(0, 255),
+      });
+    }
+
     // Increment view count
     await blog.increment('viewCount');
 
-    res.json({ success: true, viewCount: blog.viewCount + 1 });
+    res.json({
+      success: true,
+      viewCount: blog.viewCount + 1,
+      alreadyViewed: false
+    });
   } catch (error) {
     console.error('Error incrementing blog view:', error);
     res.status(500).json({ error: 'Failed to increment view count' });

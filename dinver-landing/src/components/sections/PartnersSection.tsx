@@ -152,14 +152,14 @@ export default function PartnersSection({
 
   // Responsive transform values for phone stack
   const getTransform = (offset: number) => {
-    const multiplier = isMobile ? 0.5 : 1;
+    const multiplier = isMobile ? 0.4 : 1;
 
     if (offset === 0) {
       return { x: 0, scale: 1, rotate: 0, zIndex: 10, opacity: 1 };
     }
     if (offset === 1 || offset === -6) {
       return {
-        x: 50 * multiplier,
+        x: 45 * multiplier,
         scale: 0.88,
         rotate: 4,
         zIndex: 5,
@@ -168,7 +168,7 @@ export default function PartnersSection({
     }
     if (offset === -1 || offset === 6) {
       return {
-        x: -50 * multiplier,
+        x: -45 * multiplier,
         scale: 0.88,
         rotate: -4,
         zIndex: 5,
@@ -177,7 +177,7 @@ export default function PartnersSection({
     }
     if (offset === 2 || offset === -5) {
       return {
-        x: 85 * multiplier,
+        x: 75 * multiplier,
         scale: 0.76,
         rotate: 8,
         zIndex: 2,
@@ -186,7 +186,7 @@ export default function PartnersSection({
     }
     if (offset === -2 || offset === 5) {
       return {
-        x: -85 * multiplier,
+        x: -75 * multiplier,
         scale: 0.76,
         rotate: -8,
         zIndex: 2,
@@ -194,7 +194,7 @@ export default function PartnersSection({
       };
     }
     return {
-      x: (offset > 0 ? 100 : -100) * multiplier,
+      x: (offset > 0 ? 90 : -90) * multiplier,
       scale: 0.65,
       rotate: offset > 0 ? 12 : -12,
       zIndex: 1,
@@ -243,7 +243,7 @@ export default function PartnersSection({
                 transition={{ duration: 0.3 }}
                 className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/10"
               >
-                <div className="flex items-start gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-dinver-cream rounded-xl flex items-center justify-center shrink-0">
                     {(() => {
                       const Icon = partnerFeatures[activeFeature].icon;
@@ -255,7 +255,7 @@ export default function PartnersSection({
                       );
                     })()}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
                       {partnerFeatures[activeFeature].title}
                     </h3>
@@ -267,41 +267,37 @@ export default function PartnersSection({
               </motion.div>
             </AnimatePresence>
 
-            {/* Feature buttons - horizontal scroll on mobile */}
-            <div className="relative -mx-4 sm:mx-0">
-              <div className="flex gap-2 overflow-x-auto px-4 sm:px-0 pb-2 sm:pb-0 sm:flex-wrap sm:overflow-visible scrollbar-hide">
-                {partnerFeatures.map((feature, index) => {
-                  const Icon = feature.icon;
-                  const isActive = index === activeFeature;
+            {/* Feature buttons - wrapping on mobile */}
+            <div className="flex flex-wrap gap-2">
+              {partnerFeatures.map((feature, index) => {
+                const Icon = feature.icon;
+                const isActive = index === activeFeature;
 
-                  return (
-                    <motion.button
-                      key={index}
-                      onClick={() => setActiveFeature(index)}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={isInView ? { opacity: 1, y: 0 } : {}}
-                      transition={{ delay: 0.3 + index * 0.05 }}
-                      className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 ${
-                        isActive
-                          ? "bg-dinver-cream text-dinver-dark shadow-lg"
-                          : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
-                      }`}
-                    >
-                      <Icon size={isMobile ? 14 : 16} />
-                      <span className="sm:hidden">{feature.shortTitle}</span>
-                      <span className="hidden sm:inline">{feature.title}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-              {/* Scroll hint gradient for mobile */}
-              <div className="absolute right-0 top-0 bottom-2 w-8 bg-linear-to-l from-dinver-dark to-transparent pointer-events-none sm:hidden" />
+                return (
+                  <motion.button
+                    key={index}
+                    onClick={() => setActiveFeature(index)}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ delay: 0.3 + index * 0.05 }}
+                    className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-all text-xs sm:text-sm font-medium whitespace-nowrap ${
+                      isActive
+                        ? "bg-dinver-cream text-dinver-dark shadow-lg"
+                        : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                    }`}
+                  >
+                    <Icon size={isMobile ? 14 : 16} />
+                    <span className="sm:hidden">{feature.shortTitle}</span>
+                    <span className="hidden sm:inline">{feature.title}</span>
+                  </motion.button>
+                );
+              })}
             </div>
           </AnimatedSection>
 
           {/* Stacked phone cards - SECOND on mobile */}
           <AnimatedSection direction="left" className="order-2 lg:order-1">
-            <div className="relative h-[380px] sm:h-[450px] lg:h-[520px] flex items-center justify-center">
+            <div className="relative h-[420px] sm:h-[450px] lg:h-[520px] flex items-center justify-center px-8 sm:px-0">
               {/* All phones stacked */}
               {partnerFeatures.map((feature, index) => {
                 const offset = index - activeFeature;
@@ -322,12 +318,12 @@ export default function PartnersSection({
                     className="absolute cursor-pointer"
                   >
                     <div
-                      className={`relative w-[180px] sm:w-[200px] lg:w-[220px] h-[360px] sm:h-[400px] lg:h-[440px] bg-gray-900 rounded-4xl sm:rounded-[2.5rem] p-1 sm:p-1.5 shadow-2xl transition-shadow ${
+                      className={`relative w-[160px] sm:w-[200px] lg:w-[220px] h-[340px] sm:h-[400px] lg:h-[440px] bg-gray-900 rounded-4xl sm:rounded-[2.5rem] p-1 sm:p-1.5 shadow-2xl transition-shadow ${
                         index === activeFeature ? "shadow-dinver-cream/20" : ""
                       }`}
                     >
                       {/* Screen */}
-                      <div className="w-full h-full bg-white rounded-[1.75rem] sm:rounded-4xl overflow-hidden relative">
+                      <div className="w-full h-full bg-white rounded-3xl sm:rounded-4xl overflow-hidden relative">
                         <Image
                           src={feature.screenshot}
                           alt={feature.title}
@@ -336,7 +332,7 @@ export default function PartnersSection({
                         />
                       </div>
                       {/* Phone notch */}
-                      <div className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 w-12 sm:w-16 h-4 sm:h-5 bg-gray-900 rounded-full" />
+                      <div className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 w-10 sm:w-16 h-3.5 sm:h-5 bg-gray-900 rounded-full" />
                     </div>
                   </motion.div>
                 );
@@ -345,14 +341,14 @@ export default function PartnersSection({
               {/* Navigation arrows */}
               <button
                 onClick={prevFeature}
-                className="absolute left-2 sm:left-0 z-20 w-9 h-9 sm:w-10 sm:h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                className="absolute left-0 sm:left-0 z-20 w-9 h-9 sm:w-10 sm:h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                 aria-label="Previous feature"
               >
                 <ChevronLeft className="text-white" size={18} />
               </button>
               <button
                 onClick={nextFeature}
-                className="absolute right-2 sm:right-0 z-20 w-9 h-9 sm:w-10 sm:h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                className="absolute right-0 sm:right-0 z-20 w-9 h-9 sm:w-10 sm:h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                 aria-label="Next feature"
               >
                 <ChevronRight className="text-white" size={18} />

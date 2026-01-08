@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Clock, Eye, Calendar, ChevronLeft, User, Share2 } from "lucide-react";
-import { BlogPostDetail, formatDate, formatReadingTime, trackBlogView, getBlogSessionId } from "@/lib/blog-api";
+import { BlogPostDetail, formatDate, formatReadingTime, trackBlogView } from "@/lib/blog-api";
 import BlogReactions from "./BlogReactions";
+import { decode } from "html-entities";
 
 interface BlogContentProps {
   post: BlogPostDetail;
@@ -14,6 +15,8 @@ interface BlogContentProps {
 }
 
 export default function BlogContent({ post, locale }: BlogContentProps) {
+  // Decode HTML entities
+  const decodedContent = useMemo(() => decode(post.content), [post.content]);
   useEffect(() => {
     // Track view on mount
     trackBlogView(post.slug).catch(console.error);
@@ -145,20 +148,8 @@ export default function BlogContent({ post, locale }: BlogContentProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="prose prose-lg prose-gray max-w-none
-          prose-headings:font-bold prose-headings:text-gray-900
-          prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
-          prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-          prose-p:text-gray-700 prose-p:leading-relaxed
-          prose-a:text-dinver-green prose-a:no-underline hover:prose-a:underline
-          prose-strong:text-gray-900
-          prose-ul:my-4 prose-ol:my-4
-          prose-li:text-gray-700
-          prose-img:rounded-xl prose-img:shadow-md
-          prose-blockquote:border-l-dinver-green prose-blockquote:bg-gray-50 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-lg
-          prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-dinver-green
-          prose-pre:bg-gray-900 prose-pre:text-gray-100"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        className="blog-content max-w-none"
+        dangerouslySetInnerHTML={{ __html: decodedContent }}
       />
 
       {/* Tags */}

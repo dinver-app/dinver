@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: '*.cloudfront.net',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'dinver-restaurant-thumbnails.s3.eu-north-1.amazonaws.com',
+        pathname: '/**',
+      },
     ],
   },
 };

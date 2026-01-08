@@ -118,18 +118,64 @@ export async function getBlogBySlug(
   return response.json();
 }
 
-export async function trackBlogView(slug: string): Promise<{ viewCount: number }> {
+// Check if blog was already viewed in this session
+function hasViewedBlog(slug: string): boolean {
+  if (typeof window === 'undefined') return true;
+
+  const viewedBlogs = JSON.parse(localStorage.getItem('dinver-viewed-blogs') || '{}');
+  const viewedAt = viewedBlogs[slug];
+
+  if (!viewedAt) return false;
+
+  // Consider it "viewed" if less than 24 hours ago
+  const twentyFourHours = 24 * 60 * 60 * 1000;
+  return Date.now() - viewedAt < twentyFourHours;
+}
+
+// Mark blog as viewed
+function markBlogAsViewed(slug: string): void {
+  if (typeof window === 'undefined') return;
+
+  const viewedBlogs = JSON.parse(localStorage.getItem('dinver-viewed-blogs') || '{}');
+  viewedBlogs[slug] = Date.now();
+
+  // Clean up old entries (older than 7 days)
+  const sevenDays = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  for (const [key, timestamp] of Object.entries(viewedBlogs)) {
+    if (now - (timestamp as number) > sevenDays) {
+      delete viewedBlogs[key];
+    }
+  }
+
+  localStorage.setItem('dinver-viewed-blogs', JSON.stringify(viewedBlogs));
+}
+
+export async function trackBlogView(slug: string): Promise<{ viewCount: number; tracked: boolean }> {
+  // Check if already viewed in this session
+  if (hasViewedBlog(slug)) {
+    return { viewCount: -1, tracked: false };
+  }
+
+  const sessionId = getBlogSessionId();
   const url = `${BLOG_API_URL}/public/blogs/${slug}/view`;
 
   const response = await fetch(url, {
     method: 'POST',
+    headers: {
+      'x-session-id': sessionId,
+    },
   });
 
   if (!response.ok) {
     throw new Error(`Failed to track view: ${response.status}`);
   }
 
-  return response.json();
+  // Mark as viewed locally
+  markBlogAsViewed(slug);
+
+  const data = await response.json();
+  return { ...data, tracked: true };
 }
 
 export async function reactToBlog(
