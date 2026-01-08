@@ -149,7 +149,7 @@ module.exports = (sequelize, DataTypes) => {
         { fields: ['authorId'] },
         { fields: ['status', 'publishedAt'] },
         { fields: ['category'] },
-        { fields: ['blogTopicId'] },
+        // Note: blogTopicId index is created via migration 20260107185804
       ],
     },
   );
