@@ -10,6 +10,10 @@ proxy:
   ssl: true
   host: api.staging.dinverapp.com
   app_port: 3000
+  deploy_timeout: 120
+  healthcheck:
+    interval: 10
+    timeout: 10
 
 env:
   secret:
