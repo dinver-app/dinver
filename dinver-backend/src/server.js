@@ -33,7 +33,6 @@ const db = require('../models'); // Import single DB instance
 
 const PORT = process.env.PORT || 3000;
 
-// Only sync in development - use migrations in production/staging
 const syncPromise = Promise.resolve();
 
 syncPromise.then(() => {
