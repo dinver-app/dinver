@@ -4,6 +4,8 @@ const {
   Restaurant,
   User,
   UserAdmin,
+  ContentTranslation,
+  UserSettings,
 } = require('../../models');
 const { Op } = require('sequelize');
 const {
@@ -12,6 +14,7 @@ const {
 } = require('../../services/imageUploadService');
 const { deleteFromS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
+const { detectLanguage, translateContent } = require('../../utils/translate');
 
 // Category labels for display
 const CATEGORY_LABELS = {
@@ -105,6 +108,17 @@ const createUpdate = async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + duration);
 
+    // Detect language of content for translation feature
+    let detectedLang = null;
+    if (content && content.trim().length >= 10) {
+      try {
+        detectedLang = await detectLanguage(content);
+      } catch (langError) {
+        console.error('[Create Update] Language detection failed:', langError.message);
+        // Continue without detected language - not critical
+      }
+    }
+
     // Upload image if provided
     let imageKey = null;
     let imageWidth = null;
@@ -142,6 +156,7 @@ const createUpdate = async (req, res) => {
       latitudeCached: restaurant.latitude,
       longitudeCached: restaurant.longitude,
       viewCount: 0,
+      detectedLanguage: detectedLang,
     });
 
     // Prepare response
@@ -490,6 +505,101 @@ const getCategories = async (req, res) => {
 };
 
 /**
+ * Translate Restaurant Update content
+ * POST /api/app/updates/:updateId/translate
+ *
+ * Translates the update content to user's preferred language.
+ * Caches translations for faster subsequent requests.
+ */
+const translateUpdate = async (req, res) => {
+  try {
+    const { updateId } = req.params;
+    const userId = req.user.id;
+
+    // Get user's preferred language from settings
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    const targetLanguage = userSettings?.language || 'en';
+
+    // Get update
+    const update = await RestaurantUpdate.findByPk(updateId);
+    if (!update) {
+      return res.status(404).json({
+        error: 'Update not found',
+      });
+    }
+
+    if (!update.content || update.content.trim().length === 0) {
+      return res.status(400).json({
+        error: 'No content to translate',
+      });
+    }
+
+    // Check cache first
+    const cached = await ContentTranslation.findOne({
+      where: {
+        contentType: 'restaurant_update',
+        contentId: updateId,
+        targetLanguage,
+      },
+    });
+
+    if (cached) {
+      return res.status(200).json({
+        translatedText: cached.translatedText,
+        sourceLanguage: cached.sourceLanguage,
+        targetLanguage: cached.targetLanguage,
+        cached: true,
+      });
+    }
+
+    // Determine source language
+    const sourceLanguage = update.detectedLanguage ||
+      (targetLanguage === 'hr' ? 'en' : 'hr');
+
+    // If source and target are the same, no translation needed
+    if (sourceLanguage === targetLanguage) {
+      return res.status(200).json({
+        translatedText: update.content,
+        sourceLanguage,
+        targetLanguage,
+        cached: false,
+        note: 'Same language, no translation needed',
+      });
+    }
+
+    // Translate
+    const translatedText = await translateContent(
+      update.content,
+      targetLanguage,
+      sourceLanguage
+    );
+
+    // Cache the translation
+    await ContentTranslation.create({
+      contentType: 'restaurant_update',
+      contentId: updateId,
+      sourceLanguage,
+      targetLanguage,
+      originalText: update.content,
+      translatedText,
+    });
+
+    return res.status(200).json({
+      translatedText,
+      sourceLanguage,
+      targetLanguage,
+      cached: false,
+    });
+  } catch (error) {
+    console.error('[Translate Update] Error:', error);
+    res.status(500).json({
+      error: 'Failed to translate update',
+      details: error.message,
+    });
+  }
+};
+
+/**
  * Get active updates for a specific restaurant (Public)
  * Used on restaurant details page to show current announcements
  */
@@ -540,6 +650,7 @@ module.exports = {
   getUpdatesFeed,
   recordView,
   getCategories,
+  translateUpdate,
   getActiveUpdatesByRestaurant,
   CATEGORY_LABELS,
   UPDATE_CATEGORIES,

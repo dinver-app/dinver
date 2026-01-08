@@ -14,6 +14,8 @@ const {
   Visit,
   MenuItem,
   MenuItemTranslation,
+  ContentTranslation,
+  UserSettings,
   sequelize,
 } = require('../../models');
 const { literal } = require('sequelize');
@@ -26,6 +28,7 @@ const {
   updateRestaurantDinverRating,
 } = require('../services/dinverRatingService');
 const { getMediaUrl } = require('../../config/cdn');
+const { detectLanguage, translateContent } = require('../../utils/translate');
 
 /**
  * Transform experience media to include proper URLs
@@ -256,6 +259,17 @@ const createExperience = async (req, res) => {
     const status = visit.status === 'APPROVED' ? 'APPROVED' : 'PENDING';
     const publishedAt = status === 'APPROVED' ? new Date() : null;
 
+    // Detect language of description for translation feature
+    let detectedLang = null;
+    if (description && description.trim().length >= 10) {
+      try {
+        detectedLang = await detectLanguage(description);
+      } catch (langError) {
+        console.error('[Create Experience] Language detection failed:', langError.message);
+        // Continue without detected language - not critical
+      }
+    }
+
     // Create Experience
     const experience = await Experience.create(
       {
@@ -272,6 +286,7 @@ const createExperience = async (req, res) => {
         mealType: mealType || null,
         cityCached: visit.restaurant?.place || null,
         publishedAt,
+        detectedLanguage: detectedLang,
       },
       { transaction },
     );
@@ -1131,6 +1146,101 @@ const shareExperience = async (req, res) => {
 };
 
 /**
+ * Translate Experience description
+ * POST /api/app/experiences/:experienceId/translate
+ *
+ * Translates the experience description to user's preferred language.
+ * Caches translations for faster subsequent requests.
+ */
+const translateExperience = async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const userId = req.user.id;
+
+    // Get user's preferred language from settings
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    const targetLanguage = userSettings?.language || 'en';
+
+    // Get experience
+    const experience = await Experience.findByPk(experienceId);
+    if (!experience) {
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
+
+    if (!experience.description || experience.description.trim().length === 0) {
+      return res.status(400).json({
+        error: 'No content to translate',
+      });
+    }
+
+    // Check cache first
+    const cached = await ContentTranslation.findOne({
+      where: {
+        contentType: 'experience',
+        contentId: experienceId,
+        targetLanguage,
+      },
+    });
+
+    if (cached) {
+      return res.status(200).json({
+        translatedText: cached.translatedText,
+        sourceLanguage: cached.sourceLanguage,
+        targetLanguage: cached.targetLanguage,
+        cached: true,
+      });
+    }
+
+    // Determine source language
+    const sourceLanguage = experience.detectedLanguage ||
+      (targetLanguage === 'hr' ? 'en' : 'hr');
+
+    // If source and target are the same, no translation needed
+    if (sourceLanguage === targetLanguage) {
+      return res.status(200).json({
+        translatedText: experience.description,
+        sourceLanguage,
+        targetLanguage,
+        cached: false,
+        note: 'Same language, no translation needed',
+      });
+    }
+
+    // Translate
+    const translatedText = await translateContent(
+      experience.description,
+      targetLanguage,
+      sourceLanguage
+    );
+
+    // Cache the translation
+    await ContentTranslation.create({
+      contentType: 'experience',
+      contentId: experienceId,
+      sourceLanguage,
+      targetLanguage,
+      originalText: experience.description,
+      translatedText,
+    });
+
+    return res.status(200).json({
+      translatedText,
+      sourceLanguage,
+      targetLanguage,
+      cached: false,
+    });
+  } catch (error) {
+    console.error('[Translate Experience] Error:', error);
+    res.status(500).json({
+      error: 'Failed to translate experience',
+      details: error.message,
+    });
+  }
+};
+
+/**
  * Delete Experience
  * DELETE /api/app/experiences/:experienceId
  *
@@ -1209,5 +1319,6 @@ module.exports = {
   getUserExperiences,
   getRestaurantExperiences,
   shareExperience,
+  translateExperience,
   deleteExperience,
 };

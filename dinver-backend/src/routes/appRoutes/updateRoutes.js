@@ -12,6 +12,7 @@ const updateController = require('../../controllers/restaurantUpdateController')
 const {
   appApiKeyAuth,
   appOptionalAuth,
+  appAuthenticateToken,
 } = require('../../middleware/roleMiddleware');
 
 // ============================================================
@@ -80,6 +81,21 @@ router.post(
   appApiKeyAuth,
   appOptionalAuth,
   updateController.recordView
+);
+
+// ============================================================
+// TRANSLATION
+// ============================================================
+
+/**
+ * Translate update content to user's language
+ * POST /api/app/updates/:updateId/translate
+ */
+router.post(
+  '/:updateId/translate',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  updateController.translateUpdate
 );
 
 module.exports = router;

@@ -142,6 +142,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
       },
+      // Language detection for translation feature
+      detectedLanguage: {
+        type: DataTypes.STRING(5),
+        allowNull: true,
+        comment: 'Detected language of content (hr, en)',
+      },
       // Soft delete
       deletedAt: {
         type: DataTypes.DATE,
@@ -177,6 +183,9 @@ module.exports = (sequelize, DataTypes) => {
         {
           fields: ['restaurantId', 'createdAt'],
           name: 'restaurant_updates_rate_limit_idx',
+        },
+        {
+          fields: ['detectedLanguage'],
         },
       ],
     },

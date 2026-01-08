@@ -127,4 +127,17 @@ router.post(
   experienceController.shareExperience
 );
 
+// ============================================================
+// TRANSLATION
+// ============================================================
+
+// Translate Experience description to user's language
+// POST /api/app/experiences/:experienceId/translate
+router.post(
+  '/:experienceId/translate',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.translateExperience
+);
+
 module.exports = router;

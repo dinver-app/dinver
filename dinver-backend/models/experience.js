@@ -144,6 +144,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      // Language detection for translation feature
+      detectedLanguage: {
+        type: DataTypes.STRING(5),
+        allowNull: true,
+        comment: 'Detected language of description (hr, en)',
+      },
     },
     {
       sequelize,
@@ -173,6 +179,9 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           fields: ['createdAt'],
+        },
+        {
+          fields: ['detectedLanguage'],
         },
       ],
     },
