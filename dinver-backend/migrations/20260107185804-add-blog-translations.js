@@ -11,8 +11,11 @@
  */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1. Create BlogTranslations table
-    await queryInterface.createTable('BlogTranslations', {
+    const tables = await queryInterface.showAllTables();
+
+    // 1. Create BlogTranslations table (only if it doesn't exist)
+    if (!tables.includes('BlogTranslations')) {
+      await queryInterface.createTable('BlogTranslations', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -79,17 +82,23 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW,
       },
-    });
+      });
 
-    // Add indexes
-    await queryInterface.addIndex('BlogTranslations', ['blogId']);
-    await queryInterface.addIndex('BlogTranslations', ['language']);
-    await queryInterface.addIndex('BlogTranslations', ['blogId', 'language'], {
-      unique: true,
-      name: 'blog_translation_unique_language',
-    });
+      // Add indexes
+      await queryInterface.addIndex('BlogTranslations', ['blogId']);
+      await queryInterface.addIndex('BlogTranslations', ['language']);
+      await queryInterface.addIndex('BlogTranslations', ['blogId', 'language'], {
+        unique: true,
+        name: 'blog_translation_unique_language',
+      });
+    }
 
-    // 2. Add blogTopicId column to Blogs table
+    // 2. Add blogTopicId column to Blogs table (only if it doesn't exist)
+    const blogsTable = await queryInterface.describeTable('Blogs');
+    if (blogsTable.blogTopicId) {
+      console.log('blogTopicId column already exists, skipping data migration');
+      return;
+    }
     await queryInterface.addColumn('Blogs', 'blogTopicId', {
       type: Sequelize.UUID,
       allowNull: true,
@@ -275,10 +284,16 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     // Remove blogTopicId from Blogs
-    await queryInterface.removeColumn('Blogs', 'blogTopicId');
+    const blogsTable = await queryInterface.describeTable('Blogs');
+    if (blogsTable.blogTopicId) {
+      await queryInterface.removeColumn('Blogs', 'blogTopicId');
+    }
 
     // Drop BlogTranslations table
-    await queryInterface.dropTable('BlogTranslations');
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes('BlogTranslations')) {
+      await queryInterface.dropTable('BlogTranslations');
+    }
 
     // Note: This down migration doesn't restore the deleted EN blogs
     // A full rollback would require more complex logic
