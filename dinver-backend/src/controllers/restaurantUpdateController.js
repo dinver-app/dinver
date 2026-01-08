@@ -269,6 +269,7 @@ const getUpdateById = async (req, res) => {
       status: update.status,
       viewCount: update.viewCount,
       createdAt: update.createdAt,
+      detectedLanguage: update.detectedLanguage,
     };
 
     res.json(response);
@@ -430,6 +431,7 @@ const getUpdatesFeed = async (req, res) => {
         distanceKm: updateData.distanceKm
           ? parseFloat(updateData.distanceKm).toFixed(1)
           : null,
+        detectedLanguage: updateData.detectedLanguage,
       };
     });
 
