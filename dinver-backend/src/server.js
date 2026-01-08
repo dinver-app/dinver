@@ -34,9 +34,7 @@ const db = require('../models'); // Import single DB instance
 const PORT = process.env.PORT || 3000;
 
 // Only sync in development - use migrations in production/staging
-const syncPromise = env === 'development'
-  ? db.sequelize.sync()
-  : Promise.resolve();
+const syncPromise = Promise.resolve();
 
 syncPromise.then(() => {
   if (cluster.isPrimary) {
@@ -62,8 +60,9 @@ syncPromise.then(() => {
       await leaderboardCycleManager.checkAndUpdateCycles();
     });
 
-    console.log('Leaderboard cycle cron job scheduled to run every hour (Primary)');
-
+    console.log(
+      'Leaderboard cycle cron job scheduled to run every hour (Primary)',
+    );
   } else {
     const httpServer = http.createServer(app);
     initializeSocket(httpServer);
@@ -72,13 +71,11 @@ syncPromise.then(() => {
       console.log(`WebSocket server ready`);
 
       const logger = logs.getLogger('logger-first');
-      logger.emit(
-        {
-          severityText: 'info',
-          body: `Application started successfully (${new Date().toISOString()}) `,
-          attributes: {port: PORT, environment: env, pid: process.pid}
-        }
-      );
+      logger.emit({
+        severityText: 'info',
+        body: `Application started successfully (${new Date().toISOString()}) `,
+        attributes: { port: PORT, environment: env, pid: process.pid },
+      });
     });
   }
 });
