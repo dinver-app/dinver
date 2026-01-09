@@ -24,6 +24,7 @@ import Visits from "./pages/Visits";
 import VisitDetail from "./pages/VisitDetail";
 import LeaderboardCycles from "./pages/LeaderboardCycles";
 import LeaderboardCycleDetails from "./pages/LeaderboardCycleDetails";
+import EditLeaderboardCycle from "./pages/EditLeaderboardCycle";
 import ReviewDetails from "./pages/ReviewDetails";
 import Experiences from "./pages/Experiences";
 import ExperienceDetails from "./pages/ExperienceDetails";
@@ -33,6 +34,8 @@ import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 import SupportTickets from "./pages/SupportTickets";
 import SupportTicketDetails from "./pages/SupportTicketDetails";
 import GoogleApiLogs from "./pages/GoogleApiLogs";
+import { BlogGenerationPage } from "./pages/BlogGeneration";
+import BlogTopicPreviewPage from "./pages/BlogGeneration/BlogTopicPreviewPage";
 
 function App() {
   return (
@@ -59,6 +62,8 @@ function App() {
             <Route path="/claim" element={<Claim />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog-generation" element={<BlogGenerationPage />} />
+            <Route path="/blog-generation/topic/:id" element={<BlogTopicPreviewPage />} />
             <Route path="/coupons" element={<Coupons />} />
             <Route path="/referrals" element={<Referrals />} />
             <Route path="/qr-print-requests" element={<QRPrintRequests />} />
@@ -72,6 +77,10 @@ function App() {
             <Route
               path="/leaderboard-cycles/:id"
               element={<LeaderboardCycleDetails />}
+            />
+            <Route
+              path="/leaderboard-cycles/:id/edit"
+              element={<EditLeaderboardCycle />}
             />
             <Route path="/experiences" element={<Experiences />} />
             <Route path="/experiences/:id" element={<ExperienceDetails />} />

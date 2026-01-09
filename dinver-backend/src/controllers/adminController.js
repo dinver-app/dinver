@@ -25,10 +25,12 @@ async function adminLogin(req, res) {
     res.cookie('adminRefreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
+      sameSite: 'none',
     });
     res.cookie('adminAccessToken', accessToken, {
       httpOnly: true,
       secure: true,
+      sameSite: 'none',
     });
 
     res.status(200).json({ message: 'Login successful', user: user });

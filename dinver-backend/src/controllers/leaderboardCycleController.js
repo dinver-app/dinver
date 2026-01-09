@@ -8,7 +8,7 @@ const {
 } = require('../../models');
 const { Op } = require('sequelize');
 const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const {

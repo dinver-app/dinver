@@ -1,15 +1,6 @@
-const mailgun = require('mailgun-js');
 const { format } = require('date-fns');
 const crypto = require('crypto');
-
-// Mailgun konfiguracija
-const mg = process.env.MAILGUN_API_KEY
-  ? mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    })
-  : null;
+const { sendEmail } = require('./mailgunClient');
 
 const formatDate = (dateStr) => {
   return format(new Date(dateStr), 'dd.MM.yyyy.');
@@ -422,15 +413,26 @@ const sendVerificationEmail = async (email, verificationLink) => {
   // Add headers and Mailgun options
   data = addAntiSpamHeaders(data, { refId: `verify-${Date.now()}` });
 
-  if (process.env.NODE_ENV === 'development' || !mg) {
-    console.log('Development mode: Email would be sent');
-    console.log('To:', email);
-    console.log('Verification Link:', verificationLink);
-    return;
-  }
-
   try {
-    await mg.messages().send(data);
+    await sendEmail({
+      from: data.from,
+      to: data.to,
+      subject: data.subject,
+      text: data.text,
+      html: data.html,
+      headers: {
+        'Message-ID': data['h:Message-ID'],
+        'Reply-To': data['h:Reply-To'],
+        'List-Unsubscribe': data['h:List-Unsubscribe'],
+        'X-Entity-Ref-ID': data['h:X-Entity-Ref-ID'],
+      },
+      options: {
+        dkim: data['o:dkim'],
+        tracking: data['o:tracking'],
+        'tracking-clicks': data['o:tracking-clicks'],
+        'tracking-opens': data['o:tracking-opens'],
+      },
+    });
     console.log('Verification email sent successfully');
   } catch (error) {
     console.error('Error sending verification email:', error);
@@ -876,14 +878,6 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
     html: createEmailTemplate(htmlContent),
   };
 
-  if (process.env.NODE_ENV === 'development' || !mg) {
-    console.log('Development mode: Email would be sent');
-    console.log('To:', to);
-    console.log('Subject:', subject);
-    console.log('Text:', text);
-    return;
-  }
-
   // Strengthen text part if necessary
   if (!data.text || data.text.length < 40) {
     data.text = htmlToPlainText(htmlContent || text);
@@ -895,7 +889,25 @@ const sendReservationEmail = async ({ to, type, reservation }) => {
   });
 
   try {
-    await mg.messages().send(data);
+    await sendEmail({
+      from: data.from,
+      to: data.to,
+      subject: data.subject,
+      text: data.text,
+      html: data.html,
+      headers: {
+        'Message-ID': data['h:Message-ID'],
+        'Reply-To': data['h:Reply-To'],
+        'List-Unsubscribe': data['h:List-Unsubscribe'],
+        'X-Entity-Ref-ID': data['h:X-Entity-Ref-ID'],
+      },
+      options: {
+        dkim: data['o:dkim'],
+        tracking: data['o:tracking'],
+        'tracking-clicks': data['o:tracking-clicks'],
+        'tracking-opens': data['o:tracking-opens'],
+      },
+    });
     console.log('Reservation email sent successfully');
   } catch (error) {
     console.error('Error sending reservation email:', error);
@@ -937,13 +949,6 @@ const sendPasswordResetEmail = async (email, resetLink) => {
     html: createEmailTemplate(htmlContent),
   };
 
-  if (process.env.NODE_ENV === 'development' || !mg) {
-    console.log('Development mode: Password reset email would be sent');
-    console.log('To:', email);
-    console.log('Reset Link:', resetLink);
-    return;
-  }
-
   // Strengthen text part if necessary
   if (!data.text || data.text.length < 40) {
     data.text = htmlToPlainText(htmlContent);
@@ -953,7 +958,25 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   data = addAntiSpamHeaders(data, { refId: `pwd-reset-${Date.now()}` });
 
   try {
-    await mg.messages().send(data);
+    await sendEmail({
+      from: data.from,
+      to: data.to,
+      subject: data.subject,
+      text: data.text,
+      html: data.html,
+      headers: {
+        'Message-ID': data['h:Message-ID'],
+        'Reply-To': data['h:Reply-To'],
+        'List-Unsubscribe': data['h:List-Unsubscribe'],
+        'X-Entity-Ref-ID': data['h:X-Entity-Ref-ID'],
+      },
+      options: {
+        dkim: data['o:dkim'],
+        tracking: data['o:tracking'],
+        'tracking-clicks': data['o:tracking-clicks'],
+        'tracking-opens': data['o:tracking-opens'],
+      },
+    });
     console.log('Password reset email sent successfully');
   } catch (error) {
     console.error('Error sending password reset email:', error);

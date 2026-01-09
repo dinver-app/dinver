@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const session = require('express-session');
 const passport = require('passport');
-const { createClient } = require('redis');
+const Redis = require('ioredis');
 const RedisStore = require('connect-redis')(session);
 const { PostHog, setupExpressErrorHandler } = require('posthog-node');
 
@@ -17,6 +17,7 @@ const notificationRoutes = require('./routes/appRoutes/notificationRoutes');
 
 const swaggerJsdoc = require('swagger-jsdoc');
 const cors = require('cors');
+const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
 const cron = require('node-cron');
@@ -27,6 +28,8 @@ const {
 const { runDataHealthChecks } = require('./cron/dataHealthCron');
 const { cleanupExpiredVisits } = require('./cron/cleanupExpiredVisits');
 const { cleanupOldNotifications } = require('./cron/cleanupNotifications');
+const { expireUpdates } = require('./cron/expireUpdates');
+const { processQueuedTopics } = require('./cron/blogGenerationCron');
 dotenv.config();
 
 const app = express();
@@ -61,22 +64,55 @@ cron.schedule('0 4 * * *', async () => {
 // Čišćenje starih notifikacija (svaki dan u 02:00) - briše notifikacije starije od 30 dana
 cron.schedule('0 2 * * *', cleanupOldNotifications);
 
-// Initialize client.
-const redisClient = createClient({
-  url: process.env.REDIS_URL,
-  socket: {
-    tls: false,
-    rejectUnauthorized: false,
-  },
-});
+// Expire old restaurant updates (svaki sat) - markira ACTIVE updateove kao EXPIRED ako je expiresAt prošao
+cron.schedule('0 * * * *', expireUpdates);
 
-// Initialize redis connection
-redisClient.connect().catch(console.error);
+// Blog generation - procesira queued blog teme (svaka 2 dana u 9:00 ujutro, Europe/Zagreb timezone)
+cron.schedule('0 9 */2 * *', processQueuedTopics, { timezone: 'Europe/Zagreb' });
+
+// Initialize Redis client with ioredis
+// Support both full Redis URL and separate host/port config
+const redisClient = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+      retryStrategy: (times) => {
+        if (times > 10) {
+          console.log('[Redis Session] Max retries reached');
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      enableOfflineQueue: true,
+      maxRetriesPerRequest: null,
+      tls: process.env.REDIS_URL.includes('upstash') ? {} : undefined,
+    })
+  : new Redis({
+      host: 'localhost',
+      port: parseInt(process.env.REDIS_PORT) || 6379,
+      password: process.env.REDIS_PASSWORD || undefined,
+      retryStrategy: (times) => {
+        if (times > 10) {
+          console.log('[Redis Session] Max retries reached');
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      enableOfflineQueue: true,
+      maxRetriesPerRequest: null,
+    });
 
 // Redis error handling
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-redisClient.on('connect', () => console.log('Connected to Redis'));
+redisClient.on('error', (err) =>
+  console.error('[Redis Session] Error:', err.message),
+);
+redisClient.on('connect', () => console.log('[Redis Session] Connected'));
+redisClient.on('ready', () => console.log('[Redis Session] Ready'));
 
+// Trust proxy for rate limiting behind reverse proxy (nginx, Railway, etc.)
+app.set('trust proxy', 1);
+
+app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -98,7 +134,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
@@ -113,12 +149,19 @@ const allowedOrigins = [
   'https://sysadmin.dinver.eu',
   'https://dinver.eu',
   'https://www.dinver.eu',
+  'https://dinver-staging-landing.vercel.app',
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Dozvoli sve .dinver.eu subdomene + allowedOrigins
+      // Development mode: allow all origins for mobile development
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, true);
+        return;
+      }
+
+      // Production: Dozvoli sve .dinver.eu subdomene + allowedOrigins
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
@@ -167,14 +210,11 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 if (process.env.NODE_ENV !== 'development') {
-  const posthog = new PostHog(
-    process.env.POSTHOG_API_KEY,
-    {
-      host: 'https://eu.i.posthog.com',
-      enableExceptionAutocapture: true
-    }
-  )
-  setupExpressErrorHandler(posthog, app)
+  const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+    host: 'https://eu.i.posthog.com',
+    enableExceptionAutocapture: true,
+  });
+  setupExpressErrorHandler(posthog, app);
 
   posthog.capture({
     distinctId: 'server-startup',

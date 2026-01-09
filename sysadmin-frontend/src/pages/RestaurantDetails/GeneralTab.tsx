@@ -76,7 +76,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   ]);
 
   const [file, setFile] = useState<File | null>(null);
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null
+  );
   const [errors, setErrors] = useState({
     websiteUrl: "",
     fbUrl: "",
@@ -90,9 +92,11 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
   const [saveStatus, setSaveStatus] = useState(t("all_changes_saved"));
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeleteProfilePictureModal, setShowDeleteProfilePictureModal] = useState(false);
+  const [showDeleteProfilePictureModal, setShowDeleteProfilePictureModal] =
+    useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeletingProfilePicture, setIsDeletingProfilePicture] = useState(false);
+  const [isDeletingProfilePicture, setIsDeletingProfilePicture] =
+    useState(false);
 
   const validateInput = (name: string, value: string) => {
     let error = "";
@@ -251,13 +255,17 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
       }));
       formDataToSend.append("translations", JSON.stringify(translationsToSend));
 
-      const updatedRestaurant = await updateRestaurant(restaurant.id || "", formDataToSend);
+      const updatedRestaurant = await updateRestaurant(
+        restaurant.id || "",
+        formDataToSend
+      );
 
       // Use response from backend for URLs (especially for uploaded images)
       const updatedFormData = {
         ...formData,
         thumbnailUrl: updatedRestaurant.thumbnailUrl || formData.thumbnailUrl,
-        profilePictureUrl: updatedRestaurant.profilePicture || formData.profilePictureUrl,
+        profilePictureUrl:
+          updatedRestaurant.profilePicture || formData.profilePictureUrl,
       };
 
       setFormData(updatedFormData);
@@ -483,11 +491,16 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
                       <label className="block text-sm font-medium text-gray-700">
                         {t("restaurant_long_description")} (
                         {translation.language.toUpperCase()}) -{" "}
-                        <span className="text-xs text-gray-500">Za AI kontekst</span>
+                        <span className="text-xs text-gray-500">
+                          Za AI kontekst
+                        </span>
                       </label>
                       <TranslateButton
                         onClick={() =>
-                          handleTranslate(translation.language, "longDescription")
+                          handleTranslate(
+                            translation.language,
+                            "longDescription"
+                          )
                         }
                         className="ml-2"
                       />
@@ -534,7 +547,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </span>
               <button
                 type="button"
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   formData.showWifiCredentials ? "bg-blue-600" : "bg-gray-200"
                 }`}
                 role="switch"
@@ -647,7 +660,7 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
               </span>
               <button
                 type="button"
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   formData.reservationEnabled ? "bg-blue-600" : "bg-gray-200"
                 }`}
                 role="switch"
@@ -805,7 +818,9 @@ const GeneralTab = ({ restaurant, onUpdate }: GeneralTabProps) => {
           ) : (
             <div
               className="w-64 h-64 border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer rounded-md hover:bg-gray-100 transition-colors"
-              onClick={() => document.getElementById("profilePictureInput")?.click()}
+              onClick={() =>
+                document.getElementById("profilePictureInput")?.click()
+              }
             >
               <svg
                 className="w-8 h-8 text-gray-400 mb-1"

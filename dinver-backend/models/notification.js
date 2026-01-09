@@ -59,12 +59,32 @@ module.exports = (sequelize, DataTypes) => {
       title: {
         type: DataTypes.STRING(255),
         allowNull: false,
-        comment: 'Naslov notifikacije',
+        comment: 'Naslov notifikacije (DEPRECATED - koristi titleHr/titleEn)',
       },
       body: {
         type: DataTypes.TEXT,
         allowNull: false,
-        comment: 'Tekst notifikacije',
+        comment: 'Tekst notifikacije (DEPRECATED - koristi bodyHr/bodyEn)',
+      },
+      titleHr: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        comment: 'Naslov notifikacije (Hrvatski)',
+      },
+      titleEn: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        comment: 'Naslov notifikacije (English)',
+      },
+      bodyHr: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        comment: 'Tekst notifikacije (Hrvatski)',
+      },
+      bodyEn: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        comment: 'Tekst notifikacije (English)',
       },
       data: {
         type: DataTypes.JSONB,

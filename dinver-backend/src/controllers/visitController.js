@@ -8,6 +8,9 @@ const {
   UserFollow,
   Experience,
   ExperienceLike,
+  ExperienceMedia,
+  MenuItem,
+  MenuItemTranslation,
 } = require('../../models');
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
@@ -84,6 +87,21 @@ const createVisitFromReceipt = async (req, res) => {
     if (!receiptId) {
       return res.status(400).json({ error: 'Receipt ID is required' });
     }
+
+    let parsedTaggedBuddies = taggedBuddies;
+    if (typeof taggedBuddies === 'string') {
+      try {
+        parsedTaggedBuddies = JSON.parse(taggedBuddies);
+      } catch (e) {
+        console.warn(
+          '[Visit Create] Failed to parse taggedBuddies JSON, using raw value:',
+          e.message,
+        );
+      }
+    }
+
+    if (parsedTaggedBuddies && !Array.isArray(parsedTaggedBuddies))
+      parsedTaggedBuddies = [parsedTaggedBuddies];
 
     console.log(
       `[Visit Create] Creating visit from receipt ${receiptId} for user ${userId}`,
@@ -345,7 +363,11 @@ const createVisitFromReceipt = async (req, res) => {
       status: 'PENDING',
       wasInMustVisit: wasInMustVisit,
       submittedAt: new Date(),
-      taggedBuddies: taggedBuddies || [],
+      receiptImageUrl: receipt.mediumUrl || receipt.imageUrl,
+      status: 'PENDING',
+      wasInMustVisit: wasInMustVisit,
+      submittedAt: new Date(),
+      taggedBuddies: parsedTaggedBuddies || [],
       manualRestaurantName: !finalRestaurantId ? manualRestaurantName : null,
       manualRestaurantCity: !finalRestaurantId ? manualRestaurantCity : null,
     });
@@ -381,6 +403,64 @@ const createVisitFromReceipt = async (req, res) => {
           removedForVisitId: visit.id,
         });
         console.log(`[Visit Create] Updated Must Visit entry with visit ID`);
+      }
+    }
+
+    if (
+      parsedTaggedBuddies &&
+      parsedTaggedBuddies.length > 0 &&
+      finalRestaurantId
+    ) {
+      for (const buddyId of parsedTaggedBuddies) {
+        try {
+          // Check if this buddy had restaurant in Must Visit
+          const buddyMustVisitEntry = await UserFavorite.findOne({
+            where: {
+              userId: buddyId,
+              restaurantId: finalRestaurantId,
+              removedAt: null,
+            },
+          });
+
+          const buddyWasInMustVisit = !!buddyMustVisitEntry;
+
+          // If buddy had it in Must Visit, soft delete it
+          if (buddyMustVisitEntry) {
+            await buddyMustVisitEntry.update({
+              removedAt: new Date(),
+            });
+          }
+
+          // Create visit for buddy
+          const buddyVisit = await Visit.create({
+            userId: buddyId,
+            restaurantId: finalRestaurantId || null,
+            receiptImageUrl: receipt.mediumUrl || receipt.imageUrl,
+            status: 'PENDING',
+            wasInMustVisit: buddyWasInMustVisit,
+            submittedAt: new Date(),
+            taggedBuddies: [visit.id], // Link to main visit
+            taggedBy: userId, // Who tagged this buddy
+            manualRestaurantName: !finalRestaurantId
+              ? manualRestaurantName
+              : null,
+            manualRestaurantCity: !finalRestaurantId
+              ? manualRestaurantCity
+              : null,
+          });
+
+          // Update Must Visit entry with visit ID if it was removed
+          if (buddyMustVisitEntry) {
+            await buddyMustVisitEntry.update({
+              removedForVisitId: buddyVisit.id,
+            });
+          }
+        } catch (e) {
+          console.error(
+            `[Visit Create] Failed to create visit for buddy ${buddyId}`,
+            e,
+          );
+        }
       }
     }
 
@@ -697,16 +777,140 @@ const getUserVisits = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded'],
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
+        },
+        {
+          model: User,
+          as: 'tagger',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+          required: false,
         },
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status'],
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'status',
+            'publishedAt',
+          ],
         },
       ],
       order: [['submittedAt', 'DESC']],
     });
+
+    // Fetch all related visits to build complete participant lists
+    const { Op } = require('sequelize');
+    const mainVisitIds = new Set();
+    visits.forEach((visit) => {
+      if (
+        visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.taggedBuddies[0]);
+      } else if (
+        !visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.id);
+      }
+    });
+
+    let allRelatedVisits = [];
+    if (mainVisitIds.size > 0) {
+      allRelatedVisits = await Visit.findAll({
+        where: {
+          [Op.or]: [
+            { id: { [Op.in]: Array.from(mainVisitIds) } },
+            { taggedBuddies: { [Op.overlap]: Array.from(mainVisitIds) } },
+          ],
+          status: 'APPROVED',
+        },
+        include: [
+          {
+            model: User,
+            as: 'tagger',
+            attributes: ['id', 'name', 'username', 'profileImage'],
+            required: false,
+          },
+        ],
+      });
+    }
+
+    const visitGroups = new Map();
+    const visitIdSet = new Set(visits.map((v) => v.id));
+    const allVisits = [...visits, ...allRelatedVisits];
+
+    const visitMap = new Map();
+    allVisits.forEach((visit) => {
+      if (!visitMap.has(visit.id)) {
+        visitMap.set(visit.id, visit);
+      }
+    });
+    const uniqueVisits = Array.from(visitMap.values());
+
+    uniqueVisits.forEach((visit) => {
+      if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        const firstBuddy = visit.taggedBuddies[0];
+
+        if (visitIdSet.has(firstBuddy)) {
+          if (!visitGroups.has(firstBuddy)) {
+            visitGroups.set(firstBuddy, {
+              allParticipantIds: new Set(),
+            });
+          }
+          visitGroups.get(firstBuddy).allParticipantIds.add(visit.userId);
+        } else {
+          if (!visitGroups.has(visit.id)) {
+            visitGroups.set(visit.id, {
+              allParticipantIds: new Set([
+                visit.userId,
+                ...visit.taggedBuddies,
+              ]),
+            });
+          } else {
+            visitGroups.get(visit.id).allParticipantIds.add(visit.userId);
+            visit.taggedBuddies.forEach((id) =>
+              visitGroups.get(visit.id).allParticipantIds.add(id),
+            );
+          }
+        }
+      }
+    });
+
+    const allUserIds = new Set();
+    visitGroups.forEach((group) => {
+      group.allParticipantIds.forEach((id) => allUserIds.add(id));
+    });
+
+    let usersMap = new Map();
+    if (allUserIds.size > 0) {
+      const users = await User.findAll({
+        where: { id: Array.from(allUserIds) },
+        attributes: ['id', 'name', 'username', 'profileImage'],
+      });
+      users.forEach((user) => {
+        usersMap.set(user.id, {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          profileImage: user.profileImage
+            ? getMediaUrl(user.profileImage, 'image', 'original')
+            : null,
+        });
+      });
+    }
 
     // Group visits by restaurant
     const restaurantMap = new Map();
@@ -716,6 +920,23 @@ const getUserVisits = async (req, res) => {
 
       const restaurantId = visit.restaurant.id;
 
+      // Find participants for this visit
+      let participantIds = [];
+      if (visitGroups.has(visit.id)) {
+        const group = visitGroups.get(visit.id);
+        participantIds = Array.from(group.allParticipantIds).filter(
+          (id) => id !== userId && id !== visit.taggedBy,
+        );
+      } else if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        const mainVisitId = visit.taggedBuddies[0];
+        if (visitGroups.has(mainVisitId)) {
+          const group = visitGroups.get(mainVisitId);
+          participantIds = Array.from(group.allParticipantIds).filter(
+            (id) => id !== userId && id !== visit.taggedBy,
+          );
+        }
+      }
+
       // Transform visit data with experience rating
       const visitData = {
         id: visit.id,
@@ -723,18 +944,50 @@ const getUserVisits = async (req, res) => {
         reviewedAt: visit.reviewedAt,
         visitDate: visit.visitDate,
         wasInMustVisit: visit.wasInMustVisit,
+        taggedBy: visit.tagger
+          ? {
+              id: visit.tagger.id,
+              name: visit.tagger.name,
+              username: visit.tagger.username,
+              profileImage: visit.tagger.profileImage
+                ? getMediaUrl(visit.tagger.profileImage, 'image', 'original')
+                : null,
+            }
+          : null,
+        taggedBuddies: participantIds
+          .map((id) => usersMap.get(id))
+          .filter((user) => user !== undefined),
         totalAmount: visit.receipt?.totalAmount || null,
         pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        reservationBonusPoints:
+          visit.receipt?.hasReservationBonus &&
+          visit.receipt?.pointsAwarded &&
+          visit.receipt?.totalAmount
+            ? (() => {
+                // Calculate number of participants (main user + tagged buddies)
+                const totalParticipants = 1 + (participantIds?.length || 0);
+                // Calculate base points per person (without bonus)
+                const basePointsPerPerson =
+                  visit.receipt.totalAmount / totalParticipants / 10;
+                // Bonus is the difference between awarded points and base points
+                const bonus = visit.receipt.pointsAwarded - basePointsPerPerson;
+                return parseFloat(bonus.toFixed(2));
+              })()
+            : null,
         // Experience rating for this visit
         experience: visit.experience
           ? {
               id: visit.experience.id,
               foodRating: parseFloat(visit.experience.foodRating) || null,
-              ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
+              ambienceRating:
+                parseFloat(visit.experience.ambienceRating) || null,
               serviceRating: parseFloat(visit.experience.serviceRating) || null,
               overallRating: parseFloat(visit.experience.overallRating) || null,
               sharesCount: visit.experience.sharesCount || 0,
               likesCount: visit.experience.likesCount || 0,
+              status: visit.experience.status,
+              publishedAt: visit.experience.publishedAt,
             }
           : null,
       };
@@ -750,7 +1003,10 @@ const getUserVisits = async (req, res) => {
         }
         // Update first visit date if this is older
         const visitDateStr = visit.visitDate || visit.submittedAt;
-        if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
+        if (
+          visitDateStr &&
+          new Date(visitDateStr) < new Date(group.firstVisitDate)
+        ) {
           group.firstVisitDate = visitDateStr;
         }
       } else {
@@ -763,10 +1019,22 @@ const getUserVisits = async (req, res) => {
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
-            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
-            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
-            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
-            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+            rating:
+              restaurantData.rating != null
+                ? Number(restaurantData.rating)
+                : null,
+            userRatingsTotal:
+              restaurantData.userRatingsTotal != null
+                ? Number(restaurantData.userRatingsTotal)
+                : null,
+            dinverRating:
+              restaurantData.dinverRating != null
+                ? Number(restaurantData.dinverRating)
+                : null,
+            dinverReviewsCount:
+              restaurantData.dinverReviewsCount != null
+                ? Number(restaurantData.dinverReviewsCount)
+                : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,
@@ -786,7 +1054,12 @@ const getUserVisits = async (req, res) => {
         // Calculate user's average rating for this restaurant
         const averageRating =
           group._ratings.length > 0
-            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            ? parseFloat(
+                (
+                  group._ratings.reduce((a, b) => a + b, 0) /
+                  group._ratings.length
+                ).toFixed(1),
+              )
             : null;
 
         // Remove internal _ratings array
@@ -1243,6 +1516,35 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
       { transaction },
     );
 
+    const parsedTaggedBuddies = taggedBuddies ? JSON.parse(taggedBuddies) : [];
+    if (parsedTaggedBuddies.length > 0) {
+      for (const buddyId of parsedTaggedBuddies) {
+        try {
+          await Visit.create(
+            {
+              userId: buddyId,
+              restaurantId: null,
+              receiptImageUrl: imageUrl,
+              status: 'PENDING',
+              wasInMustVisit: false, // Will be updated after OCR identifies restaurant
+              submittedAt: new Date(),
+              taggedBuddies: [visit.id],
+              taggedBy: userId, // Who tagged this buddy
+            },
+            { transaction },
+          );
+          console.log(
+            `[Upload & Create Visit] Created buddy visit for user ${buddyId}`,
+          );
+        } catch (buddyError) {
+          console.error(
+            `[Upload & Create Visit] Failed to create buddy visit for ${buddyId}:`,
+            buddyError.message,
+          );
+        }
+      }
+    }
+
     // === COMMIT TRANSACTION ===
     await transaction.commit();
 
@@ -1255,7 +1557,11 @@ const uploadReceiptAndCreateVisit = async (req, res) => {
     // Use setImmediate to defer OCR to next event loop tick
     // This ensures HTTP response is sent BEFORE OCR starts
     setImmediate(() => {
-      processFullOcrInBackground(receiptIdForOcr, imageBufferCopy, mimeTypeForOcr)
+      processFullOcrInBackground(
+        receiptIdForOcr,
+        imageBufferCopy,
+        mimeTypeForOcr,
+      )
         .then(() => {
           console.log(
             `[Background OCR] Successfully completed for receipt ${receiptIdForOcr}`,
@@ -1620,19 +1926,94 @@ async function processFullOcrInBackground(receiptId, imageBuffer, mimeType) {
     console.log('└───────────────────────────────────────────────────────┘\n');
 
     // ========================================================================
-    // STEP 4: UPDATE VISIT
+    // STEP 4: UPDATE VISIT (and BUDDY VISITS)
     // ========================================================================
     console.log('┌─ STEP 4: Update Visit ───────────────────────────────┐');
     if (matchedRestaurant) {
+      const allUserMustVisits = await UserFavorite.findAll({
+        where: {
+          userId: receipt.userId,
+          removedAt: null,
+        },
+      });
+
+      const mustVisitEntry = await UserFavorite.findOne({
+        where: {
+          userId: receipt.userId,
+          restaurantId: matchedRestaurant.id,
+          removedAt: null,
+        },
+      });
+
+      const wasInMustVisit = !!mustVisitEntry;
+
+      if (wasInMustVisit) {
+        await mustVisitEntry.update({
+          removedAt: new Date(),
+          removedForVisitId: receipt.visitId,
+        });
+      }
+
+      // Update main visit
       await Visit.update(
         {
           restaurantId: matchedRestaurant.id,
+          wasInMustVisit: wasInMustVisit,
         },
         {
           where: { id: receipt.visitId },
         },
       );
       console.log(`│ ✅ Visit linked to restaurant: ${matchedRestaurant.name}`);
+
+      // Find and update all buddy visits
+      try {
+        const { Op } = require('sequelize');
+        const buddyVisits = await Visit.findAll({
+          where: {
+            taggedBuddies: { [Op.contains]: [receipt.visitId] },
+            userId: { [Op.ne]: receipt.userId },
+          },
+        });
+
+        if (buddyVisits.length > 0) {
+          for (const buddyVisit of buddyVisits) {
+            const allBuddyMustVisits = await UserFavorite.findAll({
+              where: {
+                userId: buddyVisit.userId,
+                removedAt: null,
+              },
+            });
+
+            const buddyMustVisitEntry = await UserFavorite.findOne({
+              where: {
+                userId: buddyVisit.userId,
+                restaurantId: matchedRestaurant.id,
+                removedAt: null,
+              },
+            });
+
+            const buddyWasInMustVisit = !!buddyMustVisitEntry;
+
+            if (buddyMustVisitEntry) {
+              await buddyMustVisitEntry.update({
+                removedAt: new Date(),
+                removedForVisitId: buddyVisit.id,
+              });
+            }
+
+            await buddyVisit.update({
+              restaurantId: matchedRestaurant.id,
+              wasInMustVisit: buddyWasInMustVisit,
+            });
+          }
+        }
+      } catch (buddyUpdateError) {
+        console.log(
+          '│ ⚠️  Failed to update buddy visits:',
+          buddyUpdateError.message,
+        );
+      }
     } else {
       console.log('│ ⚠️  No restaurant matched - Visit remains unlinked');
       console.log('│    → Admin will manually link restaurant');
@@ -1766,7 +2147,10 @@ const canViewUserProfile = async (targetUserId, viewerUserId) => {
 
   // Private profiles require authentication
   if (!viewerUserId) {
-    return { canView: false, reason: 'Authentication required for non-public profile' };
+    return {
+      canView: false,
+      reason: 'Authentication required for non-public profile',
+    };
   }
 
   // Followers only - check if viewer follows target user
@@ -1779,7 +2163,10 @@ const canViewUserProfile = async (targetUserId, viewerUserId) => {
     });
 
     if (!isFollowing) {
-      return { canView: false, reason: 'You must follow this user to view their profile' };
+      return {
+        canView: false,
+        reason: 'You must follow this user to view their profile',
+      };
     }
     return { canView: true };
   }
@@ -1802,7 +2189,10 @@ const canViewUserProfile = async (targetUserId, viewerUserId) => {
     ]);
 
     if (!viewerFollowsTarget || !targetFollowsViewer) {
-      return { canView: false, reason: 'You must be buddies (mutual follow) to view this profile' };
+      return {
+        canView: false,
+        reason: 'You must be buddies (mutual follow) to view this profile',
+      };
     }
     return { canView: true };
   }
@@ -1826,9 +2216,14 @@ const getOtherUserVisits = async (req, res) => {
     }
 
     // Check privacy settings
-    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    const { canView, reason } = await canViewUserProfile(
+      targetUserId,
+      viewerUserId,
+    );
     if (!canView) {
-      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+      return res
+        .status(403)
+        .json({ error: reason || 'Cannot view this profile' });
     }
 
     // Fetch APPROVED visits only (public shouldn't see pending/rejected)
@@ -1860,7 +2255,16 @@ const getOtherUserVisits = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'foodRating', 'ambienceRating', 'serviceRating', 'overallRating', 'status', 'sharesCount', 'likesCount'],
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'status',
+            'sharesCount',
+            'likesCount',
+          ],
         },
       ],
       order: [['submittedAt', 'DESC']],
@@ -1903,7 +2307,10 @@ const getOtherUserVisits = async (req, res) => {
         }
         // Update first visit date if this is older
         const visitDateStr = visit.visitDate || visit.submittedAt;
-        if (visitDateStr && new Date(visitDateStr) < new Date(group.firstVisitDate)) {
+        if (
+          visitDateStr &&
+          new Date(visitDateStr) < new Date(group.firstVisitDate)
+        ) {
           group.firstVisitDate = visitDateStr;
         }
       } else {
@@ -1916,10 +2323,22 @@ const getOtherUserVisits = async (req, res) => {
             thumbnailUrl: visit.restaurant.thumbnailUrl
               ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
               : null,
-            rating: restaurantData.rating != null ? Number(restaurantData.rating) : null,
-            userRatingsTotal: restaurantData.userRatingsTotal != null ? Number(restaurantData.userRatingsTotal) : null,
-            dinverRating: restaurantData.dinverRating != null ? Number(restaurantData.dinverRating) : null,
-            dinverReviewsCount: restaurantData.dinverReviewsCount != null ? Number(restaurantData.dinverReviewsCount) : null,
+            rating:
+              restaurantData.rating != null
+                ? Number(restaurantData.rating)
+                : null,
+            userRatingsTotal:
+              restaurantData.userRatingsTotal != null
+                ? Number(restaurantData.userRatingsTotal)
+                : null,
+            dinverRating:
+              restaurantData.dinverRating != null
+                ? Number(restaurantData.dinverRating)
+                : null,
+            dinverReviewsCount:
+              restaurantData.dinverReviewsCount != null
+                ? Number(restaurantData.dinverReviewsCount)
+                : null,
           },
           visitCount: 1,
           lastVisitDate: visitDateStr,
@@ -1939,7 +2358,12 @@ const getOtherUserVisits = async (req, res) => {
         // Calculate user's average rating for this restaurant
         const averageRating =
           group._ratings.length > 0
-            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            ? parseFloat(
+                (
+                  group._ratings.reduce((a, b) => a + b, 0) /
+                  group._ratings.length
+                ).toFixed(1),
+              )
             : null;
 
         // Remove internal _ratings array
@@ -1961,6 +2385,222 @@ const getOtherUserVisits = async (req, res) => {
   } catch (error) {
     console.error('Error fetching user visits:', error);
     res.status(500).json({ error: 'Failed to fetch visits' });
+  }
+};
+
+/**
+ * GET /api/app/visits/:visitId
+ * Returns visit details with restaurant info - used for navigation from notifications
+ */
+const getVisitById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { visitId } = req.params;
+
+    const visit = await Visit.findOne({
+      where: {
+        id: visitId,
+        userId: userId, 
+      },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'rating',
+            'dinverRating',
+            'dinverReviewsCount',
+            'priceLevel',
+            'address',
+            'place',
+            'isClaimed',
+            'thumbnailUrl',
+            'userRatingsTotal',
+          ],
+        },
+        {
+          model: Receipt,
+          as: 'receipt',
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
+        },
+        {
+          model: User,
+          as: 'tagger',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+          required: false,
+        },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'sharesCount',
+            'status',
+            'publishedAt',
+          ],
+          include: [
+            {
+              model: ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'storageKey',
+                'width',
+                'height',
+                'caption',
+                'menuItemId',
+                'isRecommended',
+              ],
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id'],
+                  include: [
+                    {
+                      model: MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!visit) {
+      return res.status(404).json({ error: 'Visit not found' });
+    }
+
+    if (!visit.restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found for this visit' });
+    }
+
+    // Fetch tagged buddies if they exist
+    let taggedBuddiesData = [];
+    if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: visit.taggedBuddies },
+        attributes: ['id', 'name', 'username', 'profileImage'],
+      });
+      taggedBuddiesData = buddyUsers.map((user) => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        profileImage: user.profileImage
+          ? getMediaUrl(user.profileImage, 'image', 'original')
+          : null,
+      }));
+    }
+
+    const response = {
+      visit: {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        status: visit.status,
+        wasInMustVisit: visit.wasInMustVisit,
+        taggedBy: visit.tagger
+          ? {
+              id: visit.tagger.id,
+              name: visit.tagger.name,
+              username: visit.tagger.username,
+              profileImage: visit.tagger.profileImage
+                ? getMediaUrl(visit.tagger.profileImage, 'image', 'original')
+                : null,
+            }
+          : null,
+        taggedBuddies: taggedBuddiesData,
+        totalAmount: visit.receipt?.totalAmount || null,
+        pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              foodRating: parseFloat(visit.experience.foodRating) || null,
+              ambienceRating:
+                parseFloat(visit.experience.ambienceRating) || null,
+              serviceRating: parseFloat(visit.experience.serviceRating) || null,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+              description: visit.experience.description,
+              mealType: visit.experience.mealType,
+              likesCount: visit.experience.likesCount || 0,
+              sharesCount: visit.experience.sharesCount || 0,
+              status: visit.experience.status,
+              publishedAt: visit.experience.publishedAt,
+              media: visit.experience.media
+                ? visit.experience.media.map((m) => ({
+                    id: m.id,
+                    kind: m.kind,
+                    cdnUrl: m.cdnUrl
+                      ? getMediaUrl(m.cdnUrl, 'image', 'original')
+                      : null,
+                    storageKey: m.storageKey,
+                    width: m.width,
+                    height: m.height,
+                    caption: m.caption,
+                    menuItemId: m.menuItemId,
+                    menuItem: m.menuItem
+                      ? {
+                          id: m.menuItem.id,
+                          translations: m.menuItem.translations || [],
+                        }
+                      : null,
+                    isRecommended: m.isRecommended,
+                  }))
+                : [],
+            }
+          : null,
+      },
+      restaurant: {
+        ...visit.restaurant.get(),
+        thumbnailUrl: visit.restaurant.thumbnailUrl
+          ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+          : null,
+        rating:
+          visit.restaurant.rating != null
+            ? Number(visit.restaurant.rating)
+            : null,
+        userRatingsTotal:
+          visit.restaurant.userRatingsTotal != null
+            ? Number(visit.restaurant.userRatingsTotal)
+            : null,
+        dinverRating:
+          visit.restaurant.dinverRating != null
+            ? Number(visit.restaurant.dinverRating)
+            : null,
+        dinverReviewsCount:
+          visit.restaurant.dinverReviewsCount != null
+            ? Number(visit.restaurant.dinverReviewsCount)
+            : null,
+      },
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching visit by ID:', error);
+    res.status(500).json({ error: 'Failed to fetch visit' });
   }
 };
 
@@ -1995,8 +2635,8 @@ const getVisitsByRestaurant = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant not found' });
     }
 
-    // Fetch all APPROVED visits for this restaurant
-    const visits = await Visit.findAll({
+    // Fetch user's APPROVED visits for this restaurant
+    const userVisits = await Visit.findAll({
       where: {
         userId: userId,
         restaurantId: restaurantId,
@@ -2006,7 +2646,19 @@ const getVisitsByRestaurant = async (req, res) => {
         {
           model: Receipt,
           as: 'receipt',
-          attributes: ['id', 'totalAmount', 'pointsAwarded'],
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
+        },
+        {
+          model: User,
+          as: 'tagger',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+          required: false,
         },
         {
           model: Experience,
@@ -2063,6 +2715,54 @@ const getVisitsByRestaurant = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
+    const mainVisitIds = new Set();
+    userVisits.forEach((visit) => {
+      if (
+        visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.taggedBuddies[0]);
+      } else if (
+        !visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.id);
+      }
+    });
+
+    let allRelatedVisits = [];
+    if (mainVisitIds.size > 0) {
+      const { Op } = require('sequelize');
+      allRelatedVisits = await Visit.findAll({
+        where: {
+          [Op.or]: [
+            { id: { [Op.in]: Array.from(mainVisitIds) } }, // Main visits
+            { taggedBuddies: { [Op.overlap]: Array.from(mainVisitIds) } }, // Buddy visits
+          ],
+          restaurantId: restaurantId,
+          status: 'APPROVED',
+        },
+        include: [
+          {
+            model: User,
+            as: 'tagger',
+            attributes: ['id', 'name', 'username', 'profileImage'],
+            required: false,
+          },
+        ],
+      });
+    }
+
+    const visitMap = new Map();
+    [...userVisits, ...allRelatedVisits].forEach((visit) => {
+      if (!visitMap.has(visit.id)) {
+        visitMap.set(visit.id, visit);
+      }
+    });
+    const visits = Array.from(visitMap.values());
+
     // Get hasLiked status for all experiences
     const experienceIds = visits
       .filter((v) => v.experience)
@@ -2080,49 +2780,175 @@ const getVisitsByRestaurant = async (req, res) => {
       likedIds = likes.map((l) => l.experienceId);
     }
 
-    const visitsData = visits.map((visit) => ({
-      id: visit.id,
-      submittedAt: visit.submittedAt,
-      reviewedAt: visit.reviewedAt,
-      visitDate: visit.visitDate,
-      wasInMustVisit: visit.wasInMustVisit,
-      taggedBuddies: visit.taggedBuddies,
-      totalAmount: visit.receipt?.totalAmount || null,
-      pointsAwarded: visit.receipt?.pointsAwarded || null,
-      experience: visit.experience
-        ? {
-            id: visit.experience.id,
-            foodRating: parseFloat(visit.experience.foodRating) || null,
-            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
-            serviceRating: parseFloat(visit.experience.serviceRating) || null,
-            overallRating: parseFloat(visit.experience.overallRating) || null,
-            description: visit.experience.description || null,
-            mealType: visit.experience.mealType || null,
-            likesCount: visit.experience.likesCount || 0,
-            sharesCount: visit.experience.sharesCount || 0,
-            publishedAt: visit.experience.publishedAt || null,
-            hasLiked: likedIds.includes(visit.experience.id),
-            media: visit.experience.media
-              ? visit.experience.media.map((m) => ({
-                  id: m.id,
-                  kind: m.kind,
-                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image', 'original') : null,
-                  width: m.width,
-                  height: m.height,
-                  orderIndex: m.orderIndex,
-                  caption: m.caption,
-                  isRecommended: m.isRecommended,
-                  menuItemId: m.menuItemId,
-                  menuItem: m.menuItem ? {
-                    id: m.menuItem.id,
-                    restaurantId: m.menuItem.restaurantId,
-                    translations: m.menuItem.translations || [],
-                  } : null,
-                }))
-              : [],
+    // Strategy: Create map of visit IDs, then identify main vs buddy visits
+    const visitGroups = new Map();
+    const visitIdSet = new Set(visits.map((v) => v.id));
+
+    visits.forEach((visit) => {
+      if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        const firstBuddy = visit.taggedBuddies[0];
+
+        // If first buddy is in our visit list, this is a buddy visit
+        if (visitIdSet.has(firstBuddy)) {
+          if (!visitGroups.has(firstBuddy)) {
+            visitGroups.set(firstBuddy, {
+              mainVisit: null,
+              relatedVisits: [],
+              allParticipantIds: new Set(),
+            });
           }
-        : null,
-    }));
+          visitGroups.get(firstBuddy).relatedVisits.push(visit);
+          visitGroups.get(firstBuddy).allParticipantIds.add(visit.userId);
+        } else {
+          // This is a main visit (tagged other users)
+          if (!visitGroups.has(visit.id)) {
+            visitGroups.set(visit.id, {
+              mainVisit: visit,
+              relatedVisits: [],
+              allParticipantIds: new Set([
+                visit.userId,
+                ...visit.taggedBuddies,
+              ]),
+            });
+          } else {
+            visitGroups.get(visit.id).mainVisit = visit;
+            visitGroups.get(visit.id).allParticipantIds.add(visit.userId);
+            visit.taggedBuddies.forEach((id) =>
+              visitGroups.get(visit.id).allParticipantIds.add(id),
+            );
+          }
+        }
+      }
+    });
+
+    // Collect all unique user IDs from all groups
+    const allUserIds = new Set();
+    visitGroups.forEach((group) => {
+      group.allParticipantIds.forEach((userId) => allUserIds.add(userId));
+    });
+
+    // Fetch all users in one query
+    let usersMap = new Map();
+    if (allUserIds.size > 0) {
+      const users = await User.findAll({
+        where: { id: Array.from(allUserIds) },
+        attributes: ['id', 'name', 'username', 'profileImage'],
+      });
+
+      users.forEach((user) => {
+        usersMap.set(user.id, {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          profileImage: user.profileImage
+            ? getMediaUrl(user.profileImage, 'image', 'original')
+            : null,
+        });
+      });
+    }
+
+    // Filter to only show visits that belong to the current user
+    // Each person has their own visit record (main or buddy visit)
+    const currentUserVisits = visits.filter((visit) => visit.userId === userId);
+
+    const visitsData = currentUserVisits.map((visit) => {
+      // Find which group this visit belongs to
+      let participantIds = [];
+
+      // Check if this is a main visit
+      if (visitGroups.has(visit.id)) {
+        const group = visitGroups.get(visit.id);
+        participantIds = Array.from(group.allParticipantIds).filter(
+          (id) => id !== userId && id !== visit.taggedBy,
+        );
+      } else if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        // Check if this is a related visit (tagged buddy)
+        const mainVisitId = visit.taggedBuddies[0];
+        if (visitGroups.has(mainVisitId)) {
+          const group = visitGroups.get(mainVisitId);
+          participantIds = Array.from(group.allParticipantIds).filter(
+            (id) => id !== userId && id !== visit.taggedBy,
+          );
+        }
+      }
+
+      return {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        wasInMustVisit: visit.wasInMustVisit || false,
+        taggedBy: visit.tagger
+          ? {
+              id: visit.tagger.id,
+              name: visit.tagger.name,
+              username: visit.tagger.username,
+              profileImage: visit.tagger.profileImage
+                ? getMediaUrl(visit.tagger.profileImage, 'image', 'original')
+                : null,
+            }
+          : null,
+        taggedBuddies: participantIds
+          .map((userId) => usersMap.get(userId))
+          .filter((user) => user !== undefined),
+        totalAmount: visit.receipt?.totalAmount || null,
+        pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        reservationBonusPoints:
+          visit.receipt?.hasReservationBonus &&
+          visit.receipt?.pointsAwarded &&
+          visit.receipt?.totalAmount
+            ? (() => {
+                // Calculate number of participants (main user + tagged buddies)
+                const totalParticipants = 1 + (participantIds?.length || 0);
+                // Calculate base points per person (without bonus)
+                const basePointsPerPerson =
+                  visit.receipt.totalAmount / totalParticipants / 10;
+                // Bonus is the difference between awarded points and base points
+                const bonus = visit.receipt.pointsAwarded - basePointsPerPerson;
+                return parseFloat(bonus.toFixed(2));
+              })()
+            : null,
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              foodRating: parseFloat(visit.experience.foodRating) || null,
+              ambienceRating:
+                parseFloat(visit.experience.ambienceRating) || null,
+              serviceRating: parseFloat(visit.experience.serviceRating) || null,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+              description: visit.experience.description || null,
+              mealType: visit.experience.mealType || null,
+              likesCount: visit.experience.likesCount || 0,
+              sharesCount: visit.experience.sharesCount || 0,
+              publishedAt: visit.experience.publishedAt || null,
+              hasLiked: likedIds.includes(visit.experience.id),
+              media: visit.experience.media
+                ? visit.experience.media.map((m) => ({
+                    id: m.id,
+                    kind: m.kind,
+                    cdnUrl: m.cdnUrl
+                      ? getMediaUrl(m.cdnUrl, 'image', 'original')
+                      : null,
+                    width: m.width,
+                    height: m.height,
+                    orderIndex: m.orderIndex,
+                    caption: m.caption,
+                    isRecommended: m.isRecommended,
+                    menuItemId: m.menuItemId,
+                    menuItem: m.menuItem
+                      ? {
+                          id: m.menuItem.id,
+                          restaurantId: m.menuItem.restaurantId,
+                          translations: m.menuItem.translations || [],
+                        }
+                      : null,
+                  }))
+                : [],
+            }
+          : null,
+      };
+    });
 
     res.status(200).json({
       restaurant: {
@@ -2131,7 +2957,7 @@ const getVisitsByRestaurant = async (req, res) => {
           ? getMediaUrl(restaurant.thumbnailUrl, 'image', 'thumbnail')
           : null,
       },
-      visitCount: visits.length,
+      visitCount: currentUserVisits.length,
       visits: visitsData,
     });
   } catch (error) {
@@ -2157,9 +2983,14 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
     }
 
     // Check privacy settings
-    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
+    const { canView, reason } = await canViewUserProfile(
+      targetUserId,
+      viewerUserId,
+    );
     if (!canView) {
-      return res.status(403).json({ error: reason || 'Cannot view this profile' });
+      return res
+        .status(403)
+        .json({ error: reason || 'Cannot view this profile' });
     }
 
     // Get restaurant details
@@ -2192,6 +3023,12 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
       },
       include: [
         {
+          model: User,
+          as: 'tagger',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+          required: false,
+        },
+        {
           model: Experience,
           as: 'experience',
           attributes: [
@@ -2246,6 +3083,54 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
       order: [['submittedAt', 'DESC']],
     });
 
+    const mainVisitIds = new Set();
+    visits.forEach((visit) => {
+      if (
+        visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.taggedBuddies[0]);
+      } else if (
+        !visit.taggedBy &&
+        visit.taggedBuddies &&
+        visit.taggedBuddies.length > 0
+      ) {
+        mainVisitIds.add(visit.id);
+      }
+    });
+
+    let allRelatedVisits = [];
+    if (mainVisitIds.size > 0) {
+      allRelatedVisits = await Visit.findAll({
+        where: {
+          [Op.or]: [
+            { id: { [Op.in]: Array.from(mainVisitIds) } },
+            { taggedBuddies: { [Op.overlap]: Array.from(mainVisitIds) } },
+          ],
+          restaurantId: restaurantId,
+          status: 'APPROVED',
+        },
+        include: [
+          {
+            model: User,
+            as: 'tagger',
+            attributes: ['id', 'name', 'username', 'profileImage'],
+            required: false,
+          },
+        ],
+      });
+    }
+
+    const allVisits = [...visits, ...allRelatedVisits];
+    const visitMap = new Map();
+    allVisits.forEach((visit) => {
+      if (!visitMap.has(visit.id)) {
+        visitMap.set(visit.id, visit);
+      }
+    });
+    const uniqueVisits = Array.from(visitMap.values());
+
     // Get hasLiked status for all experiences if viewer is authenticated
     const experienceIds = visits
       .filter((v) => v.experience)
@@ -2263,56 +3148,162 @@ const getOtherUserVisitsByRestaurant = async (req, res) => {
       likedIds = likes.map((l) => l.experienceId);
     }
 
-    // Don't include receipt info (totalAmount, pointsAwarded) for privacy
-    const visitsData = visits.map((visit) => ({
-      id: visit.id,
-      submittedAt: visit.submittedAt,
-      reviewedAt: visit.reviewedAt,
-      visitDate: visit.visitDate,
-      wasInMustVisit: visit.wasInMustVisit,
-      taggedBuddies: visit.taggedBuddies,
-      experience: visit.experience
-        ? {
-            id: visit.experience.id,
-            foodRating: parseFloat(visit.experience.foodRating) || null,
-            ambienceRating: parseFloat(visit.experience.ambienceRating) || null,
-            serviceRating: parseFloat(visit.experience.serviceRating) || null,
-            overallRating: parseFloat(visit.experience.overallRating) || null,
-            description: visit.experience.description || null,
-            mealType: visit.experience.mealType || null,
-            likesCount: visit.experience.likesCount || 0,
-            sharesCount: visit.experience.sharesCount || 0,
-            publishedAt: visit.experience.publishedAt || null,
-            hasLiked: likedIds.includes(visit.experience.id),
-            media: visit.experience.media
-              ? visit.experience.media.map((m) => ({
-                  id: m.id,
-                  kind: m.kind,
-                  cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
-                  storageKey: m.storageKey,
-                  width: m.width,
-                  height: m.height,
-                  orderIndex: m.orderIndex,
-                  thumbnails: m.thumbnails
-                    ? {
-                        small: m.thumbnails.small ? getMediaUrl(m.thumbnails.small, 'image') : null,
-                        medium: m.thumbnails.medium ? getMediaUrl(m.thumbnails.medium, 'image') : null,
-                        large: m.thumbnails.large ? getMediaUrl(m.thumbnails.large, 'image') : null,
-                      }
-                    : null,
-                  caption: m.caption,
-                  isRecommended: m.isRecommended,
-                  menuItemId: m.menuItemId,
-                  menuItem: m.menuItem ? {
-                    id: m.menuItem.id,
-                    restaurantId: m.menuItem.restaurantId,
-                    translations: m.menuItem.translations || [],
-                  } : null,
-                }))
-              : [],
+    const visitGroups = new Map();
+    const visitIdSet = new Set(visits.map((v) => v.id));
+
+    // First pass: identify main visits and buddy visits using all unique visits
+    uniqueVisits.forEach((visit) => {
+      if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        const firstBuddy = visit.taggedBuddies[0];
+
+        if (visitIdSet.has(firstBuddy)) {
+          // This is a buddy's visit
+          if (!visitGroups.has(firstBuddy)) {
+            visitGroups.set(firstBuddy, {
+              mainVisit: null,
+              relatedVisits: [],
+              allParticipantIds: new Set(),
+            });
           }
-        : null,
-    }));
+          visitGroups.get(firstBuddy).relatedVisits.push(visit);
+          visitGroups.get(firstBuddy).allParticipantIds.add(visit.userId);
+        } else {
+          // This is a main visit
+          if (!visitGroups.has(visit.id)) {
+            visitGroups.set(visit.id, {
+              mainVisit: visit,
+              relatedVisits: [],
+              allParticipantIds: new Set([
+                visit.userId,
+                ...visit.taggedBuddies,
+              ]),
+            });
+          } else {
+            visitGroups.get(visit.id).mainVisit = visit;
+            visitGroups.get(visit.id).allParticipantIds.add(visit.userId);
+            visit.taggedBuddies.forEach((id) =>
+              visitGroups.get(visit.id).allParticipantIds.add(id),
+            );
+          }
+        }
+      }
+    });
+
+    const allUserIds = new Set();
+    visitGroups.forEach((group) => {
+      group.allParticipantIds.forEach((userId) => allUserIds.add(userId));
+    });
+
+    let usersMap = new Map();
+    if (allUserIds.size > 0) {
+      const users = await User.findAll({
+        where: { id: Array.from(allUserIds) },
+        attributes: ['id', 'name', 'username', 'profileImage'],
+      });
+
+      users.forEach((user) => {
+        usersMap.set(user.id, {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          profileImage: user.profileImage
+            ? getMediaUrl(user.profileImage, 'image', 'original')
+            : null,
+        });
+      });
+    }
+
+    // Don't include receipt info (totalAmount, pointsAwarded) for privacy
+    const visitsData = visits.map((visit) => {
+      let participantIds = [];
+
+      if (visitGroups.has(visit.id)) {
+        const group = visitGroups.get(visit.id);
+        participantIds = Array.from(group.allParticipantIds).filter(
+          (id) => id !== targetUserId && id !== visit.taggedBy,
+        );
+      } else if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+        const mainVisitId = visit.taggedBuddies[0];
+        if (visitGroups.has(mainVisitId)) {
+          const group = visitGroups.get(mainVisitId);
+          participantIds = Array.from(group.allParticipantIds).filter(
+            (id) => id !== targetUserId && id !== visit.taggedBy,
+          );
+        }
+      }
+
+      return {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        wasInMustVisit: visit.wasInMustVisit || false,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        taggedBy: visit.tagger
+          ? {
+              id: visit.tagger.id,
+              name: visit.tagger.name,
+              username: visit.tagger.username,
+              profileImage: visit.tagger.profileImage
+                ? getMediaUrl(visit.tagger.profileImage, 'image', 'original')
+                : null,
+            }
+          : null,
+        taggedBuddies: participantIds
+          .map((userId) => usersMap.get(userId))
+          .filter((user) => user !== undefined),
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              foodRating: parseFloat(visit.experience.foodRating) || null,
+              ambienceRating:
+                parseFloat(visit.experience.ambienceRating) || null,
+              serviceRating: parseFloat(visit.experience.serviceRating) || null,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+              description: visit.experience.description || null,
+              mealType: visit.experience.mealType || null,
+              likesCount: visit.experience.likesCount || 0,
+              sharesCount: visit.experience.sharesCount || 0,
+              publishedAt: visit.experience.publishedAt || null,
+              hasLiked: likedIds.includes(visit.experience.id),
+              media: visit.experience.media
+                ? visit.experience.media.map((m) => ({
+                    id: m.id,
+                    kind: m.kind,
+                    cdnUrl: m.cdnUrl ? getMediaUrl(m.cdnUrl, 'image') : null,
+                    storageKey: m.storageKey,
+                    width: m.width,
+                    height: m.height,
+                    orderIndex: m.orderIndex,
+                    thumbnails: m.thumbnails
+                      ? {
+                          small: m.thumbnails.small
+                            ? getMediaUrl(m.thumbnails.small, 'image')
+                            : null,
+                          medium: m.thumbnails.medium
+                            ? getMediaUrl(m.thumbnails.medium, 'image')
+                            : null,
+                          large: m.thumbnails.large
+                            ? getMediaUrl(m.thumbnails.large, 'image')
+                            : null,
+                        }
+                      : null,
+                    caption: m.caption,
+                    isRecommended: m.isRecommended,
+                    menuItemId: m.menuItemId,
+                    menuItem: m.menuItem
+                      ? {
+                          id: m.menuItem.id,
+                          restaurantId: m.menuItem.restaurantId,
+                          translations: m.menuItem.translations || [],
+                        }
+                      : null,
+                  }))
+                : [],
+            }
+          : null,
+      };
+    });
 
     res.status(200).json({
       restaurant: {
@@ -2382,7 +3373,13 @@ const getRestaurantVisitors = async (req, res) => {
         {
           model: Experience,
           as: 'experience',
-          attributes: ['id', 'overallRating', 'status', 'sharesCount', 'likesCount'],
+          attributes: [
+            'id',
+            'overallRating',
+            'status',
+            'sharesCount',
+            'likesCount',
+          ],
           where: { status: 'APPROVED' },
           required: false,
         },
@@ -2420,7 +3417,10 @@ const getRestaurantVisitors = async (req, res) => {
           group._ratings.push(parseFloat(visit.experience.overallRating));
         }
         // Update last visit date if this is more recent
-        if (visitDateStr && new Date(visitDateStr) > new Date(group.lastVisitDate)) {
+        if (
+          visitDateStr &&
+          new Date(visitDateStr) > new Date(group.lastVisitDate)
+        ) {
           group.lastVisitDate = visitDateStr;
         }
       } else {
@@ -2448,7 +3448,12 @@ const getRestaurantVisitors = async (req, res) => {
       .map((group) => {
         const averageRating =
           group._ratings.length > 0
-            ? parseFloat((group._ratings.reduce((a, b) => a + b, 0) / group._ratings.length).toFixed(1))
+            ? parseFloat(
+                (
+                  group._ratings.reduce((a, b) => a + b, 0) /
+                  group._ratings.length
+                ).toFixed(1),
+              )
             : null;
 
         const { _ratings, ...rest } = group;
@@ -2468,7 +3473,10 @@ const getRestaurantVisitors = async (req, res) => {
       });
 
     // Apply pagination
-    const paginatedVisitors = visitors.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+    const paginatedVisitors = visitors.slice(
+      parseInt(offset),
+      parseInt(offset) + parseInt(limit),
+    );
 
     res.status(200).json({
       restaurant: {
@@ -2512,7 +3520,7 @@ const getUserVisitsForMap = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'latitude', 'longitude'],
+          attributes: ['id', 'latitude', 'longitude', 'place', 'country'],
           where: {
             latitude: { [Op.not]: null },
             longitude: { [Op.not]: null },
@@ -2531,10 +3539,24 @@ const getUserVisitsForMap = async (req, res) => {
     }));
 
     const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+    
+    const uniqueCities = new Set(
+      visits
+        .map((v) => v['restaurant.place'])
+        .filter((place) => place && place.trim() !== '')
+    );
+    
+    const uniqueCountries = new Set(
+      visits
+        .map((v) => v['restaurant.country'])
+        .filter((country) => country && country.trim() !== '')
+    );
 
     res.status(200).json({
       visits: mapVisits,
       total: uniqueRestaurants.size,
+      cityCount: uniqueCities.size,
+      countries: Array.from(uniqueCountries),
     });
   } catch (error) {
     console.error('Error fetching visits for map:', error);
@@ -2552,13 +3574,17 @@ const getOtherUserVisitsForMap = async (req, res) => {
     const viewerUserId = req.user?.id || null;
 
     const targetUser = await User.findByPk(targetUserId);
-    if (!targetUser) 
-      return res.status(404).json({ error: 'User not found' });
-    
-    const { canView, reason } = await canViewUserProfile(targetUserId, viewerUserId);
-    if (!canView) 
-      return res.status(403).json({ error: reason || 'Cannot view this profile' });
-  
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    const { canView, reason } = await canViewUserProfile(
+      targetUserId,
+      viewerUserId,
+    );
+    if (!canView)
+      return res
+        .status(403)
+        .json({ error: reason || 'Cannot view this profile' });
+
     const visits = await Visit.findAll({
       where: {
         userId: targetUserId,
@@ -2570,7 +3596,7 @@ const getOtherUserVisitsForMap = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'latitude', 'longitude'],
+          attributes: ['id', 'latitude', 'longitude', 'place', 'country'],
           where: {
             latitude: { [Op.not]: null },
             longitude: { [Op.not]: null },
@@ -2589,10 +3615,24 @@ const getOtherUserVisitsForMap = async (req, res) => {
     }));
 
     const uniqueRestaurants = new Set(mapVisits.map((v) => v.restaurantId));
+    
+    const uniqueCities = new Set(
+      visits
+        .map((v) => v['restaurant.place'])
+        .filter((place) => place && place.trim() !== '')
+    );
+    
+    const uniqueCountries = new Set(
+      visits
+        .map((v) => v['restaurant.country'])
+        .filter((country) => country && country.trim() !== '')
+    );
 
     res.status(200).json({
       visits: mapVisits,
       total: uniqueRestaurants.size,
+      cityCount: uniqueCities.size,
+      countries: Array.from(uniqueCountries),
     });
   } catch (error) {
     console.error('Error fetching user visits for map:', error);
@@ -2605,6 +3645,7 @@ module.exports = {
   createVisitFromReceipt,
   createVisit,
   getUserVisits,
+  getVisitById,
   retakeReceipt,
   checkHasVisited,
   deleteVisit,

@@ -9,11 +9,14 @@ const {
   Experience,
   ExperienceMedia,
   ExperienceLike,
+  ExperienceShare,
   User,
   Restaurant,
   Visit,
   MenuItem,
   MenuItemTranslation,
+  ContentTranslation,
+  UserSettings,
   sequelize,
 } = require('../../models');
 const { literal } = require('sequelize');
@@ -26,6 +29,7 @@ const {
   updateRestaurantDinverRating,
 } = require('../services/dinverRatingService');
 const { getMediaUrl } = require('../../config/cdn');
+const { detectLanguage, translateContent } = require('../../utils/translate');
 
 /**
  * Transform experience media to include proper URLs
@@ -256,6 +260,17 @@ const createExperience = async (req, res) => {
     const status = visit.status === 'APPROVED' ? 'APPROVED' : 'PENDING';
     const publishedAt = status === 'APPROVED' ? new Date() : null;
 
+    // Detect language of description for translation feature
+    let detectedLang = null;
+    if (description && description.trim().length >= 10) {
+      try {
+        detectedLang = await detectLanguage(description);
+      } catch (langError) {
+        console.error('[Create Experience] Language detection failed:', langError.message);
+        // Continue without detected language - not critical
+      }
+    }
+
     // Create Experience
     const experience = await Experience.create(
       {
@@ -272,6 +287,7 @@ const createExperience = async (req, res) => {
         mealType: mealType || null,
         cityCached: visit.restaurant?.place || null,
         publishedAt,
+        detectedLanguage: detectedLang,
       },
       { transaction },
     );
@@ -489,13 +505,14 @@ const getExperience = async (req, res) => {
  * - lng: user longitude
  * - distance: 20, 60, or "all" (km)
  * - mealType: filter by meal type
+ * - onlyFollowing: "true" to show only experiences from users you follow
  * - limit: number of results (default 20)
  * - offset: pagination offset
  */
 const getExperienceFeed = async (req, res) => {
   try {
     const userId = req.user?.id || null;
-    const { limit = 20, offset = 0, lat, lng, distance, mealType } = req.query;
+    const { limit = 20, offset = 0, lat, lng, distance, mealType, onlyFollowing } = req.query;
 
     // Build where clause
     const where = {
@@ -505,6 +522,43 @@ const getExperienceFeed = async (req, res) => {
     // Filter by meal type if provided
     if (mealType) {
       where.mealType = mealType;
+    }
+
+    // Filter by following users if requested
+    if (onlyFollowing === 'true' && userId) {
+      const { UserFollow } = require('../../models');
+
+      // Get list of users that current user follows
+      const following = await UserFollow.findAll({
+        where: {
+          followerId: userId,
+          status: 'ACTIVE',
+        },
+        attributes: ['followingId'],
+      });
+
+      const followingIds = following.map((f) => f.followingId);
+
+      // If user doesn't follow anyone, return empty results
+      if (followingIds.length === 0) {
+        return res.status(200).json({
+          experiences: [],
+          pagination: {
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            hasMore: false,
+          },
+          filters: {
+            distance: distance || 'all',
+            mealType: mealType || null,
+            onlyFollowing: true,
+            followingCount: 0,
+          },
+        });
+      }
+
+      // Add following filter to where clause
+      where.userId = { [Op.in]: followingIds };
     }
 
     // Build restaurant include with distance filter
@@ -534,10 +588,10 @@ const getExperienceFeed = async (req, res) => {
       restaurantInclude.where = literal(`
         (6371 * acos(
           cos(radians(${userLat})) *
-          cos(radians("Restaurant"."latitude")) *
-          cos(radians("Restaurant"."longitude") - radians(${userLng})) +
+          cos(radians("restaurant"."latitude")) *
+          cos(radians("restaurant"."longitude") - radians(${userLng})) +
           sin(radians(${userLat})) *
-          sin(radians("Restaurant"."latitude"))
+          sin(radians("restaurant"."latitude"))
         )) <= ${distanceKm}
       `);
     }
@@ -646,6 +700,25 @@ const getExperienceFeed = async (req, res) => {
       return result;
     });
 
+    // Prepare filter info
+    const filterInfo = {
+      distance: distance || 'all',
+      mealType: mealType || null,
+      onlyFollowing: onlyFollowing === 'true',
+    };
+
+    // Add following count if filtering by following
+    if (onlyFollowing === 'true' && userId) {
+      const { UserFollow } = require('../../models');
+      const followingCount = await UserFollow.count({
+        where: {
+          followerId: userId,
+          status: 'ACTIVE',
+        },
+      });
+      filterInfo.followingCount = followingCount;
+    }
+
     res.status(200).json({
       experiences: experiencesWithStatus,
       pagination: {
@@ -653,10 +726,7 @@ const getExperienceFeed = async (req, res) => {
         offset: parseInt(offset),
         hasMore: experiences.length === parseInt(limit),
       },
-      filters: {
-        distance: distance || 'all',
-        mealType: mealType || null,
-      },
+      filters: filterInfo,
     });
   } catch (error) {
     console.error('[Get Experience Feed] Error:', error);
@@ -1046,12 +1116,24 @@ const getRestaurantExperiences = async (req, res) => {
 };
 
 /**
- * Share Experience (track share)
+ * Share Experience (track share with spam protection)
  * POST /api/app/experiences/:experienceId/share
+ *
+ * Body params (optional):
+ * - platform: string (copy_link, instagram, whatsapp, etc.)
+ *
+ * Features:
+ * - Logged-in users: One share per user per experience (strict)
+ * - Anonymous users: IP-based rate limiting (max 3 shares per IP per experience per 24h)
+ * - Only counts shares for APPROVED experiences
  */
 const shareExperience = async (req, res) => {
   try {
     const { experienceId } = req.params;
+    const userId = req.user?.id || null;
+    const { platform } = req.body;
+    const ipAddress =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
 
     const experience = await Experience.findByPk(experienceId);
     if (!experience) {
@@ -1060,19 +1142,249 @@ const shareExperience = async (req, res) => {
       });
     }
 
-    // Increment shares count
-    await experience.increment('sharesCount');
+    // Only track shares for approved experiences
+    if (experience.status !== 'APPROVED') {
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
 
-    res.status(200).json({
-      message: 'Share tracked',
-      sharesCount: experience.sharesCount + 1,
-    });
+    if (userId) {
+      // Logged-in user: One share per user per experience
+      const existingShare = await ExperienceShare.findOne({
+        where: { experienceId, userId },
+      });
+
+      if (existingShare) {
+        // Already shared, return success but don't increment
+        return res.status(200).json({
+          message: 'Already shared',
+          sharesCount: experience.sharesCount,
+          alreadyShared: true,
+        });
+      }
+
+      // Create share record
+      await ExperienceShare.create({
+        experienceId,
+        userId,
+        ipAddress,
+        platform: platform || 'unknown',
+      });
+
+      // Increment shares count
+      await experience.increment('sharesCount');
+
+      return res.status(200).json({
+        message: 'Share tracked',
+        sharesCount: experience.sharesCount + 1,
+      });
+    } else {
+      // Anonymous user: IP-based rate limiting
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const recentSharesCount = await ExperienceShare.count({
+        where: {
+          experienceId,
+          ipAddress,
+          userId: null,
+          createdAt: { [Op.gte]: twentyFourHoursAgo },
+        },
+      });
+
+      if (recentSharesCount >= 3) {
+        // Rate limited, return success but don't increment
+        return res.status(200).json({
+          message: 'Share tracked',
+          sharesCount: experience.sharesCount,
+          rateLimited: true,
+        });
+      }
+
+      // Create anonymous share record
+      await ExperienceShare.create({
+        experienceId,
+        userId: null,
+        ipAddress,
+        platform: platform || 'unknown',
+      });
+
+      // Increment shares count
+      await experience.increment('sharesCount');
+
+      return res.status(200).json({
+        message: 'Share tracked',
+        sharesCount: experience.sharesCount + 1,
+      });
+    }
   } catch (error) {
     console.error('[Share Experience] Error:', error);
     res.status(500).json({
       error: 'Failed to track share',
       details: error.message,
     });
+  }
+};
+
+/**
+ * Translate Experience description
+ * POST /api/app/experiences/:experienceId/translate
+ *
+ * Translates the experience description to user's preferred language.
+ * Caches translations for faster subsequent requests.
+ */
+const translateExperience = async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const userId = req.user.id;
+
+    // Get user's preferred language from settings
+    const userSettings = await UserSettings.findOne({ where: { userId } });
+    const targetLanguage = userSettings?.language || 'en';
+
+    // Get experience
+    const experience = await Experience.findByPk(experienceId);
+    if (!experience) {
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
+
+    if (!experience.description || experience.description.trim().length === 0) {
+      return res.status(400).json({
+        error: 'No content to translate',
+      });
+    }
+
+    // Check cache first
+    const cached = await ContentTranslation.findOne({
+      where: {
+        contentType: 'experience',
+        contentId: experienceId,
+        targetLanguage,
+      },
+    });
+
+    if (cached) {
+      return res.status(200).json({
+        translatedText: cached.translatedText,
+        sourceLanguage: cached.sourceLanguage,
+        targetLanguage: cached.targetLanguage,
+        cached: true,
+      });
+    }
+
+    // Determine source language
+    const sourceLanguage = experience.detectedLanguage ||
+      (targetLanguage === 'hr' ? 'en' : 'hr');
+
+    // If source and target are the same, no translation needed
+    if (sourceLanguage === targetLanguage) {
+      return res.status(200).json({
+        translatedText: experience.description,
+        sourceLanguage,
+        targetLanguage,
+        cached: false,
+        note: 'Same language, no translation needed',
+      });
+    }
+
+    // Translate
+    const translatedText = await translateContent(
+      experience.description,
+      targetLanguage,
+      sourceLanguage
+    );
+
+    // Cache the translation
+    await ContentTranslation.create({
+      contentType: 'experience',
+      contentId: experienceId,
+      sourceLanguage,
+      targetLanguage,
+      originalText: experience.description,
+      translatedText,
+    });
+
+    return res.status(200).json({
+      translatedText,
+      sourceLanguage,
+      targetLanguage,
+      cached: false,
+    });
+  } catch (error) {
+    console.error('[Translate Experience] Error:', error);
+    res.status(500).json({
+      error: 'Failed to translate experience',
+      details: error.message,
+    });
+  }
+};
+
+/**
+ * Record a view on an experience (Public)
+ * Increments view count and creates ExperienceView record
+ * POST /api/app/experiences/:experienceId/view
+ *
+ * Features:
+ * - Logged-in users: One view per user per experience (strict)
+ * - Anonymous users: IP-based rate limiting (max 3 views per IP per experience per 24h)
+ * - Only counts views for APPROVED experiences
+ */
+const recordView = async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const userId = req.user?.id || null; 
+
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+
+    const experience = await Experience.findByPk(experienceId);
+    if (!experience) 
+      return res.status(404).json({ error: 'Experience not found' });
+    
+
+    if (experience.status !== 'APPROVED') 
+      return res.status(404).json({ error: 'Experience not found' });
+    
+
+    const { ExperienceView } = require('../../models');
+
+    if (userId) {
+      const existingView = await ExperienceView.findOne({
+        where: { experienceId, userId },
+      });
+
+      if (!existingView) {
+        await ExperienceView.create({ experienceId, userId, ipAddress });
+        await experience.increment('viewCount');
+      }
+    } else {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const recentViewsCount = await ExperienceView.count({
+        where: {
+          experienceId,
+          ipAddress,
+          createdAt: { [Op.gte]: twentyFourHoursAgo },
+        },
+      });
+
+      if (recentViewsCount < 3) {
+        await ExperienceView.create({ experienceId, userId: null, ipAddress });
+        await experience.increment('viewCount');
+      } else {
+        return res.json({
+          success: true,
+          viewCount: experience.viewCount,
+          rateLimited: true,
+        });
+      }
+    }
+
+    res.json({ success: true, viewCount: experience.viewCount + 1 });
+  } catch (error) {
+    console.error('Error recording experience view:', error);
+    res.status(500).json({ error: 'Failed to record view' });
   }
 };
 
@@ -1146,8 +1458,247 @@ const deleteExperience = async (req, res) => {
   }
 };
 
+/**
+ * Update Experience (limited fields - Instagram style)
+ * PUT /api/app/experiences/:experienceId
+ *
+ * Can update:
+ * - description: string (min 20 chars)
+ * - mealType: string (breakfast, brunch, lunch, dinner, sweet, drinks)
+ * - mediaUpdates: array of { mediaId, orderIndex, caption, menuItemId, isRecommended }
+ *
+ * Cannot update:
+ * - ratings (foodRating, ambienceRating, serviceRating)
+ * - images (no adding/removing - only reorder and metadata)
+ */
+const updateExperience = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const userId = req.user.id;
+    const { experienceId } = req.params;
+    const { description, mealType, mediaUpdates } = req.body;
+
+    // Find the experience with media
+    const experience = await Experience.findOne({
+      where: {
+        id: experienceId,
+        userId, // Only owner can edit
+      },
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: ['id', 'orderIndex', 'caption', 'menuItemId', 'isRecommended'],
+        },
+      ],
+      transaction,
+    });
+
+    if (!experience) {
+      await transaction.rollback();
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
+
+    // Cannot edit rejected experiences
+    if (experience.status === 'REJECTED') {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: 'Cannot edit rejected experience',
+      });
+    }
+
+    // Track what was updated
+    const updated = {
+      description: false,
+      mealType: false,
+      mediaCount: 0,
+    };
+
+    // Validate and update description
+    if (description !== undefined) {
+      const descriptionLength = description ? description.trim().length : 0;
+      const MIN_DESCRIPTION_LENGTH = 20;
+
+      if (descriptionLength < MIN_DESCRIPTION_LENGTH) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Description is required (minimum ${MIN_DESCRIPTION_LENGTH} characters)`,
+          details: {
+            descriptionLength,
+            minDescriptionLength: MIN_DESCRIPTION_LENGTH,
+          },
+        });
+      }
+
+      // Check if description changed
+      if (experience.description !== description.trim()) {
+        // Re-detect language
+        let detectedLang = null;
+        if (description.trim().length >= 10) {
+          try {
+            detectedLang = await detectLanguage(description);
+          } catch (langError) {
+            console.error('[Update Experience] Language detection failed:', langError.message);
+          }
+        }
+
+        await experience.update(
+          {
+            description: description.trim(),
+            detectedLanguage: detectedLang,
+          },
+          { transaction },
+        );
+
+        // Delete cached translations since description changed
+        await ContentTranslation.destroy({
+          where: {
+            contentType: 'experience',
+            contentId: experienceId,
+          },
+          transaction,
+        });
+
+        updated.description = true;
+      }
+    }
+
+    // Validate and update mealType
+    if (mealType !== undefined) {
+      const validMealTypes = [
+        'breakfast',
+        'brunch',
+        'lunch',
+        'dinner',
+        'sweet',
+        'drinks',
+      ];
+
+      if (mealType !== null && !validMealTypes.includes(mealType)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Invalid meal type. Must be one of: ${validMealTypes.join(', ')}`,
+        });
+      }
+
+      if (experience.mealType !== mealType) {
+        await experience.update({ mealType }, { transaction });
+        updated.mealType = true;
+      }
+    }
+
+    // Update media metadata (captions, menuItemIds, isRecommended, orderIndex)
+    if (mediaUpdates && Array.isArray(mediaUpdates) && mediaUpdates.length > 0) {
+      // Get existing media IDs for this experience
+      const existingMediaIds = experience.media.map((m) => m.id);
+
+      // Validate that only one isRecommended is true
+      const recommendedCount = mediaUpdates.filter((m) => m.isRecommended === true).length;
+      if (recommendedCount > 1) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: 'Only one image can be marked as recommended',
+        });
+      }
+
+      // Update each media item
+      for (const update of mediaUpdates) {
+        const { mediaId, orderIndex, caption, menuItemId, isRecommended } = update;
+
+        // Validate mediaId belongs to this experience
+        if (!existingMediaIds.includes(mediaId)) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Media ${mediaId} does not belong to this experience`,
+          });
+        }
+
+        // Build update object (only include provided fields)
+        const updateData = {};
+        if (orderIndex !== undefined) updateData.orderIndex = orderIndex;
+        if (caption !== undefined) updateData.caption = caption;
+        if (menuItemId !== undefined) updateData.menuItemId = menuItemId;
+        if (isRecommended !== undefined) updateData.isRecommended = isRecommended;
+
+        if (Object.keys(updateData).length > 0) {
+          await ExperienceMedia.update(updateData, {
+            where: { id: mediaId },
+            transaction,
+          });
+          updated.mediaCount++;
+        }
+      }
+
+      // If isRecommended was set, make sure others are false
+      if (recommendedCount === 1) {
+        const recommendedMediaId = mediaUpdates.find((m) => m.isRecommended === true)?.mediaId;
+        await ExperienceMedia.update(
+          { isRecommended: false },
+          {
+            where: {
+              experienceId,
+              id: { [Op.ne]: recommendedMediaId },
+            },
+            transaction,
+          },
+        );
+      }
+    }
+
+    await transaction.commit();
+
+    // Return updated experience
+    const updatedExperience = await Experience.findByPk(experienceId, {
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: [
+            'id',
+            'storageKey',
+            'cdnUrl',
+            'orderIndex',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+          ],
+          order: [['orderIndex', 'ASC']],
+        },
+      ],
+      order: [[{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC']],
+    });
+
+    // Transform media URLs
+    const transformedExperience = transformMediaUrls(updatedExperience);
+
+    res.status(200).json({
+      experienceId: experience.id,
+      message: 'Experience updated successfully!',
+      updated,
+      experience: {
+        id: transformedExperience.id,
+        description: transformedExperience.description,
+        mealType: transformedExperience.mealType,
+        detectedLanguage: transformedExperience.detectedLanguage,
+        media: transformedExperience.media,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('[Update Experience] Error:', error);
+    res.status(500).json({
+      error: 'Failed to update experience',
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createExperience,
+  updateExperience,
   getExperience,
   getExperienceFeed,
   likeExperience,
@@ -1155,5 +1706,7 @@ module.exports = {
   getUserExperiences,
   getRestaurantExperiences,
   shareExperience,
+  translateExperience,
+  recordView,
   deleteExperience,
 };

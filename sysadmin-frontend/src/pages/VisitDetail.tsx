@@ -218,46 +218,20 @@ const VisitDetail: React.FC = () => {
             <h2 className="text-lg font-bold text-gray-900 mb-4">
               Receipt Image
             </h2>
-            {visit.receipt?.originalUrl ? (
+            {visit.receiptImageUrl ? (
               <div className="space-y-4">
                 <img
-                  src={visit.receipt.fullscreenUrl || visit.receipt.originalUrl}
+                  src={visit.receiptImageUrl}
                   alt="Receipt"
                   className="w-full rounded-lg border-2 border-gray-200"
                 />
-                <div className="grid grid-cols-3 gap-2">
-                  <a
-                    href={visit.receipt.thumbnailUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Thumbnail
-                  </a>
-                  <a
-                    href={visit.receipt.mediumUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Medium
-                  </a>
-                  <a
-                    href={visit.receipt.fullscreenUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Fullscreen
-                  </a>
-                </div>
                 <a
-                  href={visit.receipt.originalUrl}
+                  href={visit.receiptImageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
                 >
-                  View Original (High Quality)
+                  View Full Size
                 </a>
               </div>
             ) : (
@@ -596,7 +570,7 @@ const VisitDetail: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center mb-4">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <svg
                   className="h-6 w-6 text-red-600"
                   fill="none"

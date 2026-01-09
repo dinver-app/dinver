@@ -1,0 +1,209 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { MapPin, Star, Users } from "lucide-react";
+import AppStoreButtons from "@/components/ui/AppStoreButtons";
+import { Messages } from "@/lib/i18n";
+
+interface HeroProps {
+  messages: Messages;
+}
+
+export default function Hero({ messages }: HeroProps) {
+  const stats = [
+    { value: "150+", label: messages.hero.stats.restaurants, icon: MapPin },
+    { value: "10K+", label: messages.hero.stats.users, icon: Users },
+    { value: "25K+", label: messages.hero.stats.experiences, icon: Star },
+  ];
+
+  return (
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-linear-to-br from-gray-50 via-white to-gray-100">
+      {/* Subtle background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-dinver-green/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-dinver-green/3 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 lg:py-40">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.span
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="inline-block px-4 py-2 bg-dinver-green/10 text-dinver-green rounded-full text-sm font-semibold mb-6"
+            >
+              {messages.hero.tagline}
+            </motion.span>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight"
+            >
+              {messages.hero.title.split(" ").map((word, i) => (
+                <span
+                  key={i}
+                  className={
+                    word.toLowerCase() === "great" ||
+                    word.toLowerCase() === "odličan"
+                      ? "text-dinver-green"
+                      : ""
+                  }
+                >
+                  {word}{" "}
+                </span>
+              ))}
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-6 text-lg text-gray-600 leading-relaxed max-w-xl"
+            >
+              {messages.hero.subtitle}
+            </motion.p>
+
+            {/* App Store Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8"
+            >
+              <AppStoreButtons variant="dark" />
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="mt-12 grid grid-cols-3 gap-6"
+            >
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                    <stat.icon size={18} className="text-dinver-green" />
+                    <span className="text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">{stat.label}</p>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          {/* Phone Mockup */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="relative flex justify-center lg:justify-end"
+          >
+            <div className="relative">
+              {/* Main phone */}
+              <div className="relative z-10 w-64 sm:w-72 h-[520px] sm:h-[580px] bg-dinver-dark rounded-[3rem] p-2 shadow-2xl">
+                <div className="w-full h-full bg-gray-100 rounded-[2.5rem] overflow-hidden relative">
+                  {/* Phone screen with Dinver branding */}
+                  <div className="absolute inset-0 bg-linear-to-br from-dinver-green/10 to-gray-50 flex items-center justify-center">
+                    <div className="text-center p-6">
+                      <div className="w-20 h-20 bg-dinver-green rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        {/* D Logo */}
+                        <svg
+                          viewBox="0 0 1000 1000"
+                          className="w-12 h-12"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M418.47 787H315.754H243V212H315.754H418.47H590.086C620.047 212 647.863 224.958 673.54 250.875C699.223 276.505 719.476 311.534 734.316 355.966C749.437 400.107 757 448.093 757 499.926C757 551.473 749.437 599.323 734.316 643.463C719.476 687.609 699.223 722.638 673.54 748.554C647.863 774.185 620.047 787 590.086 787H418.47ZM418.47 242.759V760.94H445.861C469.824 760.94 492.222 748.125 513.054 722.495C534.167 696.864 550.715 664.114 562.694 624.238C574.678 584.086 580.67 542.647 580.67 499.926C580.67 457.205 574.678 416.196 562.694 376.897C550.715 337.307 534.167 305.129 513.054 280.351C492.222 255.288 469.824 242.759 445.861 242.759H418.47Z"
+                            fill="#FFF5C4"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm font-medium">
+                        Dinver App
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        Coming to your screen
+                      </p>
+                    </div>
+                  </div>
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-dinver-dark rounded-b-2xl" />
+                </div>
+              </div>
+
+              {/* Floating cards */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute -left-16 top-20 bg-white rounded-2xl shadow-xl p-4 z-20 border border-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-dinver-green/10 rounded-full flex items-center justify-center">
+                    <Star className="text-dinver-green" size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">New Experience</p>
+                    <p className="font-semibold text-sm">+50 points</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }}
+                className="absolute -right-8 bottom-32 bg-white rounded-2xl shadow-xl p-4 z-20 border border-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-dinver-green/10 rounded-full flex items-center justify-center">
+                    <MapPin className="text-dinver-green" size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Visit verified!</p>
+                    <p className="font-semibold text-sm">La Pergola</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="w-6 h-10 border-2 border-gray-300 rounded-full flex justify-center pt-2"
+        >
+          <div className="w-1.5 h-3 bg-dinver-green rounded-full" />
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}

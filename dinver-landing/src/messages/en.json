@@ -1,0 +1,595 @@
+{
+  "nav": {
+    "features": "For Users",
+    "howItWorks": "Steps",
+    "restaurants": "For restaurants",
+    "explore": "Explore",
+    "contact": "Partner",
+    "downloadApp": "Download App",
+    "language": "HR"
+  },
+  "hero": {
+    "badge": "New Restaurant Discovery Platform",
+    "tagline": "Discover. Share. Get Rewarded.",
+    "title": "Restaurant Discovery Platform",
+    "subtitle": "Real experiences from real people. Follow other users, discover new restaurants and share your favorite places. Earn rewards and have fun while exploring.",
+    "cta": "Download Now",
+    "ctaSecondary": "Explore Restaurants",
+    "stats": {
+      "restaurants": "Partner Restaurants",
+      "users": "Food Explorers",
+      "experiences": "Shared Experiences"
+    }
+  },
+  "features": {
+    "title": "Why do you need Dinver?",
+    "subtitle": "Because it enables you to find your next favorite restaurant in a simple and fun way.",
+    "items": {
+      "community": {
+        "title": "Connect with others",
+        "description": "Follow friends and discover new restaurants through their visits and recommendations."
+      },
+      "experiences": {
+        "title": "Feed with user experiences",
+        "description": "Scroll through authentic user experiences at different restaurants and save restaurants that you would like to visit."
+      },
+      "rewards": {
+        "title": "Earn rewards",
+        "description": "Visit a restaurant, scan your receipt to log your visit and compete on the leaderboard based on points. Users with the most points win prizes every two weeks."
+      },
+      "lists": {
+        "title": "Visited & Must visit",
+        "description": "A comprehensive list of all restaurants you've been to and the ones you want to visit."
+      },
+      "search": {
+        "title": "Search by dish",
+        "description": "Craving a specific dish? Enter the dish name in our search bar and find restaurants that serve exactly what you want."
+      },
+      "details": {
+        "title": "Complete information",
+        "description": "360° virtual tours through restaurants, interactive menus, updated working hours, ambience photos... Everything you need to know about a restaurant in one place."
+      },
+      "reservations": {
+        "title": "Easy reservation method",
+        "description": "Reserve a table in just a few steps. Choose the date, time, and number of guests, and wait for restaurant confirmation - all within our app."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "This is how Dinver works:",
+    "subtitle": "3 simple steps",
+    "steps": {
+      "discover": {
+        "title": "Discover a restaurant",
+        "description": "Browse the experience feed, search restaurants by dish or location, or check what's new at your favorite spots."
+      },
+      "visit": {
+        "title": "Visit and leave an experience",
+        "description": "Dine at any restaurant and snap a photo of your receipt. After we verify your visit, you'll be able to leave your authentic experience from the restaurant."
+      },
+      "share": {
+        "title": "Compete and earn rewards",
+        "description": "Collect points by scanning receipts, creating experiences, inviting friends, and climb the leaderboard to win rewards."
+      }
+    }
+  },
+  "experienceFeed": {
+    "experiences": {
+      "title": "Experience Feed",
+      "subtitle": "Social network for food lovers",
+      "description": "Scroll through authentic user experiences at different restaurants. Like what you see in the photo? Click on the restaurant, save it, or book a table right away!"
+    },
+    "whatsNew": {
+      "title": "\"What's New?\" Posts",
+      "subtitle": "Don't miss cool restaurant events",
+      "description": "Restaurants post announcements like status updates - live music tonight, new dish on the menu, special offer. Filter by categories and discover what's happening nearby. Posts last up to 7 days."
+    },
+    "cta": "See More Experiences"
+  },
+  "forRestaurants": {
+    "title": "Partner with us",
+    "subtitle": "Partner with us",
+    "benefits": {
+      "virtualTour": {
+        "title": "360 Virtual Tour",
+        "description": "Let guests explore your ambiance before they visit"
+      },
+      "menu": {
+        "title": "Interactive Menu",
+        "description": "Showcase your delicious dishes with photos and descriptions"
+      },
+      "whatsNew": {
+        "title": "What's New?",
+        "description": "Announce events, special offers, and new dishes"
+      },
+      "profile": {
+        "title": "Restaurant Profile",
+        "description": "Display all information about your restaurant in one place"
+      },
+      "analytics": {
+        "title": "Analytics and Statistics",
+        "description": "Track what interests your guests the most"
+      },
+      "workingHours": {
+        "title": "Working Hours",
+        "description": "Manage working hours and keep them regularly updated"
+      },
+      "reservations": {
+        "title": "Reservations",
+        "description": "Accept table reservations directly through the app"
+      }
+    },
+    "cta": "Partner with us",
+    "ctaSecondary": "Learn More"
+  },
+  "map": {
+    "title": "Our Partner Restaurants",
+    "subtitle": "Discover top restaurants that are already part of the Dinver community",
+    "cta": "View All Restaurants"
+  },
+  "contact": {
+    "title": "Contact us",
+    "subtitle": "Got a question, suggestion, or want to work with us? We'd love to hear from you!",
+    "info": {
+      "email": "Email",
+      "phone": "Phone",
+      "location": "Location",
+      "followUs": "Follow us"
+    },
+    "form": {
+      "inquiryType": "Inquiry type",
+      "inquiryTypes": {
+        "general": "General inquiry",
+        "partnership": "Partnership",
+        "support": "Support",
+        "press": "Press",
+        "other": "Other"
+      },
+      "name": "Full name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "phone": "Phone (optional)",
+      "city": "City",
+      "subject": "Subject",
+      "subjectPlaceholder": "What is this about?",
+      "message": "Message",
+      "messagePlaceholder": "Your message...",
+      "submit": "Send message",
+      "submitting": "Sending...",
+      "success": "Message sent!",
+      "successMessage": "Thank you for your message. We'll get back to you soon.",
+      "sendAnother": "Send another message",
+      "error": "An error occurred. Please try again.",
+      "required": "*"
+    },
+    "restaurant": {
+      "title": "Are you a restaurant owner?",
+      "description": "Join our partner community and attract guests who are actively looking for their next excellent meal.",
+      "cta": "Register Your Restaurant"
+    }
+  },
+  "footer": {
+    "tagline": "Discover your next favorite restaurant",
+    "links": {
+      "navigation": "Pages",
+      "company": "Company",
+      "home": "Home",
+      "about": "About Us",
+      "contact": "Contact",
+      "partners": "Partners",
+      "downloadApp": "Download App",
+      "careers": "Careers",
+      "press": "Press",
+      "legal": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "cookies": "Cookie Policy",
+      "social": "Follow Us"
+    },
+    "copyright": "© 2024 Dinver. All rights reserved."
+  },
+  "whatsNew": {
+    "title": "What's New?",
+    "subtitle": "Fresh updates from your favorite restaurants",
+    "tags": {
+      "liveMusic": "Live Music",
+      "newDish": "New Dish",
+      "newLocation": "New Location",
+      "specialEvent": "Special Event",
+      "happyHour": "Happy Hour"
+    }
+  },
+  "rewards": {
+    "title": "Earn points for every visit",
+    "subtitle": "Collect points, compete on the leaderboard and win a Dinver Mystery Box!",
+    "description": "Every restaurant visit counts. Scan your receipt, earn points, and compete to be the top explorer. Top 1 user and a randomly selected participant win prizes!",
+    "howToEarn": "How to Earn Points",
+    "earnMethods": {
+      "visit": {
+        "title": "Scan Receipt",
+        "description": "Verify your visit",
+        "points": "+50 pts"
+      },
+      "experience": {
+        "title": "Post Experience",
+        "description": "Share photos & rating",
+        "points": "+100 pts"
+      },
+      "streak": {
+        "title": "Weekly Streak",
+        "description": "Visit 3+ places/week",
+        "points": "+200 pts"
+      }
+    },
+    "leaderboard": {
+      "title": "Current Leaderboard",
+      "you": "You",
+      "points": "pts",
+      "blurText": "Download app to see full leaderboard"
+    },
+    "mysteryBox": {
+      "title": "Mystery Box",
+      "description": "Top 1 user and a randomly selected participant win prizes",
+      "countdown": "Next prize cycle ends in"
+    },
+    "cta": "Start Earning Points"
+  },
+  "partners": {
+    "title": "Grow Your Restaurant",
+    "subtitle": "Join 150+ partner restaurants reaching food lovers every day",
+    "dashboard": {
+      "title": "Partner Dashboard",
+      "views": "Profile Views",
+      "clicks": "Menu Clicks",
+      "experiences": "New Experiences"
+    },
+    "benefits": {
+      "visibility": {
+        "title": "Featured Placement",
+        "description": "Get highlighted to users searching in your area"
+      },
+      "virtualTour": {
+        "title": "360° Virtual Tour",
+        "description": "Let guests explore your restaurant before they visit"
+      },
+      "menu": {
+        "title": "Interactive Menu",
+        "description": "Showcase dishes with photos and descriptions"
+      },
+      "whatsNew": {
+        "title": "\"What's New?\" Posts",
+        "description": "Announce events, special offers, and new dishes"
+      },
+      "analytics": {
+        "title": "Real Analytics",
+        "description": "Understand your guests with detailed insights"
+      },
+      "badge": {
+        "title": "Partner Badge",
+        "description": "Stand out with the verified partner badge"
+      }
+    },
+    "comparison": {
+      "title": "Basic profile vs. Partner profile",
+      "feature": "Feature",
+      "basic": "Basic",
+      "partner": "Partner",
+      "features": {
+        "listing": "Restaurant visibility",
+        "experiences": "User experiences",
+        "featured": "Featured placement",
+        "virtualTour": "360° virtual tour",
+        "menu": "Interactive menu",
+        "whatsNew": "\"What's New?\" posts",
+        "analytics": "Analytics dashboard",
+        "reservations": "Reservations"
+      }
+    },
+    "cta": "Partner with us",
+    "ctaSecondary": "Learn More"
+  },
+  "socialProof": {
+    "title": "What Our Users Say",
+    "stats": {
+      "partners": "Partner Restaurants",
+      "users": "Active Users",
+      "experiences": "Shared Experiences",
+      "updates": "Active What's New"
+    },
+    "marqueeCaption": "Real user experiences - refreshes live",
+    "availableOn": "Available on",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  },
+  "download": {
+    "title": "Download Dinver",
+    "subtitle": "Discover the best restaurant spots in town, earn points, and book tables - all in one place.",
+    "scanQr": "Scan to download",
+    "available": "Available for iOS and Android"
+  },
+  "faq": {
+    "title": "Everything you need to know about Dinver",
+    "cta": "Have more questions? Contact us!",
+    "items": [
+      {
+        "question": "What is Dinver?",
+        "answer": "Dinver is an app that combines a social network with a restaurant guide. It enables guests to discover new restaurants through authentic experiences from other users and earn rewards, while allowing restaurants to showcase everything they offer in one place in an engaging way."
+      },
+      {
+        "question": "Is Dinver free?",
+        "answer": "Yes! Dinver is completely free for users. Download the app, create a profile, and start exploring restaurants in your desired city."
+      },
+      {
+        "question": "How do I earn points and rewards?",
+        "answer": "You earn points in several ways: by scanning receipts after restaurant visits, posting experiences with photos, and inviting friends. Every two weeks, the Top 1 user and one randomly selected user on the leaderboard win a Dinver Mystery Box with prizes!"
+      },
+      {
+        "question": "How can I become a partner restaurant?",
+        "answer": "Simple! Contact us through the form on our website or directly via info@dinver.eu. Our team will help you set up your profile, shoot a virtual tour, and explain all the tools we offer."
+      },
+      {
+        "question": "What do partner restaurants get?",
+        "answer": "Partner restaurants get featured placement, a 360° virtual tour, an interactive menu, the ability to post \"What's New?\" announcements about their restaurant, and detailed analytics about visits and guests."
+      },
+      {
+        "question": "Is Dinver available in my city?",
+        "answer": "We're currently focused on Croatia, with an emphasis on larger cities. If there are no available restaurants in your city, you can help us - write an experience for one of your favorite restaurants, and we'll turn it into our partner!"
+      }
+    ]
+  },
+  "about": {
+    "hero": {
+      "title": "About us",
+      "subtitle": "Dinver is a platform that connects food lovers with the best gastronomic experiences in Croatia."
+    },
+    "story": {
+      "title": "Our story",
+      "paragraphs": [
+        "Dinver was born from a simple idea: to make it easier for people to find their next favorite restaurant. In a world full of generic reviews and paid recommendations, we wanted to create a place where real experiences come from real people.",
+        "Our platform combines a social network with a restaurant guide, allowing users to follow friends, share their culinary moments, and discover hidden gems they wouldn't find elsewhere.",
+        "Today, Dinver brings together a community of passionate food lovers who actively explore, share, and get rewarded for every new gastronomic experience."
+      ]
+    },
+    "mission": {
+      "title": "Our mission",
+      "subtitle": "To connect every food lover with authentic gastronomic experiences and help restaurants reach the right guests."
+    },
+    "values": {
+      "authenticity": {
+        "title": "Authenticity",
+        "description": "We believe in real experiences from real people. No fake reviews, just honest recommendations."
+      },
+      "community": {
+        "title": "Community",
+        "description": "We're building a community of food lovers who share a passion for discovering new gastronomic experiences."
+      },
+      "quality": {
+        "title": "Quality",
+        "description": "We only work with restaurants that share our passion for quality and excellence."
+      }
+    },
+    "offerings": {
+      "title": "What we offer",
+      "forUsers": {
+        "title": "For users",
+        "items": [
+          "Discover new restaurants through authentic reviews",
+          "Follow friends and see where they've dined",
+          "Earn points and rewards for every visit",
+          "Search by dish, not just by restaurant"
+        ]
+      },
+      "forRestaurants": {
+        "title": "For restaurants",
+        "items": [
+          "Increase visibility among real food lovers",
+          "Showcase your space with a 360° virtual tour",
+          "Share news and events via \"What's New\"",
+          "Track analytics and understand your guests"
+        ]
+      }
+    },
+    "cta": {
+      "title": "Want to work with us?",
+      "subtitle": "Whether you're a restaurant looking to become a partner or have any questions, we'd love to hear from you.",
+      "button": "Contact us"
+    }
+  },
+  "privacyPolicy": {
+    "backToHome": "Back to home",
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: January 2025.",
+    "intro": {
+      "title": "1. Introduction",
+      "content": "Dinver (\"we\", \"us\" or \"our\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use and protect your personal data when you use our application and website."
+    },
+    "dataCollection": {
+      "title": "2. Data we collect",
+      "intro": "We collect the following types of data:",
+      "provided": {
+        "title": "Data you provide:",
+        "items": [
+          "First and last name",
+          "Email address",
+          "Profile photo",
+          "Content you post (photos, reviews, comments)",
+          "Data about visited restaurants"
+        ]
+      },
+      "automatic": {
+        "title": "Data we collect automatically:",
+        "items": [
+          "Device information (model, operating system)",
+          "IP address",
+          "App usage data",
+          "Location (only with your permission)"
+        ]
+      }
+    },
+    "dataUsage": {
+      "title": "3. How we use your data",
+      "intro": "We use your data to:",
+      "items": [
+        "Provide and improve our services",
+        "Personalize your experience",
+        "Communicate with you (notifications, updates, marketing)",
+        "Analyze platform usage",
+        "Prevent fraud and protect security"
+      ]
+    },
+    "dataSharing": {
+      "title": "4. Data sharing",
+      "intro": "We do not sell your personal data to third parties. We may share data with:",
+      "items": [
+        "Partner restaurants (only aggregated, anonymized statistics)",
+        "Service providers who help us operate",
+        "Government authorities when legally required"
+      ]
+    },
+    "yourRights": {
+      "title": "5. Your rights",
+      "intro": "You have the right to:",
+      "items": [
+        "Access your personal data",
+        "Correct inaccurate data",
+        "Delete your data (\"right to be forgotten\")",
+        "Restrict processing",
+        "Data portability",
+        "Withdraw consent"
+      ],
+      "contact": "To exercise these rights, contact us at info@dinver.eu."
+    },
+    "dataSecurity": {
+      "title": "6. Data security",
+      "content": "We implement technical and organizational measures to protect your data from unauthorized access, loss or destruction. However, no method of data transmission over the Internet is 100% secure."
+    },
+    "cookies": {
+      "title": "7. Cookies",
+      "content": "We use cookies and similar technologies to improve functionality and personalize content. You can manage cookie settings through your browser settings."
+    },
+    "dataRetention": {
+      "title": "8. Data retention",
+      "content": "We retain your data as long as you have an active account or as needed to provide services. After deleting your account, your data will be deleted or anonymized within a reasonable time."
+    },
+    "contact": {
+      "title": "9. Contact",
+      "intro": "For all privacy questions, contact us at:",
+      "email": "Email:"
+    },
+    "minorRestriction": {
+      "title": "10. Age restriction",
+      "content": "You must be at least 13 years old to use Dinver. If you are under 18, you must have permission from your parent or legal guardian to use our services."
+    },
+    "internationalTransfers": {
+      "title": "11. International data transfers",
+      "content": "Your data is stored on secure servers provided by Hetzner in the European Union and AWS S3 in EU regions. We ensure that all data transfers comply with GDPR requirements and use appropriate safeguards to protect your information."
+    },
+    "thirdPartyServices": {
+      "title": "12. Third-party services",
+      "intro": "We use the following third-party services to operate our platform:",
+      "items": [
+        "Hetzner (Germany) - Server hosting",
+        "AWS S3 (EU regions) - File storage for photos and media",
+        "Mailgun - Email delivery service",
+        "Expo Push Notifications - Mobile push notification delivery"
+      ],
+      "outro": "Each of these services has their own privacy policies and data protection measures. We only share the minimum necessary data to provide our services."
+    },
+    "receiptData": {
+      "title": "13. Receipt scanning and verification",
+      "content": "When you scan a receipt to verify your restaurant visit, we collect the JIR and ZKI numbers, restaurant name, and address from the receipt. This data is used solely for verification purposes and fraud prevention. We retain this data for a reasonable period to prevent duplicate submissions and detect fraudulent activity."
+    },
+    "automatedDecisions": {
+      "title": "14. Automated decision making",
+      "content": "We do not use automated decision-making or profiling that produces legal effects or similarly significantly affects you. Restaurant recommendations and content in your feed are based on simple algorithms using your preferences and activity, but you always have control over what you see and interact with."
+    },
+    "responseTime": {
+      "title": "15. Response to your requests",
+      "content": "We will respond to your data access, correction, or deletion requests within 30 days as required by GDPR. In complex cases, we may extend this period by an additional 60 days and will notify you of any delay."
+    }
+  },
+  "termsOfService": {
+    "backToHome": "Back to home",
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: January 2025.",
+    "acceptance": {
+      "title": "1. Acceptance of terms",
+      "content": "By using the Dinver application and website, you agree to these Terms of Service. If you do not agree with any part of these terms, please do not use our services."
+    },
+    "serviceDescription": {
+      "title": "2. Service description",
+      "intro": "Dinver is a platform that connects food lovers with restaurants. We enable users to:",
+      "items": [
+        "Discover new restaurants and gastronomic experiences",
+        "Share their food and restaurant experiences",
+        "Track restaurant visits and earn points",
+        "Access information about restaurants, menus and opening hours"
+      ]
+    },
+    "userAccount": {
+      "title": "3. User account",
+      "content": "To use certain features, you need to create a user account. You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account."
+    },
+    "userContent": {
+      "title": "4. User content",
+      "intro": "By posting content on Dinver (photos, reviews, comments), you retain ownership of that content, but grant us a worldwide, perpetual, irrevocable, royalty-free, non-exclusive license to use, reproduce, modify, adapt, publish, translate, distribute, and display that content on our platform and in our marketing materials.",
+      "prohibited": "It is forbidden to post content that is:",
+      "items": [
+        "Offensive, threatening or discriminatory",
+        "False or misleading",
+        "Violates copyrights or intellectual property rights",
+        "Contains illegal content"
+      ],
+      "removal": "We reserve the right to remove any content that violates these terms without prior notice."
+    },
+    "rewardSystem": {
+      "title": "5. Reward system",
+      "content": "Dinver offers a points and rewards system for active users. We reserve the right to change the reward system rules at any time. Points have no monetary value and cannot be exchanged for money."
+    },
+    "limitationOfLiability": {
+      "title": "6. Limitation of liability",
+      "content": "Dinver provides information about restaurants based on publicly available data and user contributions. We do not guarantee the accuracy, completeness or timeliness of this information. We are not responsible for the quality of service in restaurants."
+    },
+    "termsChanges": {
+      "title": "7. Changes to terms",
+      "content": "We reserve the right to change these Terms of Service at any time. We will notify you of significant changes via the app or email."
+    },
+    "contact": {
+      "title": "8. Contact",
+      "intro": "For all questions regarding these Terms of Service, contact us at:",
+      "email": "Email:"
+    },
+    "accountTermination": {
+      "title": "9. Account suspension and termination",
+      "content": "We reserve the right to suspend, restrict, or terminate your account and access to our services at any time, without prior notice, if we believe you have violated these Terms of Service, engaged in fraudulent activity, or for any other reason we deem necessary to protect our platform, users, or partners. Upon termination, your right to use the services will immediately cease."
+    },
+    "restaurantDisclaimer": {
+      "title": "10. Restaurant information disclaimer",
+      "content": "Dinver is a platform for discovering and sharing restaurant experiences. We are not responsible for the quality of food, service, hygiene, accuracy of menu information, allergens, food safety, or any injuries, illnesses, or damages that may occur during your visit to any restaurant. Restaurant information is provided by the restaurants themselves or by users and may not always be accurate or up-to-date. Always verify important information (allergens, opening hours, prices) directly with the restaurant."
+    },
+    "receiptVerification": {
+      "title": "11. Receipt verification and fraud prevention",
+      "content": "By scanning receipts to verify your visits, you confirm that each receipt is authentic, represents an actual purchase you made, and has not been previously submitted. We employ fraud detection measures and reserve the right to reject receipts, remove points, suspend accounts, or take legal action against users who submit fraudulent, duplicate, or manipulated receipts."
+    },
+    "intellectualProperty": {
+      "title": "12. Intellectual property",
+      "content": "The Dinver name, logo, design, and all original content on our platform are protected by intellectual property laws. You may not copy, reproduce, distribute, or create derivative works from our platform content without our express written permission. Automated scraping or data extraction from our platform is strictly prohibited."
+    },
+    "indemnification": {
+      "title": "13. Indemnification",
+      "content": "You agree to indemnify, defend, and hold harmless Dinver, its owners, employees, and partners from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from: (a) your use of our services, (b) your violation of these Terms, (c) your violation of any rights of another party, or (d) content you post on our platform."
+    },
+    "disputeResolution": {
+      "title": "14. Dispute resolution and governing law",
+      "content": "These Terms of Service are governed by the laws of the Republic of Croatia. Any disputes arising from these terms or your use of our services shall be resolved in the competent courts of Zagreb, Croatia. Before initiating any legal proceedings, we encourage you to contact us to try to resolve the matter informally."
+    },
+    "forceMajeure": {
+      "title": "15. Force majeure",
+      "content": "Dinver shall not be liable for any failure or delay in performance due to circumstances beyond our reasonable control, including but not limited to acts of God, war, terrorism, riots, embargoes, acts of civil or military authorities, fire, floods, accidents, pandemics, strikes, or shortages of transportation, facilities, fuel, energy, labor, or materials."
+    },
+    "severability": {
+      "title": "16. Severability",
+      "content": "If any provision of these Terms is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary so that these Terms will otherwise remain in full force and effect."
+    }
+  }
+}

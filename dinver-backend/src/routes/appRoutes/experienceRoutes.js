@@ -44,7 +44,7 @@ const upload = multer({
 // ============================================================
 
 // Get Experience Feed (public, chronological, with distance filter)
-// GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner&limit=20&offset=0
+// GET /api/app/experiences/feed?lat=45.815&lng=15.982&distance=20&mealType=dinner&onlyFollowing=true&limit=20&offset=0
 router.get('/feed', appApiKeyAuth, appOptionalAuth, experienceController.getExperienceFeed);
 
 // ============================================================
@@ -87,6 +87,16 @@ router.post(
 // GET /api/app/experiences/:experienceId
 router.get('/:experienceId', appApiKeyAuth, appOptionalAuth, experienceController.getExperience);
 
+// Update Experience (limited fields - Instagram style)
+// PUT /api/app/experiences/:experienceId
+// JSON body: description?, mealType?, mediaUpdates[]
+router.put(
+  '/:experienceId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.updateExperience
+);
+
 // Delete Experience
 // DELETE /api/app/experiences/:experienceId
 router.delete(
@@ -125,6 +135,28 @@ router.post(
   appApiKeyAuth,
   appOptionalAuth,
   experienceController.shareExperience
+);
+
+// Record a view on an experience
+// POST /api/app/experiences/:experienceId/view
+router.post(
+  '/:experienceId/view',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.recordView
+);
+
+// ============================================================
+// TRANSLATION
+// ============================================================
+
+// Translate Experience description to user's language
+// POST /api/app/experiences/:experienceId/translate
+router.post(
+  '/:experienceId/translate',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.translateExperience
 );
 
 module.exports = router;

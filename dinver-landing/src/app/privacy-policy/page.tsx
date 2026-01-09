@@ -1,0 +1,203 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { Locale, getMessages, defaultLocale } from '@/lib/i18n';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+
+export default function PolitikaPrivatnosti() {
+  const [locale, setLocale] = useState<Locale>(defaultLocale);
+  const [messages, setMessages] = useState(getMessages(defaultLocale));
+
+  useEffect(() => {
+    const savedLocale = localStorage.getItem('dinver-locale') as Locale | null;
+    if (savedLocale && (savedLocale === 'en' || savedLocale === 'hr')) {
+      setLocale(savedLocale);
+      setMessages(getMessages(savedLocale));
+    }
+  }, []);
+
+  const handleLocaleChange = (newLocale: Locale) => {
+    setLocale(newLocale);
+    setMessages(getMessages(newLocale));
+    localStorage.setItem('dinver-locale', newLocale);
+  };
+
+  return (
+    <main className="min-h-screen bg-white">
+      <Header messages={messages} locale={locale} onLocaleChange={handleLocaleChange} />
+
+      <div className="pt-24 pb-16">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            className="inline-flex items-center text-dinver-green hover:text-dinver-green-dark mb-8 transition-colors"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            {messages.privacyPolicy.backToHome}
+          </Link>
+
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
+            {messages.privacyPolicy.title}
+          </h1>
+
+          <div className="prose prose-gray max-w-none">
+            <p className="text-gray-600 mb-6">
+              {messages.privacyPolicy.lastUpdated}
+            </p>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.intro.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.intro.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataCollection.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.dataCollection.intro}
+              </p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{messages.privacyPolicy.dataCollection.provided.title}</h3>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.dataCollection.provided.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{messages.privacyPolicy.dataCollection.automatic.title}</h3>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.dataCollection.automatic.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataUsage.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.dataUsage.intro}
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.dataUsage.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataSharing.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.dataSharing.intro}
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.dataSharing.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.yourRights.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.yourRights.intro}
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.yourRights.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.yourRights.contact}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataSecurity.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.dataSecurity.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.cookies.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.cookies.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.dataRetention.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.dataRetention.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.contact.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.contact.intro}
+              </p>
+              <p className="text-gray-600">
+                <strong>{messages.privacyPolicy.contact.email}</strong> info@dinver.eu
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.minorRestriction.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.minorRestriction.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.internationalTransfers.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.internationalTransfers.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.thirdPartyServices.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.thirdPartyServices.intro}
+              </p>
+              <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                {messages.privacyPolicy.thirdPartyServices.items.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.thirdPartyServices.outro}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.receiptData.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.receiptData.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.automatedDecisions.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.automatedDecisions.content}
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{messages.privacyPolicy.responseTime.title}</h2>
+              <p className="text-gray-600 mb-4">
+                {messages.privacyPolicy.responseTime.content}
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <Footer messages={messages} locale={locale} />
+    </main>
+  );
+}

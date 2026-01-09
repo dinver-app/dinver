@@ -11,7 +11,7 @@ const {
 } = require('../../models');
 const { Op } = require('sequelize');
 const { uploadToS3, getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const {
   autoTranslate,

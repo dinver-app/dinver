@@ -41,6 +41,14 @@ router.get(
   visitController.getUserVisitsForMap,
 );
 
+// Get single visit by ID (for notifications)
+router.get(
+  '/visits/:visitId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.getVisitById,
+);
+
 // Upload receipt + Create Visit in ONE call
 // Body (multipart/form-data): receiptImage, taggedBuddies?, locationLat?, locationLng?, gpsAccuracy?
 router.post(

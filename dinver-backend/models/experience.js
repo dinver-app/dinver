@@ -30,6 +30,18 @@ module.exports = (sequelize, DataTypes) => {
         as: 'likes',
         onDelete: 'CASCADE',
       });
+
+      Experience.hasMany(models.ExperienceView, {
+        foreignKey: 'experienceId',
+        as: 'views',
+        onDelete: 'CASCADE',
+      });
+
+      Experience.hasMany(models.ExperienceShare, {
+        foreignKey: 'experienceId',
+        as: 'shares',
+        onDelete: 'CASCADE',
+      });
     }
 
     // Helper method to check if user has liked this experience
@@ -139,10 +151,21 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
       },
+      viewCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
       // Timestamps
       publishedAt: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      // Language detection for translation feature
+      detectedLanguage: {
+        type: DataTypes.STRING(5),
+        allowNull: true,
+        comment: 'Detected language of description (hr, en)',
       },
     },
     {
@@ -173,6 +196,9 @@ module.exports = (sequelize, DataTypes) => {
         },
         {
           fields: ['createdAt'],
+        },
+        {
+          fields: ['detectedLanguage'],
         },
       ],
     },

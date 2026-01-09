@@ -325,7 +325,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {establishmentTypes.map((type) => (
                 <div key={type.id} className="flex items-center">
                   <div
-                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                    className={`w-5 h-5 shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
                       ${
                         selectedEstablishmentTypes.includes(type.id)
                           ? "bg-gray-900 border-gray-900"
@@ -385,7 +385,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {mealTypes.map((type) => (
                 <div key={type.id} className="flex items-center">
                   <div
-                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                    className={`w-5 h-5 shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
                       ${
                         selectedMealTypes.includes(type.id)
                           ? "bg-gray-900 border-gray-900"
@@ -445,7 +445,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {foodTypes.map((type) => (
                 <div key={type.id} className="flex items-center">
                   <div
-                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                    className={`w-5 h-5 shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
                       ${
                         selectedFoodTypes.includes(type.id)
                           ? "bg-gray-900 border-gray-900"
@@ -505,7 +505,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {establishmentPerks.map((perk) => (
                 <div key={perk.id} className="flex items-center">
                   <div
-                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                    className={`w-5 h-5 shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
                       ${
                         selectedEstablishmentPerks.includes(perk.id)
                           ? "bg-gray-900 border-gray-900"
@@ -565,7 +565,7 @@ const FiltersTab = ({ restaurant, onUpdate }: FiltersTabProps) => {
               {dietaryTypes.map((type) => (
                 <div key={type.id} className="flex items-center">
                   <div
-                    className={`w-5 h-5 flex-shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
+                    className={`w-5 h-5 shrink-0 border rounded-sm mr-2 flex items-center justify-center cursor-pointer
                       ${
                         selectedDietaryTypes.includes(type.id)
                           ? "bg-gray-900 border-gray-900"

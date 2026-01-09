@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { User, UserSettings, PushToken } = require('../../models');
+const { User, UserSettings, PushToken, UserFollow } = require('../../models');
 const { Op } = require('sequelize');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -44,6 +44,11 @@ const register = async (req, res) => {
     if (existingUsername) {
       return res.status(400).json({ error: 'Username already exists' });
     }
+
+    // Get official Dinver account for auto-follow
+    const officialAccount = await User.findOne({
+      where: { email: 'info@dinver.eu' },
+    });
 
     // Validate referral code BEFORE creating user
     let referralApplied = false;
@@ -110,6 +115,27 @@ const register = async (req, res) => {
       isEmailVerified: false,
       isPhoneVerified: false,
     });
+
+    // Auto-follow official Dinver account
+    if (officialAccount) {
+      try {
+        await UserFollow.create({
+          followerId: user.id,
+          followingId: officialAccount.id,
+          status: 'ACTIVE',
+        });
+        console.log(
+          `[Auto-follow] User ${user.email} automatically followed official account ${officialAccount.email}`,
+        );
+      } catch (followError) {
+        console.error('Error auto-following official account:', followError);
+        // Don't fail registration if auto-follow fails
+      }
+    } else {
+      console.warn(
+        '[Auto-follow] Official Dinver account (info@dinver.eu) not found in database',
+      );
+    }
 
     // Now apply the referral code for real and do additional validations
     if (referralApplied) {
@@ -654,6 +680,7 @@ const socialLogin = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     let user = await User.findOne({ where: { email: normalizedEmail } });
+    let isNewUser = false;
 
     if (!user) {
       // Generate username from email or name
@@ -674,6 +701,32 @@ const socialLogin = async (req, res) => {
         photoURL,
         provider,
       });
+      isNewUser = true;
+
+      // Auto-follow official Dinver account for new social login users
+      try {
+        const officialAccount = await User.findOne({
+          where: { email: 'info@dinver.eu' },
+        });
+
+        if (officialAccount) {
+          await UserFollow.create({
+            followerId: user.id,
+            followingId: officialAccount.id,
+            status: 'ACTIVE',
+          });
+          console.log(
+            `[Auto-follow] Social login user ${user.email} automatically followed official account ${officialAccount.email}`,
+          );
+        } else {
+          console.warn(
+            '[Auto-follow] Official Dinver account (info@dinver.eu) not found in database',
+          );
+        }
+      } catch (followError) {
+        console.error('Error auto-following official account on social login:', followError);
+        // Don't fail social login if auto-follow fails
+      }
     }
 
     const { accessToken, refreshToken } = generateTokens(user);
@@ -741,6 +794,31 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               username,
               email: normalizedEmail,
             });
+
+            // Auto-follow official Dinver account for new Google OAuth users
+            try {
+              const officialAccount = await User.findOne({
+                where: { email: 'info@dinver.eu' },
+              });
+
+              if (officialAccount) {
+                await UserFollow.create({
+                  followerId: user.id,
+                  followingId: officialAccount.id,
+                  status: 'ACTIVE',
+                });
+                console.log(
+                  `[Auto-follow] Google OAuth user ${user.email} automatically followed official account ${officialAccount.email}`,
+                );
+              } else {
+                console.warn(
+                  '[Auto-follow] Official Dinver account (info@dinver.eu) not found in database',
+                );
+              }
+            } catch (followError) {
+              console.error('Error auto-following official account on Google OAuth:', followError);
+              // Don't fail OAuth if auto-follow fails
+            }
           }
           done(null, user);
         } catch (error) {

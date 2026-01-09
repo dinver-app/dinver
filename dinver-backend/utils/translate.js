@@ -5,6 +5,11 @@ const translate = new Translate({
   credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
 });
 
+// Languages to normalize to Croatian (similar South Slavic languages)
+const NORMALIZE_TO_HR = ['hr', 'sr', 'bs', 'sr-Latn', 'sh', 'hbs'];
+// Supported languages in the app
+const SUPPORTED_LANGUAGES = ['hr', 'en'];
+
 const autoTranslate = async (translations) => {
   let hrTranslation = translations.find((t) => t.language === 'hr');
   let enTranslation = translations.find((t) => t.language === 'en');
@@ -160,8 +165,65 @@ const translateSizeNameFill = async (input = {}) => {
   return res;
 };
 
+/**
+ * Detect the language of a text using Google Translate API.
+ * Normalizes similar languages (Serbian, Bosnian) to Croatian.
+ * @param {string} text - Text to detect language from
+ * @returns {Promise<string|null>} - Detected language code ('hr' or 'en'), or null if detection fails
+ */
+const detectLanguage = async (text) => {
+  if (!text || text.trim().length < 3) return null;
+
+  try {
+    const [detection] = await translate.detect(text);
+    // Google returns array if multiple options, take the first
+    const result = Array.isArray(detection) ? detection[0] : detection;
+    let language = result.language;
+
+    // Normalize similar languages (Serbian, Bosnian) to Croatian
+    if (NORMALIZE_TO_HR.includes(language)) {
+      language = 'hr';
+    }
+
+    // If language is not hr or en, default to hr (most users are Croatian)
+    if (!SUPPORTED_LANGUAGES.includes(language)) {
+      language = 'hr';
+    }
+
+    return language;
+  } catch (error) {
+    console.error('Language detection error:', error);
+    return null;
+  }
+};
+
+/**
+ * Translate text to a target language.
+ * @param {string} text - Text to translate
+ * @param {string} targetLanguage - Target language ('hr' or 'en')
+ * @param {string} sourceLanguage - Source language (optional, auto-detects if not provided)
+ * @returns {Promise<string>} - Translated text
+ */
+const translateContent = async (text, targetLanguage, sourceLanguage = null) => {
+  if (!text || text.trim().length === 0) return text;
+
+  try {
+    const options = { to: targetLanguage };
+    if (sourceLanguage) options.from = sourceLanguage;
+
+    const [translation] = await translate.translate(text, options);
+    return translation;
+  } catch (error) {
+    console.error('Translation error:', error);
+    throw new Error('Failed to translate content');
+  }
+};
+
 module.exports = {
   autoTranslate,
   translateSizeNameBoth,
   translateSizeNameFill,
+  detectLanguage,
+  translateContent,
+  SUPPORTED_LANGUAGES,
 };

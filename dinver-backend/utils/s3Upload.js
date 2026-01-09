@@ -1,7 +1,6 @@
 const {
   S3Client,
   PutObjectCommand,
-  HeadObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
 } = require('@aws-sdk/client-s3');
@@ -19,20 +18,6 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
-
-async function verifyFileExists(bucket, key) {
-  try {
-    const command = new HeadObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    });
-    await s3Client.send(command);
-    return true;
-  } catch (error) {
-    console.error('File does not exist in S3:', { bucket, key, error });
-    return false;
-  }
-}
 
 async function uploadToS3(file, folder) {
   try {
@@ -56,16 +41,10 @@ async function uploadToS3(file, folder) {
     };
 
     const command = new PutObjectCommand(params);
-    const result = await s3Client.send(command);
+    await s3Client.send(command);
 
-    // Verify the file was actually uploaded
-    const exists = await verifyFileExists(bucketName, fileName);
-    if (!exists) {
-      throw new Error(
-        'File upload appeared successful but file not found in S3',
-      );
-    }
-
+    // S3 PutObject is atomic - if it succeeds, the file exists
+    // No need for verification (saves 1 HEAD request per upload)
     return fileName;
   } catch (error) {
     console.error('Error in uploadToS3:', error);

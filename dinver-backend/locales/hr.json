@@ -53,8 +53,8 @@
       "body": "Dobio/la si {{points}} bodova za račun iz {{restaurantName}} (podijeljeno s {{buddyCount}} prijatelja)"
     },
     "receipt_approved_buddy": {
-      "title": "Dobio/la si bodove! 🎉",
-      "body": "{{actorName}} te je označio/la na računu iz {{restaurantName}} - dobio/la si {{points}} bodova!"
+      "title": "Novi posjet restoranu! 🎉",
+      "body": "{{userName}} te označio/la u računu iz {{restaurantName}}. Dobio/la si {{points}} bodova!"
     }
   },
   "reservationThread": {

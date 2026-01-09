@@ -310,7 +310,7 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
               <img
                 src={URL.createObjectURL(itemImageFile)}
                 alt={itemImageFile.name}
-                className="w-10 h-10 object-contain rounded mr-2 flex-shrink-0"
+                className="w-10 h-10 object-contain rounded mr-2 shrink-0"
               />
               <span className="text-xs truncate">{itemImageFile.name}</span>
             </div>
@@ -319,7 +319,7 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
               <img
                 src={drinkItem.imageUrl}
                 alt={drinkItem.name}
-                className="w-10 h-10 object-contain rounded mr-2 flex-shrink-0"
+                className="w-10 h-10 object-contain rounded mr-2 shrink-0"
               />
               <span className="text-xs truncate">
                 {drinkItem.imageUrl.split("/").pop()}
@@ -331,7 +331,7 @@ const EditDrinkItem: React.FC<EditDrinkItemProps> = ({
           {(itemImageFile || drinkItem.imageUrl) && (
             <button
               onClick={handleRemoveImage}
-              className="text-gray-500 hover:text-gray-700 text-xs ml-auto flex-shrink-0"
+              className="text-gray-500 hover:text-gray-700 text-xs ml-auto shrink-0"
             >
               <FaTrash />
             </button>

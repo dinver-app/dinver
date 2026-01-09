@@ -27,7 +27,7 @@ const {
 } = require('./achievementController');
 const { Op, Sequelize } = require('sequelize');
 const { getBaseFileName, getFolderFromKey } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const { logAudit, ActionTypes, Entities } = require('../../utils/auditLogger');
 const { calculateDistance } = require('../../utils/distance');
 const { getCitiesCoordinates } = require('../../utils/geocoding');
@@ -170,27 +170,18 @@ const getAllRestaurants = async (req, res) => {
       order: [['name', 'ASC']],
     });
 
-    const restaurantsWithStatus = await Promise.all(
-      restaurants.map(async (restaurant) => {
-        const reviews = await Review.findAll({
-          where: { restaurantId: restaurant.id },
-          attributes: ['rating'],
-        });
+    const restaurantsWithStatus = restaurants.map((restaurant) => {
+      // Use cached dinverRating if available, otherwise fallback to Google rating
+      const reviewRating = restaurant.dinverRating 
+        ? parseFloat(restaurant.dinverRating) 
+        : (restaurant.rating ? parseFloat(restaurant.rating) : null);
 
-        const totalRatings = reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0,
-        );
-        const reviewRating =
-          reviews.length > 0 ? totalRatings / reviews.length : null;
-
-        return {
-          ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.openingHours),
-          reviewRating,
-        };
-      }),
-    );
+      return {
+        ...restaurant.get(),
+        isOpen: isRestaurantOpen(restaurant.openingHours),
+        reviewRating,
+      };
+    });
 
     res.json({
       totalRestaurants: count,
@@ -302,39 +293,30 @@ const getRestaurants = async (req, res) => {
       userFavorites = new Set(favorites.map((f) => f.restaurantId));
     }
 
-    const restaurantsWithStatus = await Promise.all(
-      restaurants.map(async (restaurant) => {
-        const reviews = await Review.findAll({
-          where: { restaurantId: restaurant.id },
-          attributes: ['rating'],
-        });
+    const restaurantsWithStatus = restaurants.map((restaurant) => {
+      // Use cached dinverRating if available, otherwise fallback to Google rating
+      const reviewRating = restaurant.dinverRating 
+        ? parseFloat(restaurant.dinverRating) 
+        : (restaurant.rating ? parseFloat(restaurant.rating) : null);
 
-        const totalRatings = reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0,
-        );
-        const reviewRating =
-          reviews.length > 0 ? totalRatings / reviews.length : null;
+      // Calculate distance if user coordinates are provided
+      const distance = hasCoordinates
+        ? calculateDistance(
+            parseFloat(userLat),
+            parseFloat(userLon),
+            restaurant.latitude,
+            restaurant.longitude,
+          )
+        : null;
 
-        // Calculate distance if user coordinates are provided
-        const distance = hasCoordinates
-          ? calculateDistance(
-              parseFloat(userLat),
-              parseFloat(userLon),
-              restaurant.latitude,
-              restaurant.longitude,
-            )
-          : null;
-
-        return {
-          ...restaurant.get(),
-          isOpen: isRestaurantOpen(restaurant.openingHours),
-          reviewRating,
-          distance,
-          isFavorite: userFavorites.has(restaurant.id),
-        };
-      }),
-    );
+      return {
+        ...restaurant.get(),
+        isOpen: isRestaurantOpen(restaurant.openingHours),
+        reviewRating,
+        distance,
+        isFavorite: userFavorites.has(restaurant.id),
+      };
+    });
 
     // If coordinates are provided, sort by distance
     if (hasCoordinates) {
@@ -4577,13 +4559,8 @@ ${new Date().toLocaleString('hr-HR', {
 ═══════════════════════════════════════════════════════════════
     `.trim();
 
-    // Send email using the same mailgun setup as in claimLogController
-    const mailgun = require('mailgun-js');
-    const mg = mailgun({
-      apiKey: process.env.MAILGUN_API_KEY,
-      domain: process.env.MAILGUN_DOMAIN,
-      host: 'api.eu.mailgun.net', // EU region
-    });
+    // Send email notification
+    const { sendEmail } = require('../../utils/mailgunClient');
 
     const claimNotificationRecipients = process.env
       .CLAIM_NOTIFICATION_RECIPIENTS
@@ -4592,14 +4569,12 @@ ${new Date().toLocaleString('hr-HR', {
           .filter(Boolean)
       : ['ivankikic49@gmail.com', 'mbaric25@gmail.com'];
 
-    const emailData = {
+    await sendEmail({
       from: 'Dinver <info@dinverapp.com>',
       to: claimNotificationRecipients,
       subject: `🏪 Novi zahtjev za claim: ${restaurantName}`,
       text: emailContent,
-    };
-
-    await mg.messages().send(emailData);
+    });
 
     res.json({
       message: 'Claim form submitted successfully',

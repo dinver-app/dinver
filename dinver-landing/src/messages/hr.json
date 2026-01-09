@@ -1,0 +1,595 @@
+{
+  "nav": {
+    "features": "Za korisnike",
+    "howItWorks": "Koraci",
+    "restaurants": "Za restorane",
+    "explore": "Istraži",
+    "contact": "Partneri",
+    "downloadApp": "Preuzmi aplikaciju",
+    "language": "EN"
+  },
+  "hero": {
+    "badge": "Nova platforma za pronalazak restorana",
+    "tagline": "Otkrij. Podijeli. Osvoji nagrade.",
+    "title": "Platforma za pronalazak restorana",
+    "subtitle": "Prava iskustva od pravih ljudi. Prati druge korisnike, otkrivaj nove restorane i dijeli svoja omiljena mjesta. Osvajaj nagrade i zabavljaj se dok istražuješ.",
+    "cta": "Preuzmi sada",
+    "ctaSecondary": "Istraži restorane",
+    "stats": {
+      "restaurants": "Partner restorana",
+      "users": "Istraživača hrane",
+      "experiences": "Podijeljenih doživljaja"
+    }
+  },
+  "features": {
+    "title": "Zašto trebaš Dinver?",
+    "subtitle": "Jer ti omogućuje da na jednostavan i zabavan način pronađeš svoj sljedeći omiljeni restoran.",
+    "items": {
+      "community": {
+        "title": "Povezuj se s drugima",
+        "description": "Prati prijatelje i otkrivaj nove restorane kroz njihove posjete i preporuke."
+      },
+      "experiences": {
+        "title": "Feed s doživljajima korisnika",
+        "description": "Listaj kroz autentična iskustva korisnika u različitim restoranima kao na društvenoj mreži i spremaj restorane koji te najviše privuku."
+      },
+      "rewards": {
+        "title": "Osvajaj nagrade",
+        "description": "Posjeti restoran, slikaj račun i na taj način zabilježi posjet te se na temelju bodova natječi na ljestvici. Korisnici s najviše bodova osvajaju nagrade svaka dva tjedna."
+      },
+      "lists": {
+        "title": "Posjećeno & Planiram posjetiti",
+        "description": "Širi popis svih restorana u kojima si bio/la i bilježi one koje želiš posjetiti."
+      },
+      "search": {
+        "title": "Pretražuj po nazivima jela",
+        "description": "Jede ti se nekakvo konkretno jelo? Upiši naziv jela u našu tražilicu i pronađi restorane koji nude točno ono što želiš."
+      },
+      "details": {
+        "title": "Potpune informacije",
+        "description": "360° virtualne šetnje kroz restorane, interaktivni meniji, ažurirano radno vrijeme, fotografije ambijenta… Sve što trebaš znati o restoranu nalazi se na jednom mjestu."
+      },
+      "reservations": {
+        "title": "Jednostavan način rezerviranja",
+        "description": "Rezerviraj stol u samo nekoliko koraka. Odaberi datum, vrijeme i broj gostiju te pričekaj potvrdu restorana - sve unutar naše aplikacije."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Dinver funkcionira po sljedećem principu:",
+    "subtitle": "3 jednostavna koraka",
+    "steps": {
+      "discover": {
+        "title": "Otkrij restoran",
+        "description": "Pregledaj feed s doživljajima, pretraži restorane po jelu i lokaciji ili provjeri što je novo u tvojim omiljenim restoranima."
+      },
+      "visit": {
+        "title": "Posjeti ga i ostavi doživljaj",
+        "description": "Večeraj u bilo kojem restoranu i uslikaj račun. Nakon što verificiramo tvoj posjet, moći ćeš ostaviti svoj autentični doživljaj iz restorana."
+      },
+      "share": {
+        "title": "Natječi se i osvajaj nagrade",
+        "description": "Sakupljaj bodove slikanjem računa, kreiranjem doživljaja, pozivanjem prijatelja i penji se na ljestvici za osvajanje nagrada."
+      }
+    }
+  },
+  "experienceFeed": {
+    "experiences": {
+      "title": "Feed s doživljajima",
+      "subtitle": "Društvena mreža za ljubitelje hrane",
+      "description": "Listaj kroz autentična iskustva korisnika u različitim restoranima kao na društvenoj mreži. Sviđa ti se jelo na slici? Klikni na restoran, spremi ga ili odmah rezerviraj stol!"
+    },
+    "whatsNew": {
+      "title": "Što je novo?",
+      "subtitle": "Nemoj propuštati fora događaje u restoranima",
+      "description": "Restorani objavljuju najave poput statusa - glazba uživo večeras, novo jelo u jelovniku, posebna ponuda. Filtriraj po kategorijama i otkrij gdje se u tvojoj blizini odvija nešto zanimljivo. Objave traju do 7 dana."
+    },
+    "cta": "Pogledaj više doživljaja"
+  },
+  "forRestaurants": {
+    "title": "Postani Dinver partner",
+    "subtitle": "Neka tvoj restoran postane dijelom naše platforme",
+    "benefits": {
+      "virtualTour": {
+        "title": "Virtualna šetnja 360",
+        "description": "Omogući gostima da istraže tvoj ambijent prije dolaska"
+      },
+      "menu": {
+        "title": "Interaktivni meni",
+        "description": "Prikaži svoja ukusna jela sa slikama i opisima"
+      },
+      "whatsNew": {
+        "title": "Što je novo?",
+        "description": "Najavi događaje, promocije i nova jela"
+      },
+      "profile": {
+        "title": "Profil restorana",
+        "description": "Prikaži sve informacije o svom restoranu na jednom mjestu"
+      },
+      "analytics": {
+        "title": "Analitika i statistike",
+        "description": "Prati što tvoje goste najviše zanima"
+      },
+      "workingHours": {
+        "title": "Radno vrijeme",
+        "description": "Upravljaj radnim vremenom i redovito ga ažuriraj"
+      },
+      "reservations": {
+        "title": "Rezervacije",
+        "description": "Primaj rezervacije stolova direktno kroz aplikaciju"
+      }
+    },
+    "cta": "Postani partner",
+    "ctaSecondary": "Saznaj više"
+  },
+  "map": {
+    "title": "Naši partner restorani",
+    "subtitle": "Otkrij vrhunske restorane koji su već dijelom Dinver zajednice",
+    "cta": "Pogledaj sve restorane"
+  },
+  "contact": {
+    "title": "Kontaktiraj nas",
+    "subtitle": "Imaš pitanje, prijedlog ili želiš surađivati s nama? Veselimo se tvojoj poruci!",
+    "info": {
+      "email": "Email",
+      "phone": "Telefon",
+      "location": "Lokacija",
+      "followUs": "Prati nas"
+    },
+    "form": {
+      "inquiryType": "Tip upita",
+      "inquiryTypes": {
+        "general": "Općeniti upit",
+        "partnership": "Partnerstvo",
+        "support": "Podrška",
+        "press": "Za medije",
+        "other": "Ostalo"
+      },
+      "name": "Ime i prezime",
+      "namePlaceholder": "Tvoje ime",
+      "email": "Email",
+      "phone": "Telefon (opcionalno)",
+      "city": "Tvoj grad",
+      "subject": "Predmet",
+      "subjectPlaceholder": "O čemu se radi?",
+      "message": "Poruka",
+      "messagePlaceholder": "Tvoja poruka...",
+      "submit": "Pošalji poruku",
+      "submitting": "Šaljem...",
+      "success": "Poruka poslana!",
+      "successMessage": "Hvala na poruci. Javit ćemo vam se uskoro.",
+      "sendAnother": "Pošalji još jednu poruku",
+      "error": "Došlo je do greške. Molimo pokušajte ponovno.",
+      "required": "*"
+    },
+    "restaurant": {
+      "title": "Vlasnik si restorana?",
+      "description": "Postani Dinver partner! Pridruži se našoj zajednici partnera i privuci goste koji aktivno traže svoj sljedeći vrhunski obrok.",
+      "cta": "Registriraj svoj restoran"
+    }
+  },
+  "footer": {
+    "tagline": "Otkrij svoj sljedeći omiljeni restoran",
+    "links": {
+      "navigation": "Stranice",
+      "company": "Tvrtka",
+      "home": "Početna",
+      "about": "O nama",
+      "contact": "Kontakt",
+      "partners": "Partneri",
+      "downloadApp": "Preuzmi aplikaciju",
+      "careers": "Karijere",
+      "press": "Za medije",
+      "legal": "Pravno",
+      "privacy": "Politika privatnosti",
+      "terms": "Uvjeti korištenja",
+      "cookies": "Politika kolačića",
+      "social": "Prati nas"
+    },
+    "copyright": "© 2024 Dinver. Sva prava pridržana."
+  },
+  "whatsNew": {
+    "title": "Što je novo?",
+    "subtitle": "Svježe novosti od tvojih omiljenih restorana",
+    "tags": {
+      "liveMusic": "Glazba uživo",
+      "newDish": "Novo jelo",
+      "newLocation": "Nova lokacija",
+      "specialEvent": "Posebni događaj",
+      "happyHour": "Happy Hour"
+    }
+  },
+  "rewards": {
+    "title": "Osvajaj bodove za svaki posjet",
+    "subtitle": "Sakupljaj bodove, natječi se na ljestvici i osvoji Dinver Mystery Box!",
+    "description": "Svaki posjet restoranu se računa. Skeniraj račun, zarađuj bodove i natječi se za titulu najboljeg istraživača. Top 1 korisnik i nasumično odabran sudionik osvajaju nagrade!",
+    "howToEarn": "Kako zaraditi bodove",
+    "earnMethods": {
+      "visit": {
+        "title": "Skeniraj račun",
+        "description": "Potvrdi svoj posjet",
+        "points": "+50 bod"
+      },
+      "experience": {
+        "title": "Objavi doživljaj",
+        "description": "Podijeli slike i ocjenu",
+        "points": "+100 bod"
+      },
+      "streak": {
+        "title": "Tjedni niz",
+        "description": "Posjeti 3+ mjesta/tjedan",
+        "points": "+200 bod"
+      }
+    },
+    "leaderboard": {
+      "title": "Trenutna ljestvica",
+      "you": "Ti",
+      "points": "bod",
+      "blurText": "Preuzmi app da vidiš potpunu ljestvicu"
+    },
+    "mysteryBox": {
+      "title": "Mystery Box",
+      "description": "Top 1 korisnik i nasumično odabran sudionik osvajaju nagrade",
+      "countdown": "Sljedeći ciklus nagrada završava za"
+    },
+    "cta": "Počni zarađivati bodove"
+  },
+  "partners": {
+    "title": "Unaprijedi svoj restoran",
+    "subtitle": "Pridruži se 150+ partnerskih restorana koji svaki dan dopiru do ljubitelja hrane",
+    "dashboard": {
+      "title": "Partner nadzorna ploča",
+      "views": "Pregleda profila",
+      "clicks": "Klikova na meni",
+      "experiences": "Novih doživljaja"
+    },
+    "benefits": {
+      "visibility": {
+        "title": "Istaknuto pozicioniranje",
+        "description": "Budi istaknut korisnicima koji pretražuju tvoje područje"
+      },
+      "virtualTour": {
+        "title": "360° virtualna šetnja",
+        "description": "Omogući gostima da istraže tvoj ambijent prije dolaska"
+      },
+      "menu": {
+        "title": "Interaktivni meni",
+        "description": "Prikaži hranu i pića sa slikama i opisima"
+      },
+      "whatsNew": {
+        "title": "\"Što je novo?\" objave",
+        "description": "Najavi događaje, promocije i nova jela"
+      },
+      "analytics": {
+        "title": "Analitika i statistike",
+        "description": "Prati što tvoje goste najviše zanima"
+      },
+      "badge": {
+        "title": "Partner značka",
+        "description": "Istakni se verificiranom partner značkom"
+      }
+    },
+    "comparison": {
+      "title": "Osnovni profil vs. Partner profil",
+      "feature": "Značajka",
+      "basic": "Osnovni",
+      "partner": "Partner",
+      "features": {
+        "listing": "Prikaz restorana",
+        "experiences": "Doživljaji korisnika",
+        "featured": "Istaknuto pozicioniranje",
+        "virtualTour": "360° virtualna šetnja",
+        "menu": "Interaktivni meni",
+        "whatsNew": "\"Što je novo?\" objave",
+        "analytics": "Analitika i statistike",
+        "reservations": "Rezervacije"
+      }
+    },
+    "cta": "Postani partner",
+    "ctaSecondary": "Saznaj više"
+  },
+  "socialProof": {
+    "title": "Što kažu naši korisnici",
+    "stats": {
+      "partners": "Partner restorana",
+      "users": "Aktivnih korisnika",
+      "experiences": "Objavljenih iskustava",
+      "updates": "Aktivnih \"Što je novo?\" objava"
+    },
+    "marqueeCaption": "Stvarna iskustva korisnika - osvježava se uživo",
+    "availableOn": "Dostupno na",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  },
+  "download": {
+    "title": "Preuzmi Dinver aplikaciju",
+    "subtitle": "Rezerviraj stol, sakupljaj bodove i otkrij najbolja mjesta u gradu - sve na jednom mjestu.",
+    "scanQr": "Skeniraj za preuzimanje",
+    "available": "Dostupno za iOS i Android"
+  },
+  "faq": {
+    "title": "Sve što trebaš znati o Dinveru",
+    "cta": "Imaš dodatnih pitanja? Piši nam!",
+    "items": [
+      {
+        "question": "Što je Dinver?",
+        "answer": "Dinver je aplikacija koja kombinira društvenu mrežu s vodičem za restorane. Gostima omogućuje otkrivanje novih restorana kroz autentična iskustva drugih korisnika i osvajanje nagrada, a restoranima da na jednom mjestu i na zanimljiv način gostima dočaraju sve što nude."
+      },
+      {
+        "question": "Je li Dinver besplatan?",
+        "answer": "Da! Dinver je potpuno besplatan za korisnike. Preuzmi aplikaciju, kreiraj profil i počni istraživati restorane u željenom gradu."
+      },
+      {
+        "question": "Kako osvajam bodove i nagrade?",
+        "answer": "Bodove osvajaš na više načina: slikanjem računa nakon posjeta restoranu, objavljivanjem doživljaja sa slikama i pozivanjem prijatelja. Svaka dva tjedna Top 1 korisnik i jedan nasumično odabrani korisnik na ljestvici osvajaju Dinver Mystery Box s nagradama!"
+      },
+      {
+        "question": "Kako mogu postati partner restoran?",
+        "answer": "Jednostavno! Kontaktiraj nas putem forme na našoj web stranici ili direktno putem info@dinver.eu. Naš tim će ti pomoći s postavljanjem profila, snimiti virtualnu šetnju i pojasniti sve alate koje nudimo."
+      },
+      {
+        "question": "Što partner restorani dobivaju?",
+        "answer": "Partner restorani dobivaju istaknuto pozicioniranje, 360° virtualnu šetnju, interaktivni meni, mogućnost objavljivanja \"Što je novo?\" obavijesti o svom restoranu te detaljnu analitiku o posjetima i gostima."
+      },
+      {
+        "question": "Je li Dinver dostupan u mom gradu?",
+        "answer": "Trenutačno smo fokusirani na Hrvatsku, s naglaskom na veće gradove. Ako nema dostupnih restorana u tvojem gradu, možeš nam pomoći - napiši doživljaj za jedan od svojih omiljenih restorana, a mi ćemo ga pretvoriti u našeg partnera!"
+      }
+    ]
+  },
+  "about": {
+    "hero": {
+      "title": "O nama",
+      "subtitle": "Dinver je platforma koja povezuje ljubitelje hrane s najboljim gastronomskim iskustvima u Hrvatskoj."
+    },
+    "story": {
+      "title": "Naša priča",
+      "paragraphs": [
+        "Dinver je nastao iz jednostavne ideje: olakšati ljudima pronalazak njihovog sljedećeg omiljenog restorana. U svijetu prepunom generickih recenzija i plaćenih preporuka, željeli smo stvoriti mjesto gdje prava iskustva dolaze od pravih ljudi.",
+        "Naša platforma kombinira društvenu mrežu s vodičem za restorane, omogućujući korisnicima da prate prijatelje, dijele svoje gastro trenutke i otkrivaju skrivene dragulje koje ne biste pronašli drugdje.",
+        "Danas Dinver okuplja zajednicu strastvenih ljubitelja hrane koji aktivno istražuju, dijele i nagrađuju se za svaki novi gastro doživljaj."
+      ]
+    },
+    "mission": {
+      "title": "Naša misija",
+      "subtitle": "Povezati svakog ljubitelja hrane s autentičnim gastronomskim iskustvima i pomoći restoranima da dopru do pravih gostiju."
+    },
+    "values": {
+      "authenticity": {
+        "title": "Autentičnost",
+        "description": "Vjerujemo u prava iskustva od pravih ljudi. Bez lažnih recenzija, samo iskrene preporuke."
+      },
+      "community": {
+        "title": "Zajednica",
+        "description": "Gradimo zajednicu ljubitelja hrane koji dijele strast prema otkrivanju novih gastro doživljaja."
+      },
+      "quality": {
+        "title": "Kvaliteta",
+        "description": "Surađujemo samo s restoranima koji dijele našu strast prema kvaliteti i izvrsnosti."
+      }
+    },
+    "offerings": {
+      "title": "Što nudimo",
+      "forUsers": {
+        "title": "Za korisnike",
+        "items": [
+          "Otkrijte nove restorane kroz autentične recenzije",
+          "Pratite prijatelje i vidite gdje su večerali",
+          "Zarađujte bodove i nagrade za svaki posjet",
+          "Pretražujte po jelu, ne samo po restoranu"
+        ]
+      },
+      "forRestaurants": {
+        "title": "Za restorane",
+        "items": [
+          "Povećajte vidljivost među pravim ljubiteljima hrane",
+          "Predstavite svoj prostor s 360° virtualnom šetnjom",
+          "Dijelite novosti i događaje putem \"Što je novo?\"",
+          "Pratite analitiku i razumijte svoje goste"
+        ]
+      }
+    },
+    "cta": {
+      "title": "Želite surađivati s nama?",
+      "subtitle": "Bilo da ste restoran koji želi postati partner ili imate bilo kakvo pitanje, rado ćemo čuti od vas.",
+      "button": "Kontaktirajte nas"
+    }
+  },
+  "privacyPolicy": {
+    "backToHome": "Natrag na početnu",
+    "title": "Politika privatnosti",
+    "lastUpdated": "Zadnje ažuriranje: Siječanj 2025.",
+    "intro": {
+      "title": "1. Uvod",
+      "content": "Dinver (\"mi\", \"nas\" ili \"naš\") posvećen je zaštiti vaše privatnosti. Ova Politika privatnosti objašnjava kako prikupljamo, koristimo i štitimo vaše osobne podatke kada koristite našu aplikaciju i web stranicu."
+    },
+    "dataCollection": {
+      "title": "2. Podaci koje prikupljamo",
+      "intro": "Prikupljamo sljedeće vrste podataka:",
+      "provided": {
+        "title": "Podaci koje vi pružate:",
+        "items": [
+          "Ime i prezime",
+          "Email adresa",
+          "Profilna fotografija",
+          "Sadržaj koji objavljujete (fotografije, recenzije, komentari)",
+          "Podaci o posjećenim restoranima"
+        ]
+      },
+      "automatic": {
+        "title": "Podaci koje automatski prikupljamo:",
+        "items": [
+          "Podaci o uređaju (model, operativni sustav)",
+          "IP adresa",
+          "Podaci o korištenju aplikacije",
+          "Lokacija (samo uz vašu dozvolu)"
+        ]
+      }
+    },
+    "dataUsage": {
+      "title": "3. Kako koristimo vaše podatke",
+      "intro": "Vaše podatke koristimo za:",
+      "items": [
+        "Pružanje i poboljšanje naših usluga",
+        "Personalizaciju vašeg iskustva",
+        "Komunikaciju s vama (obavijesti, ažuriranja, marketing)",
+        "Analizu korištenja platforme",
+        "Sprječavanje prijevara i zaštitu sigurnosti"
+      ]
+    },
+    "dataSharing": {
+      "title": "4. Dijeljenje podataka",
+      "intro": "Vaše osobne podatke ne prodajemo trećim stranama. Podatke možemo dijeliti sa:",
+      "items": [
+        "Partnerskim restoranima (samo agregirana, anonimizirana statistika)",
+        "Pružateljima usluga koji nam pomažu u poslovanju",
+        "Državnim tijelima kada je to zakonski obvezno"
+      ]
+    },
+    "yourRights": {
+      "title": "5. Vaša prava",
+      "intro": "Imate pravo na:",
+      "items": [
+        "Pristup vašim osobnim podacima",
+        "Ispravak netočnih podataka",
+        "Brisanje vaših podataka (\"pravo na zaborav\")",
+        "Ograničenje obrade",
+        "Prijenos podataka",
+        "Povlačenje privole"
+      ],
+      "contact": "Za ostvarivanje ovih prava, kontaktirajte nas na info@dinver.eu."
+    },
+    "dataSecurity": {
+      "title": "6. Sigurnost podataka",
+      "content": "Primjenjujemo tehničke i organizacijske mjere za zaštitu vaših podataka od neovlaštenog pristupa, gubitka ili uništenja. Međutim, nijedna metoda prijenosa podataka putem interneta nije 100% sigurna."
+    },
+    "cookies": {
+      "title": "7. Kolačići",
+      "content": "Koristimo kolačiće i slične tehnologije za poboljšanje funkcionalnosti i personalizaciju sadržaja. Možete upravljati postavkama kolačića putem postavki vašeg preglednika."
+    },
+    "dataRetention": {
+      "title": "8. Zadržavanje podataka",
+      "content": "Vaše podatke čuvamo dok god imate aktivan račun ili dok je potrebno za pružanje usluga. Nakon brisanja računa, vaši podaci će biti obrisani ili anonimizirani u razumnom roku."
+    },
+    "contact": {
+      "title": "9. Kontakt",
+      "intro": "Za sva pitanja o privatnosti, kontaktirajte nas na:",
+      "email": "Email:"
+    },
+    "minorRestriction": {
+      "title": "10. Dobno ograničenje",
+      "content": "Morate imati najmanje 13 godina da biste koristili Dinver. Ako ste maloljetni (ispod 18 godina), morate imati dozvolu roditelja ili zakonskog skrbnika za korištenje naših usluga."
+    },
+    "internationalTransfers": {
+      "title": "11. Međunarodni prijenosi podataka",
+      "content": "Vaši podaci se pohranjuju na sigurnim serverima tvrtke Hetzner u Europskoj uniji i AWS S3 u EU regijama. Osiguravamo da svi prijenosi podataka budu u skladu s GDPR zahtjevima i koristimo odgovarajuće zaštitne mjere za zaštitu vaših informacija."
+    },
+    "thirdPartyServices": {
+      "title": "12. Usluge trećih strana",
+      "intro": "Koristimo sljedeće usluge trećih strana za rad naše platforme:",
+      "items": [
+        "Hetzner (Njemačka) - Hosting servera",
+        "AWS S3 (EU regije) - Pohranjivanje fotografija i medijskih sadržaja",
+        "Mailgun - Usluga dostave e-pošte",
+        "Expo Push Notifications - Dostava push obavijesti na mobilne uređaje"
+      ],
+      "outro": "Svaka od ovih usluga ima vlastite politike privatnosti i mjere zaštite podataka. Dijelimo samo minimalno potrebne podatke za pružanje naših usluga."
+    },
+    "receiptData": {
+      "title": "13. Skeniranje i provjera računa",
+      "content": "Kada skenirate račun kako biste potvrdili svoj posjet restoranu, prikupljamo JIR i ZKI brojeve, naziv restorana i adresu s računa. Ovi podaci koriste se isključivo u svrhu provjere i sprječavanja prijevara. Čuvamo ove podatke razumno razdoblje kako bismo spriječili duple prijave i otkrili lažne aktivnosti."
+    },
+    "automatedDecisions": {
+      "title": "14. Automatizirano donošenje odluka",
+      "content": "Ne koristimo automatizirano donošenje odluka ili profiliranje koje proizvodi pravne učinke ili vas na sličan način značajno pogađa. Preporuke restorana i sadržaj u vašem feedu temelje se na jednostavnim algoritmima koji koriste vaše preferencije i aktivnost, ali uvijek imate kontrolu nad onim što vidite i s čime komunicirate."
+    },
+    "responseTime": {
+      "title": "15. Odgovor na vaše zahtjeve",
+      "content": "Odgovorit ćemo na vaše zahtjeve za pristup, ispravak ili brisanje podataka u roku od 30 dana kako to zahtijeva GDPR. U složenim slučajevima možemo produžiti ovo razdoblje za dodatnih 60 dana i obavijestit ćemo vas o bilo kakvom kašnjenju."
+    }
+  },
+  "termsOfService": {
+    "backToHome": "Natrag na početnu",
+    "title": "Uvjeti korištenja",
+    "lastUpdated": "Zadnje ažuriranje: Siječanj 2025.",
+    "acceptance": {
+      "title": "1. Prihvaćanje uvjeta",
+      "content": "Korištenjem Dinver aplikacije i web stranice pristajete na ove Uvjete korištenja. Ako se ne slažete s bilo kojim dijelom ovih uvjeta, molimo vas da ne koristite naše usluge."
+    },
+    "serviceDescription": {
+      "title": "2. Opis usluge",
+      "intro": "Dinver je platforma koja povezuje ljubitelje hrane s restoranima. Korisnicima omogućujemo:",
+      "items": [
+        "Otkrivanje novih restorana i gastronomskih iskustava",
+        "Dijeljenje svojih doživljaja s hranom i restoranima",
+        "Praćenje posjeta restoranima i zarađivanje bodova",
+        "Pristup informacijama o restoranima, menijima i radnom vremenu"
+      ]
+    },
+    "userAccount": {
+      "title": "3. Korisnički račun",
+      "content": "Za korištenje određenih funkcionalnosti potrebno je kreirati korisnički račun. Vi ste odgovorni za čuvanje povjerljivosti svojih pristupnih podataka i za sve aktivnosti koje se odvijaju pod vašim računom."
+    },
+    "userContent": {
+      "title": "4. Korisnički sadržaj",
+      "intro": "Objavljujući sadržaj na Dinveru (fotografije, recenzije, komentare), zadržavate vlasništvo nad tim sadržajem, ali nam dajete globalnu, trajnu, neopoziv nu, besplatnu, neekskluzivnu licencu za korištenje, reprodukciju, izmjenu, prilagodbu, objavljivanje, prijevod, distribuciju i prikazivanje tog sadržaja na našoj platformi i u našim marketinškim materijalima.",
+      "prohibited": "Zabranjeno je objavljivanje sadržaja koji je:",
+      "items": [
+        "Uvredljiv, prijeteći ili diskriminirajući",
+        "Lažan ili obmanjujući",
+        "Krši autorska prava ili prava intelektualnog vlasništva",
+        "Sadrži nezakonit sadržaj"
+      ],
+      "removal": "Zadržavamo pravo uklanjanja bilo kojeg sadržaja koji krši ove uvjete bez prethodne najave."
+    },
+    "rewardSystem": {
+      "title": "5. Sustav nagrada",
+      "content": "Dinver nudi sustav bodova i nagrada za aktivne korisnike. Zadržavamo pravo izmjene pravila sustava nagrada u bilo kojem trenutku. Bodovi nemaju novčanu vrijednost i ne mogu se zamijeniti za novac."
+    },
+    "limitationOfLiability": {
+      "title": "6. Ograničenje odgovornosti",
+      "content": "Dinver pruža informacije o restoranima na temelju javno dostupnih podataka i korisničkih doprinosa. Ne garantiramo točnost, potpunost ili ažurnost tih informacija. Nismo odgovorni za kvalitetu usluge u restoranima."
+    },
+    "termsChanges": {
+      "title": "7. Izmjene uvjeta",
+      "content": "Zadržavamo pravo izmjene ovih Uvjeta korištenja u bilo kojem trenutku. O značajnim izmjenama ćemo vas obavijestiti putem aplikacije ili e-maila."
+    },
+    "contact": {
+      "title": "8. Kontakt",
+      "intro": "Za sva pitanja u vezi s ovim Uvjetima korištenja, kontaktirajte nas na:",
+      "email": "Email:"
+    },
+    "accountTermination": {
+      "title": "9. Suspenzija i ukidanje računa",
+      "content": "Zadržavamo pravo suspendirati, ograničiti ili ukinuti vaš račun i pristup našim uslugama u bilo kojem trenutku, bez prethodne najave, ako smatramo da ste prekršili ove Uvjete korištenja, sudjelovali u lažnim aktivnostima ili iz bilo kojeg drugog razloga koji smatramo potrebnim za zaštitu naše platforme, korisnika ili partnera. Nakon ukidanja računa, vaše pravo na korištenje usluga odmah prestaje."
+    },
+    "restaurantDisclaimer": {
+      "title": "10. Odricanje odgovornosti za restorane",
+      "content": "Dinver je platforma za otkrivanje i dijeljenje iskustava u restoranima. Nismo odgovorni za kvalitetu hrane, usluge, higijenu, točnost informacija o jelovniku, alergene, sigurnost hrane ili bilo kakve ozljede, bolesti ili štete koje mogu nastati tijekom vašeg posjeta restoranu. Informacije o restoranima pružaju sami restorani ili korisnici i možda nisu uvijek točne ili ažurirane. Uvijek provjerite važne informacije (alergeni, radno vrijeme, cijene) izravno s restoranom."
+    },
+    "receiptVerification": {
+      "title": "11. Provjera računa i sprječavanje prijevara",
+      "content": "Skeniranjem računa za potvrdu vaših posjeta potvrđujete da je svaki račun autentičan, da predstavlja stvarnu kupnju koju ste obavili i da nije prethodno poslan. Koristimo mjere za otkrivanje prijevara i zadržavamo pravo odbijanja računa, uklanjanja bodova, suspenzije računa ili poduzimanja pravnih radnji protiv korisnika koji šalju lažne, duple ili manipulirane račune."
+    },
+    "intellectualProperty": {
+      "title": "12. Intelektualno vlasništvo",
+      "content": "Naziv Dinver, logo, dizajn i sav originalni sadržaj na našoj platformi zaštićeni su zakonima o intelektualnom vlasništvu. Ne smijete kopirati, reproduc irati, distribuirati ili stvarati izvedene radove iz sadržaja naše platforme bez našeg izričitog pisanog odobrenja. Automatizirano prikupljanje podataka ili ekstrakcija podataka s naše platforme strogo je zabranjena."
+    },
+    "indemnification": {
+      "title": "13. Obeštećenje",
+      "content": "Slažete se obeštetiti, braniti i zaštititi Dinver, njegove vlasnike, zaposlenike i partnere od bilo kakvih zahtjeva, šteta, gubitaka, obveza i troškova (uključujući odvjetničke troškove) koji proizlaze iz: (a) vašeg korištenja naših usluga, (b) vašeg kršenja ovih Uvjeta, (c) vašeg kršenja bilo kojih prava druge strane, ili (d) sadržaja koji objavljujete na našoj platformi."
+    },
+    "disputeResolution": {
+      "title": "14. Rješavanje sporova i mjerodavno pravo",
+      "content": "Ovi Uvjeti korištenja regulirani su zakonima Republike Hrvatske. Svi sporovi koji proizlaze iz ovih uvjeta ili vašeg korištenja naših usluga rješavat će se pred nadležnim sudovima u Zagrebu, Hrvatska. Prije pokretanja bilo kakvih pravnih postupaka, potičemo vas da nas kontaktirate kako bismo pokušali riješiti stvar neformalnim putem."
+    },
+    "forceMajeure": {
+      "title": "15. Viša sila",
+      "content": "Dinver neće biti odgovoran za bilo kakvo neispunjenje ili kašnjenje u izvršenju zbog okolnosti izvan naše razumne kontrole, uključujući ali ne ograničavajući se na Božje djelo, rat, terorizam, nemire, embargo, akte građanskih ili vojnih vlasti, požar, poplave, nesreće, pandemije, štrajkove ili nestašice prijevoza, objekata, goriva, energije, radne snage ili materijala."
+    },
+    "severability": {
+      "title": "16. Odvojivost odredbi",
+      "content": "Ako se bilo koja odredba ovih Uvjeta utvrdi neprovedivom ili nevažećom, ta će odredba biti ograničena ili uklonjena u minimalnoj mjeri potrebnoj tako da ovi Uvjeti u ostalim dijelovima ostanu na punoj snazi."
+    }
+  }
+}

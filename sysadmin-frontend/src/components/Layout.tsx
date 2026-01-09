@@ -10,7 +10,6 @@ import {
   FaComments,
   FaTicketAlt,
 } from "react-icons/fa";
-import { TfiWrite } from "react-icons/tfi";
 import { IoRestaurant } from "react-icons/io5";
 import LogoutModal from "./LogoutModal";
 import { useTranslation } from "react-i18next";
@@ -107,9 +106,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           icon: <FaTicketAlt className="h-3.5 w-3.5 mr-2.5" />,
         },
         {
-          name: t("blog"),
-          path: "/blog",
-          icon: <TfiWrite className="h-3.5 w-3.5 mr-2.5" />,
+          name: "Blog",
+          path: "/blog-generation",
+          icon: <SparklesIcon className="h-3.5 w-3.5 mr-2.5" />,
         },
         {
           name: t("types_management"),

@@ -122,8 +122,9 @@ function getMediaUrl(mediaKey, mediaType = 'image', size = 'medium') {
     mediaKey = mediaKey.split('.com/').pop();
   }
 
-  // Receipts use QUICK strategy without variants, so don't add size suffix
+  // Receipts and Experiences use strategies without variants, so don't add size suffix
   const isReceipt = mediaKey.startsWith('receipts/');
+  const isExperience = mediaKey.startsWith('experiences/');
 
   // If requesting a specific size and mediaKey doesn't already have a size suffix
   if (
@@ -131,6 +132,7 @@ function getMediaUrl(mediaKey, mediaType = 'image', size = 'medium') {
     size &&
     size !== 'original' &&
     !isReceipt && // Don't add suffix for receipts
+    !isExperience && // Don't add suffix for experiences
     !mediaKey.match(/-(thumb|medium|full)\.(jpg|jpeg|png|webp)$/i)
   ) {
     // Try to construct the variant key

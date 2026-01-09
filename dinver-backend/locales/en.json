@@ -49,8 +49,8 @@
       "body": "You received {{points}} points for your receipt at {{restaurantName}} (shared with {{buddyCount}} buddies)"
     },
     "receipt_approved_buddy": {
-      "title": "You got points! 🎉",
-      "body": "{{actorName}} tagged you on a receipt at {{restaurantName}} - you got {{points}} points!"
+      "title": "New restaurant visit! 🎉",
+      "body": "{{userName}} tagged you in a receipt from {{restaurantName}}. You received {{points}} points!"
     },
     "alternative_time_accepted": {
       "title": "Alternative time accepted! ✅",

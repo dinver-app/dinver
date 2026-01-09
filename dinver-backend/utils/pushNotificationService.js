@@ -193,32 +193,52 @@ const createAndSendNotification = async (userId, notification) => {
       where: { userId },
     });
     const userLanguage = userSettings?.language || 'en';
-    const t = getI18nForLanguage(userLanguage);
 
-    // 2. Generiši title i body prema jeziku korisnika
-    const title = t(`notifications.${notification.type}.title`, notification.data || {});
-    const body = t(`notifications.${notification.type}.body`, notification.data || {});
+    const tHr = getI18nForLanguage('hr');
+    const tEn = getI18nForLanguage('en');
 
-    // 3. Spremi notifikaciju u bazu
+    const titleHr = tHr(
+      `notifications.${notification.type}.title`,
+      notification.data || {},
+    );
+    const bodyHr = tHr(
+      `notifications.${notification.type}.body`,
+      notification.data || {},
+    );
+    const titleEn = tEn(
+      `notifications.${notification.type}.title`,
+      notification.data || {},
+    );
+    const bodyEn = tEn(
+      `notifications.${notification.type}.body`,
+      notification.data || {},
+    );
+
+    const pushTitle = userLanguage === 'hr' ? titleHr : titleEn;
+    const pushBody = userLanguage === 'hr' ? bodyHr : bodyEn;
+
     const dbNotification = await Notification.create({
       userId,
       type: notification.type,
-      title,
-      body,
+      title: pushTitle,
+      body: pushBody,
+      titleHr,
+      titleEn,
+      bodyHr,
+      bodyEn,
       data: notification.data || {},
       actorUserId: notification.actorUserId || null,
       restaurantId: notification.restaurantId || null,
     });
 
     console.log(
-      `[Notification] Created notification ${dbNotification.id} for user ${userId} in language ${userLanguage}`,
+      `[Notification] Created notification ${dbNotification.id} for user ${userId} with both translations (push: ${userLanguage})`,
     );
 
-    // 4. Pošalji push notifikaciju
     try {
       const pushResult = await sendPushNotificationToUsers([userId], {
-        title,
-        body,
+        title: pushTitle,
+        body: pushBody,
         data: notification.data || {},
         sound: notification.sound || 'default',
         badge: notification.badge,
@@ -259,6 +279,26 @@ const createAndSendNotificationToUsers = async (userIds, notification) => {
     const createdNotifications = [];
     const pushMessagesByLanguage = {};
 
+    const tHr = getI18nForLanguage('hr');
+    const tEn = getI18nForLanguage('en');
+
+    const titleHr = tHr(
+      `notifications.${notification.type}.title`,
+      notification.data || {},
+    );
+    const bodyHr = tHr(
+      `notifications.${notification.type}.body`,
+      notification.data || {},
+    );
+    const titleEn = tEn(
+      `notifications.${notification.type}.title`,
+      notification.data || {},
+    );
+    const bodyEn = tEn(
+      `notifications.${notification.type}.body`,
+      notification.data || {},
+    );
+
     // Kreiraj notifikacije za sve korisnike u bazi
     for (const userId of userIds) {
       // Dohvati jezik korisnika iz UserSettings
@@ -266,17 +306,19 @@ const createAndSendNotificationToUsers = async (userIds, notification) => {
         where: { userId },
       });
       const userLanguage = userSettings?.language || 'en';
-      const t = getI18nForLanguage(userLanguage);
 
-      // Generiši title i body prema jeziku korisnika
-      const title = t(`notifications.${notification.type}.title`, notification.data || {});
-      const body = t(`notifications.${notification.type}.body`, notification.data || {});
+      const pushTitle = userLanguage === 'hr' ? titleHr : titleEn;
+      const pushBody = userLanguage === 'hr' ? bodyHr : bodyEn;
 
       const dbNotification = await Notification.create({
         userId,
         type: notification.type,
-        title,
-        body,
+        title: pushTitle,
+        body: pushBody,
+        titleHr,
+        titleEn,
+        bodyHr,
+        bodyEn,
         data: notification.data || {},
         actorUserId: notification.actorUserId || null,
         restaurantId: notification.restaurantId || null,
@@ -287,15 +329,15 @@ const createAndSendNotificationToUsers = async (userIds, notification) => {
       if (!pushMessagesByLanguage[userLanguage]) {
         pushMessagesByLanguage[userLanguage] = {
           userIds: [],
-          title,
-          body,
+          title: pushTitle,
+          body: pushBody,
         };
       }
       pushMessagesByLanguage[userLanguage].userIds.push(userId);
     }
 
     console.log(
-      `[Notification] Created ${createdNotifications.length} notifications in ${Object.keys(pushMessagesByLanguage).length} language(s)`,
+      `[Notification] Created ${createdNotifications.length} notifications with both translations in ${Object.keys(pushMessagesByLanguage).length} language(s)`,
     );
 
     // Pošalji push notifikacije grupirane po jeziku
@@ -303,14 +345,19 @@ const createAndSendNotificationToUsers = async (userIds, notification) => {
       let totalSuccess = 0;
       let totalFailure = 0;
 
-      for (const [language, messageData] of Object.entries(pushMessagesByLanguage)) {
-        const pushResult = await sendPushNotificationToUsers(messageData.userIds, {
-          title: messageData.title,
-          body: messageData.body,
-          data: notification.data || {},
-          sound: notification.sound || 'default',
-          badge: notification.badge,
-        });
+      for (const [language, messageData] of Object.entries(
+        pushMessagesByLanguage,
+      )) {
+        const pushResult = await sendPushNotificationToUsers(
+          messageData.userIds,
+          {
+            title: messageData.title,
+            body: messageData.body,
+            data: notification.data || {},
+            sound: notification.sound || 'default',
+            badge: notification.badge,
+          },
+        );
 
         totalSuccess += pushResult.success;
         totalFailure += pushResult.failure;

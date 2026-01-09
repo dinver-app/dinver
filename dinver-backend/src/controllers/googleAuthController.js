@@ -133,6 +133,11 @@ const googleSignIn = async (req, res) => {
         isEmailVerified: true, // Google emails are verified
         isPhoneVerified: false,
       });
+    } else {
+      if (!userSettings.isEmailVerified) {
+        await userSettings.update({ isEmailVerified: true });
+        await userSettings.reload();
+      }
     }
 
     // Generate tokens

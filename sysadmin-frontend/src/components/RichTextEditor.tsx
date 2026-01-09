@@ -77,8 +77,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`p-2 rounded hover:bg-gray-100 ${
-        isActive ? "bg-gray-200" : ""
+      className={`p-2 rounded transition-colors ${
+        isActive ? "bg-blue-100 text-blue-700" : "hover:bg-gray-100 text-gray-700"
       } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       {children}
@@ -86,9 +86,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   );
 
   return (
-    <div className="border border-gray-300 rounded-md">
+    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
       {/* Toolbar */}
-      <div className="border-b border-gray-200 p-2 flex flex-wrap gap-1">
+      <div className="border-b border-gray-200 bg-gray-50 p-2 flex flex-wrap gap-1">
         {/* Text Formatting */}
         <div className="flex border-r border-gray-200 pr-2 mr-2">
           <ToolbarButton
@@ -123,7 +123,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             isActive={editor.isActive("heading", { level: 1 })}
             title="Heading 1"
           >
-            H1
+            <span className="text-sm font-semibold">H1</span>
           </ToolbarButton>
           <ToolbarButton
             onClick={() =>
@@ -132,7 +132,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             isActive={editor.isActive("heading", { level: 2 })}
             title="Heading 2"
           >
-            H2
+            <span className="text-sm font-semibold">H2</span>
           </ToolbarButton>
           <ToolbarButton
             onClick={() =>
@@ -141,7 +141,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             isActive={editor.isActive("heading", { level: 3 })}
             title="Heading 3"
           >
-            H3
+            <span className="text-sm font-semibold">H3</span>
           </ToolbarButton>
         </div>
 
@@ -206,12 +206,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
 
       {/* Editor Content */}
-      <div className="p-3 min-h-[120px] bg-white">
-        <EditorContent
-          editor={editor}
-          className="w-full focus:outline-none"
-          placeholder={placeholder}
-        />
+      <div className="p-4 min-h-[200px] bg-white prose prose-sm max-w-none">
+        <style>{`
+          .ProseMirror {
+            outline: none !important;
+            min-height: 150px;
+          }
+          .ProseMirror:focus {
+            outline: none !important;
+          }
+          .ProseMirror p.is-editor-empty:first-child::before {
+            content: attr(data-placeholder);
+            float: left;
+            color: #adb5bd;
+            pointer-events: none;
+            height: 0;
+          }
+        `}</style>
+        <EditorContent editor={editor} />
       </div>
     </div>
   );

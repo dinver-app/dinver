@@ -1,6 +1,6 @@
-const { Blog, BlogUser, sequelize } = require('../../models');
+const { Blog, BlogUser, BlogReaction, BlogTranslation, BlogView, sequelize } = require('../../models');
 const { uploadToS3 } = require('../../utils/s3Upload');
-const { deleteFromS3 } = require('../../utils/s3Delete');
+const { deleteFromS3 } = require('../../utils/s3Upload');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
@@ -65,6 +65,10 @@ const getBlogs = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+        },
       ],
       order: [[sortBy, sortOrder]],
       limit: parseInt(limit),
@@ -103,7 +107,8 @@ const getBlog = async (req, res) => {
       where.slug = identifier;
     }
 
-    const blog = await Blog.findOne({
+    // First try to find by Blog.id or Blog.slug
+    let blog = await Blog.findOne({
       where,
       include: [
         {
@@ -111,8 +116,28 @@ const getBlog = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+        },
       ],
     });
+
+    // If not found by Blog slug, try to find by translation slug
+    if (!blog && !where.id) {
+      const translation = await BlogTranslation.findOne({
+        where: { slug: where.slug },
+        include: [{
+          model: Blog,
+          as: 'blog',
+          include: [
+            { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+            { model: BlogTranslation, as: 'translations' },
+          ],
+        }],
+      });
+      blog = translation?.blog;
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
@@ -358,27 +383,101 @@ const getBlogStats = async (req, res) => {
     const publishedBlogs = await Blog.count({ where: { status: 'published' } });
     const draftBlogs = await Blog.count({ where: { status: 'draft' } });
 
-    // Calculate total views across all blogs
+    // Calculate totals across all published blogs
     const result = await Blog.findAll({
       where: { status: 'published' },
-      attributes: [[sequelize.literal('SUM("viewCount")'), 'totalViews']],
+      attributes: [
+        [sequelize.literal('SUM("viewCount")'), 'totalViews'],
+        [sequelize.literal('SUM("likesCount")'), 'totalLikes'],
+        [sequelize.literal('SUM("dislikesCount")'), 'totalDislikes'],
+      ],
       raw: true,
     });
 
     const totalViews = parseInt(result[0]?.totalViews) || 0;
+    const totalLikes = parseInt(result[0]?.totalLikes) || 0;
+    const totalDislikes = parseInt(result[0]?.totalDislikes) || 0;
     const avgViewsPerBlog =
       publishedBlogs > 0 ? Math.round(totalViews / publishedBlogs) : 0;
+
+    // Calculate engagement rate
+    const totalEngagement = totalLikes + totalDislikes;
+    const engagementRate = totalViews > 0 ? ((totalEngagement / totalViews) * 100).toFixed(2) : 0;
 
     res.json({
       total: totalBlogs,
       published: publishedBlogs,
       draft: draftBlogs,
       totalViews,
+      totalLikes,
+      totalDislikes,
       avgViewsPerBlog,
+      engagementRate: parseFloat(engagementRate),
     });
   } catch (error) {
     console.error('Error fetching blog stats:', error);
     res.status(500).json({ error: 'Failed to fetch blog statistics' });
+  }
+};
+
+// Get detailed blog statistics with per-blog breakdown
+const getBlogStatsDetailed = async (req, res) => {
+  try {
+    const { sortBy = 'viewCount', sortOrder = 'DESC', limit = 20 } = req.query;
+
+    const validSortFields = ['viewCount', 'likesCount', 'dislikesCount', 'publishedAt', 'title'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'viewCount';
+
+    const blogs = await Blog.findAll({
+      where: { status: 'published' },
+      include: [
+        {
+          model: BlogUser,
+          as: 'author',
+          attributes: ['id', 'name'],
+        },
+      ],
+      attributes: [
+        'id',
+        'title',
+        'slug',
+        'viewCount',
+        'likesCount',
+        'dislikesCount',
+        'publishedAt',
+        'language',
+        'category',
+      ],
+      order: [[sortField, sortOrder]],
+      limit: parseInt(limit),
+    });
+
+    // Format response with engagement metrics
+    const formattedBlogs = blogs.map((blog) => {
+      const totalReactions = blog.likesCount + blog.dislikesCount;
+      const likeRatio = totalReactions > 0 ? ((blog.likesCount / totalReactions) * 100).toFixed(1) : 0;
+      const engagementRate = blog.viewCount > 0 ? ((totalReactions / blog.viewCount) * 100).toFixed(2) : 0;
+
+      return {
+        id: blog.id,
+        title: blog.title,
+        slug: blog.slug,
+        viewCount: blog.viewCount,
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        likeRatio: parseFloat(likeRatio),
+        engagementRate: parseFloat(engagementRate),
+        publishedAt: blog.publishedAt,
+        language: blog.language,
+        category: blog.category,
+        author: blog.author?.name || 'Unknown',
+      };
+    });
+
+    res.json({ blogs: formattedBlogs });
+  } catch (error) {
+    console.error('Error fetching detailed blog stats:', error);
+    res.status(500).json({ error: 'Failed to fetch detailed blog statistics' });
   }
 };
 
@@ -394,14 +493,12 @@ const getPublicBlogs = async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * limit;
-    const where = {
-      status: 'published', // Only return published blogs
-      language,
-    };
 
-    // Apply filters
+    // Find blogs with translations in the requested language
+    const where = {
+      status: 'published',
+    };
     if (category) where.category = category;
-    if (tag) where.tags = { [Op.contains]: [tag] };
 
     const { count, rows: blogs } = await Blog.findAndCountAll({
       where,
@@ -411,43 +508,42 @@ const getPublicBlogs = async (req, res) => {
           as: 'author',
           attributes: ['id', 'name', 'profileImage'],
         },
+        {
+          model: BlogTranslation,
+          as: 'translations',
+          where: { language },
+          required: true, // Inner join - only blogs with this translation
+        },
       ],
-      order: [['publishedAt', 'DESC']], // Most recent first
+      order: [['publishedAt', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      attributes: [
-        'id',
-        'title',
-        'slug',
-        'excerpt',
-        'content',
-        'featuredImage',
-        'category',
-        'tags',
-        'publishedAt',
-        'readingTimeMinutes',
-        'viewCount',
-      ],
     });
 
-    // Format the response
-    const formattedBlogs = blogs.map((blog) => ({
-      id: blog.id,
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt,
-      content: blog.content,
-      featuredImage: blog.featuredImage,
-      category: blog.category,
-      tags: blog.tags,
-      publishedAt: blog.publishedAt,
-      readingTimeMinutes: blog.readingTimeMinutes,
-      viewCount: blog.viewCount,
-      author: {
-        name: blog.author?.name || 'Unknown',
-        profileImage: blog.author?.profileImage,
-      },
-    }));
+    // Format the response using translation data
+    const formattedBlogs = blogs.map((blog) => {
+      const translation = blog.translations[0]; // We filtered by language, so there's one
+      return {
+        id: blog.id,
+        title: translation?.title || blog.title,
+        slug: translation?.slug || blog.slug,
+        excerpt: translation?.excerpt || blog.excerpt,
+        content: translation?.content || blog.content,
+        featuredImage: blog.featuredImage,
+        category: blog.category,
+        tags: translation?.tags || blog.tags || [],
+        publishedAt: blog.publishedAt,
+        readingTimeMinutes: translation?.readingTimeMinutes || blog.readingTimeMinutes,
+        viewCount: blog.viewCount,
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        language: translation?.language || language,
+        author: {
+          name: blog.author?.name || 'Unknown',
+          profileImage: blog.author?.profileImage,
+        },
+      };
+    });
 
     res.json({
       blogs: formattedBlogs,
@@ -464,61 +560,80 @@ const getPublicBlogs = async (req, res) => {
   }
 };
 
-// Get single public blog
+// Get single public blog by slug (checks both Blog.slug and BlogTranslation.slug)
 const getPublicBlog = async (req, res) => {
   try {
     const slug = req.params.slug;
+    const sessionId = req.headers['x-session-id'] || null;
 
-    const blog = await Blog.findOne({
-      where: {
-        slug,
-        status: 'published',
-      },
-      include: [
-        {
-          model: BlogUser,
-          as: 'author',
-          attributes: ['id', 'name', 'profileImage'],
-        },
-      ],
-      attributes: [
-        'id',
-        'title',
-        'slug',
-        'excerpt',
-        'content',
-        'featuredImage',
-        'category',
-        'tags',
-        'publishedAt',
-        'readingTimeMinutes',
-        'viewCount',
-        'metaTitle',
-        'metaDescription',
-        'keywords',
-      ],
+    // First try to find by translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{
+        model: Blog,
+        as: 'blog',
+        where: { status: 'published' },
+        include: [
+          { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+          { model: BlogTranslation, as: 'translations' },
+        ],
+      }],
     });
+
+    let blog = translation?.blog;
+    let activeTranslation = translation;
+
+    // If not found, try legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+        include: [
+          { model: BlogUser, as: 'author', attributes: ['id', 'name', 'profileImage'] },
+          { model: BlogTranslation, as: 'translations' },
+        ],
+      });
+      // Use first available translation or legacy fields
+      activeTranslation = blog?.translations?.[0];
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
-    // Format the response
+    // Check user's reaction if sessionId provided
+    let userReaction = null;
+    if (sessionId) {
+      const reaction = await BlogReaction.findOne({
+        where: { blogId: blog.id, sessionId },
+      });
+      userReaction = reaction ? reaction.reactionType : null;
+    }
+
+    // Format the response using translation data
     const formattedBlog = {
       id: blog.id,
-      title: blog.title,
-      slug: blog.slug,
-      excerpt: blog.excerpt,
-      content: blog.content,
+      title: activeTranslation?.title || blog.title,
+      slug: activeTranslation?.slug || blog.slug,
+      excerpt: activeTranslation?.excerpt || blog.excerpt,
+      content: activeTranslation?.content || blog.content,
       featuredImage: blog.featuredImage,
       category: blog.category,
-      tags: blog.tags,
+      tags: activeTranslation?.tags || blog.tags || [],
       publishedAt: blog.publishedAt,
-      readingTimeMinutes: blog.readingTimeMinutes,
+      readingTimeMinutes: activeTranslation?.readingTimeMinutes || blog.readingTimeMinutes,
       viewCount: blog.viewCount,
-      metaTitle: blog.metaTitle,
-      metaDescription: blog.metaDescription,
-      keywords: blog.keywords,
+      likesCount: blog.likesCount,
+      dislikesCount: blog.dislikesCount,
+      userReaction,
+      metaTitle: activeTranslation?.metaTitle || blog.metaTitle,
+      metaDescription: activeTranslation?.metaDescription || blog.metaDescription,
+      keywords: activeTranslation?.keywords || blog.keywords || [],
+      language: activeTranslation?.language || blog.language,
+      // Include all available translations for language switching
+      availableLanguages: blog.translations?.map(t => ({
+        language: t.language,
+        slug: t.slug,
+      })) || [],
       author: {
         name: blog.author?.name || 'Unknown',
         profileImage: blog.author?.profileImage,
@@ -532,29 +647,165 @@ const getPublicBlog = async (req, res) => {
   }
 };
 
-// Increment blog view count
+// Increment blog view count (with session-based deduplication)
 const incrementBlogView = async (req, res) => {
   try {
     const { slug } = req.params;
+    const sessionId = req.headers['x-session-id'];
 
-    const blog = await Blog.findOne({
-      where: {
-        slug,
-        status: 'published',
-      },
+    // First try translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{ model: Blog, as: 'blog', where: { status: 'published' } }],
     });
+
+    let blog = translation?.blog;
+
+    // Fallback to legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+      });
+    }
 
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
+    // If session ID provided, check for duplicate views
+    if (sessionId) {
+      const existingView = await BlogView.findOne({
+        where: { blogId: blog.id, sessionId },
+      });
+
+      if (existingView) {
+        // Already viewed by this session, don't increment
+        return res.json({
+          success: true,
+          viewCount: blog.viewCount,
+          alreadyViewed: true
+        });
+      }
+
+      // Record the view
+      await BlogView.create({
+        blogId: blog.id,
+        sessionId,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent']?.substring(0, 255),
+      });
+    }
+
     // Increment view count
     await blog.increment('viewCount');
 
-    res.json({ success: true, viewCount: blog.viewCount + 1 });
+    res.json({
+      success: true,
+      viewCount: blog.viewCount + 1,
+      alreadyViewed: false
+    });
   } catch (error) {
     console.error('Error incrementing blog view:', error);
     res.status(500).json({ error: 'Failed to increment view count' });
+  }
+};
+
+// React to blog (like/dislike)
+const reactToBlog = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { reaction } = req.body; // 'like', 'dislike', or null (to remove)
+    const sessionId = req.headers['x-session-id'];
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID required' });
+    }
+
+    if (reaction && !['like', 'dislike'].includes(reaction)) {
+      return res.status(400).json({ error: 'Invalid reaction type' });
+    }
+
+    // First try translation slug
+    let translation = await BlogTranslation.findOne({
+      where: { slug },
+      include: [{ model: Blog, as: 'blog', where: { status: 'published' } }],
+    });
+
+    let blog = translation?.blog;
+
+    // Fallback to legacy Blog.slug
+    if (!blog) {
+      blog = await Blog.findOne({
+        where: { slug, status: 'published' },
+      });
+    }
+
+    if (!blog) {
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+
+    // Find existing reaction
+    const existingReaction = await BlogReaction.findOne({
+      where: { blogId: blog.id, sessionId },
+    });
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      if (reaction === null) {
+        // Remove reaction
+        if (existingReaction) {
+          if (existingReaction.reactionType === 'like') {
+            await blog.decrement('likesCount', { transaction });
+          } else {
+            await blog.decrement('dislikesCount', { transaction });
+          }
+          await existingReaction.destroy({ transaction });
+        }
+      } else if (existingReaction) {
+        // Update existing reaction
+        if (existingReaction.reactionType !== reaction) {
+          // Switch reaction type
+          if (existingReaction.reactionType === 'like') {
+            await blog.decrement('likesCount', { transaction });
+            await blog.increment('dislikesCount', { transaction });
+          } else {
+            await blog.decrement('dislikesCount', { transaction });
+            await blog.increment('likesCount', { transaction });
+          }
+          await existingReaction.update({ reactionType: reaction }, { transaction });
+        }
+        // If same reaction, do nothing
+      } else {
+        // Create new reaction
+        await BlogReaction.create(
+          { blogId: blog.id, sessionId, reactionType: reaction },
+          { transaction },
+        );
+        if (reaction === 'like') {
+          await blog.increment('likesCount', { transaction });
+        } else {
+          await blog.increment('dislikesCount', { transaction });
+        }
+      }
+
+      await transaction.commit();
+
+      // Refresh blog data
+      await blog.reload();
+
+      res.json({
+        likesCount: blog.likesCount,
+        dislikesCount: blog.dislikesCount,
+        userReaction: reaction,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error reacting to blog:', error);
+    res.status(500).json({ error: 'Failed to react to blog' });
   }
 };
 
@@ -565,7 +816,9 @@ module.exports = {
   updateBlog,
   deleteBlog,
   getBlogStats,
+  getBlogStatsDetailed,
   getPublicBlogs,
   getPublicBlog,
   incrementBlogView,
+  reactToBlog,
 };

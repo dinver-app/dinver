@@ -1,5 +1,7 @@
 const { WaitList } = require('../../models');
 const { validationResult } = require('express-validator');
+const { sendEmail } = require('../../utils/mailgunClient');
+const { createEmailTemplate } = require('../../utils/emailService');
 
 const waitListController = {
   // Prijava korisnika na wait list
@@ -88,6 +90,54 @@ const waitListController = {
         restaurantName,
         type: 'restaurant',
       });
+
+      // Pošalji email notifikaciju na info@dinver.eu
+      try {
+        const htmlContent = `
+          <h2>Nova prijava restorana za partnerstvo</h2>
+          <div class="card">
+            <h3>Detalji restorana</h3>
+            <div class="detail-row">
+              <span class="detail-label">Naziv restorana:</span>
+              <span class="detail-value">${restaurantName}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Email:</span>
+              <span class="detail-value"><a href="mailto:${email}">${email}</a></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Grad:</span>
+              <span class="detail-value">${city}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Datum prijave:</span>
+              <span class="detail-value">${new Date(waitListEntry.createdAt).toLocaleString('hr-HR')}</span>
+            </div>
+          </div>
+        `;
+
+        const textContent = `
+Nova prijava restorana za partnerstvo
+
+Naziv restorana: ${restaurantName}
+Email: ${email}
+Grad: ${city}
+Datum prijave: ${new Date(waitListEntry.createdAt).toLocaleString('hr-HR')}
+        `.trim();
+
+        await sendEmail({
+          from: 'Dinver Partnerstva <noreply@dinver.eu>',
+          to: ['info@dinver.eu', 'ivankikic49@gmail.com'],
+          replyTo: email,
+          subject: `[Postani Partner] Nova prijava: ${restaurantName}`,
+          text: textContent,
+          html: createEmailTemplate(htmlContent),
+        });
+        console.log('Partner signup email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending partner signup email:', emailError);
+        // Ne blokiraj odgovor ako email failed
+      }
 
       res.status(201).json({
         success: true,
