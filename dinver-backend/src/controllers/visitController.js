@@ -2450,6 +2450,37 @@ const getVisitById = async (req, res) => {
             'status',
             'publishedAt',
           ],
+          include: [
+            {
+              model: ExperienceMedia,
+              as: 'media',
+              attributes: [
+                'id',
+                'kind',
+                'cdnUrl',
+                'storageKey',
+                'width',
+                'height',
+                'caption',
+                'menuItemId',
+                'isRecommended',
+              ],
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItem',
+                  attributes: ['id'],
+                  include: [
+                    {
+                      model: MenuItemTranslation,
+                      as: 'translations',
+                      attributes: ['language', 'name'],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         },
       ],
     });
@@ -2460,6 +2491,23 @@ const getVisitById = async (req, res) => {
 
     if (!visit.restaurant) {
       return res.status(404).json({ error: 'Restaurant not found for this visit' });
+    }
+
+    // Fetch tagged buddies if they exist
+    let taggedBuddiesData = [];
+    if (visit.taggedBuddies && visit.taggedBuddies.length > 0) {
+      const buddyUsers = await User.findAll({
+        where: { id: visit.taggedBuddies },
+        attributes: ['id', 'name', 'username', 'profileImage'],
+      });
+      taggedBuddiesData = buddyUsers.map((user) => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        profileImage: user.profileImage
+          ? getMediaUrl(user.profileImage, 'image', 'original')
+          : null,
+      }));
     }
 
     const response = {
@@ -2480,6 +2528,7 @@ const getVisitById = async (req, res) => {
                 : null,
             }
           : null,
+        taggedBuddies: taggedBuddiesData,
         totalAmount: visit.receipt?.totalAmount || null,
         pointsAwarded: visit.receipt?.pointsAwarded || null,
         hasReservationBonus: visit.hasReservationBonus || false,
@@ -2497,6 +2546,27 @@ const getVisitById = async (req, res) => {
               sharesCount: visit.experience.sharesCount || 0,
               status: visit.experience.status,
               publishedAt: visit.experience.publishedAt,
+              media: visit.experience.media
+                ? visit.experience.media.map((m) => ({
+                    id: m.id,
+                    kind: m.kind,
+                    cdnUrl: m.cdnUrl
+                      ? getMediaUrl(m.cdnUrl, 'image', 'original')
+                      : null,
+                    storageKey: m.storageKey,
+                    width: m.width,
+                    height: m.height,
+                    caption: m.caption,
+                    menuItemId: m.menuItemId,
+                    menuItem: m.menuItem
+                      ? {
+                          id: m.menuItem.id,
+                          translations: m.menuItem.translations || [],
+                        }
+                      : null,
+                    isRecommended: m.isRecommended,
+                  }))
+                : [],
             }
           : null,
       },

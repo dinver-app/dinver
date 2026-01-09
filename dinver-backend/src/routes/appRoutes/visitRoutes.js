@@ -33,20 +33,20 @@ router.get(
   visitController.getUserVisits,
 );
 
-// Get single visit by ID (for notifications)
-router.get(
-  '/visits/:visitId',
-  appApiKeyAuth,
-  appAuthenticateToken,
-  visitController.getVisitById,
-);
-
 // Get user's visits for map (only ID, lat, lng)
 router.get(
   '/visits/map',
   appApiKeyAuth,
   appAuthenticateToken,
   visitController.getUserVisitsForMap,
+);
+
+// Get single visit by ID (for notifications)
+router.get(
+  '/visits/:visitId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  visitController.getVisitById,
 );
 
 // Upload receipt + Create Visit in ONE call
