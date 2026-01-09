@@ -61,8 +61,19 @@ router.get('/', appAuthenticateToken, async (req, res) => {
       },
     });
 
+    const transformedNotifications = notifications.map((notification) => {
+      const notif = notification.toJSON();
+      return {
+        ...notif,
+        titleHr: notif.titleHr || notif.title,
+        titleEn: notif.titleEn || notif.title,
+        bodyHr: notif.bodyHr || notif.body,
+        bodyEn: notif.bodyEn || notif.body,
+      };
+    });
+
     res.json({
-      notifications,
+      notifications: transformedNotifications,
       unreadCount,
       totalCount,
       hasMore: parseInt(offset) + notifications.length < totalCount,
