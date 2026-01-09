@@ -51,6 +51,8 @@ FROM node:22-bookworm-slim AS runner
   COPY --from=builder /app/utils ./utils
   COPY --from=builder /app/seeders ./seeders
   COPY --from=builder /app/migrations ./migrations
+  COPY --from=builder /app/entrypoint.sh /usr/local/bin/
+  RUN chmod +x /usr/local/bin/entrypoint.sh
 
   RUN mkdir -p logs && chown -R node:node /app
 
@@ -58,4 +60,5 @@ FROM node:22-bookworm-slim AS runner
 
   EXPOSE 3000
 
+  ENTRYPOINT [ "entrypoint.sh" ]
   CMD ["dotenvx", "run", "--", "node", "--require", "./src/instrumentation.js", "src/server.js"]
