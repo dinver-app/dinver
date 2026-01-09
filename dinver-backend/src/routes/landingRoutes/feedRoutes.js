@@ -11,6 +11,7 @@ const {
   getLandingExperiences,
   getLandingWhatsNew,
   getLandingStats,
+  getExperienceById,
 } = require('../../controllers/landingController');
 const { landingApiKeyAuth } = require('../../middleware/roleMiddleware');
 
@@ -44,5 +45,11 @@ router.get('/whats-new', getLandingWhatsNew);
  * Get aggregate stats for landing page hero
  */
 router.get('/stats', getLandingStats);
+
+/**
+ * GET /api/landing/experiences/:experienceId
+ * Get single experience for shared experience page
+ */
+router.get('/experiences/:experienceId', getExperienceById);
 
 module.exports = router;

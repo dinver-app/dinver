@@ -9,6 +9,7 @@ const {
   Experience,
   ExperienceMedia,
   ExperienceLike,
+  ExperienceShare,
   User,
   Restaurant,
   Visit,
@@ -1115,12 +1116,24 @@ const getRestaurantExperiences = async (req, res) => {
 };
 
 /**
- * Share Experience (track share)
+ * Share Experience (track share with spam protection)
  * POST /api/app/experiences/:experienceId/share
+ *
+ * Body params (optional):
+ * - platform: string (copy_link, instagram, whatsapp, etc.)
+ *
+ * Features:
+ * - Logged-in users: One share per user per experience (strict)
+ * - Anonymous users: IP-based rate limiting (max 3 shares per IP per experience per 24h)
+ * - Only counts shares for APPROVED experiences
  */
 const shareExperience = async (req, res) => {
   try {
     const { experienceId } = req.params;
+    const userId = req.user?.id || null;
+    const { platform } = req.body;
+    const ipAddress =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
 
     const experience = await Experience.findByPk(experienceId);
     if (!experience) {
@@ -1129,13 +1142,81 @@ const shareExperience = async (req, res) => {
       });
     }
 
-    // Increment shares count
-    await experience.increment('sharesCount');
+    // Only track shares for approved experiences
+    if (experience.status !== 'APPROVED') {
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
 
-    res.status(200).json({
-      message: 'Share tracked',
-      sharesCount: experience.sharesCount + 1,
-    });
+    if (userId) {
+      // Logged-in user: One share per user per experience
+      const existingShare = await ExperienceShare.findOne({
+        where: { experienceId, userId },
+      });
+
+      if (existingShare) {
+        // Already shared, return success but don't increment
+        return res.status(200).json({
+          message: 'Already shared',
+          sharesCount: experience.sharesCount,
+          alreadyShared: true,
+        });
+      }
+
+      // Create share record
+      await ExperienceShare.create({
+        experienceId,
+        userId,
+        ipAddress,
+        platform: platform || 'unknown',
+      });
+
+      // Increment shares count
+      await experience.increment('sharesCount');
+
+      return res.status(200).json({
+        message: 'Share tracked',
+        sharesCount: experience.sharesCount + 1,
+      });
+    } else {
+      // Anonymous user: IP-based rate limiting
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const recentSharesCount = await ExperienceShare.count({
+        where: {
+          experienceId,
+          ipAddress,
+          userId: null,
+          createdAt: { [Op.gte]: twentyFourHoursAgo },
+        },
+      });
+
+      if (recentSharesCount >= 3) {
+        // Rate limited, return success but don't increment
+        return res.status(200).json({
+          message: 'Share tracked',
+          sharesCount: experience.sharesCount,
+          rateLimited: true,
+        });
+      }
+
+      // Create anonymous share record
+      await ExperienceShare.create({
+        experienceId,
+        userId: null,
+        ipAddress,
+        platform: platform || 'unknown',
+      });
+
+      // Increment shares count
+      await experience.increment('sharesCount');
+
+      return res.status(200).json({
+        message: 'Share tracked',
+        sharesCount: experience.sharesCount + 1,
+      });
+    }
   } catch (error) {
     console.error('[Share Experience] Error:', error);
     res.status(500).json({

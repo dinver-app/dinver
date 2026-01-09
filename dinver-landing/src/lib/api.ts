@@ -661,3 +661,56 @@ export async function getRestaurantExperiences(
     `/restaurants/${restaurantId}/experiences${query ? `?${query}` : ''}`
   );
 }
+
+// ==================== SINGLE EXPERIENCE (SHARE PAGE) ====================
+
+export interface SingleExperienceImage {
+  url: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+  isRecommended?: boolean;
+}
+
+export interface SingleExperience {
+  id: string;
+  author: {
+    id: string;
+    name: string;
+    username?: string | null;
+    avatarUrl?: string | null;
+  };
+  restaurant: {
+    id: string;
+    name: string;
+    slug: string;
+    place?: string;
+    address?: string;
+    thumbnailUrl?: string | null;
+    isPartner: boolean;
+    latitude?: number;
+    longitude?: number;
+  };
+  ratings: {
+    food: number;
+    ambience: number;
+    service: number;
+    overall: number;
+  };
+  description: string;
+  mealType?: 'breakfast' | 'brunch' | 'lunch' | 'dinner' | 'sweet' | 'drinks' | null;
+  images: SingleExperienceImage[];
+  likesCount: number;
+  sharesCount: number;
+  viewCount: number;
+  publishedAt: string;
+  cityCached?: string;
+}
+
+export interface SingleExperienceResponse {
+  experience: SingleExperience;
+}
+
+export async function getExperienceById(experienceId: string): Promise<SingleExperienceResponse> {
+  return apiRequest<SingleExperienceResponse>(`/experiences/${experienceId}`);
+}

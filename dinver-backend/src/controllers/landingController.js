@@ -77,7 +77,12 @@ const transformMediaUrls = (experience) => {
   if (transformed.media && Array.isArray(transformed.media)) {
     transformed.media = transformed.media.map((m) => {
       const mediaItem = m.toJSON ? m.toJSON() : { ...m };
-      if (mediaItem.storageKey) {
+      // Support external URLs (for demo/testing) or S3 storage keys
+      if (mediaItem.cdnUrl?.startsWith('http')) {
+        mediaItem.imageUrl = mediaItem.cdnUrl;
+      } else if (mediaItem.storageKey?.startsWith('http')) {
+        mediaItem.imageUrl = mediaItem.storageKey;
+      } else if (mediaItem.storageKey) {
         mediaItem.imageUrl = getMediaUrl(mediaItem.storageKey, 'image', 'original');
       }
       return mediaItem;
@@ -488,9 +493,122 @@ const getRestaurantExperiences = async (req, res) => {
   }
 };
 
+/**
+ * Get Single Experience for Landing Page (Share Page)
+ * GET /api/landing/experiences/:experienceId
+ *
+ * Returns full experience details for the shared experience page.
+ * Public endpoint - no auth required, only landing API key.
+ */
+const getExperienceById = async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+
+    const experience = await Experience.findOne({
+      where: {
+        id: experienceId,
+        status: 'APPROVED',
+      },
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'slug',
+            'place',
+            'address',
+            'thumbnailUrl',
+            'isClaimed',
+            'latitude',
+            'longitude',
+          ],
+        },
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: [
+            'id',
+            'storageKey',
+            'cdnUrl',
+            'width',
+            'height',
+            'orderIndex',
+            'caption',
+            'isRecommended',
+          ],
+        },
+      ],
+      order: [[{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC']],
+    });
+
+    if (!experience) {
+      return res.status(404).json({ error: 'Experience not found' });
+    }
+
+    const transformed = transformMediaUrls(experience);
+
+    res.json({
+      experience: {
+        id: transformed.id,
+        author: {
+          id: transformed.author?.id,
+          name: transformed.author?.name || 'Anonymous',
+          username: transformed.author?.username || null,
+          avatarUrl: transformed.author?.profileImage || null,
+        },
+        restaurant: {
+          id: transformed.restaurant?.id,
+          name: transformed.restaurant?.name,
+          slug: transformed.restaurant?.slug,
+          place: transformed.restaurant?.place,
+          address: transformed.restaurant?.address,
+          thumbnailUrl: transformed.restaurant?.thumbnailUrl,
+          isPartner: transformed.restaurant?.isClaimed || false,
+          latitude: transformed.restaurant?.latitude,
+          longitude: transformed.restaurant?.longitude,
+        },
+        ratings: {
+          food: parseFloat(transformed.foodRating) || 0,
+          ambience: parseFloat(transformed.ambienceRating) || 0,
+          service: parseFloat(transformed.serviceRating) || 0,
+          overall: parseFloat(transformed.overallRating) || 0,
+        },
+        description: transformed.description || '',
+        mealType: transformed.mealType || null,
+        images: (transformed.media || []).map((m) => ({
+          url: m.imageUrl,
+          width: m.width,
+          height: m.height,
+          caption: m.caption,
+          isRecommended: m.isRecommended,
+        })),
+        likesCount: transformed.likesCount || 0,
+        sharesCount: transformed.sharesCount || 0,
+        viewCount: transformed.viewCount || 0,
+        publishedAt: transformed.publishedAt,
+        cityCached: transformed.cityCached,
+      },
+    });
+  } catch (error) {
+    console.error('[Get Experience By ID] Error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch experience',
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getLandingExperiences,
   getLandingWhatsNew,
   getLandingStats,
   getRestaurantExperiences,
+  getExperienceById,
 };

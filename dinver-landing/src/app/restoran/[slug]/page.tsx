@@ -636,7 +636,11 @@ export default function RestaurantDetailsPage() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   {experiences.slice(0, 4).map((exp) => (
-                    <div key={exp.id} className="group">
+                    <Link
+                      key={exp.id}
+                      href={`/experience/${exp.id}`}
+                      className="group block"
+                    >
                       {/* Image */}
                       {exp.images?.[0]?.url && (
                         <div className="relative h-40 rounded-xl overflow-hidden mb-3">
@@ -665,7 +669,7 @@ export default function RestaurantDetailsPage() {
 
                       {/* Content */}
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">
+                        <p className="font-medium text-gray-900 text-sm group-hover:text-dinver-green transition-colors">
                           {exp.author.name}
                         </p>
                         {exp.description && (
@@ -689,7 +693,7 @@ export default function RestaurantDetailsPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
 
