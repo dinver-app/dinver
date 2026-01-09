@@ -2386,6 +2386,152 @@ const getOtherUserVisits = async (req, res) => {
 };
 
 /**
+ * GET /api/app/visits/:visitId
+ * Returns visit details with restaurant info - used for navigation from notifications
+ */
+const getVisitById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { visitId } = req.params;
+
+    const visit = await Visit.findOne({
+      where: {
+        id: visitId,
+        userId: userId, 
+      },
+      include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: [
+            'id',
+            'name',
+            'rating',
+            'dinverRating',
+            'dinverReviewsCount',
+            'priceLevel',
+            'address',
+            'place',
+            'isClaimed',
+            'thumbnailUrl',
+            'userRatingsTotal',
+          ],
+        },
+        {
+          model: Receipt,
+          as: 'receipt',
+          attributes: [
+            'id',
+            'totalAmount',
+            'pointsAwarded',
+            'reservationId',
+            'hasReservationBonus',
+          ],
+        },
+        {
+          model: User,
+          as: 'tagger',
+          attributes: ['id', 'name', 'username', 'profileImage'],
+          required: false,
+        },
+        {
+          model: Experience,
+          as: 'experience',
+          attributes: [
+            'id',
+            'foodRating',
+            'ambienceRating',
+            'serviceRating',
+            'overallRating',
+            'description',
+            'mealType',
+            'likesCount',
+            'sharesCount',
+            'status',
+            'publishedAt',
+          ],
+        },
+      ],
+    });
+
+    if (!visit) {
+      return res.status(404).json({ error: 'Visit not found' });
+    }
+
+    if (!visit.restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found for this visit' });
+    }
+
+    const response = {
+      visit: {
+        id: visit.id,
+        submittedAt: visit.submittedAt,
+        reviewedAt: visit.reviewedAt,
+        visitDate: visit.visitDate,
+        status: visit.status,
+        wasInMustVisit: visit.wasInMustVisit,
+        taggedBy: visit.tagger
+          ? {
+              id: visit.tagger.id,
+              name: visit.tagger.name,
+              username: visit.tagger.username,
+              profileImage: visit.tagger.profileImage
+                ? getMediaUrl(visit.tagger.profileImage, 'image', 'original')
+                : null,
+            }
+          : null,
+        totalAmount: visit.receipt?.totalAmount || null,
+        pointsAwarded: visit.receipt?.pointsAwarded || null,
+        hasReservationBonus: visit.hasReservationBonus || false,
+        experience: visit.experience
+          ? {
+              id: visit.experience.id,
+              foodRating: parseFloat(visit.experience.foodRating) || null,
+              ambienceRating:
+                parseFloat(visit.experience.ambienceRating) || null,
+              serviceRating: parseFloat(visit.experience.serviceRating) || null,
+              overallRating: parseFloat(visit.experience.overallRating) || null,
+              description: visit.experience.description,
+              mealType: visit.experience.mealType,
+              likesCount: visit.experience.likesCount || 0,
+              sharesCount: visit.experience.sharesCount || 0,
+              status: visit.experience.status,
+              publishedAt: visit.experience.publishedAt,
+            }
+          : null,
+      },
+      restaurant: {
+        ...visit.restaurant.get(),
+        thumbnailUrl: visit.restaurant.thumbnailUrl
+          ? getMediaUrl(visit.restaurant.thumbnailUrl, 'image')
+          : null,
+        rating:
+          visit.restaurant.rating != null
+            ? Number(visit.restaurant.rating)
+            : null,
+        userRatingsTotal:
+          visit.restaurant.userRatingsTotal != null
+            ? Number(visit.restaurant.userRatingsTotal)
+            : null,
+        dinverRating:
+          visit.restaurant.dinverRating != null
+            ? Number(visit.restaurant.dinverRating)
+            : null,
+        dinverReviewsCount:
+          visit.restaurant.dinverReviewsCount != null
+            ? Number(visit.restaurant.dinverReviewsCount)
+            : null,
+      },
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error fetching visit by ID:', error);
+    res.status(500).json({ error: 'Failed to fetch visit' });
+  }
+};
+
+/**
  * Get user's visits for a specific restaurant
  * GET /api/app/visits/restaurant/:restaurantId
  * Returns all visits to a specific restaurant for the current user
@@ -3426,6 +3572,7 @@ module.exports = {
   createVisitFromReceipt,
   createVisit,
   getUserVisits,
+  getVisitById,
   retakeReceipt,
   checkHasVisited,
   deleteVisit,
