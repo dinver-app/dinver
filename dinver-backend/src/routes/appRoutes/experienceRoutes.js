@@ -87,6 +87,16 @@ router.post(
 // GET /api/app/experiences/:experienceId
 router.get('/:experienceId', appApiKeyAuth, appOptionalAuth, experienceController.getExperience);
 
+// Update Experience (limited fields - Instagram style)
+// PUT /api/app/experiences/:experienceId
+// JSON body: description?, mealType?, mediaUpdates[]
+router.put(
+  '/:experienceId',
+  appApiKeyAuth,
+  appAuthenticateToken,
+  experienceController.updateExperience
+);
+
 // Delete Experience
 // DELETE /api/app/experiences/:experienceId
 router.delete(

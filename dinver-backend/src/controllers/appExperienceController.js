@@ -1377,8 +1377,247 @@ const deleteExperience = async (req, res) => {
   }
 };
 
+/**
+ * Update Experience (limited fields - Instagram style)
+ * PUT /api/app/experiences/:experienceId
+ *
+ * Can update:
+ * - description: string (min 20 chars)
+ * - mealType: string (breakfast, brunch, lunch, dinner, sweet, drinks)
+ * - mediaUpdates: array of { mediaId, orderIndex, caption, menuItemId, isRecommended }
+ *
+ * Cannot update:
+ * - ratings (foodRating, ambienceRating, serviceRating)
+ * - images (no adding/removing - only reorder and metadata)
+ */
+const updateExperience = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const userId = req.user.id;
+    const { experienceId } = req.params;
+    const { description, mealType, mediaUpdates } = req.body;
+
+    // Find the experience with media
+    const experience = await Experience.findOne({
+      where: {
+        id: experienceId,
+        userId, // Only owner can edit
+      },
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: ['id', 'orderIndex', 'caption', 'menuItemId', 'isRecommended'],
+        },
+      ],
+      transaction,
+    });
+
+    if (!experience) {
+      await transaction.rollback();
+      return res.status(404).json({
+        error: 'Experience not found',
+      });
+    }
+
+    // Cannot edit rejected experiences
+    if (experience.status === 'REJECTED') {
+      await transaction.rollback();
+      return res.status(400).json({
+        error: 'Cannot edit rejected experience',
+      });
+    }
+
+    // Track what was updated
+    const updated = {
+      description: false,
+      mealType: false,
+      mediaCount: 0,
+    };
+
+    // Validate and update description
+    if (description !== undefined) {
+      const descriptionLength = description ? description.trim().length : 0;
+      const MIN_DESCRIPTION_LENGTH = 20;
+
+      if (descriptionLength < MIN_DESCRIPTION_LENGTH) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Description is required (minimum ${MIN_DESCRIPTION_LENGTH} characters)`,
+          details: {
+            descriptionLength,
+            minDescriptionLength: MIN_DESCRIPTION_LENGTH,
+          },
+        });
+      }
+
+      // Check if description changed
+      if (experience.description !== description.trim()) {
+        // Re-detect language
+        let detectedLang = null;
+        if (description.trim().length >= 10) {
+          try {
+            detectedLang = await detectLanguage(description);
+          } catch (langError) {
+            console.error('[Update Experience] Language detection failed:', langError.message);
+          }
+        }
+
+        await experience.update(
+          {
+            description: description.trim(),
+            detectedLanguage: detectedLang,
+          },
+          { transaction },
+        );
+
+        // Delete cached translations since description changed
+        await ContentTranslation.destroy({
+          where: {
+            contentType: 'experience',
+            contentId: experienceId,
+          },
+          transaction,
+        });
+
+        updated.description = true;
+      }
+    }
+
+    // Validate and update mealType
+    if (mealType !== undefined) {
+      const validMealTypes = [
+        'breakfast',
+        'brunch',
+        'lunch',
+        'dinner',
+        'sweet',
+        'drinks',
+      ];
+
+      if (mealType !== null && !validMealTypes.includes(mealType)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Invalid meal type. Must be one of: ${validMealTypes.join(', ')}`,
+        });
+      }
+
+      if (experience.mealType !== mealType) {
+        await experience.update({ mealType }, { transaction });
+        updated.mealType = true;
+      }
+    }
+
+    // Update media metadata (captions, menuItemIds, isRecommended, orderIndex)
+    if (mediaUpdates && Array.isArray(mediaUpdates) && mediaUpdates.length > 0) {
+      // Get existing media IDs for this experience
+      const existingMediaIds = experience.media.map((m) => m.id);
+
+      // Validate that only one isRecommended is true
+      const recommendedCount = mediaUpdates.filter((m) => m.isRecommended === true).length;
+      if (recommendedCount > 1) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: 'Only one image can be marked as recommended',
+        });
+      }
+
+      // Update each media item
+      for (const update of mediaUpdates) {
+        const { mediaId, orderIndex, caption, menuItemId, isRecommended } = update;
+
+        // Validate mediaId belongs to this experience
+        if (!existingMediaIds.includes(mediaId)) {
+          await transaction.rollback();
+          return res.status(400).json({
+            error: `Media ${mediaId} does not belong to this experience`,
+          });
+        }
+
+        // Build update object (only include provided fields)
+        const updateData = {};
+        if (orderIndex !== undefined) updateData.orderIndex = orderIndex;
+        if (caption !== undefined) updateData.caption = caption;
+        if (menuItemId !== undefined) updateData.menuItemId = menuItemId;
+        if (isRecommended !== undefined) updateData.isRecommended = isRecommended;
+
+        if (Object.keys(updateData).length > 0) {
+          await ExperienceMedia.update(updateData, {
+            where: { id: mediaId },
+            transaction,
+          });
+          updated.mediaCount++;
+        }
+      }
+
+      // If isRecommended was set, make sure others are false
+      if (recommendedCount === 1) {
+        const recommendedMediaId = mediaUpdates.find((m) => m.isRecommended === true)?.mediaId;
+        await ExperienceMedia.update(
+          { isRecommended: false },
+          {
+            where: {
+              experienceId,
+              id: { [Op.ne]: recommendedMediaId },
+            },
+            transaction,
+          },
+        );
+      }
+    }
+
+    await transaction.commit();
+
+    // Return updated experience
+    const updatedExperience = await Experience.findByPk(experienceId, {
+      include: [
+        {
+          model: ExperienceMedia,
+          as: 'media',
+          attributes: [
+            'id',
+            'storageKey',
+            'cdnUrl',
+            'orderIndex',
+            'caption',
+            'menuItemId',
+            'isRecommended',
+          ],
+          order: [['orderIndex', 'ASC']],
+        },
+      ],
+      order: [[{ model: ExperienceMedia, as: 'media' }, 'orderIndex', 'ASC']],
+    });
+
+    // Transform media URLs
+    const transformedExperience = transformMediaUrls(updatedExperience);
+
+    res.status(200).json({
+      experienceId: experience.id,
+      message: 'Experience updated successfully!',
+      updated,
+      experience: {
+        id: transformedExperience.id,
+        description: transformedExperience.description,
+        mealType: transformedExperience.mealType,
+        detectedLanguage: transformedExperience.detectedLanguage,
+        media: transformedExperience.media,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('[Update Experience] Error:', error);
+    res.status(500).json({
+      error: 'Failed to update experience',
+      details: error.message,
+    });
+  }
+};
+
 module.exports = {
   createExperience,
+  updateExperience,
   getExperience,
   getExperienceFeed,
   likeExperience,
