@@ -2,6 +2,6 @@
 
 set -e
 
-npx sequelize-cli db:migrate
+dotenvx run -- npx sequelize-cli db:migrate
 
 exec "${@}"
