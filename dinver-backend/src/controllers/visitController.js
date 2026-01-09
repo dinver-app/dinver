@@ -8,6 +8,9 @@ const {
   UserFollow,
   Experience,
   ExperienceLike,
+  ExperienceMedia,
+  MenuItem,
+  MenuItemTranslation,
 } = require('../../models');
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
