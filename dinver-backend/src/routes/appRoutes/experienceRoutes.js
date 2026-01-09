@@ -127,6 +127,15 @@ router.post(
   experienceController.shareExperience
 );
 
+// Record a view on an experience
+// POST /api/app/experiences/:experienceId/view
+router.post(
+  '/:experienceId/view',
+  appApiKeyAuth,
+  appOptionalAuth,
+  experienceController.recordView
+);
+
 // ============================================================
 // TRANSLATION
 // ============================================================

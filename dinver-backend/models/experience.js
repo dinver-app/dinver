@@ -30,6 +30,12 @@ module.exports = (sequelize, DataTypes) => {
         as: 'likes',
         onDelete: 'CASCADE',
       });
+
+      Experience.hasMany(models.ExperienceView, {
+        foreignKey: 'experienceId',
+        as: 'views',
+        onDelete: 'CASCADE',
+      });
     }
 
     // Helper method to check if user has liked this experience
@@ -135,6 +141,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0,
       },
       sharesCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      viewCount: {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0,

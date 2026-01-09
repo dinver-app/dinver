@@ -1241,6 +1241,73 @@ const translateExperience = async (req, res) => {
 };
 
 /**
+ * Record a view on an experience (Public)
+ * Increments view count and creates ExperienceView record
+ * POST /api/app/experiences/:experienceId/view
+ *
+ * Features:
+ * - Logged-in users: One view per user per experience (strict)
+ * - Anonymous users: IP-based rate limiting (max 3 views per IP per experience per 24h)
+ * - Only counts views for APPROVED experiences
+ */
+const recordView = async (req, res) => {
+  try {
+    const { experienceId } = req.params;
+    const userId = req.user?.id || null; 
+
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+
+    const experience = await Experience.findByPk(experienceId);
+    if (!experience) 
+      return res.status(404).json({ error: 'Experience not found' });
+    
+
+    if (experience.status !== 'APPROVED') 
+      return res.status(404).json({ error: 'Experience not found' });
+    
+
+    const { ExperienceView } = require('../../models');
+
+    if (userId) {
+      const existingView = await ExperienceView.findOne({
+        where: { experienceId, userId },
+      });
+
+      if (!existingView) {
+        await ExperienceView.create({ experienceId, userId, ipAddress });
+        await experience.increment('viewCount');
+      }
+    } else {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const recentViewsCount = await ExperienceView.count({
+        where: {
+          experienceId,
+          ipAddress,
+          createdAt: { [Op.gte]: twentyFourHoursAgo },
+        },
+      });
+
+      if (recentViewsCount < 3) {
+        await ExperienceView.create({ experienceId, userId: null, ipAddress });
+        await experience.increment('viewCount');
+      } else {
+        return res.json({
+          success: true,
+          viewCount: experience.viewCount,
+          rateLimited: true,
+        });
+      }
+    }
+
+    res.json({ success: true, viewCount: experience.viewCount + 1 });
+  } catch (error) {
+    console.error('Error recording experience view:', error);
+    res.status(500).json({ error: 'Failed to record view' });
+  }
+};
+
+/**
  * Delete Experience
  * DELETE /api/app/experiences/:experienceId
  *
@@ -1320,5 +1387,6 @@ module.exports = {
   getRestaurantExperiences,
   shareExperience,
   translateExperience,
+  recordView,
   deleteExperience,
 };
