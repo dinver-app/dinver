@@ -30,8 +30,10 @@ accessories:
         DB_INIT_SQL_db1: /init_dump.sql
         DB_BACKUP_FULL_SCHEDULE: "0 2 * * *"
         DB_BACKUP_DIFF_SCHEDULE: "0 * * * *"
-        DB_BACKUP_S3: true
+        DB_BACKUP_S3: 1
         DB_BACKUP_S3_BUCKET: production-dinver-db-backups
+        DB_BACKUP_S3_HOST: s3.eu-north-1.amazonaws.com
+        DB_BACKUP_S3_REGION: eu-north-1
         DB_BACKUP_S3_RETENTION_FULL_TYPE: time
         DB_BACKUP_S3_RETENTION_FULL: 70
       secret:
@@ -39,6 +41,7 @@ accessories:
         - DB_BACKUP_S3_SECRET_KEY
         - POSTGRES_PASSWORD
         - DB_PASSWORD_db1
+        - DB_ADMIN_PASSWORD 
     files:
       - config/production.sql:/init_dump.sql
     directories:
