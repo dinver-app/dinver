@@ -134,7 +134,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
@@ -209,7 +209,7 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-if (process.env.NODE_ENV === 'staging') {
+if (process.env.NODE_ENV !== 'development') {
   const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
     host: 'https://eu.i.posthog.com',
     enableExceptionAutocapture: true,

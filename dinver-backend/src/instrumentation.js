@@ -7,11 +7,11 @@ const { resourceFromAttributes } = require('@opentelemetry/resources');
 const env = process.env.NODE_ENV || 'development';
 
 // Only run in staging/production
-if (process.env.NODE_ENV === 'staging') {
+if (process.env.NODE_ENV !== 'development') {
   const posthogApiKey = process.env.POSTHOG_API_KEY;
   const posthogHost = 'https://eu.i.posthog.com';
 
-  const sdk = new NodeSDK({
+  const sdk = new NodeSDK({ 
     resource: resourceFromAttributes({
       'service.name': `dinver-backend-${env}`,
     }),
@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === 'staging') {
     instrumentations: [
       getNodeAutoInstrumentations({
         // Specific configs if needed
-        '@opentelemetry/instrumentation-fs': { enabled: false }, // Usually too noisy
+        '@opentelemetry/instrumentation-fs': { enabled: true }, // Usually too noisy
         '@opentelemetry/instrumentation-express': { enabled: true },
         '@opentelemetry/instrumentation-http': { enabled: true },
         '@opentelemetry/instrumentation-pg': { enabled: true }, // Auto-logs SQL queries

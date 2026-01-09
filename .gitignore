@@ -63,3 +63,5 @@ coverage/
 .env
 # CloudFront keys
 config/keys/
+
+dinver-backend/config/*.sql
