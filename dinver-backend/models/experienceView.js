@@ -50,7 +50,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'ExperienceView',
       tableName: 'ExperienceViews',
-      updatedAt: false,
       indexes: [
         {
           fields: ['experienceId'],
