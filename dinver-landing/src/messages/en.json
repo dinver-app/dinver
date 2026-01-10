@@ -191,12 +191,19 @@
   "whatsNew": {
     "title": "What's New?",
     "subtitle": "Fresh updates from your favorite restaurants",
-    "tags": {
-      "liveMusic": "Live Music",
-      "newDish": "New Dish",
-      "newLocation": "New Location",
-      "specialEvent": "Special Event",
-      "happyHour": "Happy Hour"
+    "categories": {
+      "LIVE_MUSIC": "Live Music",
+      "NEW_PRODUCT": "New Product",
+      "NEW_LOCATION": "New Location",
+      "SPECIAL_OFFER": "Special Offer",
+      "SEASONAL_MENU": "Seasonal Menu",
+      "EVENT": "Event",
+      "EXTENDED_HOURS": "Extended Hours",
+      "RESERVATIONS": "Reservations Open",
+      "CHEFS_SPECIAL": "Chef's Special",
+      "FAMILY_FRIENDLY": "Family Friendly",
+      "REOPENING": "Reopening",
+      "OTHER": "Other"
     }
   },
   "rewards": {
