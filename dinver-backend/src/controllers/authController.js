@@ -13,16 +13,19 @@ const { sendPasswordResetEmail } = require('../../utils/emailService');
 
 const register = async (req, res) => {
   try {
-    const { name, username, email, password, phone, referralCode } =
-      req.body;
+    const { name, username, email, password, phone, referralCode } = req.body;
 
     // Validate required fields
     if (!name || name.trim().length < 2) {
-      return res.status(400).json({ error: 'Name is required and must be at least 2 characters long' });
+      return res.status(400).json({
+        error: 'Name is required and must be at least 2 characters long',
+      });
     }
 
     if (!username || username.trim().length < 3) {
-      return res.status(400).json({ error: 'Username is required and must be at least 3 characters long' });
+      return res.status(400).json({
+        error: 'Username is required and must be at least 3 characters long',
+      });
     }
 
     // Normalize email and username to lowercase for consistency
@@ -279,17 +282,16 @@ const login = async (req, res) => {
     // Try to find user by email or username
     const user = await User.findOne({
       where: {
-        [Op.or]: [
-          { email: normalized },
-          { username: normalized }
-        ]
-      }
+        [Op.or]: [{ email: normalized }, { username: normalized }],
+      },
     });
     console.log('User found:', user ? 'yes' : 'no');
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       console.log('Login failed: Invalid credentials');
-      return res.status(401).json({ error: 'Invalid email/username or password' });
+      return res
+        .status(401)
+        .json({ error: 'Invalid email/username or password' });
     }
 
     console.log('Password verified, generating tokens');
@@ -684,7 +686,9 @@ const socialLogin = async (req, res) => {
 
     if (!user) {
       // Generate username from email or name
-      const baseUsername = (name || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const baseUsername = (name || email.split('@')[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
       let username = baseUsername;
       let counter = 1;
 
@@ -724,7 +728,10 @@ const socialLogin = async (req, res) => {
           );
         }
       } catch (followError) {
-        console.error('Error auto-following official account on social login:', followError);
+        console.error(
+          'Error auto-following official account on social login:',
+          followError,
+        );
         // Don't fail social login if auto-follow fails
       }
     }
@@ -772,13 +779,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           let user = await User.findOne({ where: { googleId: profile.id } });
           if (!user) {
             // Normalize email to lowercase for consistency
-            const normalizedEmail = profile.emails[0].value.toLowerCase().trim();
+            const normalizedEmail = profile.emails[0].value
+              .toLowerCase()
+              .trim();
 
             // Generate full name
-            const fullName = profile.displayName || `${profile.name.givenName} ${profile.name.familyName}`;
+            const fullName =
+              profile.displayName ||
+              `${profile.name.givenName} ${profile.name.familyName}`;
 
             // Generate username from email or name
-            const baseUsername = (fullName || normalizedEmail.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+            const baseUsername = (fullName || normalizedEmail.split('@')[0])
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '');
             let username = baseUsername;
             let counter = 1;
 
@@ -816,7 +829,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
                 );
               }
             } catch (followError) {
-              console.error('Error auto-following official account on Google OAuth:', followError);
+              console.error(
+                'Error auto-following official account on Google OAuth:',
+                followError,
+              );
               // Don't fail OAuth if auto-follow fails
             }
           }
@@ -875,7 +891,7 @@ const requestEmailVerification = async (req, res) => {
     // Koristi odgovarajući URL ovisno o okruženju
     const baseUrl =
       process.env.NODE_ENV === 'production'
-        ? 'https://api.dinver.eu'
+        ? 'https://api.production.dinverapp.com'
         : 'http://localhost:3000';
 
     const verificationLink = `${baseUrl}/api/app/auth/verify-email/${verificationToken}`;
@@ -1302,7 +1318,7 @@ const requestPasswordReset = async (req, res) => {
     // Pošalji email s linkom za reset lozinke
     const baseUrl =
       process.env.NODE_ENV === 'production'
-        ? 'https://api.dinver.eu'
+        ? 'https://api.production.dinverapp.com'
         : 'http://localhost:3000';
 
     const resetLink = `${baseUrl}/api/app/auth/reset-password/${resetToken}`;
@@ -1566,7 +1582,7 @@ const checkUsernameAvailability = async (req, res) => {
     if (!username) {
       return res.status(400).json({
         error: 'Username is required',
-        available: false
+        available: false,
       });
     }
 
@@ -1578,7 +1594,7 @@ const checkUsernameAvailability = async (req, res) => {
       return res.status(400).json({
         error: 'Username must be at least 3 characters long',
         available: false,
-        username: normalizedUsername
+        username: normalizedUsername,
       });
     }
 
@@ -1588,7 +1604,7 @@ const checkUsernameAvailability = async (req, res) => {
       return res.status(400).json({
         error: 'Username can only contain lowercase letters and numbers',
         available: false,
-        username: normalizedUsername
+        username: normalizedUsername,
       });
     }
 
@@ -1600,20 +1616,20 @@ const checkUsernameAvailability = async (req, res) => {
     if (existingUser) {
       return res.status(200).json({
         available: false,
-        username: normalizedUsername
+        username: normalizedUsername,
       });
     }
 
     // Username is available
     res.status(200).json({
       available: true,
-      username: normalizedUsername
+      username: normalizedUsername,
     });
   } catch (error) {
     console.error('Error checking username availability:', error);
     res.status(500).json({
       error: 'An error occurred while checking username availability',
-      available: false
+      available: false,
     });
   }
 };
