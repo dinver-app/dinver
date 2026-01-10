@@ -191,12 +191,19 @@
   "whatsNew": {
     "title": "Što je novo?",
     "subtitle": "Svježe novosti od tvojih omiljenih restorana",
-    "tags": {
-      "liveMusic": "Glazba uživo",
-      "newDish": "Novo jelo",
-      "newLocation": "Nova lokacija",
-      "specialEvent": "Posebni događaj",
-      "happyHour": "Happy Hour"
+    "categories": {
+      "LIVE_MUSIC": "Glazba uživo",
+      "NEW_PRODUCT": "Novi proizvod",
+      "NEW_LOCATION": "Nova lokacija",
+      "SPECIAL_OFFER": "Posebna ponuda",
+      "SEASONAL_MENU": "Sezonski meni",
+      "EVENT": "Događaj",
+      "EXTENDED_HOURS": "Novo radno vrijeme",
+      "RESERVATIONS": "Rezervacije otvorene",
+      "CHEFS_SPECIAL": "Chef's special",
+      "FAMILY_FRIENDLY": "Za obitelji",
+      "REOPENING": "Ponovo otvoreno",
+      "OTHER": "Ostalo"
     }
   },
   "rewards": {

@@ -16,23 +16,21 @@ const { deleteFromS3 } = require('../../utils/s3Upload');
 const { getMediaUrl } = require('../../config/cdn');
 const { detectLanguage, translateContent } = require('../../utils/translate');
 
-// Category labels for display
-const CATEGORY_LABELS = {
-  LIVE_MUSIC: 'Glazba uživo',
-  NEW_PRODUCT: 'Novi proizvod',
-  NEW_LOCATION: 'Nova lokacija',
-  SPECIAL_OFFER: 'Posebna ponuda',
-  SEASONAL_MENU: 'Sezonski meni',
-  EVENT: 'Događaj',
-  EXTENDED_HOURS: 'Novo radno vrijeme',
-  RESERVATIONS: 'Rezervacije otvorene',
-  CHEFS_SPECIAL: "Chef's special",
-  FAMILY_FRIENDLY: 'Za obitelji',
-  REOPENING: 'Ponovo otvoreno',
-  OTHER: 'Ostalo',
-};
-
-const UPDATE_CATEGORIES = Object.keys(CATEGORY_LABELS);
+// Valid update categories
+const UPDATE_CATEGORIES = [
+  'LIVE_MUSIC',
+  'NEW_PRODUCT',
+  'NEW_LOCATION',
+  'SPECIAL_OFFER',
+  'SEASONAL_MENU',
+  'EVENT',
+  'EXTENDED_HOURS',
+  'RESERVATIONS',
+  'CHEFS_SPECIAL',
+  'FAMILY_FRIENDLY',
+  'REOPENING',
+  'OTHER',
+];
 
 /**
  * Create a new restaurant update (Admin only)
@@ -165,7 +163,6 @@ const createUpdate = async (req, res) => {
       restaurantId: update.restaurantId,
       content: update.content,
       category: update.category,
-      categoryLabel: CATEGORY_LABELS[update.category],
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: imageKey ? getMediaUrl(imageKey, 'image', 'original') : null,
@@ -206,7 +203,6 @@ const getRestaurantUpdates = async (req, res) => {
       id: update.id,
       content: update.content,
       category: update.category,
-      categoryLabel: CATEGORY_LABELS[update.category],
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
@@ -260,7 +256,6 @@ const getUpdateById = async (req, res) => {
       },
       content: update.content,
       category: update.category,
-      categoryLabel: CATEGORY_LABELS[update.category],
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
@@ -421,7 +416,6 @@ const getUpdatesFeed = async (req, res) => {
         },
         content: updateData.content,
         category: updateData.category,
-        categoryLabel: CATEGORY_LABELS[updateData.category],
         durationDays: updateData.durationDays,
         expiresAt: updateData.expiresAt,
         imageUrl: updateData.imageKey
@@ -440,7 +434,6 @@ const getUpdatesFeed = async (req, res) => {
       total: totalCount,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      categories: CATEGORY_LABELS, // Include for frontend filter UI
     });
   } catch (error) {
     console.error('Error fetching updates feed:', error);
@@ -496,7 +489,6 @@ const getCategories = async (req, res) => {
   try {
     const categories = UPDATE_CATEGORIES.map((key) => ({
       key,
-      label: CATEGORY_LABELS[key],
     }));
 
     res.json({ categories });
@@ -625,7 +617,6 @@ const getActiveUpdatesByRestaurant = async (req, res) => {
       id: update.id,
       content: update.content,
       category: update.category,
-      categoryLabel: CATEGORY_LABELS[update.category],
       durationDays: update.durationDays,
       expiresAt: update.expiresAt,
       imageUrl: update.imageKey
@@ -654,6 +645,5 @@ module.exports = {
   getCategories,
   translateUpdate,
   getActiveUpdatesByRestaurant,
-  CATEGORY_LABELS,
   UPDATE_CATEGORIES,
 };

@@ -50,6 +50,7 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'ExperienceView',
       tableName: 'ExperienceViews',
+      // View records are immutable; only creation timestamp is needed
       updatedAt: false,
       indexes: [
         {

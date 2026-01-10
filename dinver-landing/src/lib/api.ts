@@ -507,7 +507,6 @@ export interface LandingWhatsNewItem {
     isPartner: boolean;
   };
   category: string;
-  categoryLabel: string;
   content: string;
   imageUrl?: string | null;
   expiresAt: string;
@@ -521,7 +520,6 @@ export interface LandingWhatsNewResponse {
     totalActive: number;
     categories: Array<{
       key: string;
-      label: string;
       count: number;
     }>;
   };
@@ -553,12 +551,10 @@ export async function getLandingExperiences(params?: {
 export async function getLandingWhatsNew(params?: {
   limit?: number;
   category?: string;
-  lang?: 'en' | 'hr';
 }): Promise<LandingWhatsNewResponse> {
   const searchParams = new URLSearchParams();
   if (params?.limit) searchParams.set('limit', params.limit.toString());
   if (params?.category) searchParams.set('category', params.category);
-  if (params?.lang) searchParams.set('lang', params.lang);
 
   const query = searchParams.toString();
   return apiRequest<LandingWhatsNewResponse>(`/whats-new${query ? `?${query}` : ''}`);

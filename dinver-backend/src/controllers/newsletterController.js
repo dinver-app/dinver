@@ -11,7 +11,7 @@ const BASE_URL =
 
 const API_URL =
   process.env.NODE_ENV === 'production'
-    ? 'https://api.dinver.eu'
+    ? 'https://api.production.dinverapp.com'
     : 'http://localhost:8000';
 
 const sendNewsletterEmail = async (to, template) => {
