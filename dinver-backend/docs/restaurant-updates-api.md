@@ -45,6 +45,8 @@ Updates su kratke objave koje vlasnici restorana kreiraju kako bi obavijestili k
 
 Updates imaju obaveznu kategoriju koja omogucuje korisnicima filtriranje.
 
+**Napomena:** Backend šalje samo `category` enum vrijednost (npr. `LIVE_MUSIC`). Frontend koristi i18n za prikaz lokaliziranih labela.
+
 | Key | Label (HR) | Opis |
 |-----|------------|------|
 | `LIVE_MUSIC` | Glazba uzivo | Koncerti, DJ, bend... |
@@ -102,7 +104,6 @@ GET /api/app/updates/feed
       },
       "content": "Veceras glazba uzivo od 20h! Svirat ce Jazz Trio.",
       "category": "LIVE_MUSIC",
-      "categoryLabel": "Glazba uzivo",
       "durationDays": 1,
       "expiresAt": "2025-01-16T10:00:00.000Z",
       "imageUrl": "https://cdn.../image-medium.jpg",
@@ -117,21 +118,7 @@ GET /api/app/updates/feed
   ],
   "total": 42,
   "limit": 20,
-  "offset": 0,
-  "categories": {
-    "LIVE_MUSIC": "Glazba uzivo",
-    "NEW_PRODUCT": "Novi proizvod",
-    "NEW_LOCATION": "Nova lokacija",
-    "SPECIAL_OFFER": "Posebna ponuda",
-    "SEASONAL_MENU": "Sezonski meni",
-    "EVENT": "Dogadaj",
-    "EXTENDED_HOURS": "Novo radno vrijeme",
-    "RESERVATIONS": "Rezervacije otvorene",
-    "CHEFS_SPECIAL": "Chef's special",
-    "FAMILY_FRIENDLY": "Za obitelji",
-    "REOPENING": "Ponovo otvoreno",
-    "OTHER": "Ostalo"
-  }
+  "offset": 0
 }
 ```
 

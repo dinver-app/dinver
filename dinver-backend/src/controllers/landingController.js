@@ -15,37 +15,6 @@ const {
 const { Op } = require('sequelize');
 const { getMediaUrl } = require('../../config/cdn');
 
-// Category labels for What's New
-const CATEGORY_LABELS = {
-  LIVE_MUSIC: 'Glazba uživo',
-  NEW_PRODUCT: 'Novi proizvod',
-  NEW_LOCATION: 'Nova lokacija',
-  SPECIAL_OFFER: 'Posebna ponuda',
-  SEASONAL_MENU: 'Sezonski meni',
-  EVENT: 'Događaj',
-  EXTENDED_HOURS: 'Novo radno vrijeme',
-  RESERVATIONS: 'Rezervacije otvorene',
-  CHEFS_SPECIAL: "Chef's special",
-  FAMILY_FRIENDLY: 'Za obitelji',
-  REOPENING: 'Ponovo otvoreno',
-  OTHER: 'Ostalo',
-};
-
-// English category labels
-const CATEGORY_LABELS_EN = {
-  LIVE_MUSIC: 'Live Music',
-  NEW_PRODUCT: 'New Product',
-  NEW_LOCATION: 'New Location',
-  SPECIAL_OFFER: 'Special Offer',
-  SEASONAL_MENU: 'Seasonal Menu',
-  EVENT: 'Event',
-  EXTENDED_HOURS: 'Extended Hours',
-  RESERVATIONS: 'Reservations Open',
-  CHEFS_SPECIAL: "Chef's Special",
-  FAMILY_FRIENDLY: 'Family Friendly',
-  REOPENING: 'Reopening',
-  OTHER: 'Other',
-};
 
 /**
  * Transform experience media to include proper URLs
@@ -238,11 +207,10 @@ const getLandingExperiences = async (req, res) => {
  * Query params:
  * - limit: number of results (default 10, max 20)
  * - category: filter by category
- * - lang: language for labels (en/hr, default hr)
  */
 const getLandingWhatsNew = async (req, res) => {
   try {
-    const { limit = 10, category, lang = 'hr' } = req.query;
+    const { limit = 10, category } = req.query;
 
     // Build where clause
     const where = {
@@ -270,9 +238,6 @@ const getLandingWhatsNew = async (req, res) => {
       limit: Math.min(parseInt(limit), 20),
     });
 
-    // Use appropriate language for labels
-    const labels = lang === 'en' ? CATEGORY_LABELS_EN : CATEGORY_LABELS;
-
     // Transform updates for response
     const transformedUpdates = updates.map((update) => {
       const updateData = update.toJSON();
@@ -290,7 +255,6 @@ const getLandingWhatsNew = async (req, res) => {
           isPartner: updateData.restaurant?.isClaimed || false,
         },
         category: updateData.category,
-        categoryLabel: labels[updateData.category] || updateData.category,
         content: updateData.content,
         imageUrl: updateData.imageKey
           ? getMediaUrl(updateData.imageKey, 'image', 'medium')
@@ -322,18 +286,15 @@ const getLandingWhatsNew = async (req, res) => {
       raw: true,
     });
 
-    const categories = Object.keys(labels).map((key) => ({
-      key,
-      label: labels[key],
-      count: categoryCounts.find((c) => c.category === key)?.count || 0,
-    }));
-
     res.json({
       updates: transformedUpdates,
       meta: {
         count: transformedUpdates.length,
         totalActive: totalCount,
-        categories: categories.filter((c) => c.count > 0),
+        categories: categoryCounts.map((c) => ({
+          key: c.category,
+          count: c.count,
+        })),
       },
     });
   } catch (error) {
