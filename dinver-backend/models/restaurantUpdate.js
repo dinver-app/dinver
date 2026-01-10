@@ -1,23 +1,21 @@
 'use strict';
 const { Model } = require('sequelize');
 
-// Category labels for display
-const CATEGORY_LABELS = {
-  LIVE_MUSIC: 'Glazba uživo',
-  NEW_PRODUCT: 'Novi proizvod',
-  NEW_LOCATION: 'Nova lokacija',
-  SPECIAL_OFFER: 'Posebna ponuda',
-  SEASONAL_MENU: 'Sezonski meni',
-  EVENT: 'Događaj',
-  EXTENDED_HOURS: 'Novo radno vrijeme',
-  RESERVATIONS: 'Rezervacije otvorene',
-  CHEFS_SPECIAL: "Chef's special",
-  FAMILY_FRIENDLY: 'Za obitelji',
-  REOPENING: 'Ponovo otvoreno',
-  OTHER: 'Ostalo',
-};
-
-const UPDATE_CATEGORIES = Object.keys(CATEGORY_LABELS);
+// Valid update categories
+const UPDATE_CATEGORIES = [
+  'LIVE_MUSIC',
+  'NEW_PRODUCT',
+  'NEW_LOCATION',
+  'SPECIAL_OFFER',
+  'SEASONAL_MENU',
+  'EVENT',
+  'EXTENDED_HOURS',
+  'RESERVATIONS',
+  'CHEFS_SPECIAL',
+  'FAMILY_FRIENDLY',
+  'REOPENING',
+  'OTHER',
+];
 
 module.exports = (sequelize, DataTypes) => {
   class RestaurantUpdate extends Model {
@@ -37,11 +35,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'views',
         onDelete: 'CASCADE',
       });
-    }
-
-    // Get category label for display
-    getCategoryLabel() {
-      return CATEGORY_LABELS[this.category] || this.category;
     }
 
     // Check if update is still active
@@ -193,7 +186,6 @@ module.exports = (sequelize, DataTypes) => {
 
   // Static properties
   RestaurantUpdate.CATEGORIES = UPDATE_CATEGORIES;
-  RestaurantUpdate.CATEGORY_LABELS = CATEGORY_LABELS;
 
   return RestaurantUpdate;
 };
