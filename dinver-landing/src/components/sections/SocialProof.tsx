@@ -264,17 +264,39 @@ export default function SocialProof({ locale }: SocialProofProps) {
       {/* Real Experiences Marquee */}
       {experiences.length > 0 &&
         (() => {
-          // Filter experiences with images first
-          const validExperiences = experiences.filter(
-            (exp) => exp.images?.[0]?.url
-          );
+          // Collect ALL images from ALL experiences
+          const allImages: Array<{
+            url: string;
+            restaurantName: string;
+            rating: number;
+            authorName: string;
+            experienceId: string;
+          }> = [];
 
-          // Only duplicate if we have enough unique experiences (at least 8)
-          // Otherwise, show them once to avoid obvious repetition
-          const scrollExperiences =
-            validExperiences.length >= 8
-              ? [...validExperiences, ...validExperiences]
-              : validExperiences;
+          experiences.forEach((exp) => {
+            if (exp.images && exp.images.length > 0) {
+              exp.images.forEach((img) => {
+                if (img.url) {
+                  allImages.push({
+                    url: img.url,
+                    restaurantName: exp.restaurant.name,
+                    rating: exp.rating,
+                    authorName: exp.author.name,
+                    experienceId: exp.id,
+                  });
+                }
+              });
+            }
+          });
+
+          // Shuffle images randomly
+          const shuffledImages = [...allImages].sort(() => Math.random() - 0.5);
+
+          // Duplicate for smooth marquee if we have enough images (at least 8)
+          const scrollImages =
+            shuffledImages.length >= 8
+              ? [...shuffledImages, ...shuffledImages]
+              : shuffledImages;
 
           return (
             <div>
@@ -295,14 +317,14 @@ export default function SocialProof({ locale }: SocialProofProps) {
 
                 {/* Scrolling experience images */}
                 <div className="flex animate-marquee-slow gap-3 sm:gap-4">
-                  {scrollExperiences.map((exp, i) => (
+                  {scrollImages.map((img, i) => (
                     <div
-                      key={`${exp.id}-${i}`}
+                      key={`${img.experienceId}-${i}`}
                       className="shrink-0 w-52 sm:w-56 lg:w-64 h-36 sm:h-40 lg:h-44 rounded-xl sm:rounded-2xl overflow-hidden relative group shadow-lg"
                     >
                       <Image
-                        src={exp.images[0].url}
-                        alt={exp.restaurant.name}
+                        src={img.url}
+                        alt={img.restaurantName}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -311,7 +333,7 @@ export default function SocialProof({ locale }: SocialProofProps) {
                       <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3">
                         <p className="text-white text-xs sm:text-sm font-medium truncate">
-                          {exp.restaurant.name}
+                          {img.restaurantName}
                         </p>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Star
@@ -320,10 +342,10 @@ export default function SocialProof({ locale }: SocialProofProps) {
                             fill="currentColor"
                           />
                           <span className="text-white/90 text-[10px] sm:text-xs">
-                            {exp.rating.toFixed(1)}
+                            {img.rating.toFixed(1)}
                           </span>
                           <span className="text-white/60 text-[10px] sm:text-xs ml-1">
-                            by {exp.author.name}
+                            by {img.authorName}
                           </span>
                         </div>
                       </div>
