@@ -68,7 +68,9 @@ cron.schedule('0 2 * * *', cleanupOldNotifications);
 cron.schedule('0 * * * *', expireUpdates);
 
 // Blog generation - procesira queued blog teme (svaka 2 dana u 9:00 ujutro, Europe/Zagreb timezone)
-cron.schedule('0 9 */2 * *', processQueuedTopics, { timezone: 'Europe/Zagreb' });
+cron.schedule('0 9 */2 * *', processQueuedTopics, {
+  timezone: 'Europe/Zagreb',
+});
 
 // Initialize Redis client with ioredis
 // Support both full Redis URL and separate host/port config
@@ -150,6 +152,9 @@ const allowedOrigins = [
   'https://dinver.eu',
   'https://www.dinver.eu',
   'https://dinver-staging-landing.vercel.app',
+  'https://dinver-staging-landing-env-staging-dinver.vercel.app/',
+  'https://sysadmin-frontend-env-staging-dinver.vercel.app/',
+  'https://admin-frontend-env-staging-dinver.vercel.app/',
 ];
 
 app.use(
