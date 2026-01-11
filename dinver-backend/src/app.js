@@ -152,9 +152,9 @@ const allowedOrigins = [
   'https://dinver.eu',
   'https://www.dinver.eu',
   'https://dinver-staging-landing.vercel.app',
-  'https://dinver-staging-landing-env-staging-dinver.vercel.app/',
-  'https://sysadmin-frontend-env-staging-dinver.vercel.app/',
-  'https://admin-frontend-env-staging-dinver.vercel.app/',
+  'https://dinver-staging-landing-env-staging-dinver.vercel.app',
+  'https://sysadmin-frontend-env-staging-dinver.vercel.app',
+  'https://admin-frontend-env-staging-dinver.vercel.app',
 ];
 
 app.use(
