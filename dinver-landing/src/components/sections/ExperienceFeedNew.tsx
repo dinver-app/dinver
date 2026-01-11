@@ -143,22 +143,30 @@ export default function ExperienceFeedNew({
                           autoplay={{ delay: 5000, disableOnInteraction: true }}
                           className="h-full w-full"
                         >
-                          <SwiperSlide className="rounded-[2.25rem] sm:rounded-[2.5rem] overflow-hidden">
-                            <Image
-                              src="/screenshots/experience-feed.PNG"
-                              alt="Experience Feed"
-                              fill
-                              className="object-cover object-top"
-                            />
-                          </SwiperSlide>
-                          <SwiperSlide className="rounded-[2.25rem] sm:rounded-[2.5rem] overflow-hidden">
-                            <Image
-                              src="/screenshots/experience-feed-2.PNG"
-                              alt="Experience Feed - Ambience"
-                              fill
-                              className="object-cover object-top"
-                            />
-                          </SwiperSlide>
+                          {[
+                            'IMG_5746.jpg',
+                            'IMG_5747.jpg',
+                            'IMG_5748.jpg',
+                            'IMG_5749.jpg',
+                            'IMG_5750.jpg',
+                            'IMG_5751.jpg',
+                            'IMG_5752.jpg',
+                            'IMG_5753.jpg',
+                            'IMG_5754.jpg',
+                            'IMG_5755.jpg',
+                          ].map((filename, index) => (
+                            <SwiperSlide
+                              key={filename}
+                              className="rounded-[2.25rem] sm:rounded-[2.5rem] overflow-hidden"
+                            >
+                              <Image
+                                src={`/screenshots/experience-feed/${filename}`}
+                                alt={`Experience Feed ${index + 1}`}
+                                fill
+                                className="object-cover object-top"
+                              />
+                            </SwiperSlide>
+                          ))}
                         </Swiper>
                       </motion.div>
                     ) : (

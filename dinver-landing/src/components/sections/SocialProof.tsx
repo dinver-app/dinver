@@ -292,11 +292,8 @@ export default function SocialProof({ locale }: SocialProofProps) {
           // Shuffle images randomly
           const shuffledImages = [...allImages].sort(() => Math.random() - 0.5);
 
-          // Duplicate for smooth marquee if we have enough images (at least 8)
-          const scrollImages =
-            shuffledImages.length >= 8
-              ? [...shuffledImages, ...shuffledImages]
-              : shuffledImages;
+          // Always duplicate for seamless infinite scroll (like partners marquee)
+          const scrollImages = [...shuffledImages, ...shuffledImages];
 
           return (
             <div>
